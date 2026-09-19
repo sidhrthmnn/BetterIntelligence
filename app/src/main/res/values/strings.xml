@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Better Intelligence</string>
+    <string name="perm_bind_local_ai_label">Access Better Intelligence AI Service</string>
+    <string name="perm_bind_local_ai_desc">Allows third-party applications to access on-device GGUF LLM inference securely via IPC Binder</string>
+</resources>

@@ -1,0 +1,6 @@
+{
+  "name": "Better Intelligence",
+  "description": "On-device GGUF quantized LLM engine, hardware analyzer, and secure Binder IPC AI Core service for Android",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
