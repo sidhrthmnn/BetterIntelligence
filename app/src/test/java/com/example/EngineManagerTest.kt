@@ -53,4 +53,19 @@ class EngineManagerTest {
         assertTrue(result.hasSufficientRam)
         assertEquals("arm64-v8a", result.abi)
     }
+
+    @Test
+    fun testParseSmolLm2BaseModelGguf() {
+        val file = java.io.File("src/main/assets/models/smollm2-135m-instruct-q4_k_m.gguf")
+        assertTrue("Base model GGUF must exist in assets", file.exists())
+        val parser = com.example.engine.GgufParser()
+        val result = parser.parseFromFile(file)
+        assertTrue("Parsing should succeed: ${result.exceptionOrNull()?.message}", result.isSuccess)
+        val meta = result.getOrNull()
+        assertNotNull(meta)
+        assertEquals("llama", meta!!.architecture)
+        assertEquals(com.example.engine.QuantizationType.Q4_K_M, meta.primaryQuantization)
+        assertTrue("Tensor count should be 272", meta.tensorCount >= 270)
+        assertEquals(49152, meta.vocabSize)
+    }
 }

@@ -33,6 +33,15 @@ interface ModelDao {
     @Query("UPDATE models SET isActive = 1, lastUsedTimestamp = :timestamp WHERE id = :id")
     suspend fun setActiveModel(id: Long, timestamp: Long = System.currentTimeMillis())
 
+    @Query("SELECT * FROM models WHERE filename = :filename LIMIT 1")
+    suspend fun getModelByFilename(filename: String): ModelEntity?
+
+    @Query("SELECT * FROM models WHERE isBaseModel = 1 LIMIT 1")
+    suspend fun getBaseModel(): ModelEntity?
+
+    @Query("UPDATE models SET isBaseModel = 0")
+    suspend fun clearBaseModelFlags()
+
     @Query("DELETE FROM models WHERE id = :id")
     suspend fun deleteModel(id: Long)
 

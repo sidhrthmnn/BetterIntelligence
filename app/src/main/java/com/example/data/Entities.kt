@@ -33,6 +33,7 @@ data class ModelEntity(
     val sha256Checksum: String? = null,
     val isChecksumVerified: Boolean = false,
     val checksumVerificationStatus: String = "NOT_VERIFIED", // "NOT_VERIFIED", "VERIFYING", "VERIFIED", "MISMATCH", "UNAVAILABLE"
+    val isBaseModel: Boolean = false,
     val lastUsedTimestamp: Long = System.currentTimeMillis()
 )
 

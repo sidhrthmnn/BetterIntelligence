@@ -144,6 +144,23 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                             ),
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        if (activeModel?.isBaseModel == true) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.tertiary)
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "BASE",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = MaterialTheme.colorScheme.onTertiary
+                                )
+                            }
+                        }
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = "Switch model",

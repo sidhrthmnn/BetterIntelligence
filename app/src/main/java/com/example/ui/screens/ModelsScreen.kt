@@ -248,13 +248,33 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = activeModel!!.name,
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = activeModel!!.name,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (activeModel!!.isBaseModel) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(MaterialTheme.colorScheme.tertiary)
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "BASE MODEL",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 9.sp
+                                                ),
+                                                color = MaterialTheme.colorScheme.onTertiary
+                                            )
+                                        }
+                                    }
+                                }
                                 Text(
                                     text = "${activeModel!!.parameterCount} • ${activeModel!!.architecture.uppercase()} • ~${activeModel!!.speedScoreTokSec.toInt()} tok/s",
                                     style = MaterialTheme.typography.bodySmall,
@@ -264,11 +284,25 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                             QuantBadge(text = activeModel!!.quantization)
                         }
                     } else {
-                        Text(
-                            text = "No model selected. Download or select a model below.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "No model loaded into memory.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(
+                                onClick = { viewModel.restoreBaseModel() },
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text("Load Base Model", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                            }
+                        }
                     }
                 }
             }
@@ -802,6 +836,24 @@ private fun ModelItemCard(
                             ),
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        if (model.isBaseModel) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.tertiary)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "BASE MODEL",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onTertiary
+                                )
+                            }
+                        }
                         if (isActive) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Box(

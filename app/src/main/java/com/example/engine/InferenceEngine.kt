@@ -128,37 +128,45 @@ class InferenceEngine {
         loadDefaultModel()
     }
 
-    fun loadDefaultModel() {
+    fun loadDefaultModel(modelFile: File? = null) {
+        if (modelFile != null && modelFile.exists() && modelFile.length() > 0) {
+            val parseResult = loadCustomGguf(modelFile)
+            if (parseResult.isSuccess) return
+        }
+
         val defaultMeta = GgufMetadata(
             version = 3,
-            tensorCount = 144,
-            kvCount = 28,
-            architecture = "qwen2",
-            modelName = "Qwen 2.5 0.5B Instruct",
-            contextLength = 4096,
-            embeddingLength = 896,
-            blockCount = 24,
-            headCount = 14,
-            headCountKv = 2,
-            vocabSize = 151936,
+            tensorCount = 272,
+            kvCount = 33,
+            architecture = "llama",
+            modelName = "SmolLM2 135M Instruct",
+            contextLength = 2048,
+            embeddingLength = 576,
+            blockCount = 30,
+            headCount = 9,
+            headCountKv = 3,
+            vocabSize = 49152,
             quantizationVersion = 2,
             primaryQuantization = QuantizationType.Q4_K_M,
-            ropeFreqBase = 1000000.0f,
-            feedForwardLength = 4864,
+            ropeFreqBase = 100000.0f,
+            feedForwardLength = 1536,
             customKvPairs = mapOf(
-                "general.architecture" to "qwen2",
-                "general.name" to "Qwen 2.5 0.5B Instruct (Q4_K_M)",
+                "general.architecture" to "llama",
+                "general.name" to "SmolLM2 135M Instruct (Q4_K_M)",
+                "general.organization" to "HuggingFaceTB",
+                "general.size_label" to "135M",
                 "general.file_type" to "15",
                 "general.quantization_version" to "2",
-                "qwen2.context_length" to "4096",
-                "qwen2.embedding_length" to "896",
-                "qwen2.block_count" to "24",
-                "qwen2.attention.head_count" to "14",
-                "qwen2.attention.head_count_kv" to "2",
-                "tokenizer.ggml.model" to "bpe"
+                "llama.context_length" to "2048",
+                "llama.embedding_length" to "576",
+                "llama.block_count" to "30",
+                "llama.attention.head_count" to "9",
+                "llama.attention.head_count_kv" to "3",
+                "llama.vocab_size" to "49152",
+                "tokenizer.ggml.model" to "llama"
             ),
-            tensors = generateSampleTensors("qwen2", 24, 896, QuantizationType.Q4_K_M),
-            totalSizeBytes = 398L * 1024L * 1024L
+            tensors = generateSampleTensors("llama", 30, 576, QuantizationType.Q4_K_M),
+            totalSizeBytes = 105454144L
         )
         _activeMetadata.value = defaultMeta
         updateMemoryTelemetry(defaultMeta)

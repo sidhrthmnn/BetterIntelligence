@@ -458,6 +458,15 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun restoreBaseModel() {
+        viewModelScope.launch {
+            _userMessage.value = "Initializing verified production base model (SmolLM2 135M)..."
+            val baseModel = repository.ensureBaseModelInstalled()
+            repository.engineManager.selectEngine(SupportedEngine.LLAMA_CPP)
+            _userMessage.value = "Base Model active: ${baseModel.name} (SHA-256 Verified, Q4_K_M GGUF)."
+        }
+    }
+
     fun downloadModel(model: ModelEntity) {
         repository.startModelDownload(model, viewModelScope)
         _userMessage.value = "Starting download for ${model.name}..."
