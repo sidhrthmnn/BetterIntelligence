@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.data.ModelEntity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -240,13 +241,15 @@ class ModelDownloadManager(private val context: Context) {
      */
     suspend fun downloadAndVerifyModel(
         model: ModelEntity,
-        onUpdate: (DownloadStateUpdate) -> Unit
+        onUpdate: suspend (DownloadStateUpdate) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
+        require(model.filename == File(model.filename).name && !model.filename.contains('\\')) { "Invalid model filename" }
         activeDownloadFlags[model.id] = true
         val targetFile = File(modelsDirectory, model.filename)
         val tempFile = File(modelsDirectory, "${model.filename}.part")
 
         try {
+            check(modelsDirectory.usableSpace > (model.fileSizeMb + 128) * 1024L * 1024L) { "Insufficient storage for model" }
             val downloadUrl = model.downloadUrl ?: throw IllegalArgumentException("No download URL provided for model ${model.name}")
 
             // Follow HTTP redirects (Hugging Face resolve redirects to cloud CDN)
@@ -257,6 +260,7 @@ class ModelDownloadManager(private val context: Context) {
 
             while (redirects < maxRedirects) {
                 val url = URL(currentUrl)
+                require(url.protocol == "https") { "Model downloads require HTTPS" }
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     connectTimeout = 15000
                     readTimeout = 30000
@@ -269,7 +273,7 @@ class ModelDownloadManager(private val context: Context) {
                     val location = conn.getHeaderField("Location")
                     conn.disconnect()
                     if (!location.isNullOrBlank()) {
-                        currentUrl = location
+                        currentUrl = URL(url, location).toString()
                         redirects++
                         continue
                     }
@@ -297,6 +301,7 @@ class ModelDownloadManager(private val context: Context) {
                     val buffer = ByteArray(64 * 1024)
                     var bytesRead: Int
                     while (input.read(buffer).also { bytesRead = it } != -1) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
                         if (activeDownloadFlags[model.id] != true) {
                             // Download was cancelled
                             tempFile.delete()
@@ -347,14 +352,17 @@ class ModelDownloadManager(private val context: Context) {
                 }
             } else {
                 // If no remote checksum was recorded, file is stored with its computed SHA-256
-                isVerified = true
+                isVerified = false
                 Log.i(TAG, "No remote checksum for ${model.filename}. Generated hash: $computedSha256")
             }
 
+            if (downloadedBytes == 0L) error("Empty model download")
+            if (model.filename.endsWith(".gguf", true)) GgufParser().parseFromFile(tempFile).getOrThrow()
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
             // Atomically move temp file to destination
             if (tempFile.exists() && tempFile.length() > 0) {
                 if (targetFile.exists()) targetFile.delete()
-                tempFile.renameTo(targetFile)
+                check(tempFile.renameTo(targetFile)) { "Could not install downloaded model" }
             }
 
             onUpdate(DownloadStateUpdate.Success(targetFile, computedSha256, isVerified))
@@ -363,6 +371,7 @@ class ModelDownloadManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Download failed for ${model.name}: ${e.message}", e)
             if (tempFile.exists()) tempFile.delete()
+            if (e is kotlinx.coroutines.CancellationException) throw e
             onUpdate(DownloadStateUpdate.Failure(e.message ?: "Unknown download error"))
             return@withContext false
         } finally {
@@ -404,10 +413,10 @@ class ModelDownloadManager(private val context: Context) {
 
             if (expectedSha256.isNullOrBlank()) {
                 ChecksumVerificationResult(
-                    isMatch = true,
+                    isMatch = false,
                     computedSha256 = computedHash,
                     expectedSha256 = null,
-                    status = "VERIFIED",
+                    status = "UNAVAILABLE",
                     message = "SHA-256 generated: $computedHash"
                 )
             } else if (computedHash.equals(expectedSha256.trim(), ignoreCase = true)) {

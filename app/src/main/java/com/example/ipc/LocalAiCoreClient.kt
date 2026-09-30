@@ -18,7 +18,7 @@ import kotlin.coroutines.resume
 /**
  * High-level Android client SDK for connecting to the on-device Local AI Core service.
  * External Android applications can embed this single file into their codebase to access
- * on-device GGUF LLM generation, vector embeddings, summarization, and zero-shot classification.
+ * on-device GGUF text generation, summarization, and classification. Embeddings are unsupported.
  */
 class LocalAiCoreClient(private val context: Context) {
 
@@ -42,8 +42,8 @@ class LocalAiCoreClient(private val context: Context) {
      * Connects to Local AI Core on the device via Android IPC Binder.
      */
     fun bind(): Boolean {
-        val intent = Intent(LocalAiCoreService.ACTION_BIND).apply {
-            setPackage("com.aistudio.localaicore.engine")
+        val intent = Intent("com.aistudio.localaicore.ACTION_BIND_AI_CORE").apply {
+            setPackage("com.aistudio.betterintelligence.vqkzp")
         }
         return context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }

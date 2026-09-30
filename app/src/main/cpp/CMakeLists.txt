@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(better_gguf LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_COMMON OFF CACHE BOOL "" FORCE)
+set(LLAMA_CURL OFF CACHE BOOL "" FORCE)
+set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
+set(GGML_LLAMAFILE OFF CACHE BOOL "" FORCE)
+set(GGML_BACKEND_DL OFF CACHE BOOL "" FORCE)
+# Baseline ARMv8: do not require newer phone CPU instructions.
+set(GGML_CPU_ARM_ARCH "armv8-a" CACHE STRING "" FORCE)
+add_compile_options(-O3)
+include(FetchContent)
+FetchContent_Declare(llama
+    URL https://codeload.github.com/ggml-org/llama.cpp/tar.gz/1d735c0b4fa0551c51c2f4ac888dd9a01f447985
+    URL_HASH SHA256=fcc93993fdec215118d27d5c8d41e292f9de8c05a33fa86a91f028ad749d868e
+)
+FetchContent_MakeAvailable(llama)
+add_library(better_gguf SHARED gguf_jni.cpp)
+target_link_libraries(better_gguf PRIVATE llama android log)
+target_compile_options(better_gguf PRIVATE -O3)
+target_link_options(better_gguf PRIVATE "-Wl,-z,max-page-size=16384")
+

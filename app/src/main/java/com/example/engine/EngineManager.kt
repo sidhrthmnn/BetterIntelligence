@@ -9,12 +9,12 @@ enum class SupportedEngine(val displayName: String, val formatBadge: String, val
     LLAMA_CPP(
         displayName = "llama.cpp (Native NDK)",
         formatBadge = ".GGUF",
-        description = "Native C++ runtime with ARM NEON SIMD & Vulkan GPU layer offloading. Optimized for Q4_K_M & IQ4_XS GGUF files."
+        description = "Native llama.cpp CPU runtime for GGUF instruction models. ARM64 and x86_64."
     ),
     LITERT(
         displayName = "LiteRT (Google GenAI)",
         formatBadge = ".TFLITE / .BIN",
-        description = "Google's lightweight runtime with GPU Delegate & automatic XNNPACK CPU fallback. Uses Play Services to keep APK lean."
+        description = "Unavailable in this build. Select a GGUF model to use the packaged llama.cpp runtime."
     )
 }
 
@@ -37,6 +37,7 @@ class EngineManager(
         }
 
     fun selectEngine(engine: SupportedEngine) {
+        if (engine == SupportedEngine.LITERT) return // No LiteRT runtime is packaged in this build.
         if (_selectedEngineType.value != engine) {
             currentEngine.cancelGeneration()
             _selectedEngineType.value = engine

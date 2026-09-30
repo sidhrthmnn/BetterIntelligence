@@ -1,0 +1,54 @@
+[
+  {
+    "name": "SmolLM2 135M Instruct",
+    "filename": "smollm2-135m-instruct-q4_k_m.gguf",
+    "architecture": "llama",
+    "parameters": "135M",
+    "ramMb": 512,
+    "bytes": 105454144,
+    "sha256": "8030f04528538d47bda434f6f0bdf3952c40a58123e4d5e755332f23731a8684",
+    "repo": "Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF",
+    "revision": "0fbb5f440a58f880aeb698a615bc341dd7015168",
+    "url": "https://huggingface.co/Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF/resolve/0fbb5f440a58f880aeb698a615bc341dd7015168/smollm2-135m-instruct-q4_k_m.gguf",
+    "license": "apache-2.0"
+  },
+  {
+    "name": "SmolLM2 360M Instruct",
+    "filename": "SmolLM2-360M-Instruct-Q4_K_M.gguf",
+    "architecture": "llama",
+    "parameters": "360M",
+    "ramMb": 768,
+    "bytes": 270590880,
+    "sha256": "2fa3f013dcdd7b99f9b237717fa0b12d75bbb89984cc1274be1471a465bac9c2",
+    "repo": "bartowski/SmolLM2-360M-Instruct-GGUF",
+    "revision": "7be6f65f1db715fe5dc5a4634c0d459b4eed42ec",
+    "url": "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/7be6f65f1db715fe5dc5a4634c0d459b4eed42ec/SmolLM2-360M-Instruct-Q4_K_M.gguf",
+    "license": "apache-2.0"
+  },
+  {
+    "name": "Qwen 2.5 0.5B Instruct",
+    "filename": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "architecture": "qwen2",
+    "parameters": "0.5B",
+    "ramMb": 1024,
+    "bytes": 491400032,
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+    "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/9217f5db79a29953eb74d5343926648285ec7e67/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "license": "apache-2.0"
+  },
+  {
+    "name": "Gemma 3 1B Instruct",
+    "filename": "gemma-3-1b-it-Q4_K_M.gguf",
+    "architecture": "gemma3",
+    "parameters": "1B",
+    "ramMb": 1792,
+    "bytes": 806058240,
+    "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
+    "repo": "ggml-org/gemma-3-1b-it-GGUF",
+    "revision": "f9c28bcd85737ffc5aef028638d3341d49869c27",
+    "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q4_K_M.gguf",
+    "license": "gemma"
+  }
+]

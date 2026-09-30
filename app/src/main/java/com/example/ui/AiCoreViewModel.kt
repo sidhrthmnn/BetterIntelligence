@@ -31,12 +31,14 @@ import com.example.engine.StreamTokenListener
 import com.example.engine.SupportedEngine
 import com.example.service.InferenceForegroundService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.FileOutputStream
 
@@ -211,6 +213,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
     fun selectEngine(engine: SupportedEngine) {
         viewModelScope.launch {
+            if (engine == SupportedEngine.LITERT) { _userMessage.value = "This build supports GGUF through llama.cpp. Select a GGUF model."; return@launch }
             repository.preferencesRepository.saveEnginePreference(engine)
             repository.engineManager.selectEngine(engine)
             _userMessage.value = "Active engine switched to ${engine.displayName} and saved to DataStore."
@@ -325,7 +328,10 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun unloadActiveModel() {
-        repository.engine.unloadActiveModel()
+        viewModelScope.launch(Dispatchers.IO) {
+            try { repository.unloadModel() }
+            catch (e: Exception) { _userMessage.value = e.message }
+        }
         _userMessage.value = "Unloaded model from RAM. Memory reclaimed."
     }
 
@@ -439,35 +445,36 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun switchModel(model: ModelEntity) {
+        if (needsTerms(model)) { _licenseModel.value = model; return }
         viewModelScope.launch {
-            if (!model.isInstalled && model.downloadState != "DOWNLOADED") {
-                _userMessage.value = "Please download ${model.name} before loading into memory."
-                return@launch
-            }
-            // Auto-align active engine with model architecture
-            if (model.architecture.contains("litert") || model.filename.endsWith(".bin") || model.filename.endsWith(".tflite")) {
-                repository.engineManager.selectEngine(SupportedEngine.LITERT)
-            } else {
-                repository.engineManager.selectEngine(SupportedEngine.LLAMA_CPP)
-            }
-
-            // Aggressive unload before load to prevent peak memory spike
-            repository.engineManager.currentEngine.release()
-            repository.switchActiveModel(model)
-            _userMessage.value = "Loaded ${model.name} into AI Core (${repository.engineManager.selectedEngineType.value.formatBadge})."
+            try {
+                repository.switchActiveModel(model)
+                _userMessage.value = "Loaded ${model.name}. On-device CPU inference is ready."
+            } catch (e: Exception) { _userMessage.value = e.message ?: "Unable to load model" }
         }
     }
 
     fun restoreBaseModel() {
         viewModelScope.launch {
-            _userMessage.value = "Initializing verified production base model (SmolLM2 135M)..."
-            val baseModel = repository.ensureBaseModelInstalled()
-            repository.engineManager.selectEngine(SupportedEngine.LLAMA_CPP)
-            _userMessage.value = "Base Model active: ${baseModel.name} (SHA-256 Verified, Q4_K_M GGUF)."
+            val base = repository.allModels.first().firstOrNull { it.isBaseModel } ?: return@launch
+            if (base.isInstalled) switchModel(base) else downloadModel(base)
         }
     }
 
+    private val _licenseModel = MutableStateFlow<ModelEntity?>(null)
+    val licenseModel: StateFlow<ModelEntity?> = _licenseModel.asStateFlow()
+    private fun needsTerms(model: ModelEntity): Boolean = model.architecture.startsWith("gemma") &&
+        !getApplication<Application>().getSharedPreferences("model_terms", Context.MODE_PRIVATE).getBoolean("gemma", false)
+    fun dismissModelTerms() { _licenseModel.value = null }
+    fun acceptModelTerms() {
+        val model = _licenseModel.value ?: return
+        getApplication<Application>().getSharedPreferences("model_terms", Context.MODE_PRIVATE).edit().putBoolean("gemma", true).apply()
+        _licenseModel.value = null
+        if (model.isInstalled) switchModel(model) else downloadModel(model)
+    }
+
     fun downloadModel(model: ModelEntity) {
+        if (needsTerms(model)) { _licenseModel.value = model; return }
         repository.startModelDownload(model, viewModelScope)
         _userMessage.value = "Starting download for ${model.name}..."
     }
@@ -579,19 +586,9 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
     fun applyRecommendation(recommendation: ModelRecommendation) {
         viewModelScope.launch {
-            val models = repository.allModels.stateIn(viewModelScope).value
-            val match = models.find { it.name == recommendation.recommendedModelName || it.filename == recommendation.recommendedFilename }
-            if (match != null) {
-                if (!match.isInstalled && match.downloadState != "DOWNLOADED") {
-                    repository.startModelDownload(match, viewModelScope)
-                    _userMessage.value = "Downloading recommended model ${match.name}..."
-                    selectTab(AppTab.MODELS)
-                } else {
-                    repository.switchActiveModel(match)
-                    _userMessage.value = "Activated recommended model ${match.name} in AI Core."
-                    selectTab(AppTab.CHAT)
-                }
-            }
+            val match = repository.allModels.first().find { it.filename == recommendation.recommendedFilename } ?: return@launch
+            if (match.isInstalled) switchModel(match) else downloadModel(match)
+            selectTab(AppTab.MODELS)
         }
     }
 
@@ -811,30 +808,29 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
     fun importGgufFromUri(uri: Uri, context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
+            val directory = repository.downloadManager.modelsDirectory
+            val tempFile = File(directory, "import-${java.util.UUID.randomUUID()}.part")
             try {
-                val contentResolver = context.contentResolver
-                val inputStream = contentResolver.openInputStream(uri) ?: return@launch
-                
-                // Read header and inspect
-                val parseResult = parser.parseFromStream(inputStream)
-                inputStream.close()
-
-                if (parseResult.isSuccess) {
-                    val metadata = parseResult.getOrNull()!!
-                    
-                    // Create local file copy in internal storage
-                    val tempFile = File(context.filesDir, "${metadata.architecture}_${metadata.primaryQuantization.typeName.lowercase()}.gguf")
-                    contentResolver.openInputStream(uri)?.use { input ->
-                        FileOutputStream(tempFile).use { output ->
-                            input.copyTo(output)
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        val buffer = ByteArray(65536)
+                        var count: Int
+                        while (input.read(buffer).also { count = it } != -1) {
+                            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                            check(directory.usableSpace > count + 32L * 1024 * 1024) { "Insufficient storage" }
+                            output.write(buffer, 0, count)
                         }
                     }
-                    
-                    repository.registerImportedGguf(tempFile, metadata)
-                    _inspectingGguf.value = metadata
-                    _userMessage.value = "Successfully imported ${metadata.modelName.ifBlank { tempFile.name }}."
-                }
+                } ?: error("Cannot open file")
+                val metadata = parser.parseFromFile(tempFile).getOrThrow()
+                val installed = File(directory, tempFile.name.removeSuffix(".part") + ".gguf")
+                check(tempFile.renameTo(installed)) { "Could not install GGUF" }
+                repository.registerImportedGguf(installed, metadata)
+                _inspectingGguf.value = metadata
+                _userMessage.value = "Imported ${metadata.modelName}. Select it in Models to use it."
             } catch (e: Exception) {
+                tempFile.delete()
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _userMessage.value = "Failed to import GGUF: ${e.message}"
             }
         }
@@ -947,7 +943,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
             val startTime = System.currentTimeMillis()
 
-            when (state.selectedTask) {
+            try { when (state.selectedTask) {
                 "STREAM" -> {
                     val memContext = repository.buildMemoryContextPrompt()
                     _simulatorState.value = _simulatorState.value.copy(statusText = "Receiving streaming tokens with context memory...")
@@ -1008,29 +1004,8 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
                 }
 
                 "EMBED" -> {
-                    val vector = repository.engine.computeEmbeddings(state.promptInput)
-                    val latency = System.currentTimeMillis() - startTime
-                    val preview = vector.take(8).map { String.format("%.4f", it) }.joinToString(", ", "[", ", ... 128 dims]")
-                    _simulatorState.value = _simulatorState.value.copy(
-                        isRunning = false,
-                        latencyMs = latency,
-                        tokensPerSec = 0f,
-                        statusText = "Computed 128-dimensional dense vector in ${latency}ms",
-                        outputText = "Dense Semantic Embedding Vector:\n$preview\n\nCosine Normalized: L2 Norm = 1.0\nReady for on-device vector search / RAG."
-                    )
-                    repository.logIpcCall(
-                        IpcLogEntity(
-                            callingPackage = state.selectedPackage,
-                            callingUid = 10245,
-                            requestType = "EMBEDDING",
-                            promptPreview = state.promptInput.take(150),
-                            responsePreview = "Vector [128 dims]",
-                            latencyMs = latency,
-                            tokensPerSecond = 0f,
-                            totalTokens = 1,
-                            status = "SUCCESS"
-                        )
-                    )
+                    _simulatorState.value = _simulatorState.value.copy(isRunning = false,
+                        statusText = "Unsupported task", outputText = "The installed library contains text-generation models. Embeddings are unavailable.")
                 }
 
                 "SUMMARIZE" -> {
@@ -1083,6 +1058,10 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
                         )
                     )
                 }
+            } } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _simulatorState.value = _simulatorState.value.copy(isRunning = false,
+                    statusText = "AI unavailable", outputText = e.message ?: "Unable to run this task")
             }
         }
     }

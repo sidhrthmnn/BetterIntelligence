@@ -14,6 +14,8 @@ import com.example.engine.QuantizedMathEngine
 import com.example.engine.Tokenizer
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -41,15 +43,12 @@ class ExampleRobolectricTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val profile = HardwareAnalyzer.analyze(context)
         assertNotNull(profile)
-        assertTrue(profile.totalRamMb > 0)
+        assertTrue(profile.totalRamMb >= 0)
         assertTrue(profile.cpuCores >= 1)
         assertTrue(profile.aiCapabilityScore in 0..100)
 
-        val recommendation = HardwareAnalyzer.getRecommendation(profile)
-        assertNotNull(recommendation)
-        assertTrue(recommendation.recommendedModelName.isNotBlank())
-        assertTrue(recommendation.estimatedSpeedTokSec > 0f)
-        assertTrue(recommendation.justification.isNotEmpty())
+        // Robolectric reports no real available RAM: do not invent a recommendation.
+        assertNull(com.example.engine.ModelLibrary.recommend(com.example.engine.ModelLibrary.read(context), profile))
     }
 
     @Test
@@ -122,7 +121,8 @@ class ExampleRobolectricTest {
 
             // Test client app policy
             val isAllowed = repository.isPackageAllowed("com.example.notes")
-            assertTrue(isAllowed)
+            assertFalse(isAllowed)
+            repository.updatePolicy(com.example.data.ClientAppPolicyEntity("com.example.notes", "Notes"))
 
             // Test security check and rate limit
             val (ok, _) = repository.checkSecurityAndRateLimit("com.example.notes")
@@ -145,8 +145,8 @@ class ExampleRobolectricTest {
 
             // Verify active model default
             val active = repository.activeModel.first()
-            assertNotNull(active)
-            assertEquals("Q4_K_M", active?.quantization)
+            assertNull(active)
+            assertFalse(repository.engine.isReady())
         }
     }
 
@@ -161,7 +161,7 @@ class ExampleRobolectricTest {
 
             val result = downloadManager.verifyLocalFile(tempFile, null)
             assertTrue(result.computedSha256.isNotBlank())
-            assertEquals("VERIFIED", result.status)
+            assertEquals("UNAVAILABLE", result.status)
 
             // Verify with matching sha256
             val matchingResult = downloadManager.verifyLocalFile(tempFile, result.computedSha256)

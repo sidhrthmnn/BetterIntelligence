@@ -23,6 +23,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import com.example.engine.ModelLibrary
+import com.example.engine.GenerationParams
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -71,426 +78,87 @@ class AiCoreRepository(
     private val _modelRecommendation = MutableStateFlow<ModelRecommendation?>(null)
     val modelRecommendation: StateFlow<ModelRecommendation?> = _modelRecommendation.asStateFlow()
 
+    private val repositoryScope = CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+    private val modelLock = Mutex()
+
     init {
-        CoroutineScope(Dispatchers.IO).launch {
+        repositoryScope.launch {
             seedDefaultModelsIfEmpty()
-            seedDefaultClientPolicies()
-            ensureBaseModelInstalled()
+            analyzeHardware(appContext)
+            val previous = modelDao.getActiveModel().first()
+            if (previous != null) {
+                try { switchActiveModel(previous) }
+                catch (e: Exception) { modelDao.clearActiveModel() }
+            }
         }
     }
 
     fun analyzeHardware(context: Context) {
         val profile = HardwareAnalyzer.analyze(context)
         _hardwareProfile.value = profile
-        _modelRecommendation.value = HardwareAnalyzer.getRecommendation(profile)
+        repositoryScope.launch {
+            _modelRecommendation.value = ModelLibrary.recommend(modelDao.getAllModels().first(), profile)
+        }
     }
 
     suspend fun ensureBaseModelInstalled(): ModelEntity {
-        val baseFileName = "smollm2-135m-instruct-q4_k_m.gguf"
-        val targetFile = File(downloadManager.modelsDirectory, baseFileName)
-        val expectedSha = "8030f04528538d47bda434f6f0bdf3952c40a58123e4d5e755332f23731a8684"
-
-        // Extract bundled base model asset to filesDir if not present
-        if (!targetFile.exists() || targetFile.length() < 100_000_000L) {
-            try {
-                if (targetFile.exists()) targetFile.delete()
-                appContext.assets.open("models/$baseFileName").use { input ->
-                    FileOutputStream(targetFile).use { output ->
-                        input.copyTo(output, bufferSize = 64 * 1024)
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("AiCoreRepository", "Asset extraction notice: ${e.message}")
-            }
-        }
-
-        val fileExists = targetFile.exists() && targetFile.length() > 0
-        val existing = modelDao.getModelByFilename(baseFileName)
-
-        val entity = if (existing != null) {
-            existing.copy(
-                isInstalled = fileExists,
-                isActive = true,
-                isBaseModel = true,
-                localFilePath = if (fileExists) targetFile.absolutePath else existing.localFilePath,
-                downloadState = if (fileExists) "DOWNLOADED" else existing.downloadState,
-                downloadProgress = 1.0f,
-                sha256Checksum = expectedSha,
-                isChecksumVerified = true,
-                checksumVerificationStatus = "VERIFIED"
-            )
-        } else {
-            ModelEntity(
-                name = "SmolLM2 135M Instruct",
-                filename = baseFileName,
-                architecture = "llama",
-                quantization = "Q4_K_M",
-                parameterCount = "135 Million",
-                contextLength = 2048,
-                fileSizeMb = 101,
-                ramRequiredMb = 180,
-                isInstalled = fileExists,
-                isActive = true,
-                isBaseModel = true,
-                isCustom = false,
-                description = "Production-ready on-device base model (GGUF Q4_K_M). Verified SHA-256, ultra-fast 50+ tok/s execution, runs in <180MB RAM.",
-                capabilities = "Base Model, Ultra-Fast Streaming, Summarization, Zero-Shot Classification, Code & Tool Calling",
-                downloadUrl = "https://huggingface.co/Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF/resolve/main/smollm2-135m-instruct-q4_k_m.gguf",
-                localFilePath = if (fileExists) targetFile.absolutePath else null,
-                downloadState = if (fileExists) "DOWNLOADED" else "NOT_DOWNLOADED",
-                downloadProgress = if (fileExists) 1.0f else 0.0f,
-                versionTag = "v2.0-135M-Q4_K_M",
-                speedScoreTokSec = 52.0f,
-                recommendedTier = "ULTRA_LIGHT",
-                huggingFaceRepo = "Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF",
-                sha256Checksum = expectedSha,
-                isChecksumVerified = true,
-                checksumVerificationStatus = "VERIFIED"
-            )
-        }
-
-        modelDao.clearActiveModel()
-        modelDao.clearBaseModelFlags()
-        val id = modelDao.insertModel(entity)
-        val finalEntity = entity.copy(id = id)
-
-        if (fileExists) {
-            engine.loadCustomGguf(targetFile)
-        } else {
-            engine.loadDefaultModel()
-        }
-
-        return finalEntity
+        val model = modelDao.getBaseModel() ?: error("Model library is still initializing")
+        check(model.isInstalled) { "Download ${model.name} in Models first" }
+        switchActiveModel(model)
+        return model
     }
 
     private suspend fun seedDefaultModelsIfEmpty() {
-        if (modelDao.getModelCount() == 0) {
-            val defaults = listOf(
-                ModelEntity(
-                    name = "SmolLM2 135M Instruct",
-                    filename = "smollm2-135m-instruct-q4_k_m.gguf",
-                    architecture = "llama",
-                    quantization = "Q4_K_M",
-                    parameterCount = "135 Million",
-                    contextLength = 2048,
-                    fileSizeMb = 101,
-                    ramRequiredMb = 180,
-                    isInstalled = true,
-                    isActive = true,
-                    isBaseModel = true,
-                    isCustom = false,
-                    description = "Production-ready on-device base model (GGUF Q4_K_M). Verified SHA-256, ultra-fast 50+ tok/s execution, runs in <180MB RAM.",
-                    capabilities = "Base Model, Ultra-Fast Streaming, Summarization, Zero-Shot Classification, Code & Tool Calling",
-                    downloadUrl = "https://huggingface.co/Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF/resolve/main/smollm2-135m-instruct-q4_k_m.gguf",
-                    downloadState = "DOWNLOADED",
-                    downloadProgress = 1.0f,
-                    versionTag = "v2.0-135M-Q4_K_M",
-                    speedScoreTokSec = 52.0f,
-                    recommendedTier = "ULTRA_LIGHT",
-                    huggingFaceRepo = "Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF",
-                    sha256Checksum = "8030f04528538d47bda434f6f0bdf3952c40a58123e4d5e755332f23731a8684",
-                    isChecksumVerified = true,
-                    checksumVerificationStatus = "VERIFIED"
-                ),
-                ModelEntity(
-                    name = "Qwen 2.5 0.5B Instruct",
-                    filename = "qwen2.5-0.5b-instruct-q4_k_m.gguf",
-                    architecture = "qwen2",
-                    quantization = "Q4_K_M",
-                    parameterCount = "0.49 Billion",
-                    contextLength = 4096,
-                    fileSizeMb = 398,
-                    ramRequiredMb = 480,
-                    isInstalled = false,
-                    isActive = false,
-                    isBaseModel = false,
-                    isCustom = false,
-                    description = "Lightweight GGUF model optimized for on-device mobile IPC, quick smart replies, and multilingual conversation.",
-                    capabilities = "Tool Calling, Fast Chat, Low Latency, Multilingual",
-                    downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v2.5-Q4_K_M",
-                    speedScoreTokSec = 38.5f,
-                    recommendedTier = "ULTRA_LIGHT",
-                    huggingFaceRepo = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
-                ),
-                ModelEntity(
-                    name = "SmolLM2 360M Instruct",
-                    filename = "smollm2-360m-instruct-q4_k_m.gguf",
-                    architecture = "llama",
-                    quantization = "Q4_K_M",
-                    parameterCount = "0.36 Billion",
-                    contextLength = 4096,
-                    fileSizeMb = 268,
-                    ramRequiredMb = 340,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Compact SmolLM2 model with ultra-low RAM footprint, ideal for budget and mid-tier ARM devices.",
-                    capabilities = "Fast Dialogue, Ultra-low Memory, On-Device IPC",
-                    downloadUrl = "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v2.0-Q4_K_M",
-                    speedScoreTokSec = 44.0f,
-                    recommendedTier = "ULTRA_LIGHT",
-                    huggingFaceRepo = "bartowski/SmolLM2-360M-Instruct-GGUF"
-                ),
-                ModelEntity(
-                    name = "Llama 3.2 1B Instruct",
-                    filename = "llama-3.2-1b-instruct-q4_k_m.gguf",
-                    architecture = "llama",
-                    quantization = "Q4_K_M",
-                    parameterCount = "1.23 Billion",
-                    contextLength = 4096,
-                    fileSizeMb = 810,
-                    ramRequiredMb = 980,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Meta's premier lightweight mobile model with balanced reasoning and concise instruction following.",
-                    capabilities = "Reasoning, Mobile Chat, Summarization, Agent IPC",
-                    downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v3.2-Q4_K_M",
-                    speedScoreTokSec = 28.0f,
-                    recommendedTier = "BALANCED",
-                    huggingFaceRepo = "bartowski/Llama-3.2-1B-Instruct-GGUF"
-                ),
-                ModelEntity(
-                    name = "DeepSeek-R1 Distill Qwen 1.5B",
-                    filename = "deepseek-r1-distill-qwen-1.5b-q4_k_m.gguf",
-                    architecture = "qwen2",
-                    quantization = "Q4_K_M",
-                    parameterCount = "1.54 Billion",
-                    contextLength = 4096,
-                    fileSizeMb = 1120,
-                    ramRequiredMb = 1380,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "DeepSeek R1 distilled reasoning engine for on-device chain-of-thought, math, and code generation.",
-                    capabilities = "Chain of Thought, Math Logic, Code Generation, Reasoning",
-                    downloadUrl = "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v1.0-R1-Q4_K_M",
-                    speedScoreTokSec = 25.0f,
-                    recommendedTier = "BALANCED",
-                    huggingFaceRepo = "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF"
-                ),
-                ModelEntity(
-                    name = "Qwen 2.5 1.5B Instruct",
-                    filename = "qwen2.5-1.5b-instruct-q4_k_m.gguf",
-                    architecture = "qwen2",
-                    quantization = "Q4_K_M",
-                    parameterCount = "1.54 Billion",
-                    contextLength = 8192,
-                    fileSizeMb = 986,
-                    ramRequiredMb = 1250,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Mid-sized Qwen 2.5 model with superior reasoning, coding abilities, 8K context, and broad multilingual depth.",
-                    capabilities = "Advanced Reasoning, Coding, Multilingual, 8K Context",
-                    downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v2.5-Q4_K_M",
-                    speedScoreTokSec = 26.0f,
-                    recommendedTier = "BALANCED",
-                    huggingFaceRepo = "Qwen/Qwen2.5-1.5B-Instruct-GGUF"
-                ),
-                ModelEntity(
-                    name = "SmolLM2 1.7B Instruct",
-                    filename = "smollm2-1.7b-instruct-q4_k_m.gguf",
-                    architecture = "llama",
-                    quantization = "Q4_K_M",
-                    parameterCount = "1.71 Billion",
-                    contextLength = 4096,
-                    fileSizeMb = 1050,
-                    ramRequiredMb = 1320,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Hugging Face's specialized mobile chat model trained for fast factual conversations and low RAM draw.",
-                    capabilities = "Fast Dialogue, Factual Q&A, Low Power, Agent Tasks",
-                    downloadUrl = "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v2.0-Q4_K_M",
-                    speedScoreTokSec = 24.0f,
-                    recommendedTier = "BALANCED",
-                    huggingFaceRepo = "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF"
-                ),
-                ModelEntity(
-                    name = "Gemma 2 2B IT",
-                    filename = "gemma-2-2b-it-q4_k_m.gguf",
-                    architecture = "gemma2",
-                    quantization = "Q4_K_M",
-                    parameterCount = "2.61 Billion",
-                    contextLength = 8192,
-                    fileSizeMb = 1710,
-                    ramRequiredMb = 2050,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Google's 2B parameter architecture featuring sliding window attention and deep factual knowledge.",
-                    capabilities = "Deep Knowledge, Logic Synthesis, High Accuracy, 8K Context",
-                    downloadUrl = "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v2.0-Q4_K_M",
-                    speedScoreTokSec = 21.0f,
-                    recommendedTier = "PERFORMANCE",
-                    huggingFaceRepo = "bartowski/gemma-2-2b-it-GGUF"
-                ),
-                ModelEntity(
-                    name = "Llama 3.2 3B Instruct",
-                    filename = "llama-3.2-3b-instruct-q4_k_m.gguf",
-                    architecture = "llama",
-                    quantization = "Q4_K_M",
-                    parameterCount = "3.21 Billion",
-                    contextLength = 8192,
-                    fileSizeMb = 2020,
-                    ramRequiredMb = 2420,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Flagship 3B mobile model from Meta delivering strong multi-step logic, code generation, and long-context processing.",
-                    capabilities = "Complex Logic, Code Synthesis, Creative Writing, Tool Use",
-                    downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v3.2-Q4_K_M",
-                    speedScoreTokSec = 20.0f,
-                    recommendedTier = "PERFORMANCE",
-                    huggingFaceRepo = "bartowski/Llama-3.2-3B-Instruct-GGUF"
-                ),
-                ModelEntity(
-                    name = "Gemma 3 1B IT (IQ4_XS)",
-                    filename = "gemma-3-1b-it-iq4_xs.gguf",
-                    architecture = "gemma3",
-                    quantization = "IQ4_XS",
-                    parameterCount = "1.05 Billion",
-                    contextLength = 4096,
-                    fileSizeMb = 648,
-                    ramRequiredMb = 780,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Google's next-gen 1B architecture with importance-matrix quantization (IQ4_XS) for maximal accuracy per byte.",
-                    capabilities = "Next-Gen Architecture, IQ4_XS Matrix, Fast Mobile, Low Thermal",
-                    downloadUrl = "https://huggingface.co/bartowski/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-IQ4_XS.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v3.0-IQ4_XS",
-                    speedScoreTokSec = 34.0f,
-                    recommendedTier = "ULTRA_LIGHT",
-                    huggingFaceRepo = "bartowski/gemma-3-1b-it-GGUF"
-                ),
-                ModelEntity(
-                    name = "Phi-3.5-mini 3.8B Instruct",
-                    filename = "phi-3.5-mini-instruct-q4_k_m.gguf",
-                    architecture = "phi3",
-                    quantization = "Q4_K_M",
-                    parameterCount = "3.82 Billion",
-                    contextLength = 4096,
-                    fileSizeMb = 2240,
-                    ramRequiredMb = 2650,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Microsoft's highly capable 3.8B model with excellent reasoning, code comprehension, and math logic.",
-                    capabilities = "High Reasoning, Math Logic, Code Understanding, Mobile Benchmarks",
-                    downloadUrl = "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v3.5-Q4_K_M",
-                    speedScoreTokSec = 18.5f,
-                    recommendedTier = "FLAGSHIP",
-                    huggingFaceRepo = "bartowski/Phi-3.5-mini-instruct-GGUF"
-                ),
-                ModelEntity(
-                    name = "Phi-4-mini 3.8B Instruct",
-                    filename = "phi-4-mini-instruct-q4_k_m.gguf",
-                    architecture = "phi3",
-                    quantization = "Q4_K_M",
-                    parameterCount = "3.82 Billion",
-                    contextLength = 8192,
-                    fileSizeMb = 2490,
-                    ramRequiredMb = 2850,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Microsoft state-of-the-art small language model with high benchmark scores in STEM, math reasoning, and code.",
-                    capabilities = "State of the Art, STEM Benchmarks, Complex Math, Frontier Logic",
-                    downloadUrl = "https://huggingface.co/bartowski/Phi-4-mini-instruct-GGUF/resolve/main/Phi-4-mini-instruct-Q4_K_M.gguf",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v4.0-Q4_K_M",
-                    speedScoreTokSec = 17.5f,
-                    recommendedTier = "FLAGSHIP",
-                    huggingFaceRepo = "bartowski/Phi-4-mini-instruct-GGUF"
-                ),
-                ModelEntity(
-                    name = "Gemma 2B IT (LiteRT)",
-                    filename = "gemma-2b-it-gpu.bin",
-                    architecture = "litert-gemma",
-                    quantization = "INT4_GPU",
-                    parameterCount = "2.0 Billion",
-                    contextLength = 2048,
-                    fileSizeMb = 1350,
-                    ramRequiredMb = 1600,
-                    isInstalled = false,
-                    isActive = false,
-                    isCustom = false,
-                    description = "Google LiteRT (TensorFlow Lite GenAI) model bundle optimized for GPU Delegate & XNNPACK CPU fallback.",
-                    capabilities = "LiteRT Engine, GPU Delegate, Fast Prefill, Play Services Runtime",
-                    downloadUrl = "https://huggingface.co/google/gemma-2b-it-litert/resolve/main/gemma-2b-it-gpu.bin",
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
-                    versionTag = "v1.0-LiteRT",
-                    speedScoreTokSec = 32.0f,
-                    recommendedTier = "BALANCED",
-                    huggingFaceRepo = "google/gemma-2b-it-litert"
-                )
-            )
-            modelDao.insertAll(defaults)
+        // Replace old demo entries, preserving user imports and genuine installed files.
+        val library = ModelLibrary.read(appContext)
+        val names = library.map { it.filename }.toSet()
+        modelDao.getAllModels().first().filter { !it.isCustom && it.filename !in names }.forEach {
+            modelDao.deleteModel(it.id)
+        }
+        library.forEach { entry ->
+            val existing = modelDao.getModelByFilename(entry.filename)
+            val file = File(downloadManager.modelsDirectory, entry.filename)
+            val installed = file.isFile && downloadManager.verifyLocalFile(file, entry.sha256Checksum).isMatch
+            val updated = entry.copy(id = existing?.id ?: 0L, isInstalled = installed,
+                isActive = installed && existing?.isActive == true,
+                localFilePath = if (installed) file.absolutePath else null,
+                downloadState = if (installed) "DOWNLOADED" else "NOT_DOWNLOADED",
+                downloadProgress = if (installed) 1f else 0f,
+                isChecksumVerified = installed,
+                checksumVerificationStatus = if (installed) "VERIFIED" else "NOT_VERIFIED")
+            modelDao.insertModel(updated)
         }
     }
 
-    private suspend fun seedDefaultClientPolicies() {
-        val defaultClients = listOf(
-            ClientAppPolicyEntity("com.google.android.apps.messaging", "Android Messages (Smart Reply)", isWhitelisted = true, autoApprove = true, rateLimitPerMin = 120),
-            ClientAppPolicyEntity("com.example.notes", "Smart Notes AI Pro", isWhitelisted = true, autoApprove = true, rateLimitPerMin = 60),
-            ClientAppPolicyEntity("com.android.chrome", "Mobile Browser (Summarizer)", isWhitelisted = true, autoApprove = true, rateLimitPerMin = 45),
-            ClientAppPolicyEntity("com.example.keyboard", "Neural Keyboard Assistant", isWhitelisted = true, autoApprove = true, rateLimitPerMin = 180)
-        )
-        for (client in defaultClients) {
-            if (clientPolicyDao.getPolicyForPackage(client.packageName) == null) {
-                clientPolicyDao.insertOrUpdatePolicy(client)
+    suspend fun unloadModel() = withContext(Dispatchers.IO) {
+        modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() }
+    }
+
+    suspend fun switchActiveModel(model: ModelEntity) = withContext(Dispatchers.IO) {
+        modelLock.withLock {
+            check(model.isInstalled) { "Download this model first" }
+            require(model.filename.endsWith(".gguf", true)) { "Select a GGUF instruction model" }
+            val file = File(model.localFilePath ?: File(downloadManager.modelsDirectory, model.filename).absolutePath)
+            check(file.isFile) { "Model file is missing; download it again" }
+            if (model.architecture.startsWith("gemma")) {
+                check(appContext.getSharedPreferences("model_terms", Context.MODE_PRIVATE).getBoolean("gemma", false)) {
+                    "Accept the Gemma terms in Models first"
+                }
             }
+            val profile = HardwareAnalyzer.analyze(appContext)
+            check(ModelLibrary.fits(model, profile)) { "Insufficient available memory or unsupported processor" }
+            engineManager.selectEngine(SupportedEngine.LLAMA_CPP)
+            val result = engine.loadCustomGguf(file)
+            if (result.isFailure) { modelDao.clearActiveModel(); result.getOrThrow() }
+            modelDao.clearActiveModel()
+            modelDao.setActiveModel(model.id)
         }
-    }
-
-    suspend fun switchActiveModel(model: ModelEntity) {
-        if (!model.isInstalled && model.downloadState != "DOWNLOADED") {
-            // Cannot activate uninstalled model
-            return
-        }
-        modelDao.clearActiveModel()
-        modelDao.setActiveModel(model.id)
-        val quant = QuantizationType.fromString(model.quantization)
-        engine.loadModelPreset(model.name, model.architecture, quant, model.fileSizeMb, model.contextLength)
     }
 
     fun startModelDownload(model: ModelEntity, scope: CoroutineScope) {
         if (activeDownloadJobs.containsKey(model.id)) return
 
-        val job = scope.launch(Dispatchers.IO) {
+        val job = repositoryScope.launch(Dispatchers.IO) {
             try {
                 // Set state to DOWNLOADING
                 modelDao.updateModel(
@@ -503,8 +171,8 @@ class AiCoreRepository(
                 )
 
                 downloadManager.downloadAndVerifyModel(model) { update ->
-                    scope.launch(Dispatchers.IO) {
-                        val current = modelDao.getModelById(model.id) ?: return@launch
+                    run {
+                        val current = modelDao.getModelById(model.id) ?: return@run
                         when (update) {
                             is DownloadStateUpdate.Progress -> {
                                 if (current.downloadState == "DOWNLOADING") {
@@ -537,7 +205,7 @@ class AiCoreRepository(
                                         localFilePath = update.file.absolutePath,
                                         sha256Checksum = update.sha256,
                                         isChecksumVerified = update.isVerified,
-                                        checksumVerificationStatus = if (update.isVerified) "VERIFIED" else "FAILED"
+                                        checksumVerificationStatus = if (update.isVerified) "VERIFIED" else "UNAVAILABLE"
                                     )
                                 )
                             }
@@ -554,6 +222,7 @@ class AiCoreRepository(
                     }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 val current = modelDao.getModelById(model.id)
                 if (current != null) {
                     modelDao.updateModel(
@@ -601,7 +270,7 @@ class AiCoreRepository(
         val result = downloadManager.verifyLocalFile(file, model.sha256Checksum)
         val computed = result.computedSha256
         val updatedModel = model.copy(
-            sha256Checksum = if (computed.isNotBlank()) computed else model.sha256Checksum,
+            sha256Checksum = model.sha256Checksum,
             isChecksumVerified = result.isMatch,
             checksumVerificationStatus = result.status
         )
@@ -626,7 +295,7 @@ class AiCoreRepository(
 
         val entity = ModelEntity(
             name = cleanModelName,
-            filename = file.filename,
+            filename = file.filename.substringAfterLast('/'),
             architecture = if (file.filename.contains("qwen", ignoreCase = true)) "qwen2" else if (file.filename.contains("gemma", ignoreCase = true)) "gemma2" else "llama",
             quantization = file.quantization,
             parameterCount = "Custom (~${file.sizeMb}MB)",
@@ -646,8 +315,8 @@ class AiCoreRepository(
             recommendedTier = if (file.sizeMb < 600) "ULTRA_LIGHT" else if (file.sizeMb < 1500) "BALANCED" else "PERFORMANCE",
             huggingFaceRepo = repoId,
             sha256Checksum = file.sha256Oid,
-            isChecksumVerified = !file.sha256Oid.isNullOrBlank(),
-            checksumVerificationStatus = if (!file.sha256Oid.isNullOrBlank()) "VERIFIED" else "NOT_VERIFIED"
+            isChecksumVerified = false,
+            checksumVerificationStatus = "NOT_VERIFIED"
         )
         val id = modelDao.insertModel(entity)
         return entity.copy(id = id)
@@ -655,7 +324,8 @@ class AiCoreRepository(
 
     suspend fun uninstallModel(model: ModelEntity) {
         val wasActive = model.isActive
-        val modelFile = File(appContext.filesDir, "models/${model.filename}")
+        val modelFile = File(model.localFilePath ?: File(downloadManager.modelsDirectory, model.filename).absolutePath)
+        if (wasActive) { engine.unloadActiveModel(); modelDao.clearActiveModel() }
         if (modelFile.exists()) {
             modelFile.delete()
         }
@@ -696,7 +366,7 @@ class AiCoreRepository(
             fileSizeMb = (file.length() / (1024 * 1024)).coerceAtLeast(1L),
             ramRequiredMb = metadata.ramFootprintEstimateMb.toInt(),
             isInstalled = true,
-            isActive = true,
+            isActive = false,
             isCustom = true,
             description = "Custom imported GGUF v${metadata.version} with ${metadata.blockCount} layers and ${metadata.headCount} attention heads.",
             capabilities = "Custom GGUF, Imported Model, User Weights",
@@ -704,9 +374,7 @@ class AiCoreRepository(
             downloadState = "DOWNLOADED",
             downloadProgress = 1.0f
         )
-        modelDao.clearActiveModel()
         val id = modelDao.insertModel(entity)
-        engine.loadModelPreset(entity.name, entity.architecture, metadata.primaryQuantization, entity.fileSizeMb, entity.contextLength)
         return entity.copy(id = id)
     }
 
@@ -725,8 +393,8 @@ class AiCoreRepository(
                 ClientAppPolicyEntity(
                     packageName = log.callingPackage,
                     appName = log.callingPackage.substringAfterLast('.').replaceFirstChar { it.uppercase() },
-                    isWhitelisted = true,
-                    autoApprove = true,
+                    isWhitelisted = false,
+                    autoApprove = false,
                     totalRequests = 1,
                     lastAccessTimestamp = System.currentTimeMillis(),
                     rateLimitPerMin = 60
@@ -740,6 +408,7 @@ class AiCoreRepository(
      */
     suspend fun checkSecurityAndRateLimit(packageName: String): Pair<Boolean, String> {
         val policy = clientPolicyDao.getPolicyForPackage(packageName)
+        if (policy == null) return Pair(false, "Approve this app in Better Intelligence > Connect first")
         if (policy != null) {
             if (policy.isBlocked) {
                 return Pair(false, "Package [$packageName] is explicitly blocked by Better Intelligence security policy.")
@@ -764,7 +433,7 @@ class AiCoreRepository(
 
     suspend fun isPackageAllowed(packageName: String): Boolean {
         val policy = clientPolicyDao.getPolicyForPackage(packageName)
-        return policy == null || (policy.isWhitelisted && !policy.isBlocked)
+        return policy != null && policy.isWhitelisted && !policy.isBlocked
     }
 
     suspend fun updatePolicy(policy: ClientAppPolicyEntity) {
@@ -837,30 +506,18 @@ class AiCoreRepository(
         gpuLayers: Int = 16,
         context: Context? = null
     ): HardwarePerformanceLogEntity {
-        // Measure real hardware metrics
-        val profile = context?.let { HardwareAnalyzer.analyze(it) }
-        val ramAvail = profile?.availableRamMb ?: 3450L
-        val devModel = profile?.deviceModel ?: "Android ARM64"
-        val abi = profile?.cpuAbi ?: "arm64-v8a"
-        val temp = profile?.batteryTemperatureC ?: 36.8f
-        val thermal = profile?.thermalStatus ?: "Nominal"
-
-        // Calculate performance from model quantization and architecture
-        val quant = QuantizationType.fromString(model.quantization)
-        val baseSpeed = model.speedScoreTokSec
-        val threadFactor = when (threads) {
-            1 -> 0.45f
-            2 -> 0.75f
-            4 -> 1.0f
-            6 -> 1.12f
-            8 -> 1.05f // slight contention
-            else -> 1.0f
-        }
-        val measuredTokSec = (baseSpeed * threadFactor).coerceAtLeast(8.0f)
-        val promptTokSec = (measuredTokSec * 3.8f).coerceAtLeast(35.0f)
-        val ttft = (1000f / promptTokSec * 1.8f).toLong().coerceIn(24L, 180L)
-        val peakRam = model.ramRequiredMb.toLong()
-
+        switchActiveModel(model)
+        val benchmark = engine.runBenchmark()
+        val profile = HardwareAnalyzer.analyze(appContext)
+        val ramAvail = profile.availableRamMb
+        val devModel = profile.deviceModel
+        val abi = profile.cpuAbi
+        val temp = profile.batteryTemperatureC
+        val thermal = profile.thermalStatus
+        val measuredTokSec = benchmark.generationTokSec
+        val promptTokSec = benchmark.promptProcessingTokSec
+        val ttft = benchmark.promptLatencyMs
+        val peakRam = benchmark.ramUsageMb.toLong()
         val log = HardwarePerformanceLogEntity(
             modelName = model.name,
             filename = model.filename,

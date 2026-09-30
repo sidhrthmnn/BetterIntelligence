@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="com.aistudio.localaicore.permission.BIND_LOCAL_AI_CORE" />
+    <queries><package android:name="com.aistudio.betterintelligence.vqkzp" /></queries>
+    <application android:label="Better Intelligence Client Example" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name=".ClientActivity" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity>
+    </application>
+</manifest>

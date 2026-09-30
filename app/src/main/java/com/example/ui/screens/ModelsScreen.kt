@@ -99,16 +99,24 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val inspectingGguf by viewModel.inspectingGguf.collectAsState()
     val hardwareProfile by viewModel.hardwareProfile.collectAsState()
 
+    val licenseModel by viewModel.licenseModel.collectAsState()
+    if (licenseModel != null) {
+        AlertDialog(onDismissRequest = { viewModel.dismissModelTerms() },
+            title = { Text("Gemma model terms") },
+            text = { Column {
+                Text("Gemma is provided under Google's Gemma Terms of Use and Prohibited Use Policy. Review both before downloading or using it.")
+                TextButton(onClick = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("https://ai.google.dev/gemma/terms"))) }) { Text("Read terms") }
+                TextButton(onClick = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("https://ai.google.dev/gemma/prohibited_use_policy"))) }) { Text("Read use policy") }
+            } },
+            confirmButton = { TextButton(onClick = { viewModel.acceptModelTerms() }) { Text("Accept and continue") } },
+            dismissButton = { TextButton(onClick = { viewModel.dismissModelTerms() }) { Text("Cancel") } })
+    }
     var modelToDelete by remember { mutableStateOf<ModelEntity?>(null) }
     var selectedModelDetails by remember { mutableStateOf<ModelEntity?>(null) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        uri?.let {
-            viewModel.importGgufFromUri(it, context)
-        }
-    }
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris -> uris.forEach { viewModel.importGgufFromUri(it, context) } }
 
     val filteredModels = allModels.filter { model ->
         val matchesSearch = model.name.contains(searchQuery, ignoreCase = true) ||
@@ -118,7 +126,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         val matchesCategory = when (categoryFilter) {
             "ALL" -> true
             "INSTALLED" -> model.isInstalled || model.downloadState == "DOWNLOADED"
-            "RECOMMENDED" -> recommendation?.recommendedModelName == model.name
+            "RECOMMENDED" -> hardwareProfile?.let { com.example.engine.ModelLibrary.fits(model, it) } == true
             "LIGHT" -> model.ramRequiredMb <= 600
             else -> true
         }
@@ -276,7 +284,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                                     }
                                 }
                                 Text(
-                                    text = "${activeModel!!.parameterCount} • ${activeModel!!.architecture.uppercase()} • ~${activeModel!!.speedScoreTokSec.toInt()} tok/s",
+                                    text = "${activeModel!!.parameterCount} • ${activeModel!!.architecture.uppercase()} • CPU inference",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -482,7 +490,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "${recommendation!!.justification.joinToString(", ")} (~${recommendation!!.estimatedSpeedTokSec.toInt()} tok/s)",
+                                text = "${recommendation!!.justification.joinToString(", ")}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 2
@@ -747,7 +755,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                         DetailRow("Context Window", "${model.contextLength} tokens")
                         DetailRow("Download Size", "${model.fileSizeMb} MB")
                         DetailRow("RAM Footprint", "~${model.ramRequiredMb} MB")
-                        DetailRow("Speed Score", "~${model.speedScoreTokSec.toInt()} tokens/sec")
+                        DetailRow("Speed", "Run benchmark on your device")
                         DetailRow("Capabilities", model.capabilities)
                         if (!model.huggingFaceRepo.isNullOrBlank()) {
                             DetailRow("Hugging Face Hub", model.huggingFaceRepo)

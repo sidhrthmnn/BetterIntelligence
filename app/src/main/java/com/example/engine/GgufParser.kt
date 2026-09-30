@@ -42,7 +42,7 @@ class GgufParser {
     fun parseFromChannel(channel: FileChannel, totalSize: Long, maxTensorsToRead: Int = 100): Result<GgufMetadata> {
         return try {
             // Map header into memory (first 2MB is ample for metadata)
-            val headerSize = minOf(totalSize, 4L * 1024L * 1024L)
+            val headerSize = minOf(totalSize, 32L * 1024L * 1024L)
             val buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, headerSize).order(ByteOrder.LITTLE_ENDIAN)
             parseFromByteBuffer(buffer, totalSize, maxTensorsToRead)
         } catch (e: Exception) {

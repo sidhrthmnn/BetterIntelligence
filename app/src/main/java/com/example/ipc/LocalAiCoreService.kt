@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -29,6 +30,7 @@ import kotlinx.coroutines.runBlocking
 class LocalAiCoreService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val inferenceOwner = java.util.concurrent.atomic.AtomicInteger(-1)
     private lateinit var repository: AiCoreRepository
 
     override fun onCreate() {
@@ -41,43 +43,39 @@ class LocalAiCoreService : Service() {
         return START_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder {
-        // Verify that caller holds the required permission
-        if (checkCallingOrSelfPermission(PERMISSION_BIND) != PackageManager.PERMISSION_GRANTED) {
-            val callingUid = Binder.getCallingUid()
-            if (callingUid != Process.myUid()) {
-                // Log unauthorized bind attempt
-                logCall(
-                    packageName = getCallingPackageName(),
-                    uid = callingUid,
-                    type = "BIND",
-                    prompt = "Service Connection",
-                    response = "SecurityException: Missing permission $PERMISSION_BIND",
-                    latencyMs = 0L,
-                    tokPerSec = 0f,
-                    tokens = 0,
-                    status = "DENIED"
-                )
-            }
+    override fun onBind(intent: Intent?): IBinder = binder
+
+    private fun enforceCallerPermission() {
+        if (Binder.getCallingUid() != Process.myUid()) {
+            enforceCallingPermission(PERMISSION_BIND, "Better Intelligence permission is required")
         }
-        return binder
+    }
+
+    override fun onDestroy() {
+        repository.engine.cancelGeneration()
+        serviceScope.cancel()
+        super.onDestroy()
     }
 
     private val binder = object : ILocalAiCoreService.Stub() {
 
         override fun isModelLoaded(): Boolean {
+            enforceCallerPermission()
             return repository.engine.isReady()
         }
 
         override fun getActiveModelName(): String {
+            enforceCallerPermission()
             return repository.engine.activeMetadata.value?.modelName ?: "None"
         }
 
         override fun getActiveModelQuantization(): String {
+            enforceCallerPermission()
             return repository.engine.activeMetadata.value?.primaryQuantization?.typeName ?: "Unknown"
         }
 
         override fun getActiveContextSize(): Int {
+            enforceCallerPermission()
             return repository.engine.activeMetadata.value?.contextLength ?: 4096
         }
 
@@ -99,16 +97,17 @@ class LocalAiCoreService : Service() {
             }
 
             val startTime = System.currentTimeMillis()
-            val result = runBlocking(Dispatchers.Default) {
+            check(inferenceOwner.compareAndSet(-1, callingUid)) { "AI Core is busy" }
+            val result = try { runBlocking(Dispatchers.Default) {
                 repository.engine.generateSync(
                     safePrompt,
                     GenerationParams(
-                        temperature = if (temperature > 0) temperature.coerceIn(0.1f, 2.0f) else 0.7f,
+                        temperature = if (temperature.isFinite()) temperature.coerceIn(0f, 2f) else 0.7f,
                         maxTokens = if (maxTokens > 0) maxTokens.coerceIn(1, 4096) else 256,
                         systemPrompt = safeSystemPrompt.ifBlank { null }
                     )
                 )
-            }
+            } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
             val approxTokens = (result.length / 4).coerceAtLeast(1)
             val tokPerSec = if (latency > 0) (approxTokens * 1000f) / latency else 0f
@@ -140,8 +139,9 @@ class LocalAiCoreService : Service() {
                 return
             }
 
+            if (!inferenceOwner.compareAndSet(-1, callingUid)) { callback.onError(409, "AI Core is busy"); return }
             val params = GenerationParams(
-                temperature = if (temperature > 0) temperature.coerceIn(0.1f, 2.0f) else 0.7f,
+                temperature = if (temperature.isFinite()) temperature.coerceIn(0f, 2f) else 0.7f,
                 topP = if (topP > 0) topP.coerceIn(0.1f, 1.0f) else 0.9f,
                 maxTokens = if (maxTokens > 0) maxTokens.coerceIn(1, 4096) else 512,
                 systemPrompt = safeSystemPrompt.ifBlank { null }
@@ -155,7 +155,7 @@ class LocalAiCoreService : Service() {
                         try {
                             callback.onToken(token, tokenIndex)
                         } catch (e: Exception) {
-                            // Client process died or unlinked
+                            repository.engine.cancelGeneration()
                         }
                     }
 
@@ -166,6 +166,7 @@ class LocalAiCoreService : Service() {
                         promptTokens: Int,
                         completionTokens: Int
                     ) {
+                        inferenceOwner.set(-1)
                         try {
                             callback.onComplete(fullText, latencyMs, tokensPerSec, promptTokens, completionTokens)
                             logCall(
@@ -185,6 +186,7 @@ class LocalAiCoreService : Service() {
                     }
 
                     override fun onError(errorCode: Int, errorMessage: String) {
+                        inferenceOwner.set(-1)
                         try {
                             callback.onError(errorCode, errorMessage)
                             logCall(callingPackage, callingUid, "STREAM", safePrompt, errorMessage, 0L, 0f, 0, "ERROR")
@@ -224,9 +226,10 @@ class LocalAiCoreService : Service() {
             }
 
             val startTime = System.currentTimeMillis()
-            val summary = runBlocking(Dispatchers.Default) {
+            check(inferenceOwner.compareAndSet(-1, callingUid)) { "AI Core is busy" }
+            val summary = try { runBlocking(Dispatchers.Default) {
                 repository.engine.summarize(safeText, if (maxWords > 0) maxWords.coerceIn(10, 500) else 60)
-            }
+            } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
             logCall(callingPackage, callingUid, "SUMMARIZE", safeText, summary, latency, 28f, summary.length / 4, "SUCCESS")
             return summary
@@ -245,19 +248,22 @@ class LocalAiCoreService : Service() {
             }
 
             val startTime = System.currentTimeMillis()
-            val result = runBlocking(Dispatchers.Default) {
+            check(inferenceOwner.compareAndSet(-1, callingUid)) { "AI Core is busy" }
+            val result = try { runBlocking(Dispatchers.Default) {
                 repository.engine.classify(safeText, labels)
-            }
+            } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
             logCall(callingPackage, callingUid, "CLASSIFY", safeText, result, latency, 35f, 4, "SUCCESS")
             return result
         }
 
         override fun cancelActiveGeneration() {
-            repository.engine.cancelGeneration()
+            enforceCallerPermission()
+            if (inferenceOwner.get() == Binder.getCallingUid()) repository.engine.cancelGeneration()
         }
 
         override fun getEngineTelemetryJson(): String {
+            enforceCallerPermission()
             return repository.engine.telemetry.value.toJson()
         }
     }
@@ -271,6 +277,7 @@ class LocalAiCoreService : Service() {
     }
 
     private fun getCallingPackageName(): String {
+        enforceCallerPermission()
         val uid = Binder.getCallingUid()
         if (uid == Process.myUid()) {
             return applicationContext.packageName
@@ -303,8 +310,8 @@ class LocalAiCoreService : Service() {
                     callingPackage = packageName,
                     callingUid = uid,
                     requestType = type,
-                    promptPreview = prompt.take(150),
-                    responsePreview = response.take(200),
+                    promptPreview = "",
+                    responsePreview = if (status == "SUCCESS") "" else response.take(200),
                     latencyMs = latencyMs,
                     tokensPerSecond = tokPerSec,
                     totalTokens = tokens,

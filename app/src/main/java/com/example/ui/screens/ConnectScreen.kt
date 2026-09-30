@@ -496,7 +496,7 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
                         language = "Kotlin",
                         code = """
 val intent = Intent("com.example.ai.ACTION_BIND_AICORE").apply {
-    `package` = "com.aistudio.betterintelligence"
+    `package` = "com.aistudio.betterintelligence.vqkzp"
 }
 context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
 

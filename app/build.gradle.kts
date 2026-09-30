@@ -10,12 +10,16 @@ plugins {
 }
 
 android {
+  ndkVersion = "28.0.12433566"
+  externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
     applicationId = "com.aistudio.betterintelligence.vqkzp"
     minSdk = 24
+    ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+    externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
     targetSdk = 36
     versionCode = 1
     versionName = "1.0"
@@ -46,7 +50,7 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug { signingConfig = signingConfigs.getByName("debug") }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

@@ -56,7 +56,7 @@ class EngineManagerTest {
 
     @Test
     fun testParseSmolLm2BaseModelGguf() {
-        val file = java.io.File("src/main/assets/models/smollm2-135m-instruct-q4_k_m.gguf")
+        val file = java.io.File("../models/smollm2-135m-instruct-q4_k_m.gguf")
         assertTrue("Base model GGUF must exist in assets", file.exists())
         val parser = com.example.engine.GgufParser()
         val result = parser.parseFromFile(file)

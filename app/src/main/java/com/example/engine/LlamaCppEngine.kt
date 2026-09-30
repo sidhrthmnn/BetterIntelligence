@@ -40,9 +40,9 @@ class LlamaCppEngine(
     private val isGenerating = AtomicBoolean(false)
     private var activeJob: Job? = null
 
-    private var _isLoaded: Boolean = true
+    private var _isLoaded: Boolean = false
     override val isLoaded: Boolean
-        get() = _isLoaded && coreInferenceEngine.activeMetadata.value != null
+        get() = coreInferenceEngine.isReady()
 
     private var _currentBackend: BackendType = BackendType.GPU
     override val currentBackend: BackendType
@@ -64,16 +64,17 @@ class LlamaCppEngine(
                     }
                 }
 
-                _currentBackend = preferredBackend
+                _currentBackend = BackendType.CPU
                 if (modelPath.isNotBlank()) {
                     val file = File(modelPath)
                     if (file.exists() && file.length() > 0) {
                         val parseResult = coreInferenceEngine.loadCustomGguf(file)
                         if (parseResult.isFailure) {
-                            return@withContext Result.failure(parseResult.exceptionOrNull() ?: Exception("Failed to parse GGUF"))
+                            return@withLock Result.failure(parseResult.exceptionOrNull() ?: Exception("Failed to load GGUF"))
                         }
                     }
                 }
+                check(coreInferenceEngine.isReady()) { "Select an installed GGUF model first" }
                 _isLoaded = true
                 Result.success(Unit)
             } catch (e: Throwable) {
@@ -160,7 +161,7 @@ class LlamaCppEngine(
 
     override fun release() {
         cancelGeneration()
-        coreInferenceEngine.unloadActiveModel()
+        if (coreInferenceEngine.isReady()) coreInferenceEngine.unloadActiveModel()
         _isLoaded = false
         Log.i(TAG, "llama.cpp native memory and tensors released.")
     }

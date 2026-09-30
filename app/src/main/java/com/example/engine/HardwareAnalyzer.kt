@@ -125,13 +125,13 @@ object HardwareAnalyzer {
         val memInfo = ActivityManager.MemoryInfo()
         actManager?.getMemoryInfo(memInfo)
 
-        val totalRamMb = (memInfo.totalMem / (1024 * 1024)).coerceAtLeast(2048L)
-        val availRamMb = (memInfo.availMem / (1024 * 1024)).coerceAtLeast(1024L)
+        val totalRamMb = (memInfo.totalMem / (1024 * 1024)).coerceAtLeast(0L)
+        val availRamMb = (memInfo.availMem / (1024 * 1024)).coerceAtLeast(0L)
         val usedRamMb = (totalRamMb - availRamMb).coerceAtLeast(0L)
-        val usedRamPercent = (((totalRamMb - availRamMb).toDouble() / totalRamMb) * 100).roundToInt().coerceIn(0, 100)
+        val usedRamPercent = (((totalRamMb - availRamMb).toDouble() / totalRamMb.coerceAtLeast(1)) * 100).roundToInt().coerceIn(0, 100)
 
-        val osReservedRamMb = (totalRamMb * 0.38).toLong().coerceIn(2000L, 3500L)
-        val safeModelRamLimitMb = (totalRamMb - osReservedRamMb).coerceAtLeast(800L)
+        val osReservedRamMb = (totalRamMb * 0.38).toLong().coerceIn(512L, 3500L)
+        val safeModelRamLimitMb = minOf((totalRamMb - osReservedRamMb).coerceAtLeast(0L), (availRamMb - 512L).coerceAtLeast(0L))
 
         return RamStatusInfo(
             totalRamMb = totalRamMb,
@@ -148,10 +148,10 @@ object HardwareAnalyzer {
      * Detects CPU architecture, core counts, and SIMD/NEON capabilities.
      */
     fun detectCpu(): CpuStatusInfo {
-        val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(4)
+        val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
         val abi = Build.SUPPORTED_ABIS?.firstOrNull() ?: "arm64-v8a"
         val isArm64 = abi.contains("arm64") || abi.contains("aarch64") || abi.contains("x86_64")
-        val supportsNeon = isArm64
+        val supportsNeon = abi.contains("arm64")
 
         val topologySummary = when {
             cores >= 8 -> "Octa-Core Big.LITTLE"
@@ -354,85 +354,4 @@ object HardwareAnalyzer {
         )
     }
 
-    fun getRecommendation(profile: HardwareProfile): ModelRecommendation {
-        return when (profile.tier) {
-            DeviceTier.ULTRA_LIGHT -> {
-                val ramUsageMb = 480L
-                ModelRecommendation(
-                    recommendedModelName = "Qwen 2.5 0.5B Instruct",
-                    recommendedFilename = "qwen2.5-0.5b-instruct-q4_k_m.gguf",
-                    recommendedQuant = "Q4_K_M",
-                    estimatedSpeedTokSec = 38.5f,
-                    ramHeadroomMb = (profile.availableRamMb - ramUsageMb).coerceAtLeast(100L),
-                    ramUsagePercent = ((ramUsageMb.toDouble() / profile.totalRamMb) * 100).roundToInt(),
-                    justification = listOf(
-                        "Your device has ${profile.totalRamMb} MB total RAM with ~${profile.osReservedRamMb} MB reserved for OS breathing room.",
-                        "0.5B parameters in Q4_K_M quantization fit easily in memory without triggering Android LowMemoryKiller.",
-                        "Sub-30ms latency delivers instant streaming for apps and background tasks."
-                    ),
-                    tier = profile.tier,
-                    isReadyToApply = true
-                )
-            }
-            DeviceTier.BALANCED -> {
-                val ramUsageMb = 1250L
-                ModelRecommendation(
-                    recommendedModelName = "Qwen 2.5 1.5B Instruct",
-                    recommendedFilename = "qwen2.5-1.5b-instruct-q4_k_m.gguf",
-                    recommendedQuant = "Q4_K_M",
-                    estimatedSpeedTokSec = 26.0f,
-                    ramHeadroomMb = (profile.availableRamMb - ramUsageMb).coerceAtLeast(300L),
-                    ramUsagePercent = ((ramUsageMb.toDouble() / profile.totalRamMb) * 100).roundToInt(),
-                    justification = listOf(
-                        "Sweet spot for ${profile.totalRamMb} MB RAM: 1.5B model in Q4_K_M provides high coding & reasoning quality.",
-                        "Leaves ${profile.totalRamMb - ramUsageMb} MB of RAM free for Android system daemons and active apps.",
-                        "Generous 8K context window allows long documents and rich contextual memories."
-                    ),
-                    tier = profile.tier,
-                    isReadyToApply = true
-                )
-            }
-            DeviceTier.PERFORMANCE -> {
-                val ramUsageMb = 2380L
-                ModelRecommendation(
-                    recommendedModelName = "Llama 3.2 3B Instruct",
-                    recommendedFilename = "llama-3.2-3b-instruct-q4_k_m.gguf",
-                    recommendedQuant = "Q4_K_M",
-                    estimatedSpeedTokSec = 20.0f,
-                    ramHeadroomMb = (profile.availableRamMb - ramUsageMb).coerceAtLeast(800L),
-                    ramUsagePercent = ((ramUsageMb.toDouble() / profile.totalRamMb) * 100).roundToInt(),
-                    justification = listOf(
-                        "8GB RAM detected: 3B parameter model in Q4_K_M is the premier mobile choice for advanced multi-step logic.",
-                        "Leaves ~${profile.totalRamMb - ramUsageMb} MB free for Android OS breathing room.",
-                        "Meta LLaMA 3.2 architecture optimized with NEON vector instructions for ~20 tok/s."
-                    ),
-                    tier = profile.tier,
-                    isReadyToApply = true
-                )
-            }
-            DeviceTier.FLAGSHIP -> {
-                val ramUsageMb = 2750L
-                ModelRecommendation(
-                    recommendedModelName = "Phi-4-mini 3.8B Instruct",
-                    recommendedFilename = "phi-4-mini-instruct-q4_k_m.gguf",
-                    recommendedQuant = "Q4_K_M",
-                    estimatedSpeedTokSec = 17.5f,
-                    ramHeadroomMb = (profile.availableRamMb - ramUsageMb).coerceAtLeast(2000L),
-                    ramUsagePercent = ((ramUsageMb.toDouble() / profile.totalRamMb) * 100).roundToInt(),
-                    justification = listOf(
-                        "Flagship device with ${profile.totalRamMb} MB RAM safely runs state-of-the-art 3.8B models in Q4_K_M.",
-                        "Microsoft Phi-4-mini excels in complex math, STEM reasoning, and code synthesis.",
-                        "Well within the 1B to 4B mobile sweet spot, maintaining healthy OS memory headroom."
-                    ),
-                    tier = profile.tier,
-                    isReadyToApply = true
-                )
-            }
-        }
-    }
-
-    private fun String.capitalize(): String {
-        return replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-    }
 }
-

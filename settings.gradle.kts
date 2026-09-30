@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "Better Intelligence"
 
 include(":app")
+include(":sample-client")
