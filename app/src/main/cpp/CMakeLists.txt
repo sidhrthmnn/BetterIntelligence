@@ -25,4 +25,3 @@ add_library(better_gguf SHARED gguf_jni.cpp)
 target_link_libraries(better_gguf PRIVATE llama android log)
 target_compile_options(better_gguf PRIVATE -O3)
 target_link_options(better_gguf PRIVATE "-Wl,-z,max-page-size=16384")
-
