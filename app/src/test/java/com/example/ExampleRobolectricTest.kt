@@ -172,4 +172,64 @@ class ExampleRobolectricTest {
             tempFile.delete()
         }
     }
+
+    @Test
+    fun `test AI Brain per-app persona and granular scope enforcement`() {
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val repository = AiCoreRepository.getInstance(context)
+
+            // Register test policy with custom persona and restricted scopes
+            val policy = com.example.data.ClientAppPolicyEntity(
+                packageName = "com.test.notes",
+                appName = "Test Notes",
+                isWhitelisted = true,
+                allowInference = true,
+                allowReadMemory = true,
+                allowWriteMemory = false,
+                allowStructuredJson = false,
+                customSystemPrompt = "Always respond in JSON format."
+            )
+            repository.updatePolicy(policy)
+
+            // Check scopes
+            val (infAllowed, _) = repository.checkSecurityAndRateLimit("com.test.notes", "INFERENCE")
+            assertTrue("Inference should be allowed", infAllowed)
+
+            val (writeAllowed, reasonWrite) = repository.checkSecurityAndRateLimit("com.test.notes", "WRITE_MEMORY")
+            assertTrue("Write memory should be denied", !writeAllowed)
+            assertTrue(reasonWrite.contains("Scope Denied"))
+
+            val (jsonAllowed, reasonJson) = repository.checkSecurityAndRateLimit("com.test.notes", "STRUCTURED_JSON")
+            assertTrue("Structured JSON should be denied", !jsonAllowed)
+            assertTrue(reasonJson.contains("Scope Denied"))
+
+            // Verify custom persona built into system prompt
+            val prompt = repository.buildClientSystemPrompt("com.test.notes", "Summarize this note")
+            assertTrue("System prompt should contain persona", prompt.contains("Always respond in JSON format."))
+            assertTrue("System prompt should contain app name", prompt.contains("Test Notes"))
+        }
+    }
+
+    @Test
+    fun `test AI Brain structured JSON extraction and intent routing`() {
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val repository = AiCoreRepository.getInstance(context)
+
+            // Structured JSON
+            val text = "Meeting on Friday at 3:00 PM with Alex to discuss GGUF models. High priority."
+            val json = repository.engine.extractStructuredJson(text, arrayOf("summary", "priority", "date_time"))
+            assertNotNull(json)
+            assertTrue("JSON should contain valid payload", json.contains("{") && json.contains("}"))
+
+            // Intent routing
+            val utterance = "Schedule calendar reminder for tomorrow morning"
+            val routes = arrayOf("SCHEDULE_EVENT", "CREATE_NOTE", "SEND_MESSAGE")
+            val routed = repository.engine.routeIntent(utterance, routes)
+            assertNotNull(routed)
+            assertTrue("Routing JSON should be valid", routed.contains("selected_route") || routed.contains("route"))
+        }
+    }
 }
+

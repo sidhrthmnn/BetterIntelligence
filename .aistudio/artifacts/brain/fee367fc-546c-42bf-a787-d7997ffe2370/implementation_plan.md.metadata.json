@@ -1,0 +1,6 @@
+{
+  "summary": "Architectural and UX plan to elevate Better Intelligence into a multi-protocol Android AI Brain with AIDL Binder, zero-SDK ContentProvider, Android Text Selection & Share Intents, shared cross-app RAG memory, structured JSON & intent routing, per-app personas, and granular permission governance with a live IPC audit log.",
+  "updatedAt": "2026-10-13T23:43:57.293722331Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

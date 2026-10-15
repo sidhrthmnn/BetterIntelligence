@@ -14,7 +14,7 @@ import androidx.room.RoomDatabase
         MemorySnippetEntity::class,
         HardwarePerformanceLogEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -58,6 +58,34 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- System-wide AI Brain Action Activity (Process Text floating toolbar & Share) -->
+        <activity
+            android:name=".ipc.BrainTextActionActivity"
+            android:label="Better Intelligence Brain"
+            android:theme="@style/Theme.MyApplication"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.aistudio.localaicore.ACTION_BRAIN_QUERY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Zero-SDK ContentProvider for Cross-App AI Brain Queries & Shared RAG Memory -->
+        <provider
+            android:name=".ipc.AiBrainContentProvider"
+            android:authorities="com.aistudio.localaicore.provider"
+            android:exported="true" />
+
     </application>
 
 </manifest>

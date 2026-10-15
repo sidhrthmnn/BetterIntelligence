@@ -848,6 +848,42 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun togglePolicyInference(policy: ClientAppPolicyEntity) {
+        viewModelScope.launch {
+            repository.updatePolicy(policy.copy(allowInference = !policy.allowInference))
+        }
+    }
+
+    fun togglePolicyReadMemory(policy: ClientAppPolicyEntity) {
+        viewModelScope.launch {
+            repository.updatePolicy(policy.copy(allowReadMemory = !policy.allowReadMemory))
+        }
+    }
+
+    fun togglePolicyWriteMemory(policy: ClientAppPolicyEntity) {
+        viewModelScope.launch {
+            repository.updatePolicy(policy.copy(allowWriteMemory = !policy.allowWriteMemory))
+        }
+    }
+
+    fun togglePolicyStructuredJson(policy: ClientAppPolicyEntity) {
+        viewModelScope.launch {
+            repository.updatePolicy(policy.copy(allowStructuredJson = !policy.allowStructuredJson))
+        }
+    }
+
+    fun updatePolicyCustomSystemPrompt(policy: ClientAppPolicyEntity, prompt: String) {
+        viewModelScope.launch {
+            repository.updatePolicy(policy.copy(customSystemPrompt = prompt))
+        }
+    }
+
+    fun updatePolicyAllowedCategories(policy: ClientAppPolicyEntity, categories: String) {
+        viewModelScope.launch {
+            repository.updatePolicy(policy.copy(allowedMemoryCategories = categories))
+        }
+    }
+
     fun toggleClientWhitelist(packageName: String, isWhitelisted: Boolean) {
         viewModelScope.launch {
             val existing = repository.clientPolicies.stateIn(viewModelScope).value.find { it.packageName == packageName }
@@ -887,6 +923,13 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private val _ipcLogFilterStatus = MutableStateFlow("ALL")
+    val ipcLogFilterStatus: StateFlow<String> = _ipcLogFilterStatus.asStateFlow()
+
+    fun setIpcLogFilterStatus(status: String) {
+        _ipcLogFilterStatus.value = status
+    }
+
     // Simulator Functions
     fun updateSimulatorApp(appName: String, pkg: String) {
         _simulatorState.value = _simulatorState.value.copy(selectedApp = appName, selectedPackage = pkg)
@@ -897,6 +940,10 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
             selectedTask = task,
             promptInput = when (task) {
                 "STREAM" -> "Draft a 3-point action plan for launching an on-device AI feature."
+                "JSON_EXTRACT" -> "Reviewing Q4 Android AI Core milestone with team on Friday at 3:00 PM in Conference Room A. High priority deliverables: low-latency IPC and cross-app context memory."
+                "INTENT_ROUTE" -> "Set a reminder to check on-device battery temperature before starting benchmark run."
+                "RAG_QUERY" -> "What are the latest system preferences and active notes stored on this device?"
+                "STORE_MEMORY" -> "User prefers on-device local execution for all AI queries and strict privacy controls."
                 "EMBED" -> "Inter-process communication on Android via AIDL Binder"
                 "SUMMARIZE" -> "Local language models executing on mobile device CPUs using GGUF 4-bit quantization allow zero-latency responses without sending sensitive customer data to cloud servers."
                 "CLASSIFY" -> "Critical battery level dropped below 15% during heavy background processing."
@@ -912,7 +959,13 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     fun runSimulatorTest() {
         val state = _simulatorState.value
         viewModelScope.launch {
-            val (isAuthorized, reason) = repository.checkSecurityAndRateLimit(state.selectedPackage)
+            val requiredScope = when (state.selectedTask) {
+                "JSON_EXTRACT", "INTENT_ROUTE" -> "STRUCTURED_JSON"
+                "RAG_QUERY" -> "READ_MEMORY"
+                "STORE_MEMORY" -> "WRITE_MEMORY"
+                else -> "INFERENCE"
+            }
+            val (isAuthorized, reason) = repository.checkSecurityAndRateLimit(state.selectedPackage, requiredScope)
             if (!isAuthorized) {
                 _simulatorState.value = state.copy(
                     isRunning = false,
@@ -929,7 +982,11 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
                         latencyMs = 2L,
                         tokensPerSecond = 0f,
                         totalTokens = 0,
-                        status = if (reason.contains("Rate limit")) "RATE_LIMITED" else "DENIED"
+                        status = when {
+                            reason.contains("Rate limit") -> "RATE_LIMITED"
+                            reason.contains("Scope Denied") -> "SCOPE_BLOCKED"
+                            else -> "DENIED"
+                        }
                     )
                 )
                 return@launch
@@ -945,12 +1002,12 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
             try { when (state.selectedTask) {
                 "STREAM" -> {
-                    val memContext = repository.buildMemoryContextPrompt()
                     _simulatorState.value = _simulatorState.value.copy(statusText = "Receiving streaming tokens with context memory...")
+                    val effectiveSystem = repository.buildClientSystemPrompt(state.selectedPackage, null)
                     val config = GenerationConfig(
                         temperature = 0.7f,
                         maxTokens = 256,
-                        systemPrompt = "You are Better Intelligence on-device engine serving ${state.selectedApp}.$memContext"
+                        systemPrompt = effectiveSystem
                     )
                     repository.engineManager.currentEngine.generateStreamWithCallback(
                         state.promptInput,
@@ -1000,6 +1057,113 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
                                 )
                             }
                         }
+                    )
+                }
+
+                "JSON_EXTRACT" -> {
+                    val keys = arrayOf("summary", "intent", "entities", "action_items", "datetime", "priority")
+                    val json = repository.engine.extractStructuredJson(state.promptInput, keys)
+                    val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(8L)
+                    _simulatorState.value = _simulatorState.value.copy(
+                        isRunning = false,
+                        latencyMs = latency,
+                        tokensPerSec = 42f,
+                        statusText = "Extracted Structured JSON in ${latency}ms",
+                        outputText = json
+                    )
+                    repository.logIpcCall(
+                        IpcLogEntity(
+                            callingPackage = state.selectedPackage,
+                            callingUid = 10245,
+                            requestType = "JSON_EXTRACT",
+                            promptPreview = state.promptInput.take(150),
+                            responsePreview = json.take(200),
+                            latencyMs = latency,
+                            tokensPerSecond = 42f,
+                            totalTokens = json.length / 4,
+                            status = "SUCCESS"
+                        )
+                    )
+                }
+
+                "INTENT_ROUTE" -> {
+                    val routes = arrayOf("SCHEDULE_EVENT", "CREATE_NOTE", "SYSTEM_SETTINGS", "SEND_MESSAGE", "SEARCH")
+                    val routed = repository.engine.routeIntent(state.promptInput, routes)
+                    val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(6L)
+                    _simulatorState.value = _simulatorState.value.copy(
+                        isRunning = false,
+                        latencyMs = latency,
+                        tokensPerSec = 48f,
+                        statusText = "Routed Intent in ${latency}ms",
+                        outputText = routed
+                    )
+                    repository.logIpcCall(
+                        IpcLogEntity(
+                            callingPackage = state.selectedPackage,
+                            callingUid = 10245,
+                            requestType = "INTENT_ROUTE",
+                            promptPreview = state.promptInput.take(150),
+                            responsePreview = routed.take(200),
+                            latencyMs = latency,
+                            tokensPerSecond = 48f,
+                            totalTokens = routed.length / 4,
+                            status = "SUCCESS"
+                        )
+                    )
+                }
+
+                "RAG_QUERY" -> {
+                    val json = repository.querySharedMemoriesAsJson(state.selectedPackage, state.promptInput, 10)
+                    val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(4L)
+                    _simulatorState.value = _simulatorState.value.copy(
+                        isRunning = false,
+                        latencyMs = latency,
+                        tokensPerSec = 0f,
+                        statusText = "Queried Shared Brain Memory in ${latency}ms",
+                        outputText = json
+                    )
+                    repository.logIpcCall(
+                        IpcLogEntity(
+                            callingPackage = state.selectedPackage,
+                            callingUid = 10245,
+                            requestType = "MEMORY_READ",
+                            promptPreview = state.promptInput.take(150),
+                            responsePreview = json.take(200),
+                            latencyMs = latency,
+                            tokensPerSecond = 0f,
+                            totalTokens = 1,
+                            status = "SUCCESS"
+                        )
+                    )
+                }
+
+                "STORE_MEMORY" -> {
+                    val id = repository.writeSharedMemoryFromApp(
+                        packageName = state.selectedPackage,
+                        title = "${state.selectedApp} Snapshot",
+                        content = state.promptInput,
+                        category = "Cross-App"
+                    )
+                    val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(5L)
+                    _simulatorState.value = _simulatorState.value.copy(
+                        isRunning = false,
+                        latencyMs = latency,
+                        tokensPerSec = 0f,
+                        statusText = "Stored Shared Context Memory #$id in ${latency}ms",
+                        outputText = "Successfully written to Better Intelligence Shared RAG Memory Store.\nMemory ID: #$id\nOwner Package: ${state.selectedPackage}\nCategory: Cross-App\nPayload: ${state.promptInput}\n\nAll authorized apps can now query this context via ContentProvider or AIDL."
+                    )
+                    repository.logIpcCall(
+                        IpcLogEntity(
+                            callingPackage = state.selectedPackage,
+                            callingUid = 10245,
+                            requestType = "MEMORY_WRITE",
+                            promptPreview = state.promptInput.take(150),
+                            responsePreview = "Saved Memory #$id",
+                            latencyMs = latency,
+                            tokensPerSecond = 0f,
+                            totalTokens = 1,
+                            status = "SUCCESS"
+                        )
                     )
                 }
 

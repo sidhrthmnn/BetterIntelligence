@@ -192,4 +192,48 @@ class LocalAiCoreClient(private val context: Context) {
             "Error: ${e.message}"
         }
     }
+
+    /**
+     * Extracts structured JSON from raw text matching the requested schema keys.
+     */
+    fun extractStructuredJson(text: String, schemaKeys: Array<String>): String {
+        return try {
+            aiCoreService?.extractStructuredJson(text, schemaKeys) ?: """{"error": "Service not connected"}"""
+        } catch (e: RemoteException) {
+            """{"error": "${e.message}"}"""
+        }
+    }
+
+    /**
+     * Routes a natural language utterance to the best candidate action/route.
+     */
+    fun routeIntent(utterance: String, candidateRoutes: Array<String>): String {
+        return try {
+            aiCoreService?.routeIntent(utterance, candidateRoutes) ?: """{"error": "Service not connected"}"""
+        } catch (e: RemoteException) {
+            """{"error": "${e.message}"}"""
+        }
+    }
+
+    /**
+     * Writes a memory fact into Better Intelligence's shared cross-app RAG store.
+     */
+    fun storeSharedMemory(title: String, content: String, category: String = "Cross-App"): Boolean {
+        return try {
+            aiCoreService?.storeSharedMemory(title, content, category) ?: false
+        } catch (e: RemoteException) {
+            false
+        }
+    }
+
+    /**
+     * Queries Better Intelligence's shared cross-app RAG memory store as JSON.
+     */
+    fun querySharedMemoriesJson(query: String = "", limit: Int = 10): String {
+        return try {
+            aiCoreService?.querySharedMemoriesJson(query, limit) ?: """{"memories": []}"""
+        } catch (e: RemoteException) {
+            """{"error": "${e.message}", "memories": []}"""
+        }
+    }
 }

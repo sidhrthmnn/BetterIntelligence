@@ -63,7 +63,13 @@ data class ClientAppPolicyEntity(
     val totalRequests: Int = 0,
     val lastAccessTimestamp: Long = System.currentTimeMillis(),
     val rateLimitPerMin: Int = 60,
-    val isBlocked: Boolean = false
+    val isBlocked: Boolean = false,
+    val allowInference: Boolean = true,
+    val allowReadMemory: Boolean = true,
+    val allowWriteMemory: Boolean = true,
+    val allowStructuredJson: Boolean = true,
+    val customSystemPrompt: String = "",
+    val allowedMemoryCategories: String = "*"
 )
 
 @Entity(tableName = "chat_messages")
