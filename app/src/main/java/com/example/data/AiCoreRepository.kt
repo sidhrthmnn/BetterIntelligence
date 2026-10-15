@@ -287,6 +287,8 @@ class AiCoreRepository(
     }
 
     suspend fun addHuggingFaceModel(repoId: String, file: HuggingFaceGgufFile): ModelEntity {
+        val localName = com.example.engine.HuggingFaceCatalog.localFilename(repoId, file)
+        modelDao.getModelByFilename(localName)?.let { return it }
         val cleanModelName = file.filename
             .removeSuffix(".gguf")
             .removeSuffix(".GGUF")
@@ -295,7 +297,7 @@ class AiCoreRepository(
 
         val entity = ModelEntity(
             name = cleanModelName,
-            filename = file.filename.substringAfterLast('/'),
+            filename = localName,
             architecture = if (file.filename.contains("qwen", ignoreCase = true)) "qwen2" else if (file.filename.contains("gemma", ignoreCase = true)) "gemma2" else "llama",
             quantization = file.quantization,
             parameterCount = "Custom (~${file.sizeMb}MB)",
@@ -311,7 +313,7 @@ class AiCoreRepository(
             downloadState = "NOT_DOWNLOADED",
             downloadProgress = 0.0f,
             versionTag = "hf-${file.quantization.lowercase()}",
-            speedScoreTokSec = file.estimatedSpeedTokSec,
+            speedScoreTokSec = 0f,
             recommendedTier = if (file.sizeMb < 600) "ULTRA_LIGHT" else if (file.sizeMb < 1500) "BALANCED" else "PERFORMANCE",
             huggingFaceRepo = repoId,
             sha256Checksum = file.sha256Oid,

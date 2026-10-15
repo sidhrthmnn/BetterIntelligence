@@ -22,6 +22,7 @@ import com.example.ui.components.HardwareDiagnosticCard
 import com.example.ui.components.HuggingFaceDiscoveryCard
 import com.example.ui.components.HardwarePerformanceComparisonCard
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ModelsScreen(viewModel: AiCoreViewModel) {
     val models by viewModel.allModels.collectAsState()
@@ -33,21 +34,43 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val terms by viewModel.licenseModel.collectAsState()
     val verifying by viewModel.verifyingModelId.collectAsState()
     val context = LocalContext.current
+    var source by rememberSaveable { mutableStateOf("library") }
+    var tier by rememberSaveable { mutableStateOf("ALL") }
     var advanced by rememberSaveable { mutableStateOf(false) }
     var details by remember { mutableStateOf<ModelEntity?>(null) }
     var deleting by remember { mutableStateOf<ModelEntity?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) source = "my_models"
         uris.forEach { viewModel.importGgufFromUri(it, context) }
     }
     val recommended = models.find { it.filename == recommendation?.recommendedFilename }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            Text("Local AI for you and your apps", style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(8.dp))
-            Text("Download once. Chat or polish text offline with the same model.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Models for your phone", style = MaterialTheme.typography.headlineSmall)
         }
         item {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("library" to "Library", "find" to "Find models", "my_models" to "My models").forEach { (key, label) ->
+                    FilterChip(selected = source == key, onClick = { source = key }, label = { Text(label) },
+                        modifier = Modifier.testTag("model_source_$key"))
+                }
+            }
+            TextButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("import_gguf_btn")) { Text("Import a GGUF file") }
+        }
+        if (source == "find") item {
+            val query by viewModel.hfSearchQuery.collectAsState()
+            val results by viewModel.hfSearchResults.collectAsState()
+            val searching by viewModel.isHfSearching.collectAsState()
+            val repo by viewModel.selectedHfRepo.collectAsState()
+            val files by viewModel.hfRepoGgufFiles.collectAsState()
+            val loadingFiles by viewModel.isLoadingRepoFiles.collectAsState()
+            HuggingFaceDiscoveryCard(query, results, searching, repo, files, loadingFiles,
+                { viewModel.setHfSearchQuery(it) }, { viewModel.searchHuggingFace(it) },
+                { viewModel.selectHfRepo(it) }, { viewModel.clearHfRepoSelection() },
+                { id, file -> viewModel.addAndDownloadHfModel(id, file); source = "my_models" }, initiallyExpanded = true)
+        }
+        if (source != "find" && (telemetry.isModelLoaded || loading != null)) item {
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(if (telemetry.isModelLoaded) "Ready on this device" else if (loading != null) "Loading model…" else "Choose your AI model",
@@ -62,24 +85,44 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                 }
             }
         }
-        if (recommended != null && !telemetry.isModelLoaded) item {
+        if (source == "library" && recommended != null && !telemetry.isModelLoaded) item {
             Text("Suggested for this device: ${recommended.name}", style = MaterialTheme.typography.titleSmall)
-            Text("Based on available memory and storage. Try a larger model if you need better writing quality.", style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Download, then tap Use model to start.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        item { Text("Models", style = MaterialTheme.typography.titleLarge) }
-        items(models.sortedByDescending { it.id == recommended?.id }, key = { it.id }) { model ->
+        if (source == "library") item {
+            Text("Mobile-friendly library", style = MaterialTheme.typography.titleLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("ALL" to "All", "LIGHTWEIGHT" to "Lightweight", "BALANCED" to "Balanced", "QUALITY" to "More capable").forEach { (key, label) ->
+                    FilterChip(tier == key, { tier = key }, label = { Text(label) })
+                }
+            }
+        }
+        val visibleModels = models.filter {
+            when (source) {
+                "library" -> !it.isCustom && (tier == "ALL" || it.recommendedTier == tier)
+                "my_models" -> it.isInstalled || it.isCustom
+                else -> false
+            }
+        }
+        if (source == "my_models" && visibleModels.isEmpty()) item {
+            Text("Your downloads and imports will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        items(visibleModels.sortedWith(compareByDescending<ModelEntity> { it.id == active?.id }
+            .thenByDescending { it.id == recommended?.id }.thenBy { it.fileSizeMb }), key = { it.id }) { model ->
             val installed = model.isInstalled
             val downloading = model.downloadState == "DOWNLOADING"
             val selected = active?.id == model.id && telemetry.isModelLoaded
             val fits = hardware?.let { ModelLibrary.fits(model, it) } ?: true
+            val canDownload = hardware?.let { ModelLibrary.canDownload(model, it) } ?: true
             OutlinedCard(Modifier.fillMaxWidth().testTag("model_card_${model.id}")) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(model.name, style = MaterialTheme.typography.titleMedium)
                     Text("${model.fileSizeMb} MB download · About ${model.ramRequiredMb} MB memory",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (selected) Text("Selected · available to approved apps", color = MaterialTheme.colorScheme.primary)
-                    else if (!fits) Text("May exceed this device’s available memory or storage", color = MaterialTheme.colorScheme.error)
+                    Text(model.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (!selected && !fits) Text("You can keep this model downloaded, but it may need more free memory before it can run.", style = MaterialTheme.typography.bodySmall)
+                    if (!installed && !canDownload) Text("Free more storage before downloading this model.", color = MaterialTheme.colorScheme.error)
                     if (model.downloadState == "ERROR") Text("Download failed. Check your connection and try again.", color = MaterialTheme.colorScheme.error)
                     if (downloading) {
                         LinearProgressIndicator(progress = { model.downloadProgress }, modifier = Modifier.fillMaxWidth())
@@ -93,7 +136,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                                 modifier = Modifier.testTag("load_model_${model.id}")) {
                                 Text(if (loading == model.id) "Loading…" else if (selected) "In use" else "Use model")
                             }
-                            else -> Button(onClick = { viewModel.downloadModel(model) }, enabled = fits,
+                            else -> Button(onClick = { viewModel.downloadModel(model) }, enabled = canDownload,
                                 modifier = Modifier.testTag("download_model_${model.id}")) { Text(if (model.downloadState == "ERROR") "Retry download" else "Download") }
                         }
                         TextButton(onClick = { details = model }) { Text("Details") }
@@ -102,7 +145,6 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             }
         }
         item {
-            TextButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("import_gguf_btn")) { Text("Import a GGUF model") }
             TextButton(onClick = { advanced = !advanced }) { Text(if (advanced) "Hide advanced tools" else "Advanced tools") }
         }
         if (advanced) {
@@ -117,18 +159,6 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     { viewModel.runBenchmarkForModel(it) }, { viewModel.deletePerformanceLog(it) },
                     { viewModel.clearAllPerformanceLogs() })
             }
-            item {
-                val query by viewModel.hfSearchQuery.collectAsState()
-                val results by viewModel.hfSearchResults.collectAsState()
-                val searching by viewModel.isHfSearching.collectAsState()
-                val repo by viewModel.selectedHfRepo.collectAsState()
-                val files by viewModel.hfRepoGgufFiles.collectAsState()
-                val loadingFiles by viewModel.isLoadingRepoFiles.collectAsState()
-                HuggingFaceDiscoveryCard(query, results, searching, repo, files, loadingFiles,
-                    { viewModel.setHfSearchQuery(it) }, { viewModel.searchHuggingFace(it) },
-                    { viewModel.selectHfRepo(it) }, { viewModel.clearHfRepoSelection() },
-                    { id, file -> viewModel.addAndDownloadHfModel(id, file) })
-            }
             if (telemetry.isModelLoaded) item {
                 TextButton(onClick = { viewModel.unloadActiveModel() }) { Text("Unload model to free memory") }
             }
@@ -140,6 +170,9 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                 Text(model.description)
                 Text("${model.quantization} · ${model.contextLength} token model context")
                 Text("Integrity: ${model.checksumVerificationStatus}")
+                model.huggingFaceRepo?.let { repo ->
+                    TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://huggingface.co/$repo"))) }) { Text("Model source and license") }
+                }
                 Text("Writing quality depends on the selected model. Review polished text before applying it.")
                 if (model.isInstalled) {
                     TextButton(onClick = { viewModel.verifyModelChecksum(model) }, enabled = verifying == null) { Text(if (verifying == model.id) "Verifying…" else "Verify file") }

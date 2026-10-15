@@ -10,7 +10,10 @@
     "repo": "Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF",
     "revision": "0fbb5f440a58f880aeb698a615bc341dd7015168",
     "url": "https://huggingface.co/Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF/resolve/0fbb5f440a58f880aeb698a615bc341dd7015168/smollm2-135m-instruct-q4_k_m.gguf",
-    "license": "apache-2.0"
+    "license": "apache-2.0",
+    "tier": "LIGHTWEIGHT",
+    "description": "Smallest download for simple snippets and basic tasks. Limited writing accuracy.",
+    "quantization": "Q4_K_M"
   },
   {
     "name": "SmolLM2 360M Instruct",
@@ -23,7 +26,10 @@
     "repo": "bartowski/SmolLM2-360M-Instruct-GGUF",
     "revision": "7be6f65f1db715fe5dc5a4634c0d459b4eed42ec",
     "url": "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/7be6f65f1db715fe5dc5a4634c0d459b4eed42ec/SmolLM2-360M-Instruct-Q4_K_M.gguf",
-    "license": "apache-2.0"
+    "license": "apache-2.0",
+    "tier": "LIGHTWEIGHT",
+    "description": "Lightweight English chat and short edits. A small download for modest devices.",
+    "quantization": "Q4_K_M"
   },
   {
     "name": "Qwen 2.5 0.5B Instruct",
@@ -36,7 +42,10 @@
     "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
     "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
     "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/9217f5db79a29953eb74d5343926648285ec7e67/qwen2.5-0.5b-instruct-q4_k_m.gguf",
-    "license": "apache-2.0"
+    "license": "apache-2.0",
+    "tier": "BALANCED",
+    "description": "Compact multilingual assistant and a useful starter model. Review writing corrections.",
+    "quantization": "Q4_K_M"
   },
   {
     "name": "Gemma 3 1B Instruct",
@@ -49,6 +58,57 @@
     "repo": "ggml-org/gemma-3-1b-it-GGUF",
     "revision": "f9c28bcd85737ffc5aef028638d3341d49869c27",
     "url": "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/f9c28bcd85737ffc5aef028638d3341d49869c27/gemma-3-1b-it-Q4_K_M.gguf",
-    "license": "gemma"
+    "license": "gemma",
+    "tier": "BALANCED",
+    "description": "Compact English chat and short rewriting tasks. Requires acceptance of Gemma terms.",
+    "quantization": "Q4_K_M"
+  },
+  {
+    "name": "Gemma 3 270M Instruct",
+    "filename": "gemma-3-270m-it-Q4_K_M.gguf",
+    "architecture": "gemma3",
+    "parameters": "270M",
+    "ramMb": 768,
+    "bytes": 253115424,
+    "sha256": "b1baabd6b729e4041822220d3e648e00d99cac5df86b10dffb77bcccf0688e39",
+    "repo": "unsloth/gemma-3-270m-it-GGUF",
+    "revision": "c90975dbd40c0c7b275fefaae758c3415c906238",
+    "license": "gemma",
+    "tier": "LIGHTWEIGHT",
+    "description": "Compact model for short, focused tasks. Not intended for complex chat. Requires acceptance of Gemma terms.",
+    "quantization": "Q4_K_M",
+    "url": "https://huggingface.co/unsloth/gemma-3-270m-it-GGUF/resolve/c90975dbd40c0c7b275fefaae758c3415c906238/gemma-3-270m-it-Q4_K_M.gguf"
+  },
+  {
+    "name": "Qwen 2.5 1.5B Instruct",
+    "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+    "architecture": "qwen2",
+    "parameters": "1.5B",
+    "ramMb": 2048,
+    "bytes": 1117320736,
+    "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+    "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+    "revision": "91cad51170dc346986eccefdc2dd33a9da36ead9",
+    "license": "apache-2.0",
+    "tier": "QUALITY",
+    "description": "More capable compact assistant for editing, summarization and multilingual chat. Needs more free memory.",
+    "quantization": "Q4_K_M",
+    "url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+  },
+  {
+    "name": "SmolLM2 1.7B Instruct",
+    "filename": "smollm2-1.7b-instruct-q4_k_m.gguf",
+    "architecture": "llama",
+    "parameters": "1.7B",
+    "ramMb": 2048,
+    "bytes": 1055609536,
+    "sha256": "decd2598bc2c8ed08c19adc3c8fdd461ee19ed5708679d1c54ef54a5a30d4f33",
+    "repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
+    "revision": "2d4a76a30b4af41ecd395c35725ac11688d4cfe4",
+    "license": "apache-2.0",
+    "tier": "QUALITY",
+    "description": "Compact English assistant with rewriting and summarization support. Needs more free memory.",
+    "quantization": "Q4_K_M",
+    "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/2d4a76a30b4af41ecd395c35725ac11688d4cfe4/smollm2-1.7b-instruct-q4_k_m.gguf"
   }
 ]

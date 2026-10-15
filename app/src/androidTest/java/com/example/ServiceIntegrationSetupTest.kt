@@ -17,7 +17,8 @@ class ServiceIntegrationSetupTest {
         val repository = AiCoreRepository.getInstance(context)
         val models = kotlinx.coroutines.withTimeout(60_000) {
             repository.allModels.first { list ->
-                list.count { !it.isCustom } == 4 && list.any { it.name == "Qwen 2.5 0.5B Instruct" && it.isInstalled }
+                list.count { !it.isCustom } == com.example.engine.ModelLibrary.read(context).size &&
+                    list.any { it.name == "Qwen 2.5 0.5B Instruct" && it.isInstalled }
             }
         }
         repository.switchActiveModel(models.first { it.name == "Qwen 2.5 0.5B Instruct" })

@@ -20,3 +20,5 @@ debug.keystore
 **/build/
 **/.cxx/
 *.part
+# Downloaded catalog weights stay local; legacy tracked weights still use Git LFS.
+/models/*.gguf

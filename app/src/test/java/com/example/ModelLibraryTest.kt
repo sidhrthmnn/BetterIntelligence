@@ -17,19 +17,47 @@ class ModelLibraryTest {
 
     @Test fun recommendationUsesAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        assertEquals(4, models.size)
+        assertEquals(7, models.size)
         assertTrue(models.all { !it.isInstalled && !it.isActive && !it.isChecksumVerified })
         assertEquals("Qwen 2.5 0.5B Instruct", ModelLibrary.recommend(models, profile())!!.recommendedModelName)
         assertEquals("SmolLM2 135M Instruct", ModelLibrary.recommend(models, profile(storage = 0.3f))!!.recommendedModelName)
         assertNull(ModelLibrary.recommend(models, profile(ram = 512)))
         assertNull(ModelLibrary.recommend(models, profile(abi = "armeabi-v7a")))
+        assertEquals("Qwen 2.5 1.5B Instruct", ModelLibrary.recommend(models, profile(ram = 4096))!!.recommendedModelName)
     }
 
-    @Test fun everyLibraryFileHasRealGgufMetadata() {
-        val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
+    @Test fun downloadDoesNotRequireEnoughRamToRunTheModel() {
+        val model = ModelLibrary.read(ApplicationProvider.getApplicationContext()).last()
+        assertTrue(ModelLibrary.canDownload(model, profile(ram = 512)))
+        assertFalse(ModelLibrary.fits(model, profile(ram = 512)))
+        assertFalse(ModelLibrary.canDownload(model, profile(storage = 0.1f)))
+        assertNull(ModelLibrary.recommend(listOf(model.copy(isCustom = true)), profile(ram = 4096)))
+    }
+
+    @Test fun catalogHasMatchingPinnedDownloadsAndHonestEstimates() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val asset = context.assets.open("model-library.json").bufferedReader().use { it.readText() }
+        assertEquals(java.io.File("../models/library.json").readText().trim(), asset.trim())
+        val models = ModelLibrary.read(context)
+        assertEquals(7, models.map { it.filename }.distinct().size)
+        assertEquals(setOf("LIGHTWEIGHT", "BALANCED", "QUALITY"), models.map { it.recommendedTier }.toSet())
         for (model in models) {
+            assertTrue(model.sha256Checksum!!.matches(Regex("[a-f0-9]{64}")))
+            assertTrue(model.versionTag.matches(Regex("[a-f0-9]{40}")))
+            assertTrue(model.downloadUrl!!.contains("/resolve/${model.versionTag}/"))
+            assertEquals("Q4_K_M", model.quantization)
+            assertEquals(0f, model.speedScoreTokSec)
+            assertTrue(model.description.contains("Memory is an estimate"))
+        }
+    }
+
+    @Test fun availableLibraryFilesHaveRealGgufMetadata() {
+        val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
+        for ((index, model) in models.withIndex()) {
             val file = java.io.File("../models", model.filename)
-            assertTrue("Missing ${model.filename}; run scripts/download_models.py", file.isFile)
+            // Four legacy weights are in Git LFS. New catalog weights are optional local downloads.
+            if (index < 4) assertTrue("Missing ${model.filename}; run git lfs pull", file.isFile)
+            if (!file.isFile) continue
             val metadata = GgufParser().parseFromFile(file).getOrThrow()
             assertEquals(model.architecture, metadata.architecture)
             assertTrue(metadata.tensorCount > 0)

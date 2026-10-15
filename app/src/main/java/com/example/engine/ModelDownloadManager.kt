@@ -11,11 +11,9 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
-import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 data class HuggingFaceModelSearchResult(
@@ -122,88 +120,10 @@ class ModelDownloadManager(private val context: Context) {
      * Query Hugging Face API to list all available GGUF files in a repository with their sizes & LFS SHA256 checksums.
      */
     suspend fun fetchRepoGgufFiles(repoId: String): List<HuggingFaceGgufFile> = withContext(Dispatchers.IO) {
-        val files = mutableListOf<HuggingFaceGgufFile>()
-        try {
-            val cleanRepo = repoId.trim().removePrefix("https://huggingface.co/").removeSuffix("/")
-            // Try tree/main API first for comprehensive LFS metadata
-            val treeEndpoint = "https://huggingface.co/api/models/$cleanRepo/tree/main"
-            val jsonText = fetchHttpString(treeEndpoint)
-
-            if (!jsonText.isNullOrBlank() && jsonText.trim().startsWith("[")) {
-                val jsonArray = JSONArray(jsonText)
-                for (i in 0 until jsonArray.length()) {
-                    val obj = jsonArray.optJSONObject(i) ?: continue
-                    val path = obj.optString("path", "")
-                    val type = obj.optString("type", "")
-
-                    if (type == "file" && path.endsWith(".gguf", ignoreCase = true)) {
-                        val size = obj.optLong("size", 0L)
-                        var sha256Oid: String? = null
-                        val lfs = obj.optJSONObject("lfs")
-                        if (lfs != null) {
-                            sha256Oid = lfs.optString("oid", null)
-                        }
-
-                        val sizeMb = (size / (1024 * 1024)).coerceAtLeast(1L)
-                        val quant = extractQuantizationFromFilename(path)
-                        val ramMb = estimateRamRequirementMb(sizeMb)
-                        val speedTok = estimateSpeedTokSec(sizeMb)
-
-                        files.add(
-                            HuggingFaceGgufFile(
-                                filename = path,
-                                downloadUrl = "https://huggingface.co/$cleanRepo/resolve/main/$path",
-                                sizeBytes = size,
-                                sizeMb = sizeMb,
-                                sha256Oid = sha256Oid,
-                                quantization = quant,
-                                recommendedRamMb = ramMb,
-                                estimatedSpeedTokSec = speedTok
-                            )
-                        )
-                    }
-                }
-            }
-
-            // Fallback: Query model detail API if tree API was empty
-            if (files.isEmpty()) {
-                val modelDetailEndpoint = "https://huggingface.co/api/models/$cleanRepo"
-                val detailText = fetchHttpString(modelDetailEndpoint)
-                if (!detailText.isNullOrBlank()) {
-                    val detailObj = JSONObject(detailText)
-                    val siblings = detailObj.optJSONArray("siblings")
-                    if (siblings != null) {
-                        for (i in 0 until siblings.length()) {
-                            val sib = siblings.optJSONObject(i) ?: continue
-                            val rfilename = sib.optString("rfilename", "")
-                            if (rfilename.endsWith(".gguf", ignoreCase = true)) {
-                                val lfs = sib.optJSONObject("lfs")
-                                val sha256 = lfs?.optString("oid", null)
-                                val size = lfs?.optLong("size", 0L) ?: 0L
-                                val sizeMb = (size / (1024 * 1024)).coerceAtLeast(1L)
-                                val quant = extractQuantizationFromFilename(rfilename)
-
-                                files.add(
-                                    HuggingFaceGgufFile(
-                                        filename = rfilename,
-                                        downloadUrl = "https://huggingface.co/$cleanRepo/resolve/main/$rfilename",
-                                        sizeBytes = size,
-                                        sizeMb = sizeMb,
-                                        sha256Oid = sha256,
-                                        quantization = quant,
-                                        recommendedRamMb = estimateRamRequirementMb(sizeMb),
-                                        estimatedSpeedTokSec = estimateSpeedTokSec(sizeMb)
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error fetching repo GGUF files for $repoId: ${e.message}", e)
-        }
-        files.sortedBy { it.sizeBytes }
+        val repo = HuggingFaceCatalog.normalizeRepo(repoId)
+        val metadata = fetchHttpString("https://huggingface.co/api/models/$repo?blobs=true")
+            ?: error("Repository unavailable. Use a public repository, or import a downloaded GGUF file.")
+        HuggingFaceCatalog.files(repo, JSONObject(metadata))
     }
 
     /**
@@ -334,7 +254,7 @@ class ModelDownloadManager(private val context: Context) {
 
             // Determine expected checksum: from entity, or fetch from Hugging Face if repo provided
             var expectedChecksum = model.sha256Checksum
-            if (expectedChecksum.isNullOrBlank() && !model.huggingFaceRepo.isNullOrBlank()) {
+            if (expectedChecksum.isNullOrBlank() && !model.isCustom && !model.huggingFaceRepo.isNullOrBlank()) {
                 expectedChecksum = fetchOfficialSha256(model.huggingFaceRepo, model.filename)
             }
 
@@ -472,38 +392,4 @@ class ModelDownloadManager(private val context: Context) {
         }
     }
 
-    private fun extractQuantizationFromFilename(filename: String): String {
-        val upper = filename.uppercase(Locale.ROOT)
-        return when {
-            upper.contains("Q4_K_M") -> "Q4_K_M"
-            upper.contains("Q4_K_S") -> "Q4_K_S"
-            upper.contains("Q4_0") -> "Q4_0"
-            upper.contains("Q5_K_M") -> "Q5_K_M"
-            upper.contains("Q5_K_S") -> "Q5_K_S"
-            upper.contains("Q5_0") -> "Q5_0"
-            upper.contains("Q6_K") -> "Q6_K"
-            upper.contains("Q8_0") -> "Q8_0"
-            upper.contains("IQ4_XS") -> "IQ4_XS"
-            upper.contains("IQ3_M") -> "IQ3_M"
-            upper.contains("IQ2_XXS") -> "IQ2_XXS"
-            upper.contains("BF16") -> "BF16"
-            upper.contains("FP16") -> "FP16"
-            upper.contains("INT4") -> "INT4"
-            else -> "Q4_K_M"
-        }
-    }
-
-    private fun estimateRamRequirementMb(fileSizeMb: Long): Int {
-        return (fileSizeMb * 1.25f).toInt() + 60
-    }
-
-    private fun estimateSpeedTokSec(fileSizeMb: Long): Float {
-        return when {
-            fileSizeMb < 400 -> 45.0f
-            fileSizeMb < 850 -> 32.0f
-            fileSizeMb < 1200 -> 26.0f
-            fileSizeMb < 2000 -> 21.0f
-            else -> 16.0f
-        }
-    }
 }

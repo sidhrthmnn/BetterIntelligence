@@ -503,6 +503,11 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
             _hfSearchResults.value = emptyList()
             return
         }
+        val directRepo = runCatching { com.example.engine.HuggingFaceCatalog.normalizeRepo(q) }.getOrNull()
+        if (directRepo != null) {
+            selectHfRepo(directRepo)
+            return
+        }
         viewModelScope.launch {
             _isHfSearching.value = true
             try {
@@ -523,10 +528,12 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
     fun selectHfRepo(repoId: String) {
         _selectedHfRepo.value = repoId
+        _hfRepoGgufFiles.value = emptyList()
         viewModelScope.launch {
             _isLoadingRepoFiles.value = true
             try {
                 val files = repository.fetchRepoGgufFiles(repoId)
+                if (_selectedHfRepo.value != repoId) return@launch
                 _hfRepoGgufFiles.value = files
                 if (files.isEmpty()) {
                     _userMessage.value = "No .gguf files detected in $repoId."
@@ -534,9 +541,9 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
                     _userMessage.value = "Discovered ${files.size} GGUF quantization files."
                 }
             } catch (e: Exception) {
-                _userMessage.value = "Failed to load repo files: ${e.message}"
+                if (_selectedHfRepo.value == repoId) _userMessage.value = "Failed to load repo files: ${e.message}"
             } finally {
-                _isLoadingRepoFiles.value = false
+                if (_selectedHfRepo.value == repoId) _isLoadingRepoFiles.value = false
             }
         }
     }
@@ -550,8 +557,8 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 val addedModel = repository.addHuggingFaceModel(repoId, file)
-                repository.startModelDownload(addedModel, viewModelScope)
-                _userMessage.value = "Added and started downloading ${addedModel.name} (${file.quantization})."
+                if (addedModel.isInstalled) _userMessage.value = "Already downloaded. Select it in My models."
+                else if (addedModel.downloadState != "DOWNLOADING") downloadModel(addedModel)
                 clearHfRepoSelection()
             } catch (e: Exception) {
                 _userMessage.value = "Failed to add model: ${e.message}"

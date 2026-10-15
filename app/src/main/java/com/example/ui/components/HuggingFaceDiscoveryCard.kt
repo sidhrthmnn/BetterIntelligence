@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,6 +46,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -54,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -75,17 +80,18 @@ fun HuggingFaceDiscoveryCard(
     onSelectRepo: (String) -> Unit,
     onClearRepoSelection: () -> Unit,
     onDownloadGgufFile: (String, HuggingFaceGgufFile) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    initiallyExpanded: Boolean = false
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var isExpanded by remember { mutableStateOf(initiallyExpanded) }
 
     val quickQueries = listOf(
-        "qwen 0.5b gguf",
+        "qwen2.5 1.5b gguf",
+        "gemma-3 270m gguf",
         "llama-3.2 1b gguf",
-        "deepseek r1 gguf",
         "smollm2 gguf",
-        "gemma-2 2b gguf",
-        "phi-4 gguf"
+        "qwen3 0.6b gguf"
     )
 
     Surface(
@@ -126,7 +132,7 @@ fun HuggingFaceDiscoveryCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "HUGGING FACE HUB DISCOVERY",
+                            text = "Find a model",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp,
@@ -135,7 +141,7 @@ fun HuggingFaceDiscoveryCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Download verified GGUF models with SHA-256 checksums",
+                            text = "Search or paste a public Hugging Face repository",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -331,13 +337,15 @@ fun HuggingFaceDiscoveryCard(
     // Modal Sheet for Repo GGUF Files
     if (selectedRepoId != null) {
         ModalBottomSheet(
+            modifier = Modifier.fillMaxHeight(0.9f),
             onDismissRequest = onClearRepoSelection,
-            sheetState = rememberModalBottomSheetState(),
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .fillMaxHeight()
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -393,16 +401,21 @@ fun HuggingFaceDiscoveryCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No .gguf files found in this repository.",
+                            text = "No single-file text GGUF downloads found. For gated models, download from the publisher and use Import a GGUF file.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
+                    Text("Review the publisher’s license and model card. Compatibility depends on the model architecture and this device’s memory.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://huggingface.co/$selectedRepoId"))) }) {
+                        Text("View model card and license")
+                    }
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(400.dp),
+                            .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(repoGgufFiles) { file ->
@@ -440,7 +453,7 @@ fun HuggingFaceDiscoveryCard(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "Size: ${file.sizeMb} MB • RAM: ~${file.recommendedRamMb} MB • ~${file.estimatedSpeedTokSec.toInt()} tok/s",
+                                            text = "${file.sizeMb} MB download • About ${file.recommendedRamMb} MB memory",
                                             style = MaterialTheme.typography.bodySmall.copy(
                                                 fontFamily = FontFamily.Monospace,
                                                 fontSize = 10.sp
@@ -479,7 +492,7 @@ fun HuggingFaceDiscoveryCard(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "Download & Verify (${file.sizeMb} MB)",
+                                            text = if (file.sha256Oid != null) "Download & verify (${file.sizeMb} MB)" else "Download (${file.sizeMb} MB; no publisher checksum)",
                                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                                         )
                                     }

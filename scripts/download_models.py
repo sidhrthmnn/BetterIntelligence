@@ -7,7 +7,7 @@ import urllib.request
 
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
-parser.add_argument("names", nargs="*", help="Filenames; omit to download all four")
+parser.add_argument("names", nargs="*", help="Filenames; omit to download the full catalog")
 args = parser.parse_args()
 library = json.loads((root / "models/library.json").read_text(encoding="utf-8"))
 if set(args.names) - {item["filename"] for item in library}:
