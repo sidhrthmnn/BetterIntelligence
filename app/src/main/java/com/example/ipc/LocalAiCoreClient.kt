@@ -51,8 +51,8 @@ class LocalAiCoreClient(context: Context) {
      */
     fun bind(): Boolean {
         if (isBound) return true
-        val intent = Intent("com.aistudio.localaicore.ACTION_BIND_AI_CORE").apply {
-            setPackage("com.aistudio.betterintelligence.vqkzp")
+        val intent = Intent("com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE").apply {
+            setPackage("com.aistudio.betterintelligence.mobile")
         }
         isBound = context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
         return isBound

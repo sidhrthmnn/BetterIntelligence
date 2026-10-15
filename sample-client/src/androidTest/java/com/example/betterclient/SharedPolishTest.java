@@ -18,11 +18,11 @@ import static org.junit.Assert.*;
 public class SharedPolishTest {
     @Test public void providerAndBinderRespectTheCallingApp() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        Uri uri = Uri.parse("content://com.aistudio.localaicore.provider");
+        Uri uri = Uri.parse("content://com.aistudio.betterintelligence.mobile.provider");
         String expected = InstrumentationRegistry.getArguments().getString("expectedStatus", "APPROVAL_REQUIRED");
         boolean rateLimited = "true".equals(InstrumentationRegistry.getArguments().getString("rateLimited"));
         Bundle spoof = new Bundle();
-        spoof.putString("calling_package", "com.aistudio.betterintelligence.vqkzp");
+        spoof.putString("calling_package", "com.aistudio.betterintelligence.mobile");
         Bundle status = context.getContentResolver().call(uri, "status", null, spoof);
         assertNotNull(status);
         for (int i = 0; "MODEL_REQUIRED".equals(status.getString("status")) && "READY".equals(expected) && i < 60; i++) {
@@ -54,8 +54,8 @@ public class SharedPolishTest {
             }
             public void onServiceDisconnected(ComponentName name) { service.set(null); }
         };
-        boolean bound = context.bindService(new Intent("com.aistudio.localaicore.ACTION_BIND_AI_CORE")
-            .setPackage("com.aistudio.betterintelligence.vqkzp"), connection, Context.BIND_AUTO_CREATE);
+        boolean bound = context.bindService(new Intent("com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE")
+            .setPackage("com.aistudio.betterintelligence.mobile"), connection, Context.BIND_AUTO_CREATE);
         assertTrue(bound);
         try {
             assertTrue(connected.await(10, TimeUnit.SECONDS));

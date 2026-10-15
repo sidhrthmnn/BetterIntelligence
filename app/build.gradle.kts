@@ -16,7 +16,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.betterintelligence.vqkzp"
+    applicationId = "com.aistudio.betterintelligence.mobile"
     minSdk = 24
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }

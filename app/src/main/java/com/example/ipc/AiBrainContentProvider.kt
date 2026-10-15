@@ -24,7 +24,7 @@ import kotlinx.coroutines.runBlocking
  * using standard Android ContentResolver APIs (`query`, `insert`, and `call`) without
  * needing to bundle AIDL files.
  *
- * Authority: content://com.aistudio.localaicore.provider
+ * Authority: content://com.aistudio.betterintelligence.mobile.provider
  */
 class AiBrainContentProvider : ContentProvider() {
 
@@ -362,7 +362,7 @@ class AiBrainContentProvider : ContentProvider() {
     }
 
     companion object {
-        const val AUTHORITY = "com.aistudio.localaicore.provider"
+        const val AUTHORITY = "com.aistudio.betterintelligence.mobile.provider"
         private const val MATCH_STATUS = 1
         private const val MATCH_GENERATE = 2
         private const val MATCH_EXTRACT_JSON = 3

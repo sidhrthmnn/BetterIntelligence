@@ -11,7 +11,7 @@ import java.util.concurrent.Executors;
 /** Real third-party consumer with no INTERNET permission or bundled model. */
 public class ClientActivity extends Activity {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
-    private final Uri endpoint = Uri.parse("content://com.aistudio.localaicore.provider");
+    private final Uri endpoint = Uri.parse("content://com.aistudio.betterintelligence.mobile.provider");
     private TextView output;
     private void show(String text) {
         Log.i("BetterClient", text);

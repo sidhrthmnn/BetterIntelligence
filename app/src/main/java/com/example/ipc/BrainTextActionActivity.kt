@@ -50,7 +50,7 @@ class BrainTextActionActivity : ComponentActivity() {
     }
 
     companion object {
-        const val ACTION_BRAIN_QUERY = "com.aistudio.localaicore.ACTION_BRAIN_QUERY"
+        const val ACTION_BRAIN_QUERY = "com.aistudio.betterintelligence.mobile.ACTION_BRAIN_QUERY"
     }
 }
 

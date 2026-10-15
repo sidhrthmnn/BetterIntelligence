@@ -7,10 +7,10 @@ Better Intelligence owns the downloaded GGUF model and runs inference locally. A
 Install Better Intelligence, download a model in Models, and tap Use model. In the consumer manifest, declare:
 
 ```xml
-<uses-permission android:name="com.aistudio.localaicore.permission.BIND_LOCAL_AI_CORE" />
+<uses-permission android:name="com.aistudio.betterintelligence.mobile.permission.BIND_LOCAL_AI_CORE" />
 <queries>
-    <package android:name="com.aistudio.betterintelligence.vqkzp" />
-    <provider android:authorities="com.aistudio.localaicore.provider" />
+    <package android:name="com.aistudio.betterintelligence.mobile" />
+    <provider android:authorities="com.aistudio.betterintelligence.mobile.provider" />
 </queries>
 ```
 
@@ -34,7 +34,7 @@ if (result.isSuccess) {
 For raw Android clients:
 
 ```kotlin
-val uri = Uri.parse("content://com.aistudio.localaicore.provider")
+val uri = Uri.parse("content://com.aistudio.betterintelligence.mobile.provider")
 withContext(Dispatchers.IO) {
     val status = contentResolver.call(uri, "status", null, null)
     val polished = contentResolver.call(uri, "polish", originalText, null)
@@ -73,7 +73,7 @@ Polish uses a fixed English proofreading prompt with deterministic sampling. Kee
 
 ## Binder compatibility
 
-Copy both files from `app/src/main/aidl/com/example/ipc/`, preserve their package, and enable `buildFeatures { aidl = true }`. Bind to action `com.aistudio.localaicore.ACTION_BIND_AI_CORE` in package `com.aistudio.betterintelligence.vqkzp`. API v2 appends `getServiceStatus()` and `polishText(String)` after all existing methods, preserving their transaction IDs. Both return the same Bundle contract as the provider. A consumer using these methods requires a v2 service. The optional `LocalAiCoreClient` provides `connect()`, worker-dispatched `generate()`, `polish()` and `serviceStatus()` helpers; unbind when the owning lifecycle ends.
+Copy both files from `app/src/main/aidl/com/example/ipc/`, preserve their package, and enable `buildFeatures { aidl = true }`. Bind to action `com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE` in package `com.aistudio.betterintelligence.mobile`. API v2 appends `getServiceStatus()` and `polishText(String)` after all existing methods, preserving their transaction IDs. Both return the same Bundle contract as the provider. A consumer using these methods requires a v2 service. The optional `LocalAiCoreClient` provides `connect()`, worker-dispatched `generate()`, `polish()` and `serviceStatus()` helpers; unbind when the owning lifecycle ends.
 
 The older methods remain available. Shared memory reads and writes require separate permissions in Apps. Embeddings remain unsupported. Apps sharing an Android UID share its access decision; package names supplied by clients never grant access. New client policies are unapproved with memory sharing disabled. Existing user-approved policies retain their choices.
 

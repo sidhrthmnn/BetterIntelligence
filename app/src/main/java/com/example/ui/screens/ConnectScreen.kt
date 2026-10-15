@@ -62,7 +62,7 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick = { developer = !developer }) { Text(if (developer) "Hide developer details" else "For app developers") }
             if (developer) {
-                Text("Use ContentResolver.call() with authority com.aistudio.localaicore.provider and methods status or polish. Declare the local AI permission and package visibility. Run calls off the main thread. See the integration guide in the repository.",
+                Text("Use ContentResolver.call() with authority com.aistudio.betterintelligence.mobile.provider and methods status or polish. Declare the local AI permission and package visibility. Run calls off the main thread. See the integration guide in the repository.",
                     style = MaterialTheme.typography.bodySmall)
             }
         }

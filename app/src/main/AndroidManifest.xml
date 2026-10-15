@@ -8,12 +8,12 @@
 
     <!-- Custom permission for 3rd-party apps to bind to Local AI Core -->
     <permission
-        android:name="com.aistudio.localaicore.permission.BIND_LOCAL_AI_CORE"
+        android:name="com.aistudio.betterintelligence.mobile.permission.BIND_LOCAL_AI_CORE"
         android:protectionLevel="normal"
         android:label="@string/perm_bind_local_ai_label"
         android:description="@string/perm_bind_local_ai_desc" />
 
-    <uses-permission android:name="com.aistudio.localaicore.permission.BIND_LOCAL_AI_CORE" />
+    <uses-permission android:name="com.aistudio.betterintelligence.mobile.permission.BIND_LOCAL_AI_CORE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -45,9 +45,9 @@
         <service
             android:name=".ipc.LocalAiCoreService"
             android:exported="true"
-            android:permission="com.aistudio.localaicore.permission.BIND_LOCAL_AI_CORE">
+            android:permission="com.aistudio.betterintelligence.mobile.permission.BIND_LOCAL_AI_CORE">
             <intent-filter>
-                <action android:name="com.aistudio.localaicore.ACTION_BIND_AI_CORE" />
+                <action android:name="com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
@@ -75,7 +75,7 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.aistudio.localaicore.ACTION_BRAIN_QUERY" />
+                <action android:name="com.aistudio.betterintelligence.mobile.ACTION_BRAIN_QUERY" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -83,8 +83,8 @@
         <!-- Zero-SDK ContentProvider for Cross-App AI Brain Queries & Shared RAG Memory -->
         <provider
             android:name=".ipc.AiBrainContentProvider"
-            android:authorities="com.aistudio.localaicore.provider"
-            android:permission="com.aistudio.localaicore.permission.BIND_LOCAL_AI_CORE"
+            android:authorities="com.aistudio.betterintelligence.mobile.provider"
+            android:permission="com.aistudio.betterintelligence.mobile.permission.BIND_LOCAL_AI_CORE"
             android:exported="true" />
 
     </application>

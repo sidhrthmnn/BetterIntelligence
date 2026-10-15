@@ -43,6 +43,6 @@ class LocalAiPolishClient(context: Context) {
     }
 
     companion object {
-        val URI: Uri = Uri.parse("content://com.aistudio.localaicore.provider")
+        val URI: Uri = Uri.parse("content://com.aistudio.betterintelligence.mobile.provider")
     }
 }
