@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -96,6 +97,13 @@ class MainActivity : ComponentActivity() {
             val isDarkTheme by viewModel.isDarkTheme.collectAsState()
             val isGenerating by viewModel.isChatGenerating.collectAsState()
 
+            LaunchedEffect(isDarkTheme) {
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !isDarkTheme
+                    isAppearanceLightNavigationBars = !isDarkTheme
+                }
+            }
+
             // Request Notification Permission for live token streaming progress on Android 13+ (Tiramisu)
             val notificationPermissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestPermission()
@@ -134,6 +142,7 @@ class MainActivity : ComponentActivity() {
 fun MainAppContent(viewModel: AiCoreViewModel) {
     val currentTab by viewModel.currentTab.collectAsState()
     val activeModel by viewModel.activeModel.collectAsState()
+    val telemetry by viewModel.telemetry.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -155,23 +164,13 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
                 CenterAlignedTopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            StatusPulseIndicator(isActive = true)
+                            StatusPulseIndicator(isActive = telemetry.isModelLoaded)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "BETTER INTELLIGENCE",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 1.5.sp,
-                                    fontFamily = FontFamily.Monospace
-                                ),
+                                text = "Better Intelligence",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            if (activeModel != null) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                QuantBadge(
-                                    text = activeModel!!.quantization
-                                )
-                            }
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(

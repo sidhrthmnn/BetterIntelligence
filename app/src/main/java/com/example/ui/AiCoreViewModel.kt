@@ -45,7 +45,7 @@ import java.io.FileOutputStream
 enum class AppTab(val title: String) {
     MODELS("Models"),
     CHAT("Chat"),
-    CONNECT("Connect"),
+    CONNECT("Apps"),
     SETTINGS("Settings")
 }
 
@@ -110,7 +110,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     val isDarkTheme: StateFlow<Boolean> = _isDarkTheme.asStateFlow()
 
     // Active Navigation Tab
-    private val _currentTab = MutableStateFlow(AppTab.CHAT)
+    private val _currentTab = MutableStateFlow(AppTab.MODELS)
     val currentTab: StateFlow<AppTab> = _currentTab.asStateFlow()
 
     // Model Filter state
@@ -127,7 +127,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     private val _selectedMemoryCategory = MutableStateFlow("ALL")
     val selectedMemoryCategory: StateFlow<String> = _selectedMemoryCategory.asStateFlow()
 
-    private val _isAutoMemoryCaptureEnabled = MutableStateFlow(true)
+    private val _isAutoMemoryCaptureEnabled = MutableStateFlow(false)
     val isAutoMemoryCaptureEnabled: StateFlow<Boolean> = _isAutoMemoryCaptureEnabled.asStateFlow()
 
     // Playground state
@@ -198,8 +198,13 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     // Toast / Action notification
     private val _userMessage = MutableStateFlow<String?>(null)
     val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
+    private val _loadingModelId = MutableStateFlow<Long?>(null)
+    val loadingModelId: StateFlow<Long?> = _loadingModelId.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            repository.preferencesRepository.darkThemeFlow.collect { _isDarkTheme.value = it }
+        }
         // Initial hardware analysis
         repository.analyzeHardware(application)
 
@@ -222,6 +227,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setDarkTheme(isDark: Boolean) {
         _isDarkTheme.value = isDark
+        viewModelScope.launch { repository.preferencesRepository.saveDarkTheme(isDark) }
     }
 
     fun refreshHardwareDiagnostics() {
@@ -445,12 +451,15 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun switchModel(model: ModelEntity) {
+        if (_loadingModelId.value != null) return
         if (needsTerms(model)) { _licenseModel.value = model; return }
+        _loadingModelId.value = model.id
         viewModelScope.launch {
             try {
                 repository.switchActiveModel(model)
                 _userMessage.value = "Loaded ${model.name}. On-device CPU inference is ready."
             } catch (e: Exception) { _userMessage.value = e.message ?: "Unable to load model" }
+            finally { _loadingModelId.value = null }
         }
     }
 
@@ -610,6 +619,11 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
     fun sendChatMessage(userText: String) {
         if (userText.isBlank() || _isChatGenerating.value) return
+        if (!repository.engine.isReady()) {
+            _userMessage.value = "Download and select a model to start chatting."
+            selectTab(AppTab.MODELS)
+            return
+        }
 
         val currentModel = activeModel.value?.name ?: "Better Intelligence"
         viewModelScope.launch {

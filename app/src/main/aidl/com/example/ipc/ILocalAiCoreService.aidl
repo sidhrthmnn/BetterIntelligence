@@ -1,6 +1,7 @@
 package com.example.ipc;
 
 import com.example.ipc.ILocalAiStreamCallback;
+import android.os.Bundle;
 
 interface ILocalAiCoreService {
     boolean isModelLoaded();
@@ -18,4 +19,7 @@ interface ILocalAiCoreService {
     String querySharedMemoriesJson(String query, int limit);
     void cancelActiveGeneration();
     String getEngineTelemetryJson();
+    // Append new methods to preserve existing transaction IDs.
+    Bundle getServiceStatus();
+    Bundle polishText(String text);
 }

@@ -61,7 +61,7 @@
         <!-- System-wide AI Brain Action Activity (Process Text floating toolbar & Share) -->
         <activity
             android:name=".ipc.BrainTextActionActivity"
-            android:label="Better Intelligence Brain"
+            android:label="Polish with Better Intelligence"
             android:theme="@style/Theme.MyApplication"
             android:exported="true">
             <intent-filter>
@@ -84,6 +84,7 @@
         <provider
             android:name=".ipc.AiBrainContentProvider"
             android:authorities="com.aistudio.localaicore.provider"
+            android:permission="com.aistudio.localaicore.permission.BIND_LOCAL_AI_CORE"
             android:exported="true" />
 
     </application>

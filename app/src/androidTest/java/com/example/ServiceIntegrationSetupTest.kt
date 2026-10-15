@@ -15,10 +15,18 @@ class ServiceIntegrationSetupTest {
     @Test fun prepare() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val repository = AiCoreRepository.getInstance(context)
-        val models = repository.allModels.first { it.count { model -> !model.isCustom } == 4 }
+        val models = kotlinx.coroutines.withTimeout(60_000) {
+            repository.allModels.first { list ->
+                list.count { !it.isCustom } == 4 && list.any { it.name == "Qwen 2.5 0.5B Instruct" && it.isInstalled }
+            }
+        }
         repository.switchActiveModel(models.first { it.name == "Qwen 2.5 0.5B Instruct" })
-        if (InstrumentationRegistry.getArguments().getString("approveSample") == "true") {
-            repository.updatePolicy(ClientAppPolicyEntity("com.example.betterclient", "Example AI client", isWhitelisted = true))
+        val arguments = InstrumentationRegistry.getArguments()
+        if (arguments.getString("approveSample") == "true") {
+            repository.updatePolicy(ClientAppPolicyEntity("com.example.betterclient", "Example AI client", isWhitelisted = true,
+                isBlocked = arguments.getString("blockSample") == "true",
+                allowInference = arguments.getString("disableInference") != "true",
+                rateLimitPerMin = arguments.getString("requestLimit")?.toIntOrNull() ?: 60))
         } else {
             repository.deletePolicy("com.example.betterclient")
         }

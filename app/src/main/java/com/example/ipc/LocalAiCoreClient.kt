@@ -12,17 +12,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 
 /**
  * High-level Android client SDK for connecting to the on-device Local AI Core service.
  * External Android applications can embed this single file into their codebase to access
  * on-device GGUF text generation, summarization, and classification. Embeddings are unsupported.
  */
-class LocalAiCoreClient(private val context: Context) {
+class LocalAiCoreClient(context: Context) {
+    private val context = context.applicationContext
+    private var isBound = false
 
-    private var aiCoreService: ILocalAiCoreService? = null
+    @Volatile private var aiCoreService: ILocalAiCoreService? = null
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
@@ -36,29 +41,41 @@ class LocalAiCoreClient(private val context: Context) {
             aiCoreService = null
             _isConnected.value = false
         }
+
+        override fun onNullBinding(name: ComponentName?) { unbind() }
+        override fun onBindingDied(name: ComponentName?) { unbind() }
     }
 
     /**
      * Connects to Local AI Core on the device via Android IPC Binder.
      */
     fun bind(): Boolean {
+        if (isBound) return true
         val intent = Intent("com.aistudio.localaicore.ACTION_BIND_AI_CORE").apply {
             setPackage("com.aistudio.betterintelligence.vqkzp")
         }
-        return context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        isBound = context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        return isBound
+    }
+
+    suspend fun connect(timeoutMs: Long = 5000) {
+        check(withContext(Dispatchers.Main.immediate) { bind() }) { "Install Better Intelligence first" }
+        try { withTimeout(timeoutMs) { isConnected.first { it } } }
+        catch (e: Exception) { withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main.immediate) { unbind() }; throw e }
     }
 
     /**
      * Disconnects from Local AI Core.
      */
     fun unbind() {
-        if (_isConnected.value) {
+        if (isBound) {
             try {
                 context.unbindService(serviceConnection)
             } catch (e: Exception) {
                 // Ignore if already unlinked
             }
             aiCoreService = null
+            isBound = false
             _isConnected.value = false
         }
     }
@@ -101,10 +118,13 @@ class LocalAiCoreClient(private val context: Context) {
             return@callbackFlow
         }
 
+        val finished = java.util.concurrent.atomic.AtomicBoolean(false)
         val callback = object : ILocalAiStreamCallback.Stub() {
             override fun onToken(token: String?, tokenIndex: Int) {
                 if (token != null) {
-                    trySend(token)
+                    if (trySend(token).isFailure) {
+                        close(IllegalStateException("Consumer could not keep up with token stream"))
+                    }
                 }
             }
 
@@ -115,10 +135,12 @@ class LocalAiCoreClient(private val context: Context) {
                 promptTokens: Int,
                 completionTokens: Int
             ) {
+                finished.set(true)
                 close()
             }
 
             override fun onError(errorCode: Int, errorMessage: String?) {
+                finished.set(true)
                 close(RuntimeException("AI Core Error [$errorCode]: $errorMessage"))
             }
         }
@@ -131,12 +153,12 @@ class LocalAiCoreClient(private val context: Context) {
 
         awaitClose {
             try {
-                service.cancelActiveGeneration()
+                if (!finished.get()) service.cancelActiveGeneration()
             } catch (e: Exception) {
                 // Ignore
             }
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     /**
      * Generates text synchronously.
@@ -146,22 +168,21 @@ class LocalAiCoreClient(private val context: Context) {
         systemPrompt: String? = null,
         temperature: Float = 0.7f,
         maxTokens: Int = 256
-    ): String = suspendCancellableCoroutine { continuation ->
-        val service = aiCoreService
-        if (service == null) {
-            continuation.resume("Error: Service not connected")
-            return@suspendCancellableCoroutine
-        }
-        try {
-            val response = service.generateTextSync(prompt, systemPrompt, temperature, maxTokens)
-            continuation.resume(response)
-        } catch (e: RemoteException) {
-            continuation.resume("IPC Error: ${e.message}")
-        }
+    ): String = withContext(Dispatchers.IO) {
+        val service = checkNotNull(aiCoreService) { "Call connect() first" }
+        service.generateTextSync(prompt, systemPrompt, temperature, maxTokens)
+    }
+
+    suspend fun polish(text: String): android.os.Bundle = withContext(Dispatchers.IO) {
+        checkNotNull(aiCoreService) { "Call connect() first" }.polishText(text)
+    }
+
+    suspend fun serviceStatus(): android.os.Bundle = withContext(Dispatchers.IO) {
+        checkNotNull(aiCoreService) { "Call connect() first" }.serviceStatus
     }
 
     /**
-     * Computes on-device dense vector embeddings for RAG or semantic search.
+     * Unsupported for these text-generation models; the service throws UnsupportedOperationException.
      */
     fun getEmbeddings(text: String): FloatArray {
         return try {

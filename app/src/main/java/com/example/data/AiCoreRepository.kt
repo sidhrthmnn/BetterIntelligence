@@ -94,9 +94,9 @@ class AiCoreRepository(
     }
 
     fun analyzeHardware(context: Context) {
-        val profile = HardwareAnalyzer.analyze(context)
-        _hardwareProfile.value = profile
         repositoryScope.launch {
+            val profile = HardwareAnalyzer.analyze(context.applicationContext)
+            _hardwareProfile.value = profile
             _modelRecommendation.value = ModelLibrary.recommend(modelDao.getAllModels().first(), profile)
         }
     }
@@ -379,34 +379,39 @@ class AiCoreRepository(
     }
 
     suspend fun logIpcCall(log: IpcLogEntity) {
-        ipcLogDao.insertLog(log)
-        val existing = clientPolicyDao.getPolicyForPackage(log.callingPackage)
-        if (existing != null) {
-            clientPolicyDao.insertOrUpdatePolicy(
-                existing.copy(
-                    totalRequests = existing.totalRequests + 1,
-                    lastAccessTimestamp = System.currentTimeMillis()
-                )
-            )
-        } else {
-            clientPolicyDao.insertOrUpdatePolicy(
-                ClientAppPolicyEntity(
-                    packageName = log.callingPackage,
-                    appName = log.callingPackage.substringAfterLast('.').replaceFirstChar { it.uppercase() },
-                    isWhitelisted = false,
-                    autoApprove = false,
-                    totalRequests = 1,
-                    lastAccessTimestamp = System.currentTimeMillis(),
-                    rateLimitPerMin = 60
-                )
-            )
+        // Never retain editor text or model output in cross-app diagnostics.
+        ipcLogDao.insertLog(log.copy(promptPreview = "", responsePreview = ""))
+        registerClient(log.callingPackage)
+        clientPolicyDao.recordRequest(log.callingPackage, System.currentTimeMillis())
+    }
+
+    suspend fun registerClient(packageName: String) {
+        if (packageName == appContext.packageName) return
+        val label = runCatching {
+            appContext.packageManager.getApplicationLabel(
+                appContext.packageManager.getApplicationInfo(packageName, 0)).toString()
+        }.getOrDefault(packageName)
+        clientPolicyDao.insertPendingPolicy(ClientAppPolicyEntity(packageName, label))
+    }
+
+    suspend fun clientAccessStatus(packageName: String): String {
+        if (packageName == appContext.packageName) return "READY"
+        registerClient(packageName)
+        val policy = clientPolicyDao.getPolicyForPackage(packageName)!!
+        return when {
+            policy.isBlocked -> "DENIED"
+            !policy.isWhitelisted -> "APPROVAL_REQUIRED"
+            !policy.allowInference -> "DENIED"
+            else -> "READY"
         }
     }
 
     /**
      * Strict Security Authorization and Rate Limiting Check
      */
-    suspend fun checkSecurityAndRateLimit(packageName: String): Pair<Boolean, String> {
+    suspend fun checkSecurityAndRateLimit(packageName: String, scope: String = "INFERENCE"): Pair<Boolean, String> {
+        if (packageName == appContext.packageName) return true to "OK"
+        registerClient(packageName)
         val policy = clientPolicyDao.getPolicyForPackage(packageName)
         if (policy == null) return Pair(false, "Approve this app in Better Intelligence > Connect first")
         if (policy != null) {
@@ -416,6 +421,14 @@ class AiCoreRepository(
             if (!policy.isWhitelisted) {
                 return Pair(false, "Package [$packageName] has not been granted IPC inference permissions.")
             }
+            val allowed = when (scope) {
+                "INFERENCE" -> policy.allowInference
+                "STRUCTURED_JSON" -> policy.allowInference && policy.allowStructuredJson
+                "READ_MEMORY" -> policy.allowReadMemory
+                "WRITE_MEMORY" -> policy.allowWriteMemory
+                else -> false
+            }
+            if (!allowed) return false to "Scope Denied: Access to $scope is disabled in Apps"
 
             // Rate limit check: sliding 60 second window
             val now = System.currentTimeMillis()
@@ -482,6 +495,50 @@ class AiCoreRepository(
         }
         sb.append("[Use this persistent contextual awareness to give accurate, personalized, and relevant responses]\n\n")
         return sb.toString()
+    }
+
+    suspend fun buildClientSystemPrompt(packageName: String, requested: String?): String {
+        val policy = clientPolicyDao.getPolicyForPackage(packageName)
+        val system = listOfNotNull(
+            policy?.customSystemPrompt?.take(4000)?.takeIf { it.isNotBlank() },
+            requested?.take(4000)?.takeIf { it.isNotBlank() }
+        ).joinToString("\n").ifBlank { "You are a helpful on-device assistant." } +
+            (policy?.let { "\nClient: ${it.appName.take(200)}" } ?: "")
+        // Sharing inference does not imply sharing personal memories.
+        if (policy?.allowReadMemory != true || !policy.isWhitelisted || policy.isBlocked) return system
+        val memories = permittedMemories(packageName).take(10)
+        return system + memories.joinToString("\n", prefix = "\nUser context:\n") {
+            "${it.title}: ${it.content.take(500)}"
+        }
+    }
+
+    private suspend fun permittedMemories(packageName: String): List<MemorySnippetEntity> {
+        val policy = clientPolicyDao.getPolicyForPackage(packageName) ?: return emptyList()
+        if (!policy.isWhitelisted || policy.isBlocked || !policy.allowReadMemory) return emptyList()
+        val categories = policy.allowedMemoryCategories.split(',').map { it.trim() }
+        return memoryDao.getActiveMemories().first().filter { "*" in categories || it.category in categories }
+    }
+
+    suspend fun querySharedMemoriesAsJson(packageName: String, query: String, limit: Int): String {
+        val items = permittedMemories(packageName).filter {
+            it.title.contains(query.take(1000), true) || it.content.contains(query.take(1000), true)
+        }.take(limit.coerceIn(1, 50))
+        return org.json.JSONObject().put("memories", org.json.JSONArray().apply {
+            items.forEach { put(org.json.JSONObject().put("id", it.id).put("title", it.title)
+                .put("content", it.content).put("category", it.category)) }
+        }).toString()
+    }
+
+    suspend fun writeSharedMemoryFromApp(packageName: String, title: String, content: String, category: String): Long {
+        val policy = clientPolicyDao.getPolicyForPackage(packageName)
+        if (packageName != appContext.packageName) {
+            check(policy != null && policy.isWhitelisted && !policy.isBlocked && policy.allowWriteMemory)
+            val categories = policy.allowedMemoryCategories.split(',').map { it.trim() }
+            require("*" in categories || category in categories) { "Memory category is not allowed" }
+        }
+        require(content.isNotBlank() && content.length <= 8000)
+        return memoryDao.insertMemory(MemorySnippetEntity(title = title.take(200), content = content,
+            category = category.take(100), sourceApp = packageName))
     }
 
     suspend fun deleteModel(id: Long) {

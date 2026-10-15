@@ -75,6 +75,12 @@ interface ClientPolicyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdatePolicy(policy: ClientAppPolicyEntity)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPendingPolicy(policy: ClientAppPolicyEntity)
+
+    @Query("UPDATE client_policies SET totalRequests = totalRequests + 1, lastAccessTimestamp = :timestamp WHERE packageName = :pkg")
+    suspend fun recordRequest(pkg: String, timestamp: Long)
+
     @Query("UPDATE client_policies SET isWhitelisted = :isWhitelisted WHERE packageName = :pkg")
     suspend fun setWhitelisted(pkg: String, isWhitelisted: Boolean)
 

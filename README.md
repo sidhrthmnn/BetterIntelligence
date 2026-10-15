@@ -1,6 +1,12 @@
 # Better Intelligence
 
-Android AI service with real on-device GGUF inference through llama.cpp. Open **Models** to see phone diagnostics and recommendations, download individual files, or import multiple GGUF files. Select an installed model, then use **Chat** or connect another app through Binder. Downloads and activation are separate choices; installation does not silently download gigabytes.
+Android app and shared local AI service with real on-device GGUF inference through llama.cpp. In **Models**, download a suggested model and tap **Use model**. Use **Chat**, polish selected text from another app, or approve consumer apps in **Apps**. Hardware and model discovery tools are under **Advanced tools**. Downloads and activation are separate choices; installation does not silently download gigabytes.
+
+## Shared AI Polish
+
+Apps such as keyboards can use Better Intelligence’s selected local model for English proofreading without bundling their own model or inference runtime. The new API supports `status` and `polish` through `ContentResolver.call()`, or `getServiceStatus()` and `polishText()` through Binder. Only successful responses contain replacement text. New consumers require user approval, and memory access is off by default. Text is excluded from access logs and polishing never adds shared memories or uses a cloud fallback.
+
+See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin client, response states, Typeright integration pattern and verification commands. Consumer apps must implement the connection; this repository does not change Typeright’s existing AI provider. Without an app integration, Android’s text selection toolbar and Share menu offer **Polish with Better Intelligence**, with a review step before copying or replacing text.
 
 ## Model library
 
@@ -28,9 +34,9 @@ Install Better Intelligence, download and select a model. Consumer apps declare:
 
 Copy both AIDL files from `app/src/main/aidl/com/example/ipc/` and optionally `LocalAiCoreClient.kt` from `app/src/main/java/com/example/ipc/`. Enable `buildFeatures { aidl = true }`. Preserve the AIDL package names. Bind to action `com.aistudio.localaicore.ACTION_BIND_AI_CORE` in package `com.aistudio.betterintelligence.vqkzp`. Make Binder generation calls on a worker thread; streaming callbacks run on Binder threads.
 
-The first inference attempt creates a pending entry in **Connect**. The user enables its whitelist switch to approve access, and may block or rate-limit it later. Access checks use the caller UID's package, never a package supplied by the consumer. Prompts and responses from external apps are not retained in access logs. Consumers can generate synchronously or stream tokens, summarize, classify, read model readiness and telemetry, or cancel their own inference. Embeddings are explicitly unsupported because these are text-generation models.
+The first status or inference request creates a pending entry in **Apps**. The user enables its access switch to approve access, and may block or rate-limit it later. Access checks use the caller UID's package, never a package supplied by the consumer. Prompts and responses from external apps are not retained in access logs. Consumers can generate synchronously or stream tokens, summarize, classify, read model readiness and telemetry, or cancel their own Binder inference. Embeddings are explicitly unsupported because these are text-generation models.
 
-`sample-client` is a separate Android app that demonstrates synchronous and streaming requests across processes. It has no INTERNET permission and carries no model weights. Install it after Better Intelligence, launch it, approve **com.example.betterclient** in Connect, then relaunch it to request arithmetic responses from the selected model. Apps such as keyboards and chat apps can use the same contract; they must implement the integration themselves.
+`sample-client` is a separate Android app that demonstrates shared AI Polish across processes. It has no INTERNET permission and carries no model weights. Install it after Better Intelligence, launch it, approve **com.example.betterclient** in Apps, then tap **Polish with Better Intelligence**. Its instrumentation test exercises both the provider and Binder from a separate UID, including an attempted package spoof.
 
 ## Build and verify
 

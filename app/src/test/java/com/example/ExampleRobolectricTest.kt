@@ -122,7 +122,7 @@ class ExampleRobolectricTest {
             // Test client app policy
             val isAllowed = repository.isPackageAllowed("com.example.notes")
             assertFalse(isAllowed)
-            repository.updatePolicy(com.example.data.ClientAppPolicyEntity("com.example.notes", "Notes"))
+            repository.updatePolicy(com.example.data.ClientAppPolicyEntity("com.example.notes", "Notes", isWhitelisted = true))
 
             // Test security check and rate limit
             val (ok, _) = repository.checkSecurityAndRateLimit("com.example.notes")
@@ -212,23 +212,21 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `test AI Brain structured JSON extraction and intent routing`() {
+    fun `structured JSON and routing require a real loaded model`() {
         runBlocking {
             val context = ApplicationProvider.getApplicationContext<Context>()
             val repository = AiCoreRepository.getInstance(context)
 
             // Structured JSON
             val text = "Meeting on Friday at 3:00 PM with Alex to discuss GGUF models. High priority."
-            val json = repository.engine.extractStructuredJson(text, arrayOf("summary", "priority", "date_time"))
-            assertNotNull(json)
-            assertTrue("JSON should contain valid payload", json.contains("{") && json.contains("}"))
+            val extraction = runCatching { repository.engine.extractStructuredJson(text, arrayOf("summary", "priority", "date_time")) }
+            assertTrue(extraction.exceptionOrNull() is IllegalStateException)
 
             // Intent routing
             val utterance = "Schedule calendar reminder for tomorrow morning"
             val routes = arrayOf("SCHEDULE_EVENT", "CREATE_NOTE", "SEND_MESSAGE")
-            val routed = repository.engine.routeIntent(utterance, routes)
-            assertNotNull(routed)
-            assertTrue("Routing JSON should be valid", routed.contains("selected_route") || routed.contains("route"))
+            val routing = runCatching { repository.engine.routeIntent(utterance, routes) }
+            assertTrue(routing.exceptionOrNull() is IllegalStateException)
         }
     }
 }

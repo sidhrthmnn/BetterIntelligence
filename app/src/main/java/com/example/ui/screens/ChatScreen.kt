@@ -86,6 +86,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
     val streamingText by viewModel.streamingChatText.collectAsState()
     val activeMemories by viewModel.activeMemories.collectAsState()
     val generationParams by viewModel.chatGenerationParams.collectAsState()
+    val telemetry by viewModel.telemetry.collectAsState()
 
     var inputPrompt by remember { mutableStateOf("") }
     var showParamsSheet by remember { mutableStateOf(false) }
@@ -136,7 +137,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        StatusPulseIndicator(isActive = true)
+                        StatusPulseIndicator(isActive = telemetry.isModelLoaded)
                         Text(
                             text = activeModel?.name ?: "Select Model",
                             style = MaterialTheme.typography.labelMedium.copy(
@@ -206,7 +207,17 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
         }
 
         // Messages List or Clean Empty State
-        if (chatMessages.isEmpty() && !isGenerating) {
+        if (!telemetry.isModelLoaded && !isGenerating) {
+            Column(Modifier.weight(1f).fillMaxWidth().padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Your AI, on this device", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(12.dp))
+                Text("Choose a model to chat and share local AI with your apps.", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(20.dp))
+                Button(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Choose a model") }
+            }
+        } else if (chatMessages.isEmpty() && !isGenerating) {
             EmptyChatState(
                 activeModelName = activeModel?.name ?: "Better Intelligence",
                 activeMemoriesCount = activeMemories.size,
@@ -306,7 +317,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                                 viewModel.sendChatMessage(text)
                             }
                         },
-                        enabled = inputPrompt.isNotBlank(),
+                        enabled = inputPrompt.isNotBlank() && telemetry.isModelLoaded,
                         modifier = Modifier
                             .size(46.dp)
                             .clip(CircleShape)

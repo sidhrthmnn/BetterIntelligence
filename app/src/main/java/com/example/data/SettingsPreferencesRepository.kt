@@ -48,4 +48,12 @@ class SettingsPreferencesRepository(private val context: Context) {
             preferences[KEY_LLM_ENGINE] = engine.name
         }
     }
+
+    val darkThemeFlow: Flow<Boolean> = context.dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[KEY_DARK_THEME]?.toBooleanStrictOrNull() ?: true }
+
+    suspend fun saveDarkTheme(dark: Boolean) {
+        context.dataStore.edit { it[KEY_DARK_THEME] = dark.toString() }
+    }
 }

@@ -57,10 +57,10 @@ class AiBrainContentProvider : ContentProvider() {
                 val meta = repo.engine.activeMetadata.value
                 cursor.addRow(
                     arrayOf(
-                        "ACTIVE",
-                        meta?.modelName ?: "SmolLM2 135M Instruct",
-                        meta?.primaryQuantization?.typeName ?: "Q4_K_M",
-                        meta?.contextLength ?: 2048,
+                        LocalAiAccess(requireNotNull(context), repo).status().getString("status"),
+                        meta?.modelName ?: "",
+                        meta?.primaryQuantization?.typeName ?: "",
+                        meta?.contextLength ?: 0,
                         AUTHORITY
                     )
                 )
@@ -190,9 +190,23 @@ class AiBrainContentProvider : ContentProvider() {
     }
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
+        val repo = getRepo() ?: return Bundle().apply { putString("status", "ERROR") }
+        // ContentProvider.call() requires explicit permission enforcement as well as manifest protection.
+        val access = LocalAiAccess(requireNotNull(context), repo)
+        access.callerPackage()
+        if (method == "status") return access.status()
+        if (method == "polish") return access.polish(arg ?: extras?.getString("text"))
+        return try { legacyCall(method, arg, extras) }
+        catch (e: Exception) { Bundle().apply {
+            putString("status", if (e.message?.contains("busy", true) == true) "BUSY" else "ERROR")
+            putString("error", "Local AI request failed")
+        } }
+    }
+
+    private fun legacyCall(method: String, arg: String?, extras: Bundle?): Bundle {
         val result = Bundle()
         val repo = getRepo() ?: return result.apply { putString("error", "Repository unavailable") }
-        val callingPkg = extras?.getString("calling_package") ?: resolveCallerPackage()
+        val callingPkg = resolveCallerPackage()
         val callingUid = Binder.getCallingUid()
         val startTime = System.currentTimeMillis()
 
@@ -294,6 +308,7 @@ class AiBrainContentProvider : ContentProvider() {
                 result.putString("status", "SUCCESS")
                 result.putString("memories_json", json)
             }
+            else -> { result.putString("status", "INVALID_REQUEST"); result.putString("error", "Unknown method") }
         }
         return result
     }
@@ -307,12 +322,7 @@ class AiBrainContentProvider : ContentProvider() {
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int = 0
 
     private fun resolveCallerPackage(): String {
-        val ctx = context ?: return "unknown"
-        val callingPkg = callingPackage
-        if (!callingPkg.isNullOrBlank()) return callingPkg
-        val uid = Binder.getCallingUid()
-        if (uid == Process.myUid()) return ctx.packageName
-        return ctx.packageManager.getPackagesForUid(uid)?.firstOrNull() ?: "uid:$uid"
+        return LocalAiAccess(requireNotNull(context), requireNotNull(getRepo())).callerPackage()
     }
 
     private fun checkScope(repo: AiCoreRepository, pkg: String, scope: String): Pair<Boolean, String> {

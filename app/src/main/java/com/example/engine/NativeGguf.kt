@@ -15,6 +15,6 @@ internal object NativeGguf {
     fun ensureAvailable() { check(loadError == null) { "GGUF runtime requires an arm64-v8a or x86_64 device: $loadError" } }
     external fun prepare(path: ByteArray)
     external fun release()
-    external fun generate(prompt: ByteArray, observer: NativeObserver, maxTokens: Int, threads: Int,
+    external fun generate(prompt: ByteArray, systemPrompt: ByteArray, observer: NativeObserver, maxTokens: Int, threads: Int,
                           contextSize: Int, temperature: Float, topP: Float, topK: Int): ByteArray
 }

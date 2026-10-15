@@ -52,7 +52,7 @@ class LocalAiCoreService : Service() {
     }
 
     override fun onDestroy() {
-        repository.engine.cancelGeneration()
+        if (inferenceOwner.get() != -1) repository.engine.cancelGeneration()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -76,7 +76,7 @@ class LocalAiCoreService : Service() {
 
         override fun getActiveContextSize(): Int {
             enforceCallerPermission()
-            return repository.engine.activeMetadata.value?.contextLength ?: 4096
+            return repository.engine.activeMetadata.value?.contextLength ?: 0
         }
 
         override fun generateTextSync(
@@ -266,6 +266,47 @@ class LocalAiCoreService : Service() {
             enforceCallerPermission()
             return repository.engine.telemetry.value.toJson()
         }
+
+        override fun getServiceStatus(): android.os.Bundle = LocalAiAccess(this@LocalAiCoreService, repository).status()
+
+        override fun polishText(text: String?): android.os.Bundle {
+            enforceCallerPermission()
+            val uid = Binder.getCallingUid()
+            if (!inferenceOwner.compareAndSet(-1, uid)) return android.os.Bundle().apply { putString("status", "BUSY") }
+            return try { LocalAiAccess(this@LocalAiCoreService, repository).polish(text) }
+            finally { inferenceOwner.set(-1) }
+        }
+
+        override fun extractStructuredJson(text: String?, schemaKeys: Array<String>?): String =
+            runAuthorized("STRUCTURED_JSON") { repository.engine.extractStructuredJson(sanitizeInput(text), schemaKeys ?: emptyArray()) }
+
+        override fun routeIntent(utterance: String?, candidateRoutes: Array<String>?): String =
+            runAuthorized("STRUCTURED_JSON") { repository.engine.routeIntent(sanitizeInput(utterance), candidateRoutes ?: emptyArray()) }
+
+        override fun storeSharedMemory(title: String?, content: String?, category: String?): Boolean {
+            val pkg = getCallingPackageName()
+            return runBlocking(Dispatchers.IO) {
+                val (allowed, _) = repository.checkSecurityAndRateLimit(pkg, "WRITE_MEMORY")
+                allowed && runCatching { repository.writeSharedMemoryFromApp(pkg, title.orEmpty(), sanitizeInput(content), category ?: "Cross-App") }.isSuccess
+            }
+        }
+
+        override fun querySharedMemoriesJson(query: String?, limit: Int): String {
+            val pkg = getCallingPackageName()
+            return runAuthorized("READ_MEMORY", inference = false) {
+                repository.querySharedMemoriesAsJson(pkg, query.orEmpty(), limit)
+            }
+        }
+    }
+
+    private fun runAuthorized(scope: String, inference: Boolean = true, block: suspend () -> String): String {
+        val pkg = getCallingPackageName()
+        val uid = Binder.getCallingUid()
+        val (allowed, reason) = runBlocking { repository.checkSecurityAndRateLimit(pkg, scope) }
+        if (!allowed) return org.json.JSONObject().put("error", reason).toString()
+        if (inference) check(inferenceOwner.compareAndSet(-1, uid)) { "AI Core is busy" }
+        return try { runBlocking(Dispatchers.Default) { block() } }
+        finally { if (inference) inferenceOwner.set(-1) }
     }
 
     private fun sanitizeInput(input: String?): String {
@@ -282,8 +323,7 @@ class LocalAiCoreService : Service() {
         if (uid == Process.myUid()) {
             return applicationContext.packageName
         }
-        val packages = packageManager.getPackagesForUid(uid)
-        return packages?.firstOrNull() ?: "uid:$uid"
+        return LocalAiAccess(this, repository).callerPackage()
     }
 
     private fun checkAuthorizationAndRateLimit(packageName: String): Pair<Boolean, String> {

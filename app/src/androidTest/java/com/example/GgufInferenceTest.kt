@@ -35,7 +35,7 @@ class GgufInferenceTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val repository = AiCoreRepository.getInstance(context)
         assertFalse(repository.checkSecurityAndRateLimit("com.example.unapproved").first)
-        repository.updatePolicy(ClientAppPolicyEntity("com.example.approved", "Test", rateLimitPerMin = 1))
+        repository.updatePolicy(ClientAppPolicyEntity("com.example.approved", "Test", isWhitelisted = true, rateLimitPerMin = 1))
         assertTrue(repository.checkSecurityAndRateLimit("com.example.approved").first)
         assertFalse(repository.checkSecurityAndRateLimit("com.example.approved").first)
         val model = ModelLibrary.read(context).first()

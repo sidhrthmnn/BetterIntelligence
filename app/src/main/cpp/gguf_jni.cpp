@@ -64,7 +64,7 @@ Java_com_example_engine_NativeGguf_release(JNIEnv *, jobject) {
 
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray promptBytes,
-        jobject observer, jint maxTokens, jint threads, jint contextSize,
+        jbyteArray systemBytes, jobject observer, jint maxTokens, jint threads, jint contextSize,
         jfloat temperature, jfloat topP, jint topK) {
     try {
         std::lock_guard<std::mutex> lock(guard);
@@ -80,13 +80,18 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
         };
         check();
         const auto user = bytes(env, promptBytes);
-        const llama_chat_message message{"user", user.c_str()};
+        const auto system = bytes(env, systemBytes);
+        std::vector<llama_chat_message> messages;
+        // Preserve roles so instruction models receive the system prompt in their native template.
+        // llama.cpp merges system text into the user turn for templates such as Gemma.
+        if (!system.empty()) messages.push_back({"system", system.c_str()});
+        messages.push_back({"user", user.c_str()});
         const auto *chatTemplate = llama_model_chat_template(model.get(), nullptr);
         if (!chatTemplate) throw std::runtime_error("Model has no chat template; import an instruction model");
-        int size = llama_chat_apply_template(chatTemplate, &message, 1, true, nullptr, 0);
+        int size = llama_chat_apply_template(chatTemplate, messages.data(), messages.size(), true, nullptr, 0);
         if (size <= 0) throw std::runtime_error("Unsupported chat template");
         std::vector<char> formatted(size + 1);
-        size = llama_chat_apply_template(chatTemplate, &message, 1, true, formatted.data(), formatted.size());
+        size = llama_chat_apply_template(chatTemplate, messages.data(), messages.size(), true, formatted.data(), formatted.size());
         if (size <= 0 || size > static_cast<int>(formatted.size())) throw std::runtime_error("Cannot format prompt");
         const auto *vocab = llama_model_get_vocab(model.get());
         int count = -llama_tokenize(vocab, formatted.data(), size, nullptr, 0, true, true);
