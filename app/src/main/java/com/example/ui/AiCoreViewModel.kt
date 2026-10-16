@@ -183,6 +183,9 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     private val _verifyingModelId = MutableStateFlow<Long?>(null)
     val verifyingModelId: StateFlow<Long?> = _verifyingModelId.asStateFlow()
 
+    private val _deletingModelId = MutableStateFlow<Long?>(null)
+    val deletingModelId: StateFlow<Long?> = _deletingModelId.asStateFlow()
+
     // Developer Panel Visibility
     private val _isDeveloperPanelExpanded = MutableStateFlow(false)
     val isDeveloperPanelExpanded: StateFlow<Boolean> = _isDeveloperPanelExpanded.asStateFlow()
@@ -451,7 +454,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun switchModel(model: ModelEntity) {
-        if (_loadingModelId.value != null) return
+        if (_loadingModelId.value != null || _deletingModelId.value != null) return
         if (needsTerms(model)) { _licenseModel.value = model; return }
         _loadingModelId.value = model.id
         viewModelScope.launch {
@@ -567,6 +570,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun verifyModelChecksum(model: ModelEntity) {
+        if (_deletingModelId.value != null || _verifyingModelId.value != null) return
         viewModelScope.launch {
             _verifyingModelId.value = model.id
             try {
@@ -587,9 +591,19 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun uninstallModel(model: ModelEntity) {
+        if (_deletingModelId.value != null || _loadingModelId.value != null || _verifyingModelId.value != null) return
+        _deletingModelId.value = model.id
         viewModelScope.launch {
-            repository.uninstallModel(model)
-            _userMessage.value = "Uninstalled ${model.name}. Reclaimed ${model.fileSizeMb} MB storage."
+            try {
+                repository.uninstallModel(model)
+                _userMessage.value = "Deleted ${model.name} from this device."
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _userMessage.value = "Could not delete model: ${e.message}"
+            } finally {
+                _deletingModelId.value = null
+            }
         }
     }
 

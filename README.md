@@ -21,10 +21,16 @@ See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin 
 | Gemma 3 1B Instruct Q4_K_M | 806,058,240 | 1,792 MB |
 | SmolLM2 1.7B Instruct Q4_K_M | 1,055,609,536 | 2,048 MB |
 | Qwen 2.5 1.5B Instruct Q4_K_M | 1,117,320,736 | 2,048 MB |
+| Qwen 3 4B Instruct 2507 Q4_K_M | 2,497,280,736 | 4,096 MB |
+| Qwen 2.5 7B Instruct Q4_K_M | 4,683,074,240 | 6,144 MB |
 
 These are compact quantized choices for mobile CPU inference. See [model selection and publisher sources](docs/MOBILE_MODELS.md) for the tradeoffs. **Find models** searches public Hugging Face repositories or accepts an `owner/repository` URL. **Import a GGUF file** accepts files downloaded elsewhere, including gated models after obtaining access from their publisher. Downloads and imports appear in **My models**. A model must be a compatible single-file text GGUF; other formats, multimodal projectors and split files are not supported by this chooser.
 
-`models/library.json` and the matching APK asset record pinned upstream revisions, byte counts and SHA-256 checksums. In-app downloads use those pinned files. The four original weights remain in Git LFS; the three additions download on demand and local copies are ignored by Git. All weights are separate from the APK. Run `git lfs pull` for the original four, or `python scripts/download_models.py` (Python 3.11+) for all seven. The script also accepts one or more library filenames.
+`models/library.json` and the matching APK asset record pinned upstream revisions, byte counts and SHA-256 checksums. In-app downloads use those pinned files. The four original weights remain in Git LFS; additional weights download on demand and local copies are ignored by Git. All weights are separate from the APK. Run `git lfs pull` for the original four, or `python scripts/download_models.py` (Python 3.11+) for all nine. The script also accepts one or more library filenames.
+
+The 4B and 7B options are for Android devices with substantial free RAM. Their CPU generation can be slow; download size and parameter count alone do not predict quality or speed. **Delete** on a model card removes its private weights with confirmation. An active model is unloaded first; stop any current generation before deleting it. Curated and Hugging Face downloads remain available to download again. Local imports disappear from My models, while the original source file and chat history are preserved.
+
+Chat follows the bottom of an incoming answer, including answers taller than the screen. Scroll up to read earlier text without token updates pulling you away, and tap **Jump to latest** to return to the bottom. Sending a new prompt returns to the latest turn.
 
 Recommendations select from the curated library using supported ABI, current available RAM with a 512 MB reserve, low-memory state, and free storage. Users can download a larger model if storage permits, but activation still checks available memory. Memory figures are estimates. Speeds must be measured on the device. Supported packaged ABIs: arm64-v8a and x86_64. This build uses the CPU backend; GPU and LiteRT execution are unavailable. Native inference uses each GGUF's chat template, real tokenization, configurable sampling, cancellation, a 180-second deadline, and an output limit of 1,024 tokens. Only one inference runs at a time. Downloads stop if the process is killed; restart them in Models.
 

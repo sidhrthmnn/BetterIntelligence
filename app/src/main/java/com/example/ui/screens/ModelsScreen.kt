@@ -33,6 +33,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val loading by viewModel.loadingModelId.collectAsState()
     val terms by viewModel.licenseModel.collectAsState()
     val verifying by viewModel.verifyingModelId.collectAsState()
+    val deletingId by viewModel.deletingModelId.collectAsState()
     val context = LocalContext.current
     var source by rememberSaveable { mutableStateOf("library") }
     var tier by rememberSaveable { mutableStateOf("ALL") }
@@ -129,10 +130,10 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                         Text(if (model.checksumVerificationStatus == "VERIFYING") "Checking download…" else "Downloading ${(model.downloadProgress * 100).toInt()}%",
                             style = MaterialTheme.typography.bodySmall)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         when {
                             downloading -> OutlinedButton(onClick = { viewModel.cancelDownload(model.id) }) { Text("Cancel") }
-                            installed -> Button(onClick = { viewModel.switchModel(model) }, enabled = loading == null && !selected && fits,
+                            installed -> Button(onClick = { viewModel.switchModel(model) }, enabled = loading == null && deletingId == null && !selected && fits,
                                 modifier = Modifier.testTag("load_model_${model.id}")) {
                                 Text(if (loading == model.id) "Loading…" else if (selected) "In use" else "Use model")
                             }
@@ -140,7 +141,16 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                                 modifier = Modifier.testTag("download_model_${model.id}")) { Text(if (model.downloadState == "ERROR") "Retry download" else "Download") }
                         }
                         TextButton(onClick = { details = model }) { Text("Details") }
+                        if (installed || (model.isCustom && !downloading)) {
+                            TextButton(onClick = { deleting = model },
+                                enabled = deletingId == null && loading == null && verifying == null && !(selected && telemetry.isRunning),
+                                modifier = Modifier.testTag("delete_model_${model.id}"),
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                                Text(if (deletingId == model.id) "Deleting…" else "Delete")
+                            }
+                        }
                     }
+                    if (selected && telemetry.isRunning) Text("Stop the current answer before deleting the model.", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -175,16 +185,22 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                 }
                 Text("Writing quality depends on the selected model. Review polished text before applying it.")
                 if (model.isInstalled) {
-                    TextButton(onClick = { viewModel.verifyModelChecksum(model) }, enabled = verifying == null) { Text(if (verifying == model.id) "Verifying…" else "Verify file") }
-                    if (active?.id != model.id) TextButton(onClick = { details = null; deleting = model }) { Text("Remove download") }
+                    TextButton(onClick = { viewModel.verifyModelChecksum(model) }, enabled = verifying == null && deletingId == null) { Text(if (verifying == model.id) "Verifying…" else "Verify file") }
+                    TextButton(onClick = { details = null; deleting = model },
+                        enabled = deletingId == null && loading == null && verifying == null && !(active?.id == model.id && telemetry.isRunning)) { Text("Delete from device") }
                 }
             }
         }, confirmButton = { TextButton(onClick = { details = null }) { Text("Done") } })
     }
     deleting?.let { model ->
-        AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Remove ${model.name}?") },
-            text = { Text("You can download it again later.") },
-            confirmButton = { TextButton(onClick = { viewModel.uninstallModel(model); deleting = null }) { Text("Remove") } },
+        AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Delete ${model.name}?") },
+            text = { Text(buildString {
+                append("This removes the model from this device and frees its storage. ")
+                if (active?.id == model.id) append("The model will be unloaded and connected apps will need another model selected. ")
+                append(if (model.isCustom && model.downloadUrl.isNullOrBlank()) "You can import the original file again. The original file and saved chats are kept." else "You can download it again later. Saved chats are kept.")
+            }) },
+            confirmButton = { TextButton(onClick = { viewModel.uninstallModel(model); deleting = null },
+                modifier = Modifier.testTag("confirm_delete_model")) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } })
     }
     if (terms != null) AlertDialog(onDismissRequest = { viewModel.dismissModelTerms() }, title = { Text("Gemma model terms") },

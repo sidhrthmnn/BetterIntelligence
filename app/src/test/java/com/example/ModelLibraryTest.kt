@@ -17,7 +17,7 @@ class ModelLibraryTest {
 
     @Test fun recommendationUsesAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        assertEquals(7, models.size)
+        assertEquals(9, models.size)
         assertTrue(models.all { !it.isInstalled && !it.isActive && !it.isChecksumVerified })
         assertEquals("Qwen 2.5 0.5B Instruct", ModelLibrary.recommend(models, profile())!!.recommendedModelName)
         assertEquals("SmolLM2 135M Instruct", ModelLibrary.recommend(models, profile(storage = 0.3f))!!.recommendedModelName)
@@ -34,12 +34,25 @@ class ModelLibraryTest {
         assertNull(ModelLibrary.recommend(listOf(model.copy(isCustom = true)), profile(ram = 4096)))
     }
 
+    @Test fun higherCapacityModelsRequireEnoughAvailableMemoryAndStorage() {
+        val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
+        val fourB = models.single { it.parameterCount == "4B" }
+        val sevenB = models.single { it.parameterCount == "7B" }
+        assertFalse(ModelLibrary.fits(fourB, profile(ram = 4096)))
+        assertTrue(ModelLibrary.fits(fourB, profile(ram = 6144)))
+        assertFalse(ModelLibrary.fits(sevenB, profile(ram = 6144)))
+        assertTrue(ModelLibrary.fits(sevenB, profile(ram = 8192)))
+        assertFalse(ModelLibrary.canDownload(sevenB, profile(ram = 8192, storage = 4f)))
+        assertEquals(fourB.name, ModelLibrary.recommend(models, profile(ram = 6144))!!.recommendedModelName)
+        assertEquals(sevenB.name, ModelLibrary.recommend(models, profile(ram = 8192))!!.recommendedModelName)
+    }
+
     @Test fun catalogHasMatchingPinnedDownloadsAndHonestEstimates() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val asset = context.assets.open("model-library.json").bufferedReader().use { it.readText() }
         assertEquals(java.io.File("../models/library.json").readText().trim(), asset.trim())
         val models = ModelLibrary.read(context)
-        assertEquals(7, models.map { it.filename }.distinct().size)
+        assertEquals(9, models.map { it.filename }.distinct().size)
         assertEquals(setOf("LIGHTWEIGHT", "BALANCED", "QUALITY"), models.map { it.recommendedTier }.toSet())
         for (model in models) {
             assertTrue(model.sha256Checksum!!.matches(Regex("[a-f0-9]{64}")))

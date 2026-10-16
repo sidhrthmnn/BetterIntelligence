@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -54,20 +56,27 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.ChatMessageEntity
@@ -75,6 +84,7 @@ import com.example.ui.AiCoreViewModel
 import com.example.ui.AppTab
 import com.example.ui.components.SmoothStreamingTokenText
 import com.example.ui.components.StatusPulseIndicator
+import kotlinx.coroutines.flow.collect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,17 +101,6 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
     var inputPrompt by remember { mutableStateOf("") }
     var showParamsSheet by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
-
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(chatMessages.size, streamingText) {
-        if (chatMessages.isNotEmpty() || streamingText.isNotEmpty()) {
-            val target = (chatMessages.size + if (isGenerating) 1 else 0) - 1
-            if (target >= 0) {
-                listState.animateScrollToItem(target)
-            }
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -129,6 +128,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier
+                        .weight(1f)
                         .clickable { viewModel.selectTab(AppTab.MODELS) }
                         .testTag("model_selector_pill")
                 ) {
@@ -143,7 +143,10 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.SemiBold
                             ),
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                         if (activeModel?.isBaseModel == true) {
                             Box(
@@ -219,6 +222,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
             }
         } else if (chatMessages.isEmpty() && !isGenerating) {
             EmptyChatState(
+                modifier = Modifier.weight(1f),
                 activeModelName = activeModel?.name ?: "Better Intelligence",
                 activeMemoriesCount = activeMemories.size,
                 onPromptSelected = { prompt ->
@@ -228,32 +232,9 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                 }
             )
         } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(chatMessages, key = { it.id }) { msg ->
-                    ChatMessageItem(
-                        message = msg,
-                        onCopy = { clipboardManager.setText(AnnotatedString(msg.content)) }
-                    )
-                }
-
-                // Streaming Assistant Bubble
-                if (isGenerating) {
-                    item {
-                        AssistantStreamingItem(
-                            streamingText = streamingText,
-                            modelName = activeModel?.name ?: "Local Model"
-                        )
-                    }
-                }
-            }
+            ChatTranscript(chatMessages, isGenerating, streamingText, activeModel?.name ?: "Local Model",
+                onCopy = { clipboardManager.setText(AnnotatedString(it)) },
+                modifier = Modifier.weight(1f).fillMaxWidth())
         }
 
         // Bottom Clean Pill Input Bar
@@ -481,14 +462,83 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
     }
 }
 
+/** Follow the bottom sentinel without restarting an animation for every generated token. */
+@Composable
+internal fun ChatTranscript(
+    messages: List<ChatMessageEntity>,
+    isGenerating: Boolean,
+    streamingText: String,
+    modelName: String,
+    onCopy: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState()
+) {
+    val awayFromLatest by remember {
+        derivedStateOf { listState.canScrollForward }
+    }
+    var followLatest by remember { mutableStateOf(true) }
+    val scrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source == NestedScrollSource.UserInput && available.y > 0f) followLatest = false
+                return Offset.Zero
+            }
+        }
+    }
+    LaunchedEffect(messages.lastOrNull { it.role == "user" }?.id) { followLatest = true }
+    LaunchedEffect(listState) {
+        snapshotFlow { !listState.canScrollForward }.collect { atBottom ->
+            if (atBottom) followLatest = true
+        }
+    }
+    LaunchedEffect(listState, followLatest) {
+        if (followLatest) snapshotFlow {
+            val layout = listState.layoutInfo
+            val last = layout.visibleItemsInfo.lastOrNull()
+            listOf(layout.totalItemsCount, layout.viewportEndOffset, last?.index, last?.offset, last?.size)
+        }.collect {
+            val lastIndex = listState.layoutInfo.totalItemsCount - 1
+            if (lastIndex >= 0 && listState.canScrollForward) listState.scrollToItem(lastIndex)
+        }
+    }
+    Box(modifier) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollConnection).testTag("chat_transcript"),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom)
+        ) {
+            items(messages, key = { "message_${it.id}" }) { message ->
+                ChatMessageItem(message, onCopy = { onCopy(message.content) })
+            }
+            if (isGenerating) item(key = "streaming") {
+                AssistantStreamingItem(streamingText, modelName)
+            }
+            item(key = "bottom") { Spacer(Modifier.height(1.dp)) }
+        }
+        if (awayFromLatest) {
+            Button(
+                onClick = { followLatest = true },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).testTag("jump_to_latest"),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("Jump to latest")
+            }
+        }
+    }
+}
+
 @Composable
 private fun EmptyChatState(
+    modifier: Modifier = Modifier,
     activeModelName: String,
     activeMemoriesCount: Int,
     onPromptSelected: (String) -> Unit
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -662,13 +712,13 @@ private fun ChatMessageItem(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
+                    SelectionContainer { Text(
                         text = message.content,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             lineHeight = 22.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface
-                    )
+                    ) }
 
                     if (message.latencyMs > 0) {
                         Spacer(modifier = Modifier.height(8.dp))

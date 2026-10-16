@@ -260,22 +260,18 @@ class AiCoreRepository(
         }
     }
 
-    suspend fun verifyModelChecksum(model: ModelEntity): ChecksumVerificationResult {
-        val file = if (!model.localFilePath.isNullOrBlank()) {
-            File(model.localFilePath)
-        } else {
-            File(downloadManager.modelsDirectory, model.filename)
+    suspend fun verifyModelChecksum(model: ModelEntity): ChecksumVerificationResult = withContext(Dispatchers.IO) {
+        modelLock.withLock {
+            val current = modelDao.getModelById(model.id) ?: error("Model was deleted")
+            check(current.isInstalled) { "Download or import this model first" }
+            val file = File(current.localFilePath ?: File(downloadManager.modelsDirectory, current.filename).path)
+            val result = downloadManager.verifyLocalFile(file, current.sha256Checksum)
+            modelDao.updateModel(current.copy(
+                isChecksumVerified = result.isMatch,
+                checksumVerificationStatus = result.status
+            ))
+            result
         }
-
-        val result = downloadManager.verifyLocalFile(file, model.sha256Checksum)
-        val computed = result.computedSha256
-        val updatedModel = model.copy(
-            sha256Checksum = model.sha256Checksum,
-            isChecksumVerified = result.isMatch,
-            checksumVerificationStatus = result.status
-        )
-        modelDao.updateModel(updatedModel)
-        return result
     }
 
     suspend fun searchHuggingFaceHub(query: String): List<HuggingFaceModelSearchResult> {
@@ -324,32 +320,42 @@ class AiCoreRepository(
         return entity.copy(id = id)
     }
 
-    suspend fun uninstallModel(model: ModelEntity) {
-        val wasActive = model.isActive
-        val modelFile = File(model.localFilePath ?: File(downloadManager.modelsDirectory, model.filename).absolutePath)
-        if (wasActive) { engine.unloadActiveModel(); modelDao.clearActiveModel() }
-        if (modelFile.exists()) {
-            modelFile.delete()
-        }
-        modelDao.updateModel(
-            model.copy(
+    suspend fun uninstallModel(model: ModelEntity) = withContext(Dispatchers.IO) {
+        modelLock.withLock {
+            // Re-read inside the same lock used for activation: the UI's model may be stale.
+            val current = modelDao.getModelById(model.id) ?: return@withLock
+            check(current.downloadState != "DOWNLOADING" && !activeDownloadJobs.containsKey(current.id)) {
+                "Cancel the download before deleting this model"
+            }
+            val directory = downloadManager.modelsDirectory.canonicalFile
+            val modelFile = File(current.localFilePath ?: File(directory, current.filename).path).canonicalFile
+            val partialFile = File(directory, "${current.filename}.part").canonicalFile
+            require(modelFile.parentFile == directory && partialFile.parentFile == directory) {
+                "Model file is outside the app's model storage"
+            }
+            if (current.isActive) {
+                // The engine refuses to unload while chat or a connected app is generating.
+                engine.unloadActiveModel()
+                modelDao.clearActiveModel()
+            }
+            for (file in listOf(modelFile, partialFile)) {
+                check(!file.exists() || (file.isFile && file.delete())) { "Could not delete ${file.name}. Try again." }
+            }
+            if (current.isCustom && current.downloadUrl.isNullOrBlank()) {
+                // Imported source files are untouched; only the app's private copy is removed.
+                modelDao.deleteModel(current.id)
+            } else modelDao.updateModel(current.copy(
                 isInstalled = false,
                 isActive = false,
                 downloadState = "NOT_DOWNLOADED",
                 downloadProgress = 0f,
                 downloadSpeedMbps = 0f,
-                localFilePath = null
-            )
-        )
-
-        // If this model was active in memory, switch to first available installed model
-        if (wasActive) {
-            val models = modelDao.getAllModels().firstOrNull() ?: emptyList()
-            val fallback = models.firstOrNull { it.id != model.id && (it.isInstalled || it.downloadState == "DOWNLOADED") }
-            if (fallback != null) {
-                switchActiveModel(fallback)
-            }
+                localFilePath = null,
+                isChecksumVerified = false,
+                checksumVerificationStatus = "NOT_VERIFIED"
+            ))
         }
+        analyzeHardware(appContext)
     }
 
     suspend fun updateModel(model: ModelEntity, scope: CoroutineScope) {

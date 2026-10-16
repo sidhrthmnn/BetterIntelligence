@@ -15,7 +15,8 @@ class GgufInferenceTest {
     @Test fun newMobileCatalogModelsRunOnNativeCpuBackend() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val engine = InferenceEngine()
-        val filenames = setOf("gemma-3-270m-it-Q4_K_M.gguf", "qwen2.5-1.5b-instruct-q4_k_m.gguf", "smollm2-1.7b-instruct-q4_k_m.gguf")
+        val filenames = setOf("gemma-3-270m-it-Q4_K_M.gguf", "qwen2.5-1.5b-instruct-q4_k_m.gguf", "smollm2-1.7b-instruct-q4_k_m.gguf",
+            "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf", "Qwen2.5-7B-Instruct-Q4_K_M.gguf")
         val requested = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("mobileModelFilename")
         require(requested == null || requested in filenames) { "Unknown mobile catalog test model" }
         try {
