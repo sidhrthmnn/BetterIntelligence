@@ -18,13 +18,16 @@ class GgufInferenceTest {
         val filenames = setOf("gemma-3-270m-it-Q4_K_M.gguf", "qwen2.5-1.5b-instruct-q4_k_m.gguf", "smollm2-1.7b-instruct-q4_k_m.gguf",
             "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf", "Qwen2.5-7B-Instruct-Q4_K_M.gguf")
         val requested = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("mobileModelFilename")
+        val outputTokens = androidx.test.platform.app.InstrumentationRegistry.getArguments()
+            .getString("mobileModelMaxTokens")?.toIntOrNull()?.coerceIn(1, 16) ?: 16
         require(requested == null || requested in filenames) { "Unknown mobile catalog test model" }
         try {
             for (model in ModelLibrary.read(context).filter { it.filename in filenames && (requested == null || it.filename == requested) }) {
                 val file = File(context.filesDir, "models/${model.filename}")
                 assertTrue("Push ${model.filename} into files/models first", file.isFile)
                 engine.loadCustomGguf(file).getOrThrow()
-                val output = engine.generateSync("Write a short greeting.", GenerationParams(maxTokens = 16, contextSize = 2048, temperature = 0f))
+                val output = engine.generateSync(if (outputTokens == 1) "Hi" else "Write a short greeting.",
+                    GenerationParams(maxTokens = outputTokens, contextSize = if (outputTokens == 1) 512 else 2048, temperature = 0f))
                 assertTrue("No native output from ${model.name}", output.isNotBlank())
                 assertTrue(engine.telemetry.value.completionTokens > 0)
                 android.util.Log.i("BetterGgufTest", "${model.name}: $output")

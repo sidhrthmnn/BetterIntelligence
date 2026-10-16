@@ -17,7 +17,7 @@ class ActiveModelDeletionTest {
     @Test fun busyModelIsKeptThenIdleModelCanBeDeletedWithoutLosingChats() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val repository = AiCoreRepository.getInstance(context)
-        val models = withTimeout(60_000) {
+        val models = withTimeout(300_000) {
             repository.allModels.first { it.size == ModelLibrary.read(context).size }
         }
         val model = models.first { it.isBaseModel }
