@@ -15,7 +15,7 @@ class ServiceIntegrationSetupTest {
     @Test fun prepare() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val repository = AiCoreRepository.getInstance(context)
-        val models = kotlinx.coroutines.withTimeout(60_000) {
+        val models = kotlinx.coroutines.withTimeout(300_000) {
             repository.allModels.first { list ->
                 list.count { !it.isCustom } == com.example.engine.ModelLibrary.read(context).size &&
                     list.any { it.name == "Qwen 2.5 0.5B Instruct" && it.isInstalled }

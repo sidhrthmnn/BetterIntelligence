@@ -11,17 +11,18 @@ data class GenerationConfig(
     val topP: Float = 0.95f,
     val maxTokens: Int = 1024,
     val systemPrompt: String? = null,
-    val threads: Int = 4,
-    val gpuLayers: Int = 16,
-    val stopSequences: List<String> = listOf("</s>", "<|im_end|>", "<|eot_id|>", "[/INST]")
+    val threads: Int = 0,
+    val gpuLayers: Int = 0,
+    val stopSequences: List<String> = listOf("</s>", "<|im_end|>", "<|eot_id|>", "[/INST]"),
+    val contextSize: Int = 4096
 )
 
 /**
  * Hardware accelerator options for the inference backend.
  */
 enum class BackendType {
-    GPU,       // OpenCL / Vulkan / Qualcomm Adreno Delegate
-    CPU        // XNNPACK / ARM NEON SIMD
+    GPU,       // Packaged llama.cpp Vulkan backend, if verified compatible.
+    CPU        // Packaged ggml CPU backend, baseline NEON on arm64-v8a.
 }
 
 /**
@@ -37,7 +38,7 @@ interface LlmEngine {
      */
     suspend fun initialize(
         modelPath: String,
-        preferredBackend: BackendType = BackendType.GPU
+        preferredBackend: BackendType = BackendType.CPU
     ): Result<Unit>
 
     /**
@@ -55,7 +56,7 @@ interface LlmEngine {
         prompt: String,
         config: GenerationConfig = GenerationConfig(),
         listener: StreamTokenListener
-    )
+    ): kotlinx.coroutines.Job?
 
     /**
      * Cancels any in-flight token generation.

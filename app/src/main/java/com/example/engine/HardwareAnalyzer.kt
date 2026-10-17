@@ -130,8 +130,10 @@ object HardwareAnalyzer {
         val usedRamMb = (totalRamMb - availRamMb).coerceAtLeast(0L)
         val usedRamPercent = (((totalRamMb - availRamMb).toDouble() / totalRamMb.coerceAtLeast(1)) * 100).roundToInt().coerceIn(0, 100)
 
-        val osReservedRamMb = (totalRamMb * 0.38).toLong().coerceIn(512L, 3500L)
-        val safeModelRamLimitMb = minOf((totalRamMb - osReservedRamMb).coerceAtLeast(0L), (availRamMb - 512L).coerceAtLeast(0L))
+        // Available RAM already excludes non-reclaimable system allocations.
+        // Do not subtract a second, fixed 38% of total RAM from the model budget.
+        val osReservedRamMb = maxOf(512L, (totalRamMb * 0.12).toLong())
+        val safeModelRamLimitMb = ModelMemoryPlanner.budget(totalRamMb, availRamMb)
 
         return RamStatusInfo(
             totalRamMb = totalRamMb,
@@ -150,14 +152,10 @@ object HardwareAnalyzer {
     fun detectCpu(): CpuStatusInfo {
         val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
         val abi = Build.SUPPORTED_ABIS?.firstOrNull() ?: "arm64-v8a"
-        val isArm64 = abi.contains("arm64") || abi.contains("aarch64") || abi.contains("x86_64")
+        val isArm64 = abi.contains("arm64") || abi.contains("aarch64")
         val supportsNeon = abi.contains("arm64")
 
-        val topologySummary = when {
-            cores >= 8 -> "Octa-Core Big.LITTLE"
-            cores >= 6 -> "Hexa-Core Cluster"
-            else -> "Quad-Core"
-        }
+        val topologySummary = "$cores available logical cores"
 
         return CpuStatusInfo(
             cores = cores,
@@ -175,8 +173,8 @@ object HardwareAnalyzer {
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
 
         var statusCode = 0
-        var statusLabel = "Nominal / Cool"
-        var description = "Thermal state is optimal for sustained on-device LLM inference."
+        var statusLabel = "Unavailable (Android < 10)"
+        var description = "The system thermal API is unavailable. Battery temperature is a separate sensor."
         var isThrottling = false
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && powerManager != null) {
@@ -229,7 +227,7 @@ object HardwareAnalyzer {
         val batteryFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         val batteryIntent = context.registerReceiver(null, batteryFilter)
         val tempRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
-        val tempC = if (tempRaw > 0) tempRaw / 10.0f else 32.0f
+        val tempC = if (tempRaw > 0) tempRaw / 10.0f else 0f
         val batteryStatus = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         val isCharging = batteryStatus == BatteryManager.BATTERY_STATUS_CHARGING || batteryStatus == BatteryManager.BATTERY_STATUS_FULL
 
@@ -262,9 +260,9 @@ object HardwareAnalyzer {
         // Battery level
         val batteryFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         val batteryIntent = context.registerReceiver(null, batteryFilter)
-        val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: 85
-        val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: 100
-        val batteryPercent = if (level >= 0 && scale > 0) ((level.toFloat() / scale) * 100).roundToInt() else 85
+        val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val batteryPercent = if (level >= 0 && scale > 0) ((level.toFloat() / scale) * 100).roundToInt() else -1
 
         // Compute AI Capability Score (0-100)
         var score = 0
@@ -336,7 +334,7 @@ object HardwareAnalyzer {
         val thermal = detectThermalStatus(context)
         val profile = analyze(context)
 
-        val isReady = !ram.isLowMemory && ram.availableRamMb >= 1200L && cpu.isArm64 && !thermal.isThrottling
+        val isReady = !ram.isLowMemory && ram.availableRamMb >= 768L && cpu.abi in listOf("arm64-v8a", "x86_64") && !thermal.isThrottling
         val diagnosticBadge = when {
             !isReady && thermal.isThrottling -> "THERMAL THROTTLE"
             !isReady && ram.isLowMemory -> "LOW RAM"

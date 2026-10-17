@@ -9,7 +9,7 @@ enum class SupportedEngine(val displayName: String, val formatBadge: String, val
     LLAMA_CPP(
         displayName = "llama.cpp (Native NDK)",
         formatBadge = ".GGUF",
-        description = "Native llama.cpp CPU runtime for GGUF instruction models. ARM64 and x86_64."
+        description = "Native GGUF inference on CPU or compatible Vulkan GPU. ARM64 and x86_64."
     ),
     LITERT(
         displayName = "LiteRT (Google GenAI)",
@@ -46,7 +46,7 @@ class EngineManager(
 
     suspend fun initializeActiveEngine(
         modelPath: String = "",
-        preferredBackend: BackendType = BackendType.GPU
+        preferredBackend: BackendType = BackendType.CPU
     ): Result<Unit> {
         return currentEngine.initialize(modelPath, preferredBackend)
     }

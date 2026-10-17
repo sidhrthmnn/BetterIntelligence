@@ -14,8 +14,9 @@ class LiteRtEngine(private val context: Context) : LlmEngine {
     override fun generateStream(prompt: String, config: GenerationConfig): Flow<String> = flow {
         throw UnsupportedOperationException("LiteRT is not packaged. Select a GGUF model.")
     }
-    override fun generateStreamWithCallback(prompt: String, config: GenerationConfig, listener: StreamTokenListener) {
+    override fun generateStreamWithCallback(prompt: String, config: GenerationConfig, listener: StreamTokenListener): kotlinx.coroutines.Job? {
         listener.onError(501, "LiteRT is not packaged. Select a GGUF model.")
+        return null
     }
     override fun cancelGeneration() {}
     override fun release() {}

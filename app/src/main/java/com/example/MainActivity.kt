@@ -24,13 +24,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brightness4
@@ -73,6 +74,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -155,9 +157,11 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isExpanded = maxWidth >= 600.dp
+        val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            // Own IME insets once, above every screen. Child content must not add them again.
+            modifier = Modifier.fillMaxSize().imePadding(),
             containerColor = MaterialTheme.colorScheme.background,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
@@ -193,9 +197,9 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
                 )
             },
             bottomBar = {
-                if (!isExpanded) {
+                if (!isExpanded && !keyboardVisible) {
                     NavigationBar(
-                        modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                        modifier = Modifier.testTag("bottom_navigation"),
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ) {
@@ -240,6 +244,7 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
+                        .consumeWindowInsets(innerPadding)
                 ) {
                     NavigationRail(
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -281,6 +286,7 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
+                        .consumeWindowInsets(innerPadding)
                 ) {
                     TabContent(tab = currentTab, viewModel = viewModel)
                 }

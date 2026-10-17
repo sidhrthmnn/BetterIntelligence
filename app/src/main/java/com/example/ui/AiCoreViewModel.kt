@@ -135,6 +135,8 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     val isChatGenerating: StateFlow<Boolean> = _isChatGenerating.asStateFlow()
 
     private val _streamingChatText = MutableStateFlow("")
+    private var chatPreparationJob: kotlinx.coroutines.Job? = null
+    private var chatInferenceJob: kotlinx.coroutines.Job? = null
     val streamingChatText: StateFlow<String> = _streamingChatText.asStateFlow()
 
     private val _chatGenerationParams = MutableStateFlow(GenerationParams())
@@ -142,6 +144,15 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
     // Engine Manager state: llama.cpp (GGUF) vs LiteRT (TFLite)
     val selectedEngine: StateFlow<SupportedEngine> = repository.engineManager.selectedEngineType
+    val processingMode = repository.engine.hardware.mode
+    val accelerationCapabilities = repository.engine.hardware.capabilities
+    val gpuLayerLimit = repository.engine.hardware.layerLimit
+
+    fun setProcessingMode(mode: com.example.engine.ProcessingMode, layers: Int = gpuLayerLimit.value) {
+        runCatching { repository.engine.setProcessingMode(mode, layers) }
+            .onSuccess { _userMessage.value = "Processing setting saved. Applies to the next request." }
+            .onFailure { _userMessage.value = it.message }
+    }
     
     // Hardware Pre-flight Validation
     val hardwareValidation = HardwareValidator.validateEnvironment(application)
@@ -366,6 +377,8 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun releasableGpuWeightsMb(): Long = repository.engine.releasableGpuWeightsMb()
+
     fun runBenchmark() {
         if (_isBenchmarking.value) return
         _isBenchmarking.value = true
@@ -374,21 +387,19 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 val result = repository.engine.runBenchmark(
-                    contextLength = _chatGenerationParams.value.contextSize,
-                    gpuLayers = _chatGenerationParams.value.gpuLayers
+                    contextLength = _chatGenerationParams.value.contextSize
                 )
                 _benchmarkResult.value = result
                 
                 // Automatically tune runtime parameters to identified sweet spot
                 _chatGenerationParams.value = _chatGenerationParams.value.copy(
                     threads = result.recommendedThreads,
-                    gpuLayers = result.recommendedGpuLayers,
                     contextSize = result.recommendedContext
                 )
 
                 // Persist benchmark metric log to Room database
                 val active = activeModel.value
-                val profile = repository.hardwareProfile.value
+                val profile = com.example.engine.HardwareAnalyzer.analyze(getApplication())
                 val log = HardwarePerformanceLogEntity(
                     modelName = active?.name ?: result.modelName,
                     filename = active?.filename ?: "${result.modelName.lowercase().replace(' ', '-')}.gguf",
@@ -399,13 +410,13 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
                     promptProcessingTokSec = result.promptProcessingTokSec,
                     timeToFirstTokenMs = result.promptLatencyMs,
                     peakRamMb = result.ramUsageMb.toLong(),
-                    ramAvailableAtTestMb = profile?.availableRamMb ?: 3450L,
-                    batteryTemperatureC = profile?.batteryTemperatureC ?: 36.5f,
-                    thermalState = profile?.thermalStatus ?: "Nominal",
+                    ramAvailableAtTestMb = profile.availableRamMb,
+                    batteryTemperatureC = profile.batteryTemperatureC,
+                    thermalState = profile.thermalStatus,
                     threadCount = result.recommendedThreads,
                     gpuLayers = result.recommendedGpuLayers,
-                    deviceModel = profile?.deviceModel ?: "ARM64 Android System",
-                    chipsetAbi = profile?.cpuAbi ?: "arm64-v8a (NEON SIMD)",
+                    deviceModel = profile.deviceModel,
+                    chipsetAbi = profile.cpuAbi,
                     testType = "BENCHMARK_RUN",
                     efficiencyScore = if (result.ramUsageMb > 0) result.generationTokSec / (result.ramUsageMb / 1024f) else result.generationTokSec,
                     timestamp = System.currentTimeMillis()
@@ -430,9 +441,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val log = repository.runAndSaveBenchmarkForModel(
                     model = model,
-                    threads = _chatGenerationParams.value.threads,
-                    gpuLayers = _chatGenerationParams.value.gpuLayers,
-                    context = getApplication()
+                    contextSize = _chatGenerationParams.value.contextSize
                 )
                 _userMessage.value = "Saved log for ${model.name}: ${String.format("%.1f", log.tokensPerSecond)} tok/s (${log.quantization})."
             } catch (e: Exception) {
@@ -447,10 +456,9 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         val bench = _benchmarkResult.value ?: return
         _chatGenerationParams.value = _chatGenerationParams.value.copy(
             threads = bench.recommendedThreads,
-            gpuLayers = bench.recommendedGpuLayers,
             contextSize = bench.recommendedContext
         )
-        _userMessage.value = "Saved optimal configuration (${bench.recommendedThreads} threads, ${bench.recommendedGpuLayers} GPU layers, ${bench.recommendedContext} context)."
+        _userMessage.value = "Saved ${bench.recommendedThreads} CPU threads and ${bench.recommendedContext} context. AI Processing Mode manages GPU offloading."
     }
 
     fun switchModel(model: ModelEntity) {
@@ -460,7 +468,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 repository.switchActiveModel(model)
-                _userMessage.value = "Loaded ${model.name}. On-device CPU inference is ready."
+                _userMessage.value = "Loaded ${model.name}. On-device inference is ready."
             } catch (e: Exception) { _userMessage.value = e.message ?: "Unable to load model" }
             finally { _loadingModelId.value = null }
         }
@@ -647,7 +655,10 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         val currentModel = activeModel.value?.name ?: "Better Intelligence"
-        viewModelScope.launch {
+        chatInferenceJob = null
+        _isChatGenerating.value = true
+        _streamingChatText.value = ""
+        chatPreparationJob = viewModelScope.launch {
             // Check auto memory capture
             if (_isAutoMemoryCaptureEnabled.value) {
                 autoExtractMemory(userText.trim(), "Chat")
@@ -690,11 +701,12 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
                 maxTokens = effectiveParams.maxTokens,
                 systemPrompt = enhancedSystemPrompt,
                 threads = effectiveParams.threads,
-                gpuLayers = effectiveParams.gpuLayers
+                gpuLayers = effectiveParams.gpuLayers,
+                contextSize = effectiveParams.contextSize
             )
 
             val currentEngine = repository.engineManager.currentEngine
-            currentEngine.generateStreamWithCallback(
+            chatInferenceJob = currentEngine.generateStreamWithCallback(
                 userText,
                 config,
                 object : StreamTokenListener {
@@ -753,6 +765,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
                     }
 
                     override fun onError(errorCode: Int, errorMessage: String) {
+                        val partial = _streamingChatText.value
                         if (_isForegroundServiceEnabled.value) {
                             InferenceForegroundService.cancel(app)
                         }
@@ -761,7 +774,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
                             repository.insertChatMessage(
                                 ChatMessageEntity(
                                     role = "assistant",
-                                    content = "Error [$errorCode]: $errorMessage",
+                                    content = if (partial.isNotBlank()) "$partial\n\n[Stopped: $errorMessage]" else "Error [$errorCode]: $errorMessage",
                                     modelName = currentModel
                                 )
                             )
@@ -815,12 +828,14 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun cancelGeneration() {
-        repository.engineManager.cancelGeneration()
+        // Cancel only this chat, never a request owned by an external app.
+        chatPreparationJob?.cancel()
+        val request = chatInferenceJob
+        request?.cancel()
         if (_isForegroundServiceEnabled.value) {
             InferenceForegroundService.cancel(getApplication())
         }
-        _isChatGenerating.value = false
-        _streamingChatText.value = ""
+        if (request == null) _isChatGenerating.value = false
     }
 
     fun clearChat() {

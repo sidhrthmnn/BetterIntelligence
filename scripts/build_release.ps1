@@ -1,8 +1,16 @@
 param(
     [Parameter(Mandatory = $true)][string]$SigningCredentials,
-    [string[]]$Tasks = @(':app:bundleRelease')
+    [string[]]$Tasks = @(':app:bundleRelease'),
+    [string]$NativeToolchainBin,
+    [string]$NativeBuildDirectory
 )
 $ErrorActionPreference = 'Stop'
+if ($NativeToolchainBin) {
+    if (-not (Test-Path -LiteralPath $NativeToolchainBin -PathType Container)) { throw 'Native host toolchain directory not found.' }
+    $env:PATH = "$NativeToolchainBin;$env:PATH"
+}
+if ($NativeBuildDirectory) { $env:BI_NATIVE_BUILD_DIR = $NativeBuildDirectory }
+if ($env:ANDROID_HOME) { $env:PATH = "$env:ANDROID_HOME\cmake\3.22.1\bin;$env:PATH" }
 $credentials = Get-Content -LiteralPath $SigningCredentials -Raw | ConvertFrom-Json
 if ($credentials.alias -ne 'upload') { throw 'The release signing configuration expects alias upload.' }
 if (-not (Test-Path -LiteralPath $credentials.keystore -PathType Leaf)) { throw 'Upload keystore was not found.' }

@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import com.example.engine.ModelLibrary
+import com.example.engine.ModelMemoryPlanner
 import com.example.engine.GenerationParams
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -80,15 +81,24 @@ class AiCoreRepository(
 
     private val repositoryScope = CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
     private val modelLock = Mutex()
+    private val verifiedFiles = com.example.engine.VerifiedModelFileCache(appContext)
+    @Volatile private var explicitModelSelection = false
 
     init {
         repositoryScope.launch {
-            seedDefaultModelsIfEmpty()
+            engine.refreshHardware()
+            modelLock.withLock { seedDefaultModelsIfEmpty() }
             analyzeHardware(appContext)
             val previous = modelDao.getActiveModel().first()
             if (previous != null) {
-                try { switchActiveModel(previous) }
-                catch (e: Exception) { modelDao.clearActiveModel() }
+                try { activateModel(previous, restoring = true) }
+                catch (e: Exception) { if (!explicitModelSelection && !engine.isReady()) modelDao.clearActiveModel() }
+            }
+        }
+        repositoryScope.launch {
+            while (true) {
+                delay(10_000)
+                if (_hardwareProfile.subscriptionCount.value > 0) analyzeHardware(appContext)
             }
         }
     }
@@ -112,13 +122,18 @@ class AiCoreRepository(
         // Replace old demo entries, preserving user imports and genuine installed files.
         val library = ModelLibrary.read(appContext)
         val names = library.map { it.filename }.toSet()
+        modelDao.getAllModels().first().filter { it.isCustom && it.isInstalled }.forEach { model ->
+            model.localFilePath?.let { path -> com.example.engine.GgufParser().parseFromFile(File(path)).getOrNull()?.let { ModelLibrary.recordMetadata(model.filename, it) } }
+        }
         modelDao.getAllModels().first().filter { !it.isCustom && it.filename !in names }.forEach {
             modelDao.deleteModel(it.id)
         }
         library.forEach { entry ->
             val existing = modelDao.getModelByFilename(entry.filename)
             val file = File(downloadManager.modelsDirectory, entry.filename)
-            val installed = file.isFile && downloadManager.verifyLocalFile(file, entry.sha256Checksum).isMatch
+            val installed = verifiedFiles.verify(file, entry.sha256Checksum) {
+                downloadManager.verifyLocalFile(file, entry.sha256Checksum).isMatch
+            }
             val updated = entry.copy(id = existing?.id ?: 0L, isInstalled = installed,
                 isActive = installed && existing?.isActive == true,
                 localFilePath = if (installed) file.absolutePath else null,
@@ -131,11 +146,18 @@ class AiCoreRepository(
     }
 
     suspend fun unloadModel() = withContext(Dispatchers.IO) {
+        explicitModelSelection = true
         modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() }
     }
 
-    suspend fun switchActiveModel(model: ModelEntity) = withContext(Dispatchers.IO) {
+    suspend fun switchActiveModel(model: ModelEntity) {
+        explicitModelSelection = true
+        activateModel(model)
+    }
+
+    private suspend fun activateModel(model: ModelEntity, restoring: Boolean = false) = withContext(Dispatchers.IO) {
         modelLock.withLock {
+            if (restoring && (explicitModelSelection || engine.isReady())) return@withLock
             check(model.isInstalled) { "Download this model first" }
             require(model.filename.endsWith(".gguf", true)) { "Select a GGUF instruction model" }
             val file = File(model.localFilePath ?: File(downloadManager.modelsDirectory, model.filename).absolutePath)
@@ -146,9 +168,14 @@ class AiCoreRepository(
                 }
             }
             val profile = HardwareAnalyzer.analyze(appContext)
-            check(ModelLibrary.fits(model, profile)) { "Insufficient available memory or unsupported processor" }
+            // Do not credit CPU mmap weights: available RAM already includes file cache.
+            val oldWeightsMb = engine.releasableGpuWeightsMb()
+            val available = (profile.availableRamMb + oldWeightsMb).coerceAtMost(profile.totalRamMb)
+            val adjusted = profile.copy(availableRamMb = available,
+                safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
+            ModelLibrary.incompatibilityReason(model, adjusted, 512)?.let { error(it) }
             engineManager.selectEngine(SupportedEngine.LLAMA_CPP)
-            val result = engine.loadCustomGguf(file)
+            val result = engine.loadCustomGguf(file, model.sha256Checksum.orEmpty())
             if (result.isFailure) { modelDao.clearActiveModel(); result.getOrThrow() }
             modelDao.clearActiveModel()
             modelDao.setActiveModel(model.id)
@@ -196,6 +223,7 @@ class AiCoreRepository(
                                 }
                             }
                             is DownloadStateUpdate.Success -> {
+                                com.example.engine.GgufParser().parseFromFile(update.file).getOrNull()?.let { ModelLibrary.recordMetadata(current.filename, it) }
                                 modelDao.updateModel(
                                     current.copy(
                                         isInstalled = true,
@@ -266,6 +294,7 @@ class AiCoreRepository(
             check(current.isInstalled) { "Download or import this model first" }
             val file = File(current.localFilePath ?: File(downloadManager.modelsDirectory, current.filename).path)
             val result = downloadManager.verifyLocalFile(file, current.sha256Checksum)
+            verifiedFiles.invalidate(file) // Explicit verification always replaces startup trust.
             modelDao.updateModel(current.copy(
                 isChecksumVerified = result.isMatch,
                 checksumVerificationStatus = result.status
@@ -364,6 +393,7 @@ class AiCoreRepository(
     }
 
     suspend fun registerImportedGguf(file: File, metadata: GgufMetadata): ModelEntity {
+        ModelLibrary.recordMetadata(file.name, metadata)
         val entity = ModelEntity(
             name = metadata.modelName.ifBlank { file.nameWithoutExtension },
             filename = file.name,
@@ -567,12 +597,10 @@ class AiCoreRepository(
 
     suspend fun runAndSaveBenchmarkForModel(
         model: ModelEntity,
-        threads: Int = 4,
-        gpuLayers: Int = 16,
-        context: Context? = null
+        contextSize: Int = 2048
     ): HardwarePerformanceLogEntity {
         switchActiveModel(model)
-        val benchmark = engine.runBenchmark()
+        val benchmark = engine.runBenchmark(contextLength = contextSize)
         val profile = HardwareAnalyzer.analyze(appContext)
         val ramAvail = profile.availableRamMb
         val devModel = profile.deviceModel
@@ -596,8 +624,8 @@ class AiCoreRepository(
             ramAvailableAtTestMb = ramAvail,
             batteryTemperatureC = temp,
             thermalState = thermal,
-            threadCount = threads,
-            gpuLayers = gpuLayers,
+            threadCount = benchmark.recommendedThreads,
+            gpuLayers = benchmark.recommendedGpuLayers,
             deviceModel = devModel,
             chipsetAbi = abi,
             testType = "BENCHMARK_RUN",

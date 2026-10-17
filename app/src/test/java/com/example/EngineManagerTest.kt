@@ -38,8 +38,8 @@ class EngineManagerTest {
 
     @Test
     fun testHardwareValidationThresholds() {
-        assertEquals(6000L, HardwareValidator.MIN_RECOMMENDED_RAM_MB)
-        assertEquals(1500L, HardwareValidator.MIN_FREE_RAM_MB)
+        assertEquals(1024L, HardwareValidator.MIN_RECOMMENDED_RAM_MB)
+        assertEquals(512L, HardwareValidator.MIN_FREE_RAM_MB)
 
         val result = HardwareValidator.ValidationResult(
             isSupported = true,

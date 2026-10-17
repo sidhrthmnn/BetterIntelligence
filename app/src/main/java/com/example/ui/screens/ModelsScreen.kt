@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.data.ModelEntity
 import com.example.engine.ModelLibrary
+import com.example.engine.ModelMemoryPlanner
 import com.example.ui.AiCoreViewModel
 import com.example.ui.AppTab
 import com.example.ui.components.HardwareDiagnosticCard
@@ -113,16 +114,21 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             val installed = model.isInstalled
             val downloading = model.downloadState == "DOWNLOADING"
             val selected = active?.id == model.id && telemetry.isModelLoaded
-            val fits = hardware?.let { ModelLibrary.fits(model, it) } ?: true
+            val loadProfile = hardware?.let { profile ->
+                val reclaimable = viewModel.releasableGpuWeightsMb()
+                val available = (profile.availableRamMb + reclaimable).coerceAtMost(profile.totalRamMb)
+                profile.copy(availableRamMb = available, safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
+            }
+            val fits = loadProfile?.let { ModelLibrary.fits(model, it, 512) } ?: true
             val canDownload = hardware?.let { ModelLibrary.canDownload(model, it) } ?: true
             OutlinedCard(Modifier.fillMaxWidth().testTag("model_card_${model.id}")) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(model.name, style = MaterialTheme.typography.titleMedium)
-                    Text("${model.fileSizeMb} MB download · About ${model.ramRequiredMb} MB memory",
+                    Text("${model.fileSizeMb} MB download · About ${ModelLibrary.memoryEstimate(model).totalMb} MB at 2K context",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (selected) Text("Selected · available to approved apps", color = MaterialTheme.colorScheme.primary)
                     Text(model.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (!selected && !fits) Text("You can keep this model downloaded, but it may need more free memory before it can run.", style = MaterialTheme.typography.bodySmall)
+                    if (!selected && !fits) Text(loadProfile?.let { ModelLibrary.incompatibilityReason(model, it, 512) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
                     if (!installed && !canDownload) Text("Free more storage before downloading this model.", color = MaterialTheme.colorScheme.error)
                     if (model.downloadState == "ERROR") Text("Download failed. Check your connection and try again.", color = MaterialTheme.colorScheme.error)
                     if (downloading) {
@@ -133,7 +139,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         when {
                             downloading -> OutlinedButton(onClick = { viewModel.cancelDownload(model.id) }) { Text("Cancel") }
-                            installed -> Button(onClick = { viewModel.switchModel(model) }, enabled = loading == null && deletingId == null && !selected && fits,
+                            installed -> Button(onClick = { viewModel.switchModel(model) }, enabled = loading == null && deletingId == null && !selected && fits && !telemetry.isRunning,
                                 modifier = Modifier.testTag("load_model_${model.id}")) {
                                 Text(if (loading == model.id) "Loading…" else if (selected) "In use" else "Use model")
                             }
@@ -158,6 +164,19 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             TextButton(onClick = { advanced = !advanced }) { Text(if (advanced) "Hide advanced tools" else "Advanced tools") }
         }
         if (advanced) {
+            item {
+                OutlinedCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Hardware monitoring", style = MaterialTheme.typography.titleMedium)
+                        Text("${telemetry.modelName} · ${telemetry.activeBackend}")
+                        Text("${"%.1f".format(telemetry.tokensPerSecond)} tokens/s · First token ${telemetry.timeToFirstTokenMs} ms")
+                        Text("${telemetry.activeThreads} CPU threads · ${telemetry.activeGpuLayers} GPU layers · ${telemetry.memoryUsageMb.toInt()} MB app RAM")
+                        Text("Thermal: ${telemetry.thermalState} · Battery sensor: ${if (telemetry.temperatureCelsius > 0) "${telemetry.temperatureCelsius}°C" else "Unavailable"}")
+                        Text("Backend load: ${telemetry.backendInitializationMs} ms · ${telemetry.backendStatus}")
+                        if (telemetry.fallbackCount > 0) Text("Fallbacks: ${telemetry.fallbackCount} · ${telemetry.lastFallback}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
             item { HardwareDiagnosticCard(hardware, { viewModel.refreshHardwareDiagnostics() }) }
             item {
                 val logs by viewModel.performanceLogs.collectAsState()

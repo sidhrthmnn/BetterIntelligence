@@ -35,7 +35,7 @@ class ExampleRobolectricTest {
     fun `verify app name resource`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val appName = context.getString(R.string.app_name)
-        assertEquals("Better Intelligence", appName)
+        assertEquals(if (BuildConfig.APPLICATION_ID.endsWith(".validation")) "BI Validation" else "Better Intelligence", appName)
     }
 
     @Test

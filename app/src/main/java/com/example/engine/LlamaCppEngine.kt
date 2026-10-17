@@ -21,12 +21,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * llama.cpp On-Device LLM Inference Engine.
- * Supports GGUF quantized models (Q4_K_M, IQ4_XS, Q5_K_M, Q8_0) with ARM NEON / SVE2
- * SIMD and Vulkan GPU Layer Offloading.
+ * GGUF facade. The shared core owns hardware selection, weights and admission.
  */
 class LlamaCppEngine(
     private val context: Context? = null,
-    val coreInferenceEngine: InferenceEngine = InferenceEngine()
+    val coreInferenceEngine: InferenceEngine = InferenceEngine(context)
 ) : LlmEngine {
 
     companion object {
@@ -36,17 +35,11 @@ class LlamaCppEngine(
     override val engineType: String = "llama.cpp (GGUF)"
 
     private val mutex = Mutex()
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val isGenerating = AtomicBoolean(false)
-    private var activeJob: Job? = null
-
-    private var _isLoaded: Boolean = false
     override val isLoaded: Boolean
         get() = coreInferenceEngine.isReady()
 
-    private var _currentBackend: BackendType = BackendType.GPU
     override val currentBackend: BackendType
-        get() = _currentBackend
+        get() = if (coreInferenceEngine.telemetry.value.activeGpuLayers > 0) BackendType.GPU else BackendType.CPU
 
     override suspend fun initialize(
         modelPath: String,
@@ -64,7 +57,6 @@ class LlamaCppEngine(
                     }
                 }
 
-                _currentBackend = BackendType.CPU
                 if (modelPath.isNotBlank()) {
                     val file = File(modelPath)
                     if (file.exists() && file.length() > 0) {
@@ -75,11 +67,9 @@ class LlamaCppEngine(
                     }
                 }
                 check(coreInferenceEngine.isReady()) { "Select an installed GGUF model first" }
-                _isLoaded = true
                 Result.success(Unit)
             } catch (e: Throwable) {
                 Log.e(TAG, "Failed to initialize llama.cpp engine", e)
-                _isLoaded = false
                 Result.failure(e)
             }
         }
@@ -89,7 +79,6 @@ class LlamaCppEngine(
         prompt: String,
         config: GenerationConfig
     ): Flow<String> = callbackFlow {
-        isGenerating.set(true)
         val params = GenerationParams(
             temperature = config.temperature,
             topK = config.topK,
@@ -98,10 +87,11 @@ class LlamaCppEngine(
             systemPrompt = config.systemPrompt,
             threads = config.threads,
             gpuLayers = config.gpuLayers,
-            accelerationMode = if (_currentBackend == BackendType.GPU) "GPU (Vulkan NDK)" else "CPU Only (NEON SIMD)"
+            contextSize = config.contextSize,
+            accelerationMode = "Managed by Better Intelligence"
         )
 
-        coreInferenceEngine.generateStream(
+        val requestJob = coreInferenceEngine.generateStream(
             prompt = prompt,
             params = params,
             listener = object : StreamTokenListener {
@@ -126,8 +116,7 @@ class LlamaCppEngine(
         )
 
         awaitClose {
-            coreInferenceEngine.cancelGeneration()
-            isGenerating.set(false)
+            requestJob.cancel()
         }
     }.flowOn(Dispatchers.Default)
 
@@ -135,7 +124,7 @@ class LlamaCppEngine(
         prompt: String,
         config: GenerationConfig,
         listener: StreamTokenListener
-    ) {
+    ): Job {
         val params = GenerationParams(
             temperature = config.temperature,
             topK = config.topK,
@@ -144,10 +133,11 @@ class LlamaCppEngine(
             systemPrompt = config.systemPrompt,
             threads = config.threads,
             gpuLayers = config.gpuLayers,
-            accelerationMode = if (_currentBackend == BackendType.GPU) "GPU (Vulkan NDK)" else "CPU Only (NEON SIMD)"
+            contextSize = config.contextSize,
+            accelerationMode = "Managed by Better Intelligence"
         )
 
-        coreInferenceEngine.generateStream(
+        return coreInferenceEngine.generateStream(
             prompt = prompt,
             params = params,
             listener = listener
@@ -155,14 +145,12 @@ class LlamaCppEngine(
     }
 
     override fun cancelGeneration() {
-        isGenerating.set(false)
         coreInferenceEngine.cancelGeneration()
     }
 
     override fun release() {
-        cancelGeneration()
+        check(!coreInferenceEngine.telemetry.value.isRunning) { "Stop generation and await completion before releasing the engine" }
         if (coreInferenceEngine.isReady()) coreInferenceEngine.unloadActiveModel()
-        _isLoaded = false
         Log.i(TAG, "llama.cpp native memory and tensors released.")
     }
 }

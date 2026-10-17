@@ -10,8 +10,8 @@ import android.os.Build
  */
 object HardwareValidator {
 
-    const val MIN_RECOMMENDED_RAM_MB = 6000L // 6 GB minimum recommended for LLMs
-    const val MIN_FREE_RAM_MB = 1500L        // 1.5 GB minimum free memory
+    const val MIN_RECOMMENDED_RAM_MB = 1024L // Runtime baseline, not a model-size restriction.
+    const val MIN_FREE_RAM_MB = 512L        // Exact model/context checks are in ModelMemoryPlanner.
 
     data class ValidationResult(
         val isSupported: Boolean,
@@ -27,12 +27,12 @@ object HardwareValidator {
     }
 
     fun validateEnvironment(context: Context): ValidationResult {
-        // 1. Architecture Check (LLMs require 64-bit ARM registers & NEON/DotProd SIMD)
+        // Packaged CPU runtimes support the Android ARM64 and x86_64 baselines.
         val supportedAbis = Build.SUPPORTED_ABIS ?: emptyArray()
         val is64BitArm = supportedAbis.any { it.equals("arm64-v8a", ignoreCase = true) }
         
         // For development/emulator environments, allow x86_64 with fallback notice
-        val is64Bit = is64BitArm || supportedAbis.any { it.contains("64") }
+        val is64Bit = is64BitArm || supportedAbis.any { it == "x86_64" }
 
         // 2. RAM Pre-flight Check via ActivityManager.MemoryInfo
         val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -45,7 +45,7 @@ object HardwareValidator {
         if (!is64Bit) {
             return ValidationResult(
                 isSupported = false,
-                reason = "Incompatible CPU ABI (${supportedAbis.firstOrNull() ?: "unknown"}). 64-bit ARM (arm64-v8a) is required for LLM tensor execution.",
+                reason = "Incompatible CPU ABI (${supportedAbis.firstOrNull() ?: "unknown"}). The runtime supports arm64-v8a and x86_64.",
                 isArm64 = false,
                 availableRamMb = availRamMb,
                 totalRamMb = totalRamMb,
@@ -56,7 +56,7 @@ object HardwareValidator {
         if (totalRamMb < MIN_RECOMMENDED_RAM_MB) {
             return ValidationResult(
                 isSupported = false,
-                reason = "Device has ${totalRamMb}MB total RAM. At least 6GB is recommended for stable on-device LLM inference without OOM risk.",
+                reason = "Device has ${totalRamMb}MB total RAM. At least ${MIN_RECOMMENDED_RAM_MB} MB is needed for the runtime; models require additional memory.",
                 isArm64 = is64BitArm,
                 availableRamMb = availRamMb,
                 totalRamMb = totalRamMb,

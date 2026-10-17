@@ -11,7 +11,10 @@ plugins {
 
 android {
   ndkVersion = "28.0.12433566"
-  externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
+  externalNativeBuild { cmake {
+    path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1"
+    System.getenv("BI_NATIVE_BUILD_DIR")?.let { buildStagingDirectory = file(it) }
+  } }
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
@@ -21,10 +24,11 @@ android {
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
     targetSdk = 36
-    versionCode = 2
-    versionName = "1.1"
+    versionCode = 3
+    versionName = "1.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    manifestPlaceholders["localAiExported"] = "true"
   }
 
   signingConfigs {
@@ -50,7 +54,15 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debug") }
+    debug {
+      signingConfig = signingConfigs.getByName("debug")
+      // Side-by-side device validation preserves the user's Play installation.
+      if (providers.gradleProperty("biValidationPackage").orNull == "true") {
+        applicationIdSuffix = ".validation"
+        resValue("string", "app_name", "BI Validation")
+        manifestPlaceholders["localAiExported"] = "false"
+      }
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -60,6 +72,7 @@ android {
     compose = true
     buildConfig = true
     aidl = true
+    resValues = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
   dependenciesInfo {

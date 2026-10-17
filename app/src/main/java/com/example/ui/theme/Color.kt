@@ -2,38 +2,40 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Modern Brand Accents
-val BrandIndigo = Color(0xFF6366F1)
-val BrandIndigoLight = Color(0xFF818CF8)
-val BrandIndigoDark = Color(0xFF4F46E5)
+// Brain icon palette: violet, cyan, rose and warm yellow.
+val BrandIndigo = Color(0xFF7959DE)
+val BrandIndigoLight = Color(0xFFB9A5FF)
+val BrandIndigoDark = Color(0xFF5B3DB5)
 
-val BrandSky = Color(0xFF0EA5E9)
-val BrandCyan = Color(0xFF06B6D4)
+val BrandSky = Color(0xFF006875)
+val BrandPink = Color(0xFFFFAAD4)
+val BrandYellow = Color(0xFFFFE779)
+val BrandCyan = Color(0xFF35CFE3)
 val BrandEmerald = Color(0xFF10B981)
-val BrandAmber = Color(0xFFF59E0B)
+val BrandAmber = Color(0xFFD69B00)
 val BrandRose = Color(0xFFF43F5E)
 
-// Dark Theme Colors (Deep Modern Slate)
-val SlateDarkBg = Color(0xFF0B0D13)
-val SlateDarkSurface = Color(0xFF131620)
-val SlateDarkCard = Color(0xFF1B1F2D)
-val SlateDarkCardElevated = Color(0xFF242A3D)
-val SlateDarkBorder = Color(0xFF2B3245)
-val SlateDarkBorderLight = Color(0xFF384159)
-val SlateDarkTextPrimary = Color(0xFFF8FAFC)
-val SlateDarkTextSecondary = Color(0xFF94A3B8)
-val SlateDarkTextMuted = Color(0xFF64748B)
+// Navy surfaces echo the launcher background.
+val SlateDarkBg = Color(0xFF090D20)
+val SlateDarkSurface = Color(0xFF11172E)
+val SlateDarkCard = Color(0xFF1A2140)
+val SlateDarkCardElevated = Color(0xFF252D50)
+val SlateDarkBorder = Color(0xFF363E60)
+val SlateDarkBorderLight = Color(0xFF454E73)
+val SlateDarkTextPrimary = Color(0xFFF7F8FF)
+val SlateDarkTextSecondary = Color(0xFFBAC2E0)
+val SlateDarkTextMuted = Color(0xFF8B96BA)
 
-// Light Theme Colors (Clean Crisp Slate)
-val SlateLightBg = Color(0xFFF8FAFC)
+// Light surfaces retain the same violet and cyan identity.
+val SlateLightBg = Color(0xFFF7F8FF)
 val SlateLightSurface = Color(0xFFFFFFFF)
-val SlateLightCard = Color(0xFFF1F5F9)
-val SlateLightCardElevated = Color(0xFFE2E8F0)
-val SlateLightBorder = Color(0xFFE2E8F0)
-val SlateLightBorderDark = Color(0xFFCBD5E1)
-val SlateLightTextPrimary = Color(0xFF0F172A)
-val SlateLightTextSecondary = Color(0xFF475569)
-val SlateLightTextMuted = Color(0xFF94A3B8)
+val SlateLightCard = Color(0xFFEDF0FC)
+val SlateLightCardElevated = Color(0xFFDFE5F7)
+val SlateLightBorder = Color(0xFFDFE5F7)
+val SlateLightBorderDark = Color(0xFFC4CBE3)
+val SlateLightTextPrimary = Color(0xFF161D38)
+val SlateLightTextSecondary = Color(0xFF4D5878)
+val SlateLightTextMuted = Color(0xFF647096)
 
 // Compatibility aliases
 val MonoBlack = Color(0xFF000000)
@@ -56,6 +58,6 @@ val DarkBorder = SlateDarkBorder
 val TextPrimary = SlateDarkTextPrimary
 val TextSecondary = SlateDarkTextSecondary
 val TextMuted = SlateDarkTextMuted
-val CodeBlockBg = Color(0xFF0F121C)
+val CodeBlockBg = Color(0xFF0D1229)
 
 

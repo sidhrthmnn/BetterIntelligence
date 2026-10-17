@@ -11,11 +11,14 @@ import org.junit.runner.RunWith
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
+// Authorization creates the repository's startup-restore job. Run that fixture
+// after the isolated native-engine fixtures, which own the process-wide model.
+@org.junit.FixMethodOrder(org.junit.runners.MethodSorters.NAME_ASCENDING)
 class GgufInferenceTest {
     @Test fun newMobileCatalogModelsRunOnNativeCpuBackend() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val engine = InferenceEngine()
-        val filenames = setOf("gemma-3-270m-it-Q4_K_M.gguf", "qwen2.5-1.5b-instruct-q4_k_m.gguf", "smollm2-1.7b-instruct-q4_k_m.gguf",
+        val engine = InferenceEngine(context)
+        val filenames = setOf("SmolLM2-360M-Instruct-Q4_K_M.gguf", "gemma-3-270m-it-Q4_K_M.gguf", "qwen2.5-1.5b-instruct-q4_k_m.gguf", "smollm2-1.7b-instruct-q4_k_m.gguf",
             "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf", "Qwen2.5-7B-Instruct-Q4_K_M.gguf")
         val requested = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("mobileModelFilename")
         val outputTokens = androidx.test.platform.app.InstrumentationRegistry.getArguments()
@@ -38,7 +41,7 @@ class GgufInferenceTest {
 
     @Test fun realOfflineInferenceAndModelSwitching() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val engine = InferenceEngine()
+        val engine = InferenceEngine(context)
         val models = ModelLibrary.read(context)
         val selected = listOf(models[0], models[2], models[3])
         for (model in selected) {

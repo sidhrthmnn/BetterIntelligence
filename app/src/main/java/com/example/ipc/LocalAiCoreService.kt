@@ -109,8 +109,8 @@ class LocalAiCoreService : Service() {
                 )
             } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
-            val approxTokens = (result.length / 4).coerceAtLeast(1)
-            val tokPerSec = if (latency > 0) (approxTokens * 1000f) / latency else 0f
+            val approxTokens = repository.engine.telemetry.value.completionTokens
+            val tokPerSec = repository.engine.telemetry.value.tokensPerSecond
 
             logCall(callingPackage, callingUid, "SYNC", safePrompt, result, latency, tokPerSec, approxTokens, "SUCCESS")
             return result
@@ -231,7 +231,7 @@ class LocalAiCoreService : Service() {
                 repository.engine.summarize(safeText, if (maxWords > 0) maxWords.coerceIn(10, 500) else 60)
             } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
-            logCall(callingPackage, callingUid, "SUMMARIZE", safeText, summary, latency, 28f, summary.length / 4, "SUCCESS")
+            logCall(callingPackage, callingUid, "SUMMARIZE", safeText, summary, latency, repository.engine.telemetry.value.tokensPerSecond, repository.engine.telemetry.value.completionTokens, "SUCCESS")
             return summary
         }
 
@@ -253,7 +253,7 @@ class LocalAiCoreService : Service() {
                 repository.engine.classify(safeText, labels)
             } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
-            logCall(callingPackage, callingUid, "CLASSIFY", safeText, result, latency, 35f, 4, "SUCCESS")
+            logCall(callingPackage, callingUid, "CLASSIFY", safeText, result, latency, repository.engine.telemetry.value.tokensPerSecond, repository.engine.telemetry.value.completionTokens, "SUCCESS")
             return result
         }
 

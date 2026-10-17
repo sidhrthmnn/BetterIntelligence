@@ -4,7 +4,7 @@
     "filename": "smollm2-135m-instruct-q4_k_m.gguf",
     "architecture": "llama",
     "parameters": "135M",
-    "ramMb": 512,
+    "ramMb": 410,
     "bytes": 105454144,
     "sha256": "8030f04528538d47bda434f6f0bdf3952c40a58123e4d5e755332f23731a8684",
     "repo": "Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF",
@@ -13,14 +13,16 @@
     "license": "apache-2.0",
     "tier": "LIGHTWEIGHT",
     "description": "Smallest download for simple snippets and basic tasks. Limited writing accuracy.",
-    "quantization": "Q4_K_M"
+    "quantization": "Q4_K_M",
+    "layers": 30,
+    "kvBytesPerToken": 23040
   },
   {
     "name": "SmolLM2 360M Instruct",
     "filename": "SmolLM2-360M-Instruct-Q4_K_M.gguf",
     "architecture": "llama",
     "parameters": "360M",
-    "ramMb": 768,
+    "ramMb": 615,
     "bytes": 270590880,
     "sha256": "2fa3f013dcdd7b99f9b237717fa0b12d75bbb89984cc1274be1471a465bac9c2",
     "repo": "bartowski/SmolLM2-360M-Instruct-GGUF",
@@ -29,14 +31,16 @@
     "license": "apache-2.0",
     "tier": "LIGHTWEIGHT",
     "description": "Lightweight English chat and short edits. A small download for modest devices.",
-    "quantization": "Q4_K_M"
+    "quantization": "Q4_K_M",
+    "layers": 32,
+    "kvBytesPerToken": 40960
   },
   {
     "name": "Qwen 2.5 0.5B Instruct",
     "filename": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
     "architecture": "qwen2",
     "parameters": "0.5B",
-    "ramMb": 1024,
+    "ramMb": 786,
     "bytes": 491400032,
     "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
     "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
@@ -45,14 +49,16 @@
     "license": "apache-2.0",
     "tier": "BALANCED",
     "description": "Compact multilingual assistant and a useful starter model. Review writing corrections.",
-    "quantization": "Q4_K_M"
+    "quantization": "Q4_K_M",
+    "layers": 24,
+    "kvBytesPerToken": 12288
   },
   {
     "name": "Gemma 3 1B Instruct",
     "filename": "gemma-3-1b-it-Q4_K_M.gguf",
     "architecture": "gemma3",
     "parameters": "1B",
-    "ramMb": 1792,
+    "ramMb": 1138,
     "bytes": 806058240,
     "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
     "repo": "ggml-org/gemma-3-1b-it-GGUF",
@@ -61,14 +67,16 @@
     "license": "gemma",
     "tier": "BALANCED",
     "description": "Compact English chat and short rewriting tasks. Requires acceptance of Gemma terms.",
-    "quantization": "Q4_K_M"
+    "quantization": "Q4_K_M",
+    "layers": 26,
+    "kvBytesPerToken": 26624
   },
   {
     "name": "Gemma 3 270M Instruct",
     "filename": "gemma-3-270m-it-Q4_K_M.gguf",
     "architecture": "gemma3",
     "parameters": "270M",
-    "ramMb": 768,
+    "ramMb": 553,
     "bytes": 253115424,
     "sha256": "b1baabd6b729e4041822220d3e648e00d99cac5df86b10dffb77bcccf0688e39",
     "repo": "unsloth/gemma-3-270m-it-GGUF",
@@ -77,14 +85,16 @@
     "tier": "LIGHTWEIGHT",
     "description": "Compact model for short, focused tasks. Not intended for complex chat. Requires acceptance of Gemma terms.",
     "quantization": "Q4_K_M",
-    "url": "https://huggingface.co/unsloth/gemma-3-270m-it-GGUF/resolve/c90975dbd40c0c7b275fefaae758c3415c906238/gemma-3-270m-it-Q4_K_M.gguf"
+    "url": "https://huggingface.co/unsloth/gemma-3-270m-it-GGUF/resolve/c90975dbd40c0c7b275fefaae758c3415c906238/gemma-3-270m-it-Q4_K_M.gguf",
+    "layers": 18,
+    "kvBytesPerToken": 18432
   },
   {
     "name": "Qwen 2.5 1.5B Instruct",
     "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
     "architecture": "qwen2",
     "parameters": "1.5B",
-    "ramMb": 2048,
+    "ramMb": 1463,
     "bytes": 1117320736,
     "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
     "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
@@ -93,14 +103,16 @@
     "tier": "QUALITY",
     "description": "More capable compact assistant for editing, summarization and multilingual chat. Needs more free memory.",
     "quantization": "Q4_K_M",
-    "url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+    "url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+    "layers": 28,
+    "kvBytesPerToken": 28672
   },
   {
     "name": "SmolLM2 1.7B Instruct",
     "filename": "smollm2-1.7b-instruct-q4_k_m.gguf",
     "architecture": "llama",
     "parameters": "1.7B",
-    "ramMb": 2048,
+    "ramMb": 1727,
     "bytes": 1055609536,
     "sha256": "decd2598bc2c8ed08c19adc3c8fdd461ee19ed5708679d1c54ef54a5a30d4f33",
     "repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
@@ -109,14 +121,16 @@
     "tier": "QUALITY",
     "description": "Compact English assistant with rewriting and summarization support. Needs more free memory.",
     "quantization": "Q4_K_M",
-    "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/2d4a76a30b4af41ecd395c35725ac11688d4cfe4/smollm2-1.7b-instruct-q4_k_m.gguf"
+    "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/2d4a76a30b4af41ecd395c35725ac11688d4cfe4/smollm2-1.7b-instruct-q4_k_m.gguf",
+    "layers": 24,
+    "kvBytesPerToken": 196608
   },
   {
     "name": "Qwen 3 4B Instruct 2507",
     "filename": "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
     "architecture": "qwen3",
     "parameters": "4B",
-    "ramMb": 4096,
+    "ramMb": 3116,
     "bytes": 2497280736,
     "sha256": "2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e",
     "repo": "bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF",
@@ -125,14 +139,16 @@
     "tier": "QUALITY",
     "description": "Higher-capacity multilingual chat, writing and coding. Non-thinking instruction model for high-memory phones. Slower CPU answers and a larger download.",
     "quantization": "Q4_K_M",
-    "url": "https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF/resolve/ae44f08e1392f39c0e474af10c3ff8355c8b6688/Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+    "url": "https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF/resolve/ae44f08e1392f39c0e474af10c3ff8355c8b6688/Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+    "layers": 36,
+    "kvBytesPerToken": 147456
   },
   {
     "name": "Qwen 2.5 7B Instruct",
     "filename": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
     "architecture": "qwen2",
     "parameters": "7B",
-    "ramMb": 6144,
+    "ramMb": 5192,
     "bytes": 4683074240,
     "sha256": "65b8fcd92af6b4fefa935c625d1ac27ea29dcb6ee14589c55a8f115ceaaa1423",
     "repo": "bartowski/Qwen2.5-7B-Instruct-GGUF",
@@ -141,6 +157,8 @@
     "tier": "QUALITY",
     "description": "Larger instruction model for multilingual writing and more involved tasks. For high-memory Android devices with enough free RAM; CPU generation can be slow.",
     "quantization": "Q4_K_M",
-    "url": "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/8911e8a47f92bac19d6f5c64a2e2095bd2f7d031/Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+    "url": "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/8911e8a47f92bac19d6f5c64a2e2095bd2f7d031/Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+    "layers": 28,
+    "kvBytesPerToken": 57344
   }
 ]

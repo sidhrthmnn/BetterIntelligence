@@ -12,19 +12,19 @@ See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin 
 
 ## Model library
 
-| Model | GGUF bytes | Estimated runtime RAM |
+| Model | GGUF bytes | Estimated RAM at 2K context |
 | --- | ---: | ---: |
-| SmolLM2 135M Instruct Q4_K_M | 105,454,144 | 512 MB |
-| Gemma 3 270M Instruct Q4_K_M | 253,115,424 | 768 MB |
-| SmolLM2 360M Instruct Q4_K_M | 270,590,880 | 768 MB |
-| Qwen 2.5 0.5B Instruct Q4_K_M | 491,400,032 | 1,024 MB |
-| Gemma 3 1B Instruct Q4_K_M | 806,058,240 | 1,792 MB |
-| SmolLM2 1.7B Instruct Q4_K_M | 1,055,609,536 | 2,048 MB |
-| Qwen 2.5 1.5B Instruct Q4_K_M | 1,117,320,736 | 2,048 MB |
-| Qwen 3 4B Instruct 2507 Q4_K_M | 2,497,280,736 | 4,096 MB |
-| Qwen 2.5 7B Instruct Q4_K_M | 4,683,074,240 | 6,144 MB |
+| SmolLM2 135M Instruct Q4_K_M | 105,454,144 | 410 MB |
+| Gemma 3 270M Instruct Q4_K_M | 253,115,424 | 553 MB |
+| SmolLM2 360M Instruct Q4_K_M | 270,590,880 | 615 MB |
+| Qwen 2.5 0.5B Instruct Q4_K_M | 491,400,032 | 786 MB |
+| Gemma 3 1B Instruct Q4_K_M | 806,058,240 | 1,138 MB |
+| SmolLM2 1.7B Instruct Q4_K_M | 1,055,609,536 | 1,727 MB |
+| Qwen 2.5 1.5B Instruct Q4_K_M | 1,117,320,736 | 1,463 MB |
+| Qwen 3 4B Instruct 2507 Q4_K_M | 2,497,280,736 | 3,116 MB |
+| Qwen 2.5 7B Instruct Q4_K_M | 4,683,074,240 | 5,192 MB |
 
-These are compact quantized choices for mobile CPU inference. See [model selection and publisher sources](docs/MOBILE_MODELS.md) for the tradeoffs. **Find models** searches public Hugging Face repositories or accepts an `owner/repository` URL. **Import a GGUF file** accepts files downloaded elsewhere, including gated models after obtaining access from their publisher. Downloads and imports appear in **My models**. A model must be a compatible single-file text GGUF; other formats, multimodal projectors and split files are not supported by this chooser.
+These are compact quantized choices for mobile CPU or compatible Vulkan GPU inference. See [model selection and publisher sources](docs/MOBILE_MODELS.md) for the tradeoffs. **Find models** searches public Hugging Face repositories or accepts an `owner/repository` URL. **Import a GGUF file** accepts files downloaded elsewhere, including gated models after obtaining access from their publisher. Downloads and imports appear in **My models**. A model must be a compatible single-file text GGUF; other formats, multimodal projectors and split files are not supported by this chooser.
 
 `models/library.json` and the matching APK asset record pinned upstream revisions, byte counts and SHA-256 checksums. In-app downloads use those pinned files. The four original weights remain in Git LFS; additional weights download on demand and local copies are ignored by Git. All weights are separate from the APK. Run `git lfs pull` for the original four, or `python scripts/download_models.py` (Python 3.11+) for all nine. The script also accepts one or more library filenames.
 
@@ -32,7 +32,7 @@ The 4B and 7B options are for Android devices with substantial free RAM. Their C
 
 Chat follows the bottom of an incoming answer, including answers taller than the screen. Scroll up to read earlier text without token updates pulling you away, and tap **Jump to latest** to return to the bottom. Sending a new prompt returns to the latest turn.
 
-Recommendations select from the curated library using supported ABI, current available RAM with a 512 MB reserve, low-memory state, and free storage. Users can download a larger model if storage permits, but activation still checks available memory. Memory figures are estimates. Speeds must be measured on the device. Supported packaged ABIs: arm64-v8a and x86_64. This build uses the CPU backend; GPU and LiteRT execution are unavailable. Native inference uses each GGUF's chat template, real tokenization, configurable sampling, cancellation, a 180-second deadline, and an output limit of 1,024 tokens. Only one inference runs at a time. Downloads stop if the process is killed; restart them in Models.
+Recommendations select from the curated library using supported ABI, current available RAM with a 512 MB reserve, low-memory state, and free storage. Users can download a larger model if storage permits, but activation still checks available memory. Memory figures are estimates. Speeds must be measured on the device. Supported packaged ABIs: arm64-v8a and x86_64. Automatic processing compares genuine CPU/Vulkan configurations and caches its choice. GPU offloading requires a compatible Vulkan 1.2 device and successful native model warm-up; CPU remains the fallback. LiteRT/NPU execution is unavailable. See [hardware acceleration, memory policy and device validation](docs/HARDWARE_ACCELERATION.md). Native inference uses each GGUF's chat template, real tokenization, configurable sampling, cancellation, a 180-second deadline, and an output limit of 1,024 tokens. Only one inference runs at a time. Downloads stop if the process is killed; restart them in Models.
 
 SmolLM2 and Qwen are Apache-2.0. Gemma requires acceptance of its terms and prohibited-use policy in Models before download or activation. Redistributors must retain the notices and model license files under `models/`. See [Gemma terms](https://ai.google.dev/gemma/terms), [Gemma use policy](https://ai.google.dev/gemma/prohibited_use_policy), and [llama.cpp Android build guidance](https://github.com/ggml-org/llama.cpp/blob/master/docs/android.md).
 
@@ -53,7 +53,7 @@ The first status or inference request creates a pending entry in **Apps**. The u
 
 ## Build and verify
 
-Use JDK 21, Android SDK 36.1, NDK 28.0.12433566 and CMake 3.22.1. Configure `sdk.dir` in `local.properties`. Gradle fetches a pinned llama.cpp source archive with its SHA-256 verified.
+Use JDK 21, Android SDK 36.1, NDK 28.0.12433566 and CMake 3.22.1. Configure `sdk.dir` in `local.properties`. Gradle fetches SHA-256-pinned llama.cpp and Vulkan-Headers archives. Vulkan shader generation also requires a host C++17 compiler and Ninja; Windows builds should use a short BI_NATIVE_BUILD_DIR. See [native build setup](docs/HARDWARE_ACCELERATION.md#build).
 
 ```sh
 ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :sample-client:assembleDebug

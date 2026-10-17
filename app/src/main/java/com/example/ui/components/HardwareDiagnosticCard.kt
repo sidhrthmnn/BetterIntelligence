@@ -345,7 +345,11 @@ fun HardwareDiagnosticCard(
                         )
 
                         Text(
-                            text = if (hardwareProfile.batteryTemperatureC > 0) "${hardwareProfile.batteryTemperatureC}°C" else "${hardwareProfile.batteryPercent}% Batt",
+                            text = when {
+                                hardwareProfile.batteryTemperatureC > 0 -> "${hardwareProfile.batteryTemperatureC}°C battery"
+                                hardwareProfile.batteryPercent >= 0 -> "${hardwareProfile.batteryPercent}% battery"
+                                else -> "Battery sensor unavailable"
+                            },
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontSize = 9.sp,
                                 fontFamily = FontFamily.Monospace
@@ -424,8 +428,8 @@ fun HardwareDiagnosticCard(
                         value = hardwareProfile.androidVersion
                     )
                     DetailRow(
-                        label = "AI Device Tier",
-                        value = "${hardwareProfile.tier.title} (${hardwareProfile.aiCapabilityScore}/100 Score)"
+                        label = "Estimated Device Tier",
+                        value = "${hardwareProfile.tier.title} (${hardwareProfile.aiCapabilityScore}/100 capacity heuristic)"
                     )
                     DetailRow(
                         label = "Recommended Models",
@@ -437,7 +441,7 @@ fun HardwareDiagnosticCard(
                     )
                     DetailRow(
                         label = "Power / Charging",
-                        value = "${hardwareProfile.batteryPercent}% (${if (hardwareProfile.isCharging) "Charging" else "Discharging"})"
+                        value = if (hardwareProfile.batteryPercent >= 0) "${hardwareProfile.batteryPercent}% (${if (hardwareProfile.isCharging) "Charging" else "Discharging"})" else "Unavailable"
                     )
                 }
             }

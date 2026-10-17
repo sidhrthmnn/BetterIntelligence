@@ -63,7 +63,7 @@ data class GgufMetadata(
         get() = (totalSizeBytes / (1024f * 1024f))
 
     val ramFootprintEstimateMb: Float
-        get() = totalSizeMb * 1.15f + (contextLength * embeddingLength * 4f / (1024f * 1024f))
+        get() = ModelMemoryPlanner.estimate(this, 2048).totalMb.toFloat()
 
     val formattedArchitecture: String
         get() = when (architecture.lowercase()) {

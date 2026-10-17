@@ -78,7 +78,7 @@ class ModelDeletionTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
         val repository = AiCoreRepository(context, database, EngineManager(context), SettingsPreferencesRepository(context))
-        withTimeout(15_000) { repository.hardwareProfile.filterNotNull().first() }
+        withTimeout(15_000) { repository.allModels.first { it.size == com.example.engine.ModelLibrary.read(context).size } }
         try { block(repository, database.modelDao()) } finally { database.close() }
     }
 }
