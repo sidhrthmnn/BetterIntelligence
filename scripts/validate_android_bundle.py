@@ -29,8 +29,10 @@ assert provider.attrib[android + "permission"] == service.attrib[android + "perm
 assert provider.attrib[android + "exported"] == service.attrib[android + "exported"] == "true"
 assert any(a.attrib[android + "name"] == "com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE"
            for f in service.findall("intent-filter") for a in f.findall("action"))
-expected = {"libbetter_gguf.so", "libggml.so", "libggml-base.so", "libggml-cpu.so", "libggml-vulkan.so", "libllama.so", "libc++_shared.so",
+expected = {"libbetter_gguf.so", "libggml.so", "libggml-base.so", "libggml-cpu.so", "libggml-vulkan.so", "libllama.so", "liblitertlm_jni.so",
             "libandroidx.graphics.path.so", "libdatastore_shared_counter.so"}
+platform_libraries = {"libandroid.so", "liblog.so", "libm.so", "libdl.so", "libc.so", "libz.so",
+                      "libGLESv2.so", "libGLESv3.so", "libEGL.so", "libvulkan.so"}
 report = {"package": manifest.attrib["package"], "versionCode": manifest.attrib[android + "versionCode"],
           "versionName": manifest.attrib[android + "versionName"], "nativeLibraries": []}
 
@@ -40,7 +42,7 @@ with ZipFile(args.bundle) as archive:
     assert archive.read("base/assets/licenses/NOTICE") == (root / "models/NOTICE").read_bytes()
     assert archive.read("base/assets/licenses/LICENSE-Vulkan-MIT.txt") == (root / "models/LICENSE-Vulkan-MIT.txt").read_bytes()
     assert archive.read("base/assets/licenses/LICENSE-SPIRV-Headers.txt") == (root / "models/LICENSE-SPIRV-Headers.txt").read_bytes()
-    assert not any(name.endswith(".gguf") for name in archive.namelist()), "Weights must download separately"
+    assert not any(name.endswith((".gguf", ".litertlm")) for name in archive.namelist()), "Weights must download separately"
     for abi in ("arm64-v8a", "x86_64"):
         names = {Path(name).name for name in archive.namelist() if name.startswith(f"base/lib/{abi}/") and name.endswith(".so")}
         assert names == expected, (abi, names)
@@ -58,6 +60,7 @@ with ZipFile(args.bundle) as archive:
             mapping = next(h for h in loads if h[3] <= address < h[3] + h[5])
             strings = address - mapping[3] + mapping[2]
             needed = [data[strings + value:].split(b"\0", 1)[0].decode() for tag, value in entries if tag == 1]
+            assert set(needed) <= names | platform_libraries, (name, "Unpackaged dependency", needed)
             assert ("libvulkan.so" in needed) == (name == "libggml-vulkan.so"), (name, needed)
             report["nativeLibraries"].append({"abi": abi, "library": name, "needed": needed, "minLoadAlignment": min(h[7] for h in loads)})
 

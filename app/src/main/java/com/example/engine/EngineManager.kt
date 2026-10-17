@@ -12,9 +12,9 @@ enum class SupportedEngine(val displayName: String, val formatBadge: String, val
         description = "Native GGUF inference on CPU or compatible Vulkan GPU. ARM64 and x86_64."
     ),
     LITERT(
-        displayName = "LiteRT (Google GenAI)",
-        formatBadge = ".TFLITE / .BIN",
-        description = "Unavailable in this build. Select a GGUF model to use the packaged llama.cpp runtime."
+        displayName = "LiteRT-LM (Google)",
+        formatBadge = ".LITERTLM",
+        description = "LiteRT-LM text inference on CPU or validated OpenCL GPU. Select a compatible .litertlm model."
     )
 }
 
@@ -25,21 +25,21 @@ enum class SupportedEngine(val displayName: String, val formatBadge: String, val
 class EngineManager(
     private val context: Context,
     val llamaCppEngine: LlamaCppEngine = LlamaCppEngine(context),
-    val liteRtEngine: LiteRtEngine = LiteRtEngine(context)
+    val liteRtEngine: LiteRtEngine = LiteRtEngine(context, llamaCppEngine.coreInferenceEngine)
 ) {
     private val _selectedEngineType = MutableStateFlow(SupportedEngine.LLAMA_CPP)
     val selectedEngineType: StateFlow<SupportedEngine> = _selectedEngineType.asStateFlow()
 
     val currentEngine: LlmEngine
-        get() = when (_selectedEngineType.value) {
+        get() = when (if (llamaCppEngine.isLoaded) {
+            if (llamaCppEngine.coreInferenceEngine.isLiteRtLoaded()) SupportedEngine.LITERT else SupportedEngine.LLAMA_CPP
+        } else _selectedEngineType.value) {
             SupportedEngine.LLAMA_CPP -> llamaCppEngine
             SupportedEngine.LITERT -> liteRtEngine
         }
 
     fun selectEngine(engine: SupportedEngine) {
-        if (engine == SupportedEngine.LITERT) return // No LiteRT runtime is packaged in this build.
         if (_selectedEngineType.value != engine) {
-            currentEngine.cancelGeneration()
             _selectedEngineType.value = engine
         }
     }

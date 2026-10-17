@@ -17,13 +17,13 @@ class ModelLibraryTest {
 
     @Test fun recommendationUsesAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        assertEquals(9, models.size)
+        assertEquals(13, models.size)
         assertTrue(models.all { !it.isInstalled && !it.isActive && !it.isChecksumVerified })
         assertEquals("Qwen 2.5 1.5B Instruct", ModelLibrary.recommend(models, profile())!!.recommendedModelName)
         assertEquals("SmolLM2 135M Instruct", ModelLibrary.recommend(models, profile(storage = 0.3f))!!.recommendedModelName)
         assertNull(ModelLibrary.recommend(models, profile(ram = 512)))
         assertNull(ModelLibrary.recommend(models, profile(abi = "armeabi-v7a")))
-        assertEquals("Qwen 3 4B Instruct 2507", ModelLibrary.recommend(models, profile(ram = 4096))!!.recommendedModelName)
+        assertEquals("Gemma 4 E2B Instruct · LiteRT", ModelLibrary.recommend(models, profile(ram = 4096))!!.recommendedModelName)
     }
 
     @Test fun downloadDoesNotRequireEnoughRamToRunTheModel() {
@@ -44,7 +44,7 @@ class ModelLibraryTest {
         assertTrue(ModelLibrary.fits(sevenB, profile(ram = 8192)))
         assertFalse(ModelLibrary.canDownload(sevenB, profile(ram = 8192, storage = 4f)))
         assertEquals(sevenB.name, ModelLibrary.recommend(models, profile(ram = 6144))!!.recommendedModelName)
-        assertEquals(sevenB.name, ModelLibrary.recommend(models, profile(ram = 8192))!!.recommendedModelName)
+        assertEquals("Gemma 4 E4B Instruct · GGUF", ModelLibrary.recommend(models, profile(ram = 8192))!!.recommendedModelName)
     }
 
     @Test fun qwen4BOn12GbPhoneUsesCurrentHeadroomContextAndQuantizedFileSize() {
@@ -64,13 +64,13 @@ class ModelLibraryTest {
         val asset = context.assets.open("model-library.json").bufferedReader().use { it.readText() }
         assertEquals(java.io.File("../models/library.json").readText().trim(), asset.trim())
         val models = ModelLibrary.read(context)
-        assertEquals(9, models.map { it.filename }.distinct().size)
+        assertEquals(13, models.map { it.filename }.distinct().size)
         assertEquals(setOf("LIGHTWEIGHT", "BALANCED", "QUALITY"), models.map { it.recommendedTier }.toSet())
         for (model in models) {
             assertTrue(model.sha256Checksum!!.matches(Regex("[a-f0-9]{64}")))
             assertTrue(model.versionTag.matches(Regex("[a-f0-9]{40}")))
             assertTrue(model.downloadUrl!!.contains("/resolve/${model.versionTag}/"))
-            assertEquals("Q4_K_M", model.quantization)
+            assertEquals(if (model.filename.endsWith(".litertlm")) "Mixed 2/4/8-bit" else "Q4_K_M", model.quantization)
             assertEquals(0f, model.speedScoreTokSec)
             assertTrue(model.description.contains("Memory is an estimate"))
         }
@@ -93,5 +93,19 @@ class ModelLibraryTest {
 
     @Test fun noDefaultModelIsReportedReady() {
         assertFalse(InferenceEngine().isReady())
+    }
+
+    @Test fun gemma4HasBothVerifiedFormatsAndDoesNotCountUnloadedAudioVisionWeights() {
+        val models = ModelLibrary.read(ApplicationProvider.getApplicationContext()).filter { it.architecture == "gemma4" }
+        assertEquals(setOf("E2B", "E4B"), models.map { it.parameterCount }.toSet())
+        for (size in listOf("E2B", "E4B")) {
+            val pair = models.filter { it.parameterCount == size }
+            assertEquals(2, pair.size)
+            val lite = pair.single { it.filename.endsWith(".litertlm") }
+            assertTrue(ModelLibrary.memoryEstimate(lite).weightsMb < lite.fileSizeMb)
+            assertTrue(ModelLibrary.memoryEstimate(lite, 4096).totalMb > ModelLibrary.memoryEstimate(lite, 512).totalMb)
+            assertNull(ModelLibrary.incompatibilityReason(lite, profile(ram = 8192).copy(totalRamMb = 12 * 1024)))
+            assertTrue(lite.description.contains("apache-2.0"))
+        }
     }
 }

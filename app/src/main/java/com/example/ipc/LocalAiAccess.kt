@@ -30,7 +30,7 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
             putBoolean("supports_polish", true)
             putString("polish_language", "en")
             putBoolean("model_loaded", repository.engine.isReady())
-            putString("active_model", repository.engine.activeMetadata.value?.modelName ?: "")
+            putString("active_model", if (repository.engine.isReady()) repository.engine.activeModelName else "")
             putString("status", if (access != "READY") access else if (!repository.engine.isReady()) "MODEL_REQUIRED"
                 else if (repository.engine.telemetry.value.isRunning) "BUSY" else "READY")
             putString("settings_package", context.packageName)

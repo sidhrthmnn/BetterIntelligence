@@ -24,8 +24,8 @@ android {
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
     targetSdk = 36
-    versionCode = 3
-    versionName = "1.2"
+    versionCode = 4
+    versionName = "1.3"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders["localAiExported"] = "true"
@@ -139,6 +139,8 @@ dependencies {
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
+  // Real LiteRT-LM runtime used only for explicitly downloaded .litertlm models.
+  implementation(libs.litertlm.android)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

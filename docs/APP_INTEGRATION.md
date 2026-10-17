@@ -1,6 +1,6 @@
 # Use Better Intelligence from another Android app
 
-Better Intelligence owns the downloaded GGUF model and runs inference locally. A keyboard such as Typeright can submit English text for proofreading and receive a replacement without carrying model weights or native inference code. The consumer needs an integration; installing Better Intelligence does not redirect existing AI buttons automatically.
+Better Intelligence owns the downloaded GGUF or LiteRT-LM model and runs inference locally. A keyboard such as Typeright can submit text for proofreading and receive a replacement without carrying model weights or native inference code. The consumer needs an integration; installing Better Intelligence does not redirect existing AI buttons automatically. BI selects the runtime from the model format and manages CPU/GPU processing internally. Existing AIDL transaction IDs, permission names and response fields remain compatible.
 
 ## Setup
 

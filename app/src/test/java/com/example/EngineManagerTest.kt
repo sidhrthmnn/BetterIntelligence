@@ -15,8 +15,8 @@ class EngineManagerTest {
         assertEquals("llama.cpp (Native NDK)", SupportedEngine.LLAMA_CPP.displayName)
         assertEquals(".GGUF", SupportedEngine.LLAMA_CPP.formatBadge)
 
-        assertEquals("LiteRT (Google GenAI)", SupportedEngine.LITERT.displayName)
-        assertEquals(".TFLITE / .BIN", SupportedEngine.LITERT.formatBadge)
+        assertEquals("LiteRT-LM (Google)", SupportedEngine.LITERT.displayName)
+        assertEquals(".LITERTLM", SupportedEngine.LITERT.formatBadge)
     }
 
     @Test

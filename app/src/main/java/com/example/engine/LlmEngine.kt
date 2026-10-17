@@ -26,7 +26,7 @@ enum class BackendType {
 }
 
 /**
- * Common abstraction implemented by both LlamaCppEngine (GGUF) and LiteRtEngine (.tflite/.bin/.task).
+ * Common abstraction implemented by LlamaCppEngine (.gguf) and LiteRtEngine (.litertlm).
  */
 interface LlmEngine {
     val engineType: String

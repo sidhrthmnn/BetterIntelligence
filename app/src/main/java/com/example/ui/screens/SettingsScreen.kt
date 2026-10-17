@@ -75,7 +75,7 @@ fun SettingsScreen(viewModel: AiCoreViewModel) {
             Text("About", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
             Text("Better Intelligence · Local AI API v2", style = MaterialTheme.typography.bodyMedium)
-            Text("GGUF models run locally with llama.cpp on CPU or a compatible Vulkan GPU. Model quality and speed vary by device. Review AI results before using them.",
+            Text("GGUF models use llama.cpp; .litertlm models use LiteRT-LM. CPU and validated GPU processing stay on your device. Model quality and speed vary. Review AI results before using them.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
@@ -96,7 +96,7 @@ fun SettingsScreen(viewModel: AiCoreViewModel) {
                         }
                     }
                     Text("Automatic compares compatible CPU/GPU configurations and saves the result. Initial tuning may delay the first answer. Changes apply between requests.", style = MaterialTheme.typography.bodySmall)
-                    if (caps.gpuAvailable) {
+                    if (caps.gpuAvailable && !caps.gpuName.startsWith("LiteRT")) {
                         Text("GPU layer limit: ${if (layerLimit < 0) "Automatic" else layerLimit.toString()}")
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf(-1, 8, 16, 32).forEach { layers ->

@@ -21,7 +21,7 @@ data class AccelerationCapabilities(
     val gpuReason: String = "Checking packaged Vulkan runtime…",
     val gpuFreeBytes: Long = 0, val gpuTotalBytes: Long = 0,
     val npuAvailable: Boolean = false,
-    val npuReason: String = "GGUF is not an NPU format. A compatible LiteRT-LM runtime, vendor driver and compiled model are not packaged."
+    val npuReason: String = "GGUF cannot run directly on an NPU. A matching compiled NPU model and vendor runtime/driver are not packaged."
 )
 
 data class ResourceState(
@@ -57,6 +57,11 @@ class HardwareAccelerationManager(private val context: Context? = null) {
             gpuFreeBytes = j.optLong("gpuFreeBytes"), gpuTotalBytes = j.optLong("gpuTotalBytes"))
     }
     internal fun markUnavailable(reason: String) { _capabilities.value = _capabilities.value.copy(gpuAvailable = false, gpuReason = reason) }
+    internal fun liteRtGpuStatus(available: Boolean, reason: String) {
+        _capabilities.value = _capabilities.value.copy(gpuAvailable = available, gpuName = "LiteRT OpenCL",
+            gpuReason = reason, gpuFreeBytes = 0, gpuTotalBytes = 0,
+            npuReason = "This build provides CPU/OpenCL LiteRT-LM inference. NPU requires a matching compiled model and packaged vendor runtime/driver.")
+    }
     fun resources(): ResourceState {
         val ctx = context ?: return ResourceState()
         val ram = HardwareAnalyzer.detectRam(ctx)

@@ -12,7 +12,7 @@ See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin 
 
 ## Model library
 
-| Model | GGUF bytes | Estimated RAM at 2K context |
+| Model | Download bytes | Estimated RAM at 2K context |
 | --- | ---: | ---: |
 | SmolLM2 135M Instruct Q4_K_M | 105,454,144 | 410 MB |
 | Gemma 3 270M Instruct Q4_K_M | 253,115,424 | 553 MB |
@@ -23,18 +23,22 @@ See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin 
 | Qwen 2.5 1.5B Instruct Q4_K_M | 1,117,320,736 | 1,463 MB |
 | Qwen 3 4B Instruct 2507 Q4_K_M | 2,497,280,736 | 3,116 MB |
 | Qwen 2.5 7B Instruct Q4_K_M | 4,683,074,240 | 5,192 MB |
+| Gemma 4 E2B LiteRT mixed precision | 2,588,147,712 | 2,374 MB (text only) |
+| Gemma 4 E4B LiteRT mixed precision | 3,659,530,240 | 3,590 MB (text only) |
+| Gemma 4 E2B GGUF Q4_K_M | 3,106,738,272 | 3,596 MB |
+| Gemma 4 E4B GGUF Q4_K_M | 4,977,171,584 | 5,718 MB |
 
 These are compact quantized choices for mobile CPU or compatible Vulkan GPU inference. See [model selection and publisher sources](docs/MOBILE_MODELS.md) for the tradeoffs. **Find models** searches public Hugging Face repositories or accepts an `owner/repository` URL. **Import a GGUF file** accepts files downloaded elsewhere, including gated models after obtaining access from their publisher. Downloads and imports appear in **My models**. A model must be a compatible single-file text GGUF; other formats, multimodal projectors and split files are not supported by this chooser.
 
-`models/library.json` and the matching APK asset record pinned upstream revisions, byte counts and SHA-256 checksums. In-app downloads use those pinned files. The four original weights remain in Git LFS; additional weights download on demand and local copies are ignored by Git. All weights are separate from the APK. Run `git lfs pull` for the original four, or `python scripts/download_models.py` (Python 3.11+) for all nine. The script also accepts one or more library filenames.
+`models/library.json` and the matching APK asset record pinned upstream revisions, byte counts and SHA-256 checksums. In-app downloads use those pinned files. The four original weights remain in Git LFS; additional weights download on demand and local copies are ignored by Git. All weights are separate from the APK. Run `git lfs pull` for the original four, or `python scripts/download_models.py` (Python 3.11+) for the catalog. The script also accepts one or more library filenames. The Gemma 4 benchmark download script uses a separate directory and verifies all four pinned artifacts.
 
 The 4B and 7B options are for Android devices with substantial free RAM. Their CPU generation can be slow; download size and parameter count alone do not predict quality or speed. **Delete** on a model card removes its private weights with confirmation. An active model is unloaded first; stop any current generation before deleting it. Curated and Hugging Face downloads remain available to download again. Local imports disappear from My models, while the original source file and chat history are preserved.
 
 Chat follows the bottom of an incoming answer, including answers taller than the screen. Scroll up to read earlier text without token updates pulling you away, and tap **Jump to latest** to return to the bottom. Sending a new prompt returns to the latest turn.
 
-Recommendations select from the curated library using supported ABI, current available RAM with a 512 MB reserve, low-memory state, and free storage. Users can download a larger model if storage permits, but activation still checks available memory. Memory figures are estimates. Speeds must be measured on the device. Supported packaged ABIs: arm64-v8a and x86_64. Automatic processing compares genuine CPU/Vulkan configurations and caches its choice. GPU offloading requires a compatible Vulkan 1.2 device and successful native model warm-up; CPU remains the fallback. LiteRT/NPU execution is unavailable. See [hardware acceleration, memory policy and device validation](docs/HARDWARE_ACCELERATION.md). Native inference uses each GGUF's chat template, real tokenization, configurable sampling, cancellation, a 180-second deadline, and an output limit of 1,024 tokens. Only one inference runs at a time. Downloads stop if the process is killed; restart them in Models.
+Recommendations select from the curated library using supported ABI, current available RAM with a 512 MB reserve, low-memory state, and free storage. Users can download a larger model if storage permits, but activation checks current memory. Memory figures are estimates. Supported ABIs are arm64-v8a and x86_64. GGUF uses llama.cpp CPU/Vulkan; compatible `.litertlm` models use LiteRT-LM 0.18 CPU/OpenCL. Automatic compares compatible CPU/GPU configurations and caches its choice; CPU remains the fallback. GPU memory is shared system RAM. NPU stays unavailable without a matching compiled model and vendor runtime/driver. See [hardware acceleration](docs/HARDWARE_ACCELERATION.md) and [the measured Gemma comparison](docs/LITERT_LLAMA_COMPARISON.md). Only one inference runs at a time, with cancellation, a 180-second generation deadline and at most 1,024 output tokens. Downloads stop if the process is killed; restart them in Models.
 
-SmolLM2 and Qwen are Apache-2.0. Gemma requires acceptance of its terms and prohibited-use policy in Models before download or activation. Redistributors must retain the notices and model license files under `models/`. See [Gemma terms](https://ai.google.dev/gemma/terms), [Gemma use policy](https://ai.google.dev/gemma/prohibited_use_policy), and [llama.cpp Android build guidance](https://github.com/ggml-org/llama.cpp/blob/master/docs/android.md).
+SmolLM2, Qwen, Gemma 4 and LiteRT-LM are Apache-2.0. Gemma 3 requires acceptance of its terms and prohibited-use policy in Models before download or activation. Redistributors must retain the notices and model license files under `models/`. See [Gemma terms](https://ai.google.dev/gemma/terms), [Gemma use policy](https://ai.google.dev/gemma/prohibited_use_policy), and [llama.cpp Android build guidance](https://github.com/ggml-org/llama.cpp/blob/master/docs/android.md).
 
 ## Use the shared AI service from another app
 

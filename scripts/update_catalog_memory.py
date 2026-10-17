@@ -39,6 +39,12 @@ root = Path(__file__).resolve().parents[1]
 catalog = json.loads((root / "models/library.json").read_text())
 directories = [root / "models", *(Path(p) for p in sys.argv[1:])]
 for model in catalog:
+    if model["filename"].endswith(".litertlm"):
+        # LiteRT containers are not GGUF. Their source model cards specify
+        # resident text decoder/embedding bytes; audio/vision stay unloaded.
+        weights_mb = math.ceil(model["textWeightsBytes"] / 1048576)
+        model["ramMb"] = weights_mb + math.ceil(model["kvBytesPerToken"] * 2048 / 1048576) + 256 + int(weights_mb * 0.08)
+        continue
     path = next((p / model["filename"] for p in directories if (p / model["filename"]).is_file()), None)
     if not path:
         raise SystemExit(f"Missing {model['filename']}; provide an existing weights directory")

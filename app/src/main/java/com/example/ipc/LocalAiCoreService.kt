@@ -66,17 +66,17 @@ class LocalAiCoreService : Service() {
 
         override fun getActiveModelName(): String {
             enforceCallerPermission()
-            return repository.engine.activeMetadata.value?.modelName ?: "None"
+            return repository.engine.activeModelName
         }
 
         override fun getActiveModelQuantization(): String {
             enforceCallerPermission()
-            return repository.engine.activeMetadata.value?.primaryQuantization?.typeName ?: "Unknown"
+            return repository.engine.activeQuantization
         }
 
         override fun getActiveContextSize(): Int {
             enforceCallerPermission()
-            return repository.engine.activeMetadata.value?.contextLength ?: 0
+            return repository.engine.activeContextLength
         }
 
         override fun generateTextSync(

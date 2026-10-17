@@ -278,6 +278,9 @@ class ModelDownloadManager(private val context: Context) {
 
             if (downloadedBytes == 0L) error("Empty model download")
             if (model.filename.endsWith(".gguf", true)) GgufParser().parseFromFile(tempFile).getOrThrow()
+            if (model.filename.endsWith(".litertlm", true)) com.google.ai.edge.litertlm.ModelInfo.from(tempFile.absolutePath).use {
+                require(it is com.google.ai.edge.litertlm.ModelInfo.Llm) { "Downloaded LiteRT file is not a text-generation model" }
+            }
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
             // Atomically move temp file to destination
             if (tempFile.exists() && tempFile.length() > 0) {

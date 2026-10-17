@@ -1,6 +1,6 @@
 # Models for mobile
 
-The library offers nine instruction models in Q4_K_M GGUF format, from tiny downloads to higher-capacity options for high-memory Android devices. Four-bit quantization reduces weight storage; actual memory, latency and battery use still depend on the phone, context length and model architecture. The app runs llama.cpp on CPU or a compatible Vulkan GPU, with [automatic selection and CPU fallback](HARDWARE_ACCELERATION.md). These selections do not imply NPU acceleration or measured performance on a physical phone.
+The library offers thirteen downloads: eleven Q4_K_M GGUF models and two mobile-optimized mixed-precision LiteRT-LM models. Gemma 4 E2B and E4B are available in both formats. GGUF uses llama.cpp CPU/Vulkan; `.litertlm` uses LiteRT-LM CPU/OpenCL, with [automatic selection and CPU fallback](HARDWARE_ACCELERATION.md). See the [physical-phone Gemma 4 comparison](LITERT_LLAMA_COMPARISON.md) for measured latency, speed, output checks and limits. No NPU acceleration is implied.
 
 | Model | Download, MiB rounded up | Estimated RAM at 2K context | Suggested use |
 | --- | ---: | ---: | --- |
@@ -13,6 +13,10 @@ The library offers nine instruction models in Q4_K_M GGUF format, from tiny down
 | Qwen 2.5 1.5B | 1,066 | 1,463 MB | More capacity for editing and multilingual tasks |
 | Qwen 3 4B Instruct 2507 | 2,382 | 3,116 MB | Higher-capacity writing, coding and multilingual chat |
 | Qwen 2.5 7B Instruct | 4,467 | 5,192 MB | Larger assistant for devices with substantial free RAM |
+| Gemma 4 E2B LiteRT mixed precision | 2,469 | 2,374 MB | Mobile text polishing/chat; validated GPU on supported phones |
+| Gemma 4 E4B LiteRT mixed precision | 3,490 | 3,590 MB | More capable mobile text model; requires more free RAM |
+| Gemma 4 E2B GGUF Q4_K_M | 2,963 | 3,596 MB | Gemma 4 through llama.cpp |
+| Gemma 4 E4B GGUF Q4_K_M | 4,747 | 5,718 MB | Gemma 4 through llama.cpp on high-memory devices |
 
 For AI Polish, start with Qwen 2.5 0.5B on a constrained device and try Qwen 2.5 1.5B or SmolLM2 1.7B when more memory is available. This is a selection heuristic, not a proofreading benchmark. Small general-purpose models can miss errors or change meaning; review results before replacing text. The current shared polish prompt is optimized for English.
 
@@ -25,7 +29,7 @@ For AI Polish, start with Qwen 2.5 0.5B on a constrained device and try Qwen 2.5
 - [Qwen 3 4B Instruct 2507](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) is a non-thinking model with improved instruction following and writing capabilities. The app uses [Bartowski's single-file Q4_K_M conversion](https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF). Its approximately 3.1 GB CPU estimate at 2K context includes architecture-specific K/V cache and overhead; GPU buffers need extra shared RAM. Actual requirements vary.
 - [Qwen 2.5 7B Instruct](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) offers a larger instruction model. The catalog uses [Bartowski's single-file conversion](https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF) because the official Q4_K_M release is split. Its CPU estimate at 2K context is approximately 5.2 GB, plus the reserve for Android. GPU buffers require extra shared RAM. Total installed RAM alone does not establish compatibility, and CPU answers can be slow.
 
-All nine catalog downloads have exact byte sizes, SHA-256 checksums and immutable upstream revisions in [library.json](../models/library.json). Source and license links are available in each model's Details dialog. SmolLM2 and these Qwen models use Apache-2.0. Gemma requires its terms and use-policy acceptance before in-app download or activation.
+All thirteen catalog downloads have exact byte sizes, SHA-256 checksums and immutable upstream revisions in [library.json](../models/library.json). Source and license links are available in each model's Details dialog. SmolLM2, Qwen and Gemma 4 use Apache-2.0. Gemma 3 requires its terms and use-policy acceptance before in-app download or activation. LiteRT text-memory estimates exclude audio/vision models that are not loaded; memory-mapped embeddings, context and runtime headroom are included. GPU memory is shared system RAM, and process PSS may omit driver allocations.
 
 ## Choosing any compatible model
 

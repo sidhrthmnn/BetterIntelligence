@@ -54,13 +54,12 @@ class AiBrainContentProvider : ContentProvider() {
         return when (uriMatcher.match(uri)) {
             MATCH_STATUS -> {
                 val cursor = MatrixCursor(arrayOf("status", "active_model", "quantization", "context_length", "authority"))
-                val meta = repo.engine.activeMetadata.value
                 cursor.addRow(
-                    arrayOf(
+                    arrayOf<Any?>(
                         LocalAiAccess(requireNotNull(context), repo).status().getString("status"),
-                        meta?.modelName ?: "",
-                        meta?.primaryQuantization?.typeName ?: "",
-                        meta?.contextLength ?: 0,
+                        repo.engine.activeModelName,
+                        repo.engine.activeQuantization,
+                        repo.engine.activeContextLength,
                         AUTHORITY
                     )
                 )
@@ -74,7 +73,7 @@ class AiBrainContentProvider : ContentProvider() {
                 val cursor = MatrixCursor(arrayOf("status", "response", "model", "latency_ms"))
                 if (!allowed) {
                     logProviderCall(repo, callingPkg, callingUid, "PROVIDER_QUERY", prompt, reason, 0L, "SCOPE_BLOCKED")
-                    cursor.addRow(arrayOf("DENIED", reason, "None", 0L))
+                    cursor.addRow(arrayOf<Any?>("DENIED", reason, "None", 0L))
                     return cursor
                 }
 
@@ -86,9 +85,9 @@ class AiBrainContentProvider : ContentProvider() {
                     )
                 }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(10L)
-                val modelName = repo.engine.activeMetadata.value?.modelName ?: "SmolLM2 135M Instruct"
+                val modelName = repo.engine.activeModelName
                 logProviderCall(repo, callingPkg, callingUid, "PROVIDER_QUERY", prompt, output, latency, "SUCCESS")
-                cursor.addRow(arrayOf("SUCCESS", output, modelName, latency))
+                cursor.addRow(arrayOf<Any?>("SUCCESS", output, modelName, latency))
                 cursor
             }
 
@@ -101,7 +100,7 @@ class AiBrainContentProvider : ContentProvider() {
                 val cursor = MatrixCursor(arrayOf("status", "json_payload", "latency_ms"))
                 if (!allowed) {
                     logProviderCall(repo, callingPkg, callingUid, "JSON_EXTRACT", text, reason, 0L, "SCOPE_BLOCKED")
-                    cursor.addRow(arrayOf("DENIED", """{"error": "$reason"}""", 0L))
+                    cursor.addRow(arrayOf<Any?>("DENIED", """{"error": "$reason"}""", 0L))
                     return cursor
                 }
 
@@ -110,7 +109,7 @@ class AiBrainContentProvider : ContentProvider() {
                 }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(8L)
                 logProviderCall(repo, callingPkg, callingUid, "JSON_EXTRACT", text, json, latency, "SUCCESS")
-                cursor.addRow(arrayOf("SUCCESS", json, latency))
+                cursor.addRow(arrayOf<Any?>("SUCCESS", json, latency))
                 cursor
             }
 
@@ -123,7 +122,7 @@ class AiBrainContentProvider : ContentProvider() {
                 val cursor = MatrixCursor(arrayOf("status", "routing_json", "latency_ms"))
                 if (!allowed) {
                     logProviderCall(repo, callingPkg, callingUid, "INTENT_ROUTE", utterance, reason, 0L, "SCOPE_BLOCKED")
-                    cursor.addRow(arrayOf("DENIED", """{"error": "$reason"}""", 0L))
+                    cursor.addRow(arrayOf<Any?>("DENIED", """{"error": "$reason"}""", 0L))
                     return cursor
                 }
 
@@ -132,7 +131,7 @@ class AiBrainContentProvider : ContentProvider() {
                 }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(6L)
                 logProviderCall(repo, callingPkg, callingUid, "INTENT_ROUTE", utterance, routed, latency, "SUCCESS")
-                cursor.addRow(arrayOf("SUCCESS", routed, latency))
+                cursor.addRow(arrayOf<Any?>("SUCCESS", routed, latency))
                 cursor
             }
 

@@ -1,6 +1,18 @@
-# Hardware acceleration (1.2)
+# Hardware acceleration (1.3)
 
-## Actual capabilities
+## LiteRT-LM and Gemma 4
+
+Version 1.3 packages Google LiteRT-LM 0.18.0 alongside llama.cpp. `.litertlm` selects LiteRT-LM; `.gguf` selects llama.cpp. Both formats use InferenceEngine's same process-wide admission gate, model lifecycle, cancellation and telemetry. Only one model and one generation are active. The AIDL interface and transaction ordering are unchanged. Switching formats closes the previous engine before loading the next. Loading the same unchanged private file reuses the existing engine.
+
+The curated Gemma 4 E2B/E4B standard `.litertlm` files contain CPU and GPU text graphs, confirmed with `ModelInfo`. A graph in a file is only a candidate: OpenCL GPU initialization and a deterministic decode must pass on the actual phone before GPU is accepted. CPU uses LiteRT's CPU backend with a bounded thread count; GPU uses the packaged LiteRT backend and an optional Android vendor `libOpenCL.so`. This is separate from llama.cpp's Vulkan layer offload. LiteRT executes a graph and therefore reports **zero llama.cpp GPU layers**, together with `GPU (LiteRT OpenCL)` when GPU inference is active. It never fabricates an offloaded-layer count.
+
+AUTO compares warm CPU/GPU decode trials and caches stable performance by firmware, pinned runtime, exact model identity, context and thread count. The existing latency/decode/init/PSS/thermal score and 10% improvement threshold apply. CPU/GPU deterministic output mismatch rejects the GPU candidate. Explicit GPU mode also validates it. Failed/interrupted attempts enter a 24-hour cooldown, and cache entries expire after 30 days. No tuning runs under severe thermal or low-memory conditions. Initialization and driver calls cannot be forcibly interrupted safely. Generation cancellation waits for the runtime's completion/error callback before closing the conversation or accepting a new model/request.
+
+LiteRT memory estimates include the published text decoder plus memory-mapped embeddings (E2B 1.92 GB, E4B 2.91 GB), context and runtime headroom. Unloaded audio/vision weights are excluded. These are estimates rather than allocation guarantees. CPU/GPU share system RAM; GPU memory is never added to available RAM. Request-time memory/thermal checks can stop generation while retaining partial text. GPU failures retry on CPU only before visible output; otherwise the user can retry without losing partial text.
+
+NPU remains disabled: the standard CPU/GPU model is not a vendor-compiled NPU artifact, and this build does not package the matching vendor runtime/driver. The presence of a Qualcomm/Tensor/other NPU is insufficient. There is no silent model conversion or download. See the [measured comparison and its limits](LITERT_LLAMA_COMPARISON.md).
+
+## llama.cpp capabilities
 
 One process-wide llama.cpp model serves chat, polish, provider and Binder clients. The AIDL files, transaction ordering, permissions and service addresses are unchanged. Concurrent inference receives the existing busy/retry response. CPU/GPU selection stays inside BI; client apps do not allocate their own model. A model cannot be switched, deleted or unloaded during generation. Cancelling a Flow cancels that specific request, rather than a later client's request.
 
@@ -10,7 +22,7 @@ The app packages **real ggml Vulkan kernels**, not a delegate label. `libggml-vu
 
 On a compatible device, the chosen layer count reaches JNI `prepare`, `llama_model_params.n_gpu_layers` and an explicit Vulkan device list. Actual layer placement is read from the pinned loader's `offloaded N/M layers` report. A real decode/warm-up must succeed before GPU is reported ready. Its graph callback additionally checks that at least one completed matrix operation has an output buffer belonging to the Vulkan device; weights merely placed in GPU memory are insufficient. This callback is only used during warm-up, not normal generation. Operators unsupported by Vulkan can still execute on CPU: GPU means real layer offload, not that every operation runs on GPU. GPU load/context/decode errors release the context/model through RAII, then reload CPU. An answer is retried automatically only before any output tokens were emitted; partial streamed output is preserved and the next request can use CPU.
 
-**NPU is disabled.** No LiteRT-LM runtime or vendor delegate is packaged, and the model library contains GGUF files. An NPU chip alone cannot execute them. Future support needs a supported runtime, vendor drivers, an explicitly compatible compiled model/tokenizer and operation coverage, then actual runtime load/decode tests. Google documents [LiteRT-LM](https://developers.google.com/edge/litert-lm/overview) and [NPU delegates](https://developers.google.com/edge/litert/android/npu/overview); neither makes arbitrary GGUF files NPU-compatible. No conversion or large download happens implicitly.
+**NPU is disabled.** Future support needs matching vendor drivers, an explicitly compatible compiled model/tokenizer and operation coverage, then actual runtime load/decode tests. Google documents [LiteRT-LM](https://developers.google.com/edge/litert-lm/overview) and [NPU delegates](https://developers.google.com/edge/litert/android/npu/overview); neither makes arbitrary GGUF files NPU-compatible. No conversion or large download happens implicitly.
 
 ## Automatic selection
 

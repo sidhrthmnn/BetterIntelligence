@@ -6,6 +6,7 @@ import org.json.JSONArray
 
 object ModelLibrary {
     private val shapes = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Int>>()
+    private val textWeights = java.util.concurrent.ConcurrentHashMap<String, Long>()
     fun recordMetadata(filename: String, metadata: GgufMetadata) {
         shapes[filename] = ModelMemoryPlanner.kvBytesPerToken(metadata) to metadata.blockCount
     }
@@ -13,6 +14,7 @@ object ModelLibrary {
         val list = JSONArray(context.assets.open("model-library.json").bufferedReader().use { it.readText() })
         return (0 until list.length()).map { index ->
             val item = list.getJSONObject(index)
+            if (item.has("textWeightsBytes")) textWeights[item.getString("filename")] = item.getLong("textWeightsBytes")
             shapes[item.getString("filename")] = item.optLong("kvBytesPerToken", 131072L) to item.optInt("layers", 0)
             ModelEntity(name = item.getString("name"), filename = item.getString("filename"),
                 architecture = item.getString("architecture"), quantization = item.optString("quantization", "Q4_K_M"),
@@ -34,11 +36,12 @@ object ModelLibrary {
     fun memoryEstimate(model: ModelEntity, context: Int = 2048, gpuLayers: Int = 0): ModelMemoryEstimate {
         val shape = shapes[model.filename]
         // Unknown imports get a conservative KV estimate until their header is parsed on load.
-        return ModelMemoryPlanner.estimate(model.fileSizeMb * 1048576, context, shape?.first ?: 524288L, gpuLayers, shape?.second ?: 0)
+        return ModelMemoryPlanner.estimate(textWeights[model.filename] ?: (model.fileSizeMb * 1048576), context,
+            shape?.first ?: 524288L, gpuLayers, shape?.second ?: 0)
     }
 
     fun incompatibilityReason(model: ModelEntity, profile: HardwareProfile, context: Int = 2048): String? = when {
-        !model.filename.endsWith(".gguf", true) -> "This build requires a GGUF instruction model. LiteRT/NPU models are not supported."
+        !model.filename.endsWith(".gguf", true) && !model.filename.endsWith(".litertlm", true) -> "Select a GGUF or compatible LiteRT-LM instruction model. Raw TFLite and vendor NPU files are not supported."
         profile.cpuAbi !in listOf("arm64-v8a", "x86_64") -> "The packaged runtime requires arm64-v8a or x86_64; this device reports ${profile.cpuAbi}."
         profile.isLowMemory -> "Android reports low memory (${profile.availableRamMb} MB available). Close other apps and retry."
         memoryEstimate(model, context).totalMb > profile.safeModelRamLimitMb ->

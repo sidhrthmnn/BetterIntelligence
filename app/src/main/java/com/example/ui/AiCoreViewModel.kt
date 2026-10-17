@@ -225,14 +225,17 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
         // Observe and apply saved engine preference from DataStore
         viewModelScope.launch {
             repository.savedEnginePreference.collect { savedEngine ->
-                repository.engineManager.selectEngine(savedEngine)
+                if (!repository.engine.isReady()) repository.engineManager.selectEngine(savedEngine)
             }
         }
     }
 
     fun selectEngine(engine: SupportedEngine) {
         viewModelScope.launch {
-            if (engine == SupportedEngine.LITERT) { _userMessage.value = "This build supports GGUF through llama.cpp. Select a GGUF model."; return@launch }
+            if (repository.engine.isReady() && (engine == SupportedEngine.LITERT) != repository.engine.isLiteRtLoaded()) {
+                _userMessage.value = "Select a ${engine.formatBadge} model in Models to change inference engine."
+                return@launch
+            }
             repository.preferencesRepository.saveEnginePreference(engine)
             repository.engineManager.selectEngine(engine)
             _userMessage.value = "Active engine switched to ${engine.displayName} and saved to DataStore."
@@ -483,7 +486,7 @@ class AiCoreViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _licenseModel = MutableStateFlow<ModelEntity?>(null)
     val licenseModel: StateFlow<ModelEntity?> = _licenseModel.asStateFlow()
-    private fun needsTerms(model: ModelEntity): Boolean = model.architecture.startsWith("gemma") &&
+    private fun needsTerms(model: ModelEntity): Boolean = model.architecture.startsWith("gemma") && !model.architecture.startsWith("gemma4") &&
         !getApplication<Application>().getSharedPreferences("model_terms", Context.MODE_PRIVATE).getBoolean("gemma", false)
     fun dismissModelTerms() { _licenseModel.value = null }
     fun acceptModelTerms() {

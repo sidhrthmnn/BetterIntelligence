@@ -55,11 +55,11 @@ class AccelerationTest {
         selector = SmartBackendSelector(context) { clock }
         assertEquals(16, selector.cached(key, true)!!.layers)
         assertNull(selector.cached(key, false))
-        for (parts in listOf(arrayOf("firmware", "model", "Q4", "runtime", 2048, 4, 16),
-            arrayOf("device", "other model", "Q4", "runtime", 2048, 4, 16),
-            arrayOf("device", "model", "Q8", "runtime", 2048, 4, 16),
-            arrayOf("device", "model", "Q4", "new runtime", 2048, 4, 16),
-            arrayOf("device", "model", "Q4", "runtime", 4096, 4, 16))) assertNull(selector.cached(SmartBackendSelector.key(*parts), true))
+        for (parts in listOf(arrayOf<Any>("firmware", "model", "Q4", "runtime", 2048, 4, 16),
+            arrayOf<Any>("device", "other model", "Q4", "runtime", 2048, 4, 16),
+            arrayOf<Any>("device", "model", "Q8", "runtime", 2048, 4, 16),
+            arrayOf<Any>("device", "model", "Q4", "new runtime", 2048, 4, 16),
+            arrayOf<Any>("device", "model", "Q4", "runtime", 4096, 4, 16))) assertNull(selector.cached(SmartBackendSelector.key(*parts), true))
         clock += SmartBackendSelector.MAX_AGE_MS + 1
         assertNull(selector.cached(key, true))
     }

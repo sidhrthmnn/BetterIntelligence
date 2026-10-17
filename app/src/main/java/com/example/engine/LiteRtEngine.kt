@@ -1,23 +1,14 @@
 package com.example.engine
 
 import android.content.Context
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
-/** Explicitly unavailable until a real LiteRT dependency is integrated. */
-class LiteRtEngine(private val context: Context) : LlmEngine {
-    override val engineType = "LiteRT (unavailable in this build)"
-    override val isLoaded = false
-    override val currentBackend = BackendType.CPU
+/** Uses the same admission, cancellation and telemetry core as chat and Binder. */
+class LiteRtEngine(context: Context, private val core: InferenceEngine = InferenceEngine(context)) :
+    LlmEngine by LlamaCppEngine(context, core) {
+    override val engineType = "LiteRT-LM (.litertlm)"
     override suspend fun initialize(modelPath: String, preferredBackend: BackendType): Result<Unit> =
-        Result.failure(UnsupportedOperationException("LiteRT is not packaged. Select a GGUF model."))
-    override fun generateStream(prompt: String, config: GenerationConfig): Flow<String> = flow {
-        throw UnsupportedOperationException("LiteRT is not packaged. Select a GGUF model.")
-    }
-    override fun generateStreamWithCallback(prompt: String, config: GenerationConfig, listener: StreamTokenListener): kotlinx.coroutines.Job? {
-        listener.onError(501, "LiteRT is not packaged. Select a GGUF model.")
-        return null
-    }
-    override fun cancelGeneration() {}
-    override fun release() {}
+        withContext(Dispatchers.IO) { core.loadLiteRt(File(modelPath)) }
 }

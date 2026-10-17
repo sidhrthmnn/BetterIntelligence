@@ -143,6 +143,13 @@ class InferenceEngine internal constructor(private val context: android.content.
     private var loadedLayers = 0
     private var selectedKey = ""
     private var initializationMs = 0L
+    private var liteSession: LiteRtSession? = null
+    private var liteName = ""
+    private var liteQuantization = ""
+    private var liteLibraryModel: com.example.data.ModelEntity? = null
+    val activeModelName: String get() = if (isReady()) activeMetadata.value?.modelName ?: liteName else "None"
+    val activeQuantization: String get() = activeMetadata.value?.primaryQuantization?.typeName ?: if (isReady()) liteQuantization else "Unknown"
+    val activeContextLength: Int get() = activeMetadata.value?.contextLength ?: liteSession?.maximumContext ?: 0
     private val _activeMetadata = MutableStateFlow<GgufMetadata?>(null)
     val activeMetadata: StateFlow<GgufMetadata?> = _activeMetadata.asStateFlow()
     private val _telemetry = MutableStateFlow(HardwareTelemetry())
@@ -191,8 +198,10 @@ class InferenceEngine internal constructor(private val context: android.content.
                     "Model needs about ${estimate.totalMb} MB at 512 context; $budget MB safely available. Free memory or choose a smaller model."
                 }
             }
+            if (liteSession != null) capabilitiesRead = false
             refreshHardware()
             owner?.takeIf { it !== this }?.clearModelState()
+            liteSession?.close(); liteSession = null
             owner = this
             _activeMetadata.value = null
             _telemetry.value = HardwareTelemetry(isModelLoaded = false)
@@ -216,19 +225,169 @@ class InferenceEngine internal constructor(private val context: android.content.
     fun unloadActiveModel() {
         synchronized(lifecycleLock) {
             check(owner?.busy?.get() != true) { "Stop generation before unloading the model" }
-            if (owner === this) { runtime.release(); owner = null }
+            if (owner === this) { runtime.release(); liteSession?.close(); owner = null }
             clearModelState()
         }
     }
 
     private fun clearModelState() {
+        if (liteSession != null) capabilitiesRead = false
+        liteSession?.close(); liteSession = null; liteName = ""; liteQuantization = ""; liteLibraryModel = null
         loadedFile = null; loadedLayers = 0; selectedKey = ""
         _activeMetadata.value = null; _telemetry.value = HardwareTelemetry()
     }
 
     fun cancelGeneration() { activeJob?.cancel() }
-    fun isReady(): Boolean = owner === this && _activeMetadata.value != null
-    fun releasableGpuWeightsMb(): Long = if (isReady()) activeMetadata.value?.let {
+    fun isReady(): Boolean = owner === this && (_activeMetadata.value != null || liteSession?.let { it.isInitialized || busy.get() } == true)
+    fun isLiteRtLoaded(): Boolean = isReady() && liteSession != null
+
+    fun loadLiteRt(file: File, name: String = file.nameWithoutExtension, identity: String = "", quantization: String = "Model-defined"): Result<Unit> = runCatching {
+        synchronized(lifecycleLock) {
+            check(owner?.busy?.get() != true) { "Stop generation before switching models" }
+            require(file.isFile && file.length() > 24) { "LiteRT-LM file is missing or empty" }
+            val key = "$identity:${file.canonicalPath}:${file.length()}:${file.lastModified()}"
+            if (owner === this && liteSession != null && modelIdentity == key && isReady()) return@runCatching
+            val ctx = requireNotNull(context) { "LiteRT requires an Android application context" }
+            val catalogModel = ModelLibrary.read(ctx).firstOrNull { it.filename == file.name }
+            val resources = hardware.resources()
+            val estimate = catalogModel?.let { ModelLibrary.memoryEstimate(it, 2048) }
+                ?: ModelMemoryPlanner.estimate(file.length(), 2048, 524288L)
+            val available = (resources.availableMb + (owner?.releasableGpuWeightsMb() ?: 0)).coerceAtMost(resources.totalMb)
+            val budget = ModelMemoryPlanner.budget(resources.totalMb, available)
+            check(!resources.lowMemory && estimate.totalMb <= budget) {
+                "LiteRT model needs about ${estimate.totalMb} MB at 2048 context; $budget MB safely available. Free memory or choose a smaller model."
+            }
+            owner?.clearModelState()
+            runtime.release()
+            owner = this; clearModelState()
+            val candidate = LiteRtSession(ctx, file)
+            try { candidate.prepare(ProcessingMode.CPU, hardware.threads(), 2048) }
+            catch (failure: Throwable) { candidate.close(); throw failure }
+            liteSession = candidate; loadedFile = file; modelIdentity = key
+            liteName = name; liteQuantization = quantization
+            liteLibraryModel = catalogModel
+            hardware.liteRtGpuStatus(false, "Choose Automatic to validate this model's LiteRT OpenCL GPU backend on this device")
+            _telemetry.value = HardwareTelemetry(isModelLoaded = true, modelName = name,
+                activeThreads = hardware.threads(), accelerationMode = "CPU (LiteRT-LM)",
+                modelLoadTimeMs = candidate.initializationMs, backendInitializationMs = candidate.initializationMs,
+                memoryUsageMb = memoryMb())
+        }
+    }
+
+    private suspend fun inferLiteRt(prompt: String, params: GenerationParams, listener: StreamTokenListener?, started: Long): String {
+        val session = checkNotNull(liteSession)
+        val state = hardware.resources()
+        val effective = params.copy(contextSize = params.contextSize.coerceIn(512, minOf(4096, session.maximumContext).coerceAtLeast(512)),
+            threads = hardware.threads(params.threads, state))
+        val extra = liteLibraryModel?.let { ModelLibrary.memoryEstimate(it, effective.contextSize).let { m -> m.kvMb + m.overheadMb } } ?: 512L
+        check(extra < state.availableMb - 256) { "LiteRT context needs about $extra MB of headroom; ${state.availableMb} MB available. Free memory or reduce context." }
+        val key = SmartBackendSelector.key(android.os.Build.FINGERPRINT, "litertlm-0.18.0-policy-1", modelIdentity,
+            effective.contextSize, effective.threads)
+        val mode = hardware.mode.value
+        var target = ProcessingMode.CPU
+        val gpuEstimate = liteLibraryModel?.let { ModelLibrary.memoryEstimate(it, effective.contextSize, Int.MAX_VALUE).totalMb }
+            ?: ModelMemoryPlanner.estimate(session.file.length(), effective.contextSize, 524288L, 1, 1).totalMb
+        val gpuBudget = ModelMemoryPlanner.budget(state.totalMb,
+            (state.availableMb + session.releasablePrivateMb).coerceAtMost(state.totalMb))
+        val resourceLimited = state.lowMemory || state.thermal >= 3 || gpuEstimate > gpuBudget
+        _telemetry.value = _telemetry.value.copy(backendStatus = "Selecting processing backend…")
+        val selection = "$key:$mode:$resourceLimited"
+        if (selectedKey == selection) target = session.backend
+        else if (mode != ProcessingMode.CPU && session.supportsGpu && !resourceLimited && !selector.blocked(key)) {
+            val cached = if (mode == ProcessingMode.AUTO) selector.cached(key, true) else null
+            if (cached != null) {
+                target = cached.backend
+                if (selector.hasValidatedGpu(key)) hardware.liteRtGpuStatus(true, "This exact model/device/runtime configuration passed GPU validation previously")
+            }
+            else {
+                val samples = mutableListOf<BackendMeasurement>()
+                var reference: String? = null
+                for (candidate in listOf(ProcessingMode.CPU, ProcessingMode.GPU)) {
+                    try {
+                        if (candidate == ProcessingMode.GPU) selector.beginGpuAttempt(key)
+                        val before = hardware.resources()
+                        session.prepare(candidate, effective.threads, effective.contextSize)
+                        session.generate("Hi", effective.copy(maxTokens = 1, temperature = 0f))
+                        val result = session.generate("Count from one to fifty, separated by commas.", effective.copy(maxTokens = 8, temperature = 0f))
+                        if (candidate == ProcessingMode.CPU) reference = result.text.trim()
+                        else check(result.text.trim() == reference) { "GPU deterministic decode did not match CPU reference" }
+                        val after = hardware.resources()
+                        samples += BackendMeasurement(candidate, 0, effective.threads, result.tokensPerSecond,
+                            result.firstTokenMs, memoryMb(), session.initializationMs, before.thermal, after.thermal,
+                            if (before.batteryC > 0 && after.batteryC > 0) after.batteryC - before.batteryC else 0f,
+                            result.outputTokens > 1 && !after.lowMemory)
+                        if (candidate == ProcessingMode.GPU) hardware.liteRtGpuStatus(true, "LiteRT OpenCL model load and deterministic decode passed")
+                    } catch (failure: Exception) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        if (candidate == ProcessingMode.GPU) {
+                            selector.failed(key, failure.message.orEmpty())
+                            hardware.liteRtGpuStatus(false, "LiteRT GPU validation failed: ${failure.message}")
+                            fallback("LiteRT GPU validation failed; using CPU: ${failure.message}")
+                        } else throw failure
+                    } finally { selector.endGpuAttempt() }
+                    if (hardware.resources().thermal >= 3 || hardware.resources().lowMemory) break
+                }
+                val best = SmartBackendSelector.choose(samples)
+                if (best != null) selector.save(key, best, samples)
+                target = if (mode == ProcessingMode.GPU && samples.any { it.backend == ProcessingMode.GPU && it.stable }) ProcessingMode.GPU
+                    else best?.backend ?: ProcessingMode.CPU
+            }
+        }
+        if (mode == ProcessingMode.GPU && resourceLimited) fallback("LiteRT GPU needs about $gpuEstimate MB including shared RAM overhead; $gpuBudget MB safely available, or the device is thermally limited. Using CPU.")
+        if (target == ProcessingMode.GPU) selector.beginGpuAttempt(key)
+        try { session.prepare(target, effective.threads, effective.contextSize) }
+        catch (failure: Exception) {
+            if (target == ProcessingMode.CPU) throw failure
+            selector.failed(key, failure.message.orEmpty()); target = ProcessingMode.CPU
+            fallback("LiteRT GPU initialization failed; using CPU: ${failure.message}")
+            session.prepare(target, effective.threads, effective.contextSize)
+        }
+        selectedKey = selection
+        _telemetry.value = _telemetry.value.copy(activeBackend = target.name, activeGpuLayers = 0,
+            accelerationMode = if (target == ProcessingMode.GPU) "GPU (LiteRT OpenCL)" else "CPU (LiteRT-LM)",
+            activeThreads = if (target == ProcessingMode.CPU) effective.threads else 0,
+            backendInitializationMs = session.initializationMs, thermalState = state.thermalLabel,
+            totalRamMb = state.totalMb.toFloat(), temperatureCelsius = state.batteryC, backendStatus = "Generating")
+        var visibleOutput = false
+        var lastResourceRead = 0L
+        try {
+            val result = session.generate(prompt, effective) { delta, index ->
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastResourceRead >= 500) {
+                    lastResourceRead = now
+                    val current = hardware.resources()
+                    check(!current.lowMemory && current.availableMb >= 256 && current.thermal < 5) {
+                        "Device reached critical memory or thermal pressure. Partial output is preserved; retry after it recovers."
+                    }
+                    _telemetry.value = _telemetry.value.copy(thermalState = current.thermalLabel, temperatureCelsius = current.batteryC)
+                }
+                visibleOutput = true
+                if (_telemetry.value.timeToFirstTokenMs == 0L) _telemetry.value = _telemetry.value.copy(timeToFirstTokenMs = SystemClock.elapsedRealtime() - started)
+                listener?.onToken(delta, index)
+            }
+            if (target == ProcessingMode.GPU) hardware.liteRtGpuStatus(true, "LiteRT OpenCL initialization and model decode succeeded")
+            _telemetry.value = _telemetry.value.copy(tokensPerSecond = result.tokensPerSecond,
+                completionTokens = result.outputTokens, promptTokens = result.inputTokens,
+                promptEvaluationTimeMs = result.prefillMs, peakMemoryUsageMb = memoryMb())
+            listener?.onComplete(result.text, SystemClock.elapsedRealtime() - started, result.tokensPerSecond, result.inputTokens, result.outputTokens)
+            return result.text
+        } catch (failure: Exception) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            if (target == ProcessingMode.GPU) {
+                selector.failed(key, failure.message.orEmpty()); selectedKey = ""
+                hardware.liteRtGpuStatus(false, "LiteRT GPU execution failed: ${failure.message}")
+                fallback("LiteRT GPU execution failed; CPU will be used on retry: ${failure.message}")
+                val resources = hardware.resources()
+                if (resources.lowMemory || resources.availableMb < 512 || resources.thermal >= 5) throw failure
+                session.prepare(ProcessingMode.CPU, effective.threads, effective.contextSize)
+                _telemetry.value = _telemetry.value.copy(activeBackend = "CPU", accelerationMode = "CPU (LiteRT-LM)", activeGpuLayers = 0)
+                if (visibleOutput) throw IllegalStateException("GPU stopped after partial output. Partial text is preserved; retry with CPU.", failure)
+                return inferLiteRt(prompt, effective, listener, started)
+            }
+            throw failure
+        } finally { selector.endGpuAttempt() }
+    }
+    fun releasableGpuWeightsMb(): Long = if (isReady()) liteSession?.releasablePrivateMb ?: activeMetadata.value?.let {
         ModelMemoryPlanner.releasableGpuWeightsMb(it, loadedLayers)
     } ?: 0L else 0L
     private fun memoryMb(): Float = android.os.Debug.getPss() / 1024f
@@ -323,7 +482,7 @@ class InferenceEngine internal constructor(private val context: android.content.
                 val (cpu, reference) = measure(0, params, key)
                 val (gpu, output) = measure(layers, params, key)
                 check(output == reference) { "GPU deterministic decode did not match CPU reference" }
-                selector.save(key, gpu, listOf(cpu, gpu))
+                selector.save(key, SmartBackendSelector.choose(listOf(cpu, gpu)) ?: cpu, listOf(cpu, gpu))
                 target = layers
             } catch (e: Exception) {
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
@@ -387,6 +546,7 @@ class InferenceEngine internal constructor(private val context: android.content.
             require(prompt.length + system.length <= 65536) { "Prompt is too long" }
             val state = hardware.resources()
             check(state.availableMb >= 256 && state.thermal < 5) { "Device is under critical memory or thermal pressure; retry after it recovers" }
+            if (liteSession != null) return inferLiteRt(prompt, params, listener, started)
             var contextSize = params.contextSize.coerceIn(512, if (state.lowMemory) 1024 else 4096)
             val meta = checkNotNull(activeMetadata.value)
             if (context != null) {
@@ -450,6 +610,7 @@ class InferenceEngine internal constructor(private val context: android.content.
         } finally {
             synchronized(lifecycleLock) {
                 activeJob = null
+                if (liteSession != null && liteSession?.isInitialized != true) _telemetry.value = _telemetry.value.copy(isModelLoaded = false)
                 if (!_telemetry.value.isModelLoaded) _activeMetadata.value = null
                 _telemetry.value = _telemetry.value.copy(isRunning = false, memoryUsageMb = memoryMb(), backendStatus = "Ready")
                 busy.set(false)
@@ -505,7 +666,7 @@ class InferenceEngine internal constructor(private val context: android.content.
         }
         val best = snapshots.maxBy { it.value.tokensPerSecond }
         val t = best.value
-        return BenchmarkResult(activeMetadata.value!!.modelName,
+        return BenchmarkResult(activeModelName,
             t.promptTokens * 1000f / t.promptEvaluationTimeMs.coerceAtLeast(1), t.tokensPerSecond,
             t.peakMemoryUsageMb, t.timeToFirstTokenMs, t.activeGpuLayers, t.activeThreads, contextLength.coerceIn(512, 4096), snapshots.mapValues { it.value.tokensPerSecond })
     }

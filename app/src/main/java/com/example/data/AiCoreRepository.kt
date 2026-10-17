@@ -159,10 +159,10 @@ class AiCoreRepository(
         modelLock.withLock {
             if (restoring && (explicitModelSelection || engine.isReady())) return@withLock
             check(model.isInstalled) { "Download this model first" }
-            require(model.filename.endsWith(".gguf", true)) { "Select a GGUF instruction model" }
+            require(model.filename.endsWith(".gguf", true) || model.filename.endsWith(".litertlm", true)) { "Select a GGUF or LiteRT-LM instruction model" }
             val file = File(model.localFilePath ?: File(downloadManager.modelsDirectory, model.filename).absolutePath)
             check(file.isFile) { "Model file is missing; download it again" }
-            if (model.architecture.startsWith("gemma")) {
+            if (model.architecture.startsWith("gemma") && !model.architecture.startsWith("gemma4")) {
                 check(appContext.getSharedPreferences("model_terms", Context.MODE_PRIVATE).getBoolean("gemma", false)) {
                     "Accept the Gemma terms in Models first"
                 }
@@ -173,10 +173,12 @@ class AiCoreRepository(
             val available = (profile.availableRamMb + oldWeightsMb).coerceAtMost(profile.totalRamMb)
             val adjusted = profile.copy(availableRamMb = available,
                 safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
-            ModelLibrary.incompatibilityReason(model, adjusted, 512)?.let { error(it) }
-            engineManager.selectEngine(SupportedEngine.LLAMA_CPP)
-            val result = engine.loadCustomGguf(file, model.sha256Checksum.orEmpty())
+            ModelLibrary.incompatibilityReason(model, adjusted, if (model.filename.endsWith(".litertlm", true)) 2048 else 512)?.let { error(it) }
+            val liteRt = model.filename.endsWith(".litertlm", true)
+            val result = if (liteRt) engine.loadLiteRt(file, model.name, model.sha256Checksum.orEmpty(), model.quantization)
+                else engine.loadCustomGguf(file, model.sha256Checksum.orEmpty()).map { Unit }
             if (result.isFailure) { modelDao.clearActiveModel(); result.getOrThrow() }
+            engineManager.selectEngine(if (liteRt) SupportedEngine.LITERT else SupportedEngine.LLAMA_CPP)
             modelDao.clearActiveModel()
             modelDao.setActiveModel(model.id)
         }

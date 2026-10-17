@@ -237,11 +237,28 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
         messages.push_back({"user", user.c_str()});
         const auto *chatTemplate = llama_model_chat_template(model.get(), nullptr);
         if (!chatTemplate) throw std::runtime_error("Model has no chat template; import an instruction model");
-        int size = llama_chat_apply_template(chatTemplate, messages.data(), messages.size(), true, nullptr, 0);
-        if (size <= 0) throw std::runtime_error("Unsupported chat template");
-        std::vector<char> formatted(size + 1);
-        size = llama_chat_apply_template(chatTemplate, messages.data(), messages.size(), true, formatted.data(), formatted.size());
-        if (size <= 0 || size > static_cast<int>(formatted.size())) throw std::runtime_error("Cannot format prompt");
+        std::vector<char> formatted;
+        int size;
+        char architecture[64] = {};
+        llama_model_meta_val_str(model.get(), "general.architecture", architecture, sizeof(architecture));
+        if (std::string(architecture) == "gemma4" && std::string(chatTemplate).find("<|turn>") != std::string::npos) {
+            // llama_chat_apply_template's legacy formatter does not implement
+            // Gemma 4. Use Google's documented text-only, thinking-disabled
+            // format. Keep this scoped to Gemma 4; never guess another model's
+            // template. BOS is added once by llama_tokenize below.
+            // https://ai.google.dev/gemma/docs/core/prompt-formatting-gemma4
+            std::string text;
+            if (!system.empty()) text += "<|turn>system\n" + system + "<turn|>\n";
+            text += "<|turn>user\n" + user + "<turn|>\n<|turn>model\n";
+            formatted.assign(text.begin(), text.end());
+            size = static_cast<int>(formatted.size());
+        } else {
+            size = llama_chat_apply_template(chatTemplate, messages.data(), messages.size(), true, nullptr, 0);
+            if (size <= 0) throw std::runtime_error("Unsupported chat template");
+            formatted.resize(size + 1);
+            size = llama_chat_apply_template(chatTemplate, messages.data(), messages.size(), true, formatted.data(), formatted.size());
+            if (size <= 0 || size > static_cast<int>(formatted.size())) throw std::runtime_error("Cannot format prompt");
+        }
         const auto *vocab = llama_model_get_vocab(model.get());
         int count = -llama_tokenize(vocab, formatted.data(), size, nullptr, 0, true, true);
         if (count <= 0 || count + maxTokens > contextSize) throw std::runtime_error("Prompt exceeds context; shorten it or reduce output tokens");

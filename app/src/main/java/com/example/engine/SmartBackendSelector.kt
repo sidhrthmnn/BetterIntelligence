@@ -54,6 +54,14 @@ class SmartBackendSelector(context: Context? = null, private val now: () -> Long
         cache.put(key, encode(result).put("saved", now()).put("measurements", JSONArray(samples.map { encode(it) })))
         prefs?.edit()?.putString("cache", cache.toString())?.apply()
     }
+    fun hasValidatedGpu(key: String): Boolean {
+        val saved = cache.optJSONObject(key) ?: return false
+        if (blocked(key) || now() - saved.optLong("saved") !in 0..MAX_AGE_MS) return false
+        val samples = saved.optJSONArray("measurements") ?: return false
+        return (0 until samples.length()).any { index -> samples.optJSONObject(index)?.let {
+            it.optString("backend") == ProcessingMode.GPU.name && it.optBoolean("stable") && it.optDouble("tps") > 0
+        } == true }
+    }
     private fun encode(m: BackendMeasurement) = JSONObject().put("backend", m.backend.name).put("layers", m.layers).put("threads", m.threads)
         .put("tps", m.tokensPerSecond.toDouble()).put("ttft", m.firstTokenMs).put("memory", m.memoryMb.toDouble())
         .put("init", m.initializationMs).put("thermalBefore", m.thermalBefore).put("thermalAfter", m.thermalAfter)
