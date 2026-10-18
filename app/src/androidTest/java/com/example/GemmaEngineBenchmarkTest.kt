@@ -134,7 +134,7 @@ class GemmaEngineBenchmarkTest {
                                     .put("prefillTokens", input).put("decodeTokens", count)
                                     .put("decodeTokensPerSecond", if (decodeMs > 0) count * 1000.0 / decodeMs else 0.0)
                             }, { _, _, _ -> if (firstMs == 0.0) firstMs = (SystemClock.elapsedRealtimeNanos() - start) / 1e6 }),
-                            96, 4, 2048, 0f, 1f, 1, 180_000).toString(Charsets.UTF_8)
+                            96, 4, 2048, 0f, 1f, 1, 180_000, emptyArray(), emptyArray()).toString(Charsets.UTF_8)
                         sample.put("response", output)
                     }
                     sample.put("wallMs", (SystemClock.elapsedRealtimeNanos() - start) / 1e6)

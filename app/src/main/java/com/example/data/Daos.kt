@@ -95,9 +95,40 @@ interface ChatDao {
 
     @Insert
     suspend fun insertMessage(message: ChatMessageEntity): Long
+    @Update suspend fun updateMessage(message: ChatMessageEntity)
+    @Query("UPDATE chat_messages SET messageState = 'STOPPED', groundingStatus = CASE WHEN groundingStatus = 'SOURCES_RETRIEVED' THEN 'CITATIONS_MISSING' ELSE groundingStatus END, content = CASE WHEN content = '' THEN 'Response interrupted. You can retry.' ELSE content END WHERE messageState = 'STREAMING'")
+    suspend fun recoverInterruptedMessages()
 
     @Query("DELETE FROM chat_messages")
     suspend fun clearChat()
+
+    @Query("SELECT * FROM chat_messages WHERE conversationId = :conversationId ORDER BY id ASC")
+    fun messages(conversationId: Long): Flow<List<ChatMessageEntity>>
+    @Query("SELECT * FROM chat_messages WHERE conversationId = :conversationId ORDER BY id ASC")
+    suspend fun messageSnapshot(conversationId: Long): List<ChatMessageEntity>
+
+    @Query("DELETE FROM chat_messages WHERE conversationId = :conversationId")
+    suspend fun deleteConversationMessages(conversationId: Long)
+
+    @Query("DELETE FROM chat_messages WHERE conversationId = :conversationId AND id >= :messageId")
+    suspend fun deleteFrom(conversationId: Long, messageId: Long)
+}
+
+@Dao
+interface ConversationDao {
+    @Query("SELECT * FROM conversations ORDER BY updatedAt DESC, id DESC")
+    fun all(): Flow<List<ConversationEntity>>
+    @Query("SELECT * FROM conversations WHERE id = :id")
+    suspend fun get(id: Long): ConversationEntity?
+    @Insert suspend fun insert(conversation: ConversationEntity): Long
+    @Query("UPDATE conversations SET draft = :draft WHERE id = :id")
+    suspend fun saveDraft(id: Long, draft: String)
+    @Query("UPDATE conversations SET groundingMode = :mode WHERE id = :id")
+    suspend fun saveGroundingMode(id: Long, mode: String)
+    @Query("UPDATE conversations SET title = CASE WHEN title = 'New conversation' THEN :title ELSE title END, updatedAt = :time WHERE id = :id")
+    suspend fun touch(id: Long, title: String, time: Long)
+    @Query("DELETE FROM conversations WHERE id = :id") suspend fun delete(id: Long)
+    @Query("DELETE FROM conversations") suspend fun clear()
 }
 
 @Dao

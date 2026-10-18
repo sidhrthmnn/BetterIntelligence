@@ -35,6 +35,7 @@ class InferenceForegroundService : Service() {
 
     private var currentModelName: String = "Local GGUF Model"
     private var currentPromptPreview: String = "Reasoning task..."
+    private var requestToken = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -54,6 +55,7 @@ class InferenceForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
+                requestToken = intent.getLongExtra(EXTRA_REQUEST_TOKEN, 0)
                 currentModelName = intent.getStringExtra(EXTRA_MODEL_NAME) ?: "Local GGUF Model"
                 currentPromptPreview = intent.getStringExtra(EXTRA_PROMPT_PREVIEW) ?: "Generating response..."
                 
@@ -61,7 +63,7 @@ class InferenceForegroundService : Service() {
                 val notification = buildInferenceNotification(
                     tokenCount = 0,
                     tokensPerSec = 0f,
-                    previewText = "Initializing model & computing prompt prefill...",
+                    previewText = "Preparing your answer on this device",
                     modelName = currentModelName,
                     isOngoing = true
                 )
@@ -101,17 +103,14 @@ class InferenceForegroundService : Service() {
             }
 
             ACTION_CANCEL -> {
-                // Cancel inference directly on engine
-                try {
-                    val repository = AiCoreRepository.getInstance(applicationContext)
-                    repository.engine.cancelGeneration()
-                } catch (e: Exception) {
-                    // Safe catch
-                }
+                if (intent.getLongExtra(EXTRA_REQUEST_TOKEN, -1) != requestToken) return START_NOT_STICKY
+                cancellations.remove(requestToken)?.invoke()
                 stopForegroundAndSelf()
             }
 
             ACTION_STOP -> {
+                if (intent.getLongExtra(EXTRA_REQUEST_TOKEN, -1) != requestToken) return START_NOT_STICKY
+                cancellations.remove(requestToken)
                 val totalTokens = intent.getIntExtra(EXTRA_TOKEN_COUNT, 0)
                 val latencyMs = intent.getLongExtra(EXTRA_LATENCY_MS, 0L)
                 val tokPerSec = intent.getFloatExtra(EXTRA_TOK_PER_SEC, 0f)
@@ -171,15 +170,12 @@ class InferenceForegroundService : Service() {
             1,
             Intent(this, InferenceForegroundService::class.java).apply {
                 action = ACTION_CANCEL
+                putExtra(EXTRA_REQUEST_TOKEN, requestToken)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val title = if (tokenCount > 0) {
-            "⚡ $modelName ($tokenCount tok • ${String.format("%.1f", tokensPerSec)} tok/s)"
-        } else {
-            "⚡ $modelName (Generating...)"
-        }
+        val title = "Better Intelligence · Generating"
 
         val snippet = if (previewText.isNotBlank()) {
             previewText.takeLast(140)
@@ -193,9 +189,9 @@ class InferenceForegroundService : Service() {
             .setContentText(snippet)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .setBigContentTitle("⚡ Local AI Inference • $modelName")
-                    .setSummaryText("${tokenCount} tokens • ${String.format("%.1f", tokensPerSec)} tok/s")
-                    .bigText(if (previewText.isNotBlank()) previewText else "Generating response on CPU/GPU...")
+                    .setBigContentTitle("Better Intelligence")
+                    .setSummaryText(modelName)
+                    .bigText("Preparing your answer on this device")
             )
             .setProgress(0, 0, true) // Indeterminate progress spinner
             .setOngoing(isOngoing)
@@ -245,6 +241,7 @@ class InferenceForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        cancellations.remove(requestToken)
         releaseWakeLock()
         isServiceRunning = false
         super.onDestroy()
@@ -269,6 +266,9 @@ class InferenceForegroundService : Service() {
     }
 
     companion object {
+        private val requestSequence = java.util.concurrent.atomic.AtomicLong()
+        private val cancellations = java.util.concurrent.ConcurrentHashMap<Long, () -> Unit>()
+        private const val EXTRA_REQUEST_TOKEN = "request_token"
         const val CHANNEL_ID = "better_intelligence_inference_channel"
         const val NOTIFICATION_ID = 1001
 
@@ -284,11 +284,14 @@ class InferenceForegroundService : Service() {
         const val EXTRA_PREVIEW_TEXT = "extra_preview_text"
         const val EXTRA_LATENCY_MS = "extra_latency_ms"
 
-        fun start(context: Context, promptPreview: String, modelName: String) {
+        fun start(context: Context, promptPreview: String, modelName: String, onCancel: () -> Unit = {}): Long {
+            val token = requestSequence.incrementAndGet()
+            cancellations[token] = onCancel
             val intent = Intent(context, InferenceForegroundService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_PROMPT_PREVIEW, promptPreview)
                 putExtra(EXTRA_MODEL_NAME, modelName)
+                putExtra(EXTRA_REQUEST_TOKEN, token)
             }
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -297,8 +300,10 @@ class InferenceForegroundService : Service() {
                     context.startService(intent)
                 }
             } catch (e: Exception) {
+                cancellations.remove(token)
                 // Catch BackgroundServiceStartNotAllowedException on Android 12+ if backgrounded
             }
+            return token
         }
 
         fun update(context: Context, tokenCount: Int, tokPerSec: Float, preview: String, modelName: String) {
@@ -316,12 +321,14 @@ class InferenceForegroundService : Service() {
             }
         }
 
-        fun stop(context: Context, totalTokens: Int, latencyMs: Long, tokPerSec: Float) {
+        fun stop(context: Context, totalTokens: Int, latencyMs: Long, tokPerSec: Float, requestToken: Long = 0) {
+            cancellations.remove(requestToken)
             val intent = Intent(context, InferenceForegroundService::class.java).apply {
                 action = ACTION_STOP
                 putExtra(EXTRA_TOKEN_COUNT, totalTokens)
                 putExtra(EXTRA_LATENCY_MS, latencyMs)
                 putExtra(EXTRA_TOK_PER_SEC, tokPerSec)
+                putExtra(EXTRA_REQUEST_TOKEN, requestToken)
             }
             try {
                 context.startService(intent)
@@ -333,6 +340,7 @@ class InferenceForegroundService : Service() {
         fun cancel(context: Context) {
             val intent = Intent(context, InferenceForegroundService::class.java).apply {
                 action = ACTION_CANCEL
+                putExtra(EXTRA_REQUEST_TOKEN, requestSequence.get())
             }
             try {
                 context.startService(intent)

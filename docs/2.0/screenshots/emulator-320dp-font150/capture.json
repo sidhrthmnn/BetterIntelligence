@@ -1,0 +1,11 @@
+{
+  "device": "Android 16 x86_64 emulator",
+  "date": "2026-10-18",
+  "widthDp": 320,
+  "fontScale": "1.5",
+  "displaySize": "Physical size: 320x640",
+  "density": "Physical density: 160",
+  "validationApkSha256": "5c622b6e4fe44dd3b67efdce04f2c5aaec6199fdd683833c6e66c18bfd714d37",
+  "tests": "ChatFirstNavigationTest, ChatKeyboardTest: 2 passed",
+  "content": "Synthetic development data"
+}

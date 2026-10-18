@@ -20,7 +20,7 @@ enum class SupportedEngine(val displayName: String, val formatBadge: String, val
 
 /**
  * Manages the active on-device inference engine and allows dynamic switching
- * between llama.cpp (GGUF) and LiteRT (TFLite/GenAI).
+ * between llama.cpp (GGUF) and LiteRT-LM (.litertlm), sharing one admission gate.
  */
 class EngineManager(
     private val context: Context,
@@ -53,11 +53,9 @@ class EngineManager(
 
     fun cancelGeneration() {
         llamaCppEngine.cancelGeneration()
-        liteRtEngine.cancelGeneration()
     }
 
     fun release() {
         llamaCppEngine.release()
-        liteRtEngine.release()
     }
 }

@@ -27,6 +27,7 @@ import com.example.ui.components.HardwarePerformanceComparisonCard
 @Composable
 fun ModelsScreen(viewModel: AiCoreViewModel) {
     val models by viewModel.allModels.collectAsState()
+    val downloadErrors by viewModel.modelDownloadErrors.collectAsState()
     val active by viewModel.activeModel.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
     val hardware by viewModel.hardwareProfile.collectAsState()
@@ -58,7 +59,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                         modifier = Modifier.testTag("model_source_$key"))
                 }
             }
-            TextButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("import_gguf_btn")) { Text("Import a GGUF file") }
+            TextButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("import_gguf_btn")) { Text("Import GGUF or LiteRT-LM") }
         }
         if (source == "find") item {
             val query by viewModel.hfSearchQuery.collectAsState()
@@ -130,7 +131,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     Text(model.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (!selected && !fits) Text(loadProfile?.let { ModelLibrary.incompatibilityReason(model, it, 512) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
                     if (!installed && !canDownload) Text("Free more storage before downloading this model.", color = MaterialTheme.colorScheme.error)
-                    if (model.downloadState == "ERROR") Text("Download failed. Check your connection and try again.", color = MaterialTheme.colorScheme.error)
+                    if (model.downloadState == "ERROR") Text(downloadErrors[model.id] ?: "Download interrupted. Retry to resume or check the model publisher’s access requirements.", color = MaterialTheme.colorScheme.error)
                     if (downloading) {
                         LinearProgressIndicator(progress = { model.downloadProgress }, modifier = Modifier.fillMaxWidth())
                         Text(if (model.checksumVerificationStatus == "VERIFYING") "Checking download…" else "Downloading ${(model.downloadProgress * 100).toInt()}%",
@@ -138,13 +139,13 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         when {
-                            downloading -> OutlinedButton(onClick = { viewModel.cancelDownload(model.id) }) { Text("Cancel") }
+                            downloading -> OutlinedButton(onClick = { viewModel.cancelDownload(model.id) }) { Text("Pause") }
                             installed -> Button(onClick = { viewModel.switchModel(model) }, enabled = loading == null && deletingId == null && !selected && fits && !telemetry.isRunning,
                                 modifier = Modifier.testTag("load_model_${model.id}")) {
                                 Text(if (loading == model.id) "Loading…" else if (selected) "In use" else "Use model")
                             }
                             else -> Button(onClick = { viewModel.downloadModel(model) }, enabled = canDownload,
-                                modifier = Modifier.testTag("download_model_${model.id}")) { Text(if (model.downloadState == "ERROR") "Retry download" else "Download") }
+                                modifier = Modifier.testTag("download_model_${model.id}")) { Text(if (model.downloadState == "ERROR") "Retry download" else if (model.downloadState == "PAUSED") "Resume download" else "Download") }
                         }
                         TextButton(onClick = { details = model }) { Text("Details") }
                         if (installed || (model.isCustom && !downloading)) {

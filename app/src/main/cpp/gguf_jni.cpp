@@ -212,7 +212,8 @@ Java_com_example_engine_NativeGguf_release(JNIEnv *, jobject) {
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray promptBytes,
         jbyteArray systemBytes, jobject observer, jint maxTokens, jint threads, jint contextSize,
-        jfloat temperature, jfloat topP, jint topK, jint timeoutMs) {
+        jfloat temperature, jfloat topP, jint topK, jint timeoutMs,
+        jobjectArray historyRoles, jobjectArray historyContents) {
     try {
         std::lock_guard<std::mutex> lock(guard);
         if (!model) throw std::runtime_error("No GGUF model selected");
@@ -234,6 +235,23 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
         // Preserve roles so instruction models receive the system prompt in their native template.
         // llama.cpp merges system text into the user turn for templates such as Gemma.
         if (!system.empty()) messages.push_back({"system", system.c_str()});
+        const auto historyCount = env->GetArrayLength(historyRoles);
+        if (historyCount > 24 || env->GetArrayLength(historyContents) != historyCount)
+            throw std::runtime_error("Invalid conversation history");
+        std::vector<std::string> roles, contents;
+        roles.reserve(historyCount); contents.reserve(historyCount);
+        size_t historyBytes = 0;
+        for (jsize i = 0; i < historyCount; ++i) {
+            auto roleBytes = static_cast<jbyteArray>(env->GetObjectArrayElement(historyRoles, i));
+            auto contentBytes = static_cast<jbyteArray>(env->GetObjectArrayElement(historyContents, i));
+            roles.push_back(bytes(env, roleBytes)); contents.push_back(bytes(env, contentBytes));
+            env->DeleteLocalRef(roleBytes); env->DeleteLocalRef(contentBytes);
+            if (roles.back() != "user" && roles.back() != "assistant")
+                throw std::runtime_error("Invalid conversation role");
+            historyBytes += contents.back().size();
+            if (historyBytes > 32768) throw std::runtime_error("Conversation context is too large");
+        }
+        for (jsize i = 0; i < historyCount; ++i) messages.push_back({roles[i].c_str(), contents[i].c_str()});
         messages.push_back({"user", user.c_str()});
         const auto *chatTemplate = llama_model_chat_template(model.get(), nullptr);
         if (!chatTemplate) throw std::runtime_error("Model has no chat template; import an instruction model");
@@ -249,6 +267,8 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
             // https://ai.google.dev/gemma/docs/core/prompt-formatting-gemma4
             std::string text;
             if (!system.empty()) text += "<|turn>system\n" + system + "<turn|>\n";
+            for (jsize i = 0; i < historyCount; ++i)
+                text += "<|turn>" + (roles[i] == "assistant" ? std::string("model") : roles[i]) + "\n" + contents[i] + "<turn|>\n";
             text += "<|turn>user\n" + user + "<turn|>\n<|turn>model\n";
             formatted.assign(text.begin(), text.end());
             size = static_cast<int>(formatted.size());

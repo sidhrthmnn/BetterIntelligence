@@ -11,14 +11,20 @@ object ModelLibrary {
         shapes[filename] = ModelMemoryPlanner.kvBytesPerToken(metadata) to metadata.blockCount
     }
     fun read(context: Context): List<ModelEntity> {
-        val list = JSONArray(context.assets.open("model-library.json").bufferedReader().use { it.readText() })
+        return readAsset(context, "model-library.json", true)
+    }
+    fun inferenceModel(context: Context, filename: String): ModelEntity? = read(context).firstOrNull { it.filename == filename }
+        ?: readAsset(context, "model-research.json", false).firstOrNull { it.filename == filename }
+
+    private fun readAsset(context: Context, asset: String, primary: Boolean): List<ModelEntity> {
+        val list = JSONArray(context.assets.open(asset).bufferedReader().use { it.readText() })
         return (0 until list.length()).map { index ->
             val item = list.getJSONObject(index)
             if (item.has("textWeightsBytes")) textWeights[item.getString("filename")] = item.getLong("textWeightsBytes")
             shapes[item.getString("filename")] = item.optLong("kvBytesPerToken", 131072L) to item.optInt("layers", 0)
             ModelEntity(name = item.getString("name"), filename = item.getString("filename"),
                 architecture = item.getString("architecture"), quantization = item.optString("quantization", "Q4_K_M"),
-                parameterCount = item.getString("parameters"), contextLength = 2048,
+                parameterCount = item.getString("parameters"), contextLength = item.optInt("context", 2048),
                 fileSizeMb = (item.getLong("bytes") + 1048575) / 1048576,
                 ramRequiredMb = item.getInt("ramMb"), isInstalled = false, isActive = false, isCustom = false,
                 description = item.getString("description") + " License: ${item.getString("license")}. Memory is an estimate.",
@@ -26,12 +32,12 @@ object ModelLibrary {
                 huggingFaceRepo = item.getString("repo"), sha256Checksum = item.getString("sha256"),
                 versionTag = item.getString("revision"), speedScoreTokSec = 0f,
                 recommendedTier = item.getString("tier"),
-                isBaseModel = index == 0)
+                isBaseModel = primary && index == 0)
         }
     }
 
     fun canDownload(model: ModelEntity, profile: HardwareProfile): Boolean =
-        model.fileSizeMb + 128 <= profile.internalStorageFreeGb * 1024
+        (model.fileSizeMb * (1f - if (model.downloadState in setOf("PAUSED", "ERROR")) model.downloadProgress.coerceIn(0f, .99f) else 0f)).toLong() + 128 <= profile.internalStorageFreeGb * 1024
 
     fun memoryEstimate(model: ModelEntity, context: Int = 2048, gpuLayers: Int = 0): ModelMemoryEstimate {
         val shape = shapes[model.filename]

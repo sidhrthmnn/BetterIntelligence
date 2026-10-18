@@ -41,9 +41,17 @@ class GgufParser {
 
     fun parseFromChannel(channel: FileChannel, totalSize: Long, maxTensorsToRead: Int = 100): Result<GgufMetadata> {
         return try {
-            // Map header into memory (first 2MB is ample for metadata)
+            // Bound header inspection without retaining a file-backed mapping. Mapped
+            // buffers outlive the channel and can prevent verified partials being renamed
+            // or deleted (notably on Windows host tests). Weights stay mmap'd in llama.cpp.
             val headerSize = minOf(totalSize, 32L * 1024L * 1024L)
-            val buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, headerSize).order(ByteOrder.LITTLE_ENDIAN)
+            require(headerSize >= 16) { "File too small to be a valid GGUF" }
+            val buffer = ByteBuffer.allocate(headerSize.toInt()).order(ByteOrder.LITTLE_ENDIAN)
+            while (buffer.hasRemaining()) {
+                val count = channel.read(buffer, buffer.position().toLong())
+                if (count < 0) break
+            }
+            buffer.flip()
             parseFromByteBuffer(buffer, totalSize, maxTensorsToRead)
         } catch (e: Exception) {
             Result.failure(e)

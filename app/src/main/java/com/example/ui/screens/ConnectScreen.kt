@@ -1,6 +1,12 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -23,14 +29,12 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            Text("AI for your other apps", style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(8.dp))
             Text("Let supported apps use this device’s model for tasks such as AI Polish. You choose which apps have access.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
-            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+            Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(if (telemetry.isModelLoaded) "Local AI is ready" else "Set up a model first", style = MaterialTheme.typography.titleLarge)
+                    Text(if (telemetry.isModelLoaded) "Local AI is ready" else "Set up a model first", style = MaterialTheme.typography.titleMedium)
                     Text(if (telemetry.isModelLoaded) active?.name ?: "Local model" else "Download and select a model to enable AI for your apps.")
                     if (!telemetry.isModelLoaded) Button(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Choose a model") }
                 }
@@ -72,19 +76,30 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
 @Composable
 private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewModel) {
     var expanded by rememberSaveable(policy.packageName) { mutableStateOf(false) }
-    OutlinedCard(Modifier.fillMaxWidth()) {
+    val context = LocalContext.current
+    val icon by produceState<android.graphics.Bitmap?>(null, policy.packageName) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching {
+            context.packageManager.getApplicationIcon(policy.packageName).toBitmap(48, 48)
+        }.getOrNull() }
+    }
+    Column(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (icon != null) Image(icon!!.asImageBitmap(), null, Modifier.size(40.dp))
+                else Icon(Icons.Default.Apps, null, Modifier.size(40.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(policy.appName, style = MaterialTheme.typography.titleMedium)
                     Text(policy.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(if (policy.isBlocked) "Blocked" else if (policy.isWhitelisted) "Allowed" else "Awaiting your approval",
+                    Text(if (policy.isBlocked) "Denied" else if (policy.isWhitelisted) "Approved · Local inference" else "Pending approval",
                         style = MaterialTheme.typography.labelMedium)
                 }
                 Switch(checked = policy.isWhitelisted && !policy.isBlocked,
                     onCheckedChange = { viewModel.togglePolicyWhitelist(policy) }, enabled = !policy.isBlocked,
                     modifier = Modifier.testTag("allow_app_${policy.packageName}"))
             }
+            if (policy.totalRequests > 0) Text("Last used ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(policy.lastAccessTimestamp))}",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide permissions" else "Permissions and limits") }
             if (expanded) {
                 PermissionRow("AI generation and polish", policy.allowInference) { viewModel.togglePolicyInference(policy) }
@@ -98,6 +113,7 @@ private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewMo
                 }
             }
         }
+        HorizontalDivider()
     }
 }
 

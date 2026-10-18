@@ -1,0 +1,114 @@
+category	input	gold
+spelling	I recieved your message.	I received your message.
+spelling	Please check the adress.	Please check the address.
+spelling	The meeting is tommorow.	The meeting is tomorrow.
+spelling	This is a seperate issue.	This is a separate issue.
+spelling	We need more accomodation.	We need more accommodation.
+spelling	I definately agree.	I definitely agree.
+spelling	The report is availble now.	The report is available now.
+spelling	Thank you for your patiance.	Thank you for your patience.
+spelling	Please send the attachement.	Please send the attachment.
+spelling	This is an important decission.	This is an important decision.
+grammar	She don't like coffee.	She doesn't like coffee.
+grammar	They was waiting outside.	They were waiting outside.
+grammar	He have two tickets.	He has two tickets.
+grammar	I has finished the task.	I have finished the task.
+grammar	We is ready to leave.	We are ready to leave.
+grammar	There is three options.	There are three options.
+grammar	The files was uploaded.	The files were uploaded.
+grammar	She go to work by bus.	She goes to work by bus.
+grammar	He did not went home.	He did not go home.
+grammar	I am agree with you.	I agree with you.
+punctuation	Its raining outside.	It's raining outside.
+punctuation	Lets begin the meeting.	Let's begin the meeting.
+punctuation	Dont close the window.	Don't close the window.
+punctuation	Where are you going	Where are you going?
+punctuation	Can you send the file	Can you send the file?
+punctuation	I cant attend today.	I can't attend today.
+punctuation	Youre welcome.	You're welcome.
+punctuation	Thats a good idea.	That's a good idea.
+punctuation	Weve already paid.	We've already paid.
+punctuation	Please bring bread milk and eggs.	Please bring bread, milk, and eggs.
+joined_words	I willcall you tomorrow.	I will call you tomorrow.
+joined_words	Please sendme the file.	Please send me the file.
+joined_words	We aregoing home.	We are going home.
+joined_words	Thisis my notebook.	This is my notebook.
+joined_words	Can youhelp me?	Can you help me?
+joined_words	I donot agree.	I do not agree.
+joined_words	She willbe here soon.	She will be here soon.
+joined_words	They arewaiting outside.	They are waiting outside.
+nearby_keys	I will be therr soon.	I will be there soon.
+nearby_keys	Please senf the report.	Please send the report.
+nearby_keys	We need to talj today.	We need to talk today.
+nearby_keys	The meeting starts at ninr.	The meeting starts at nine.
+nearby_keys	I csn help you.	I can help you.
+nearby_keys	Thank yoi for coming.	Thank you for coming.
+nearby_keys	Please checj this file.	Please check this file.
+nearby_keys	This is a goof example.	This is a good example.
+proper_names	Anjali recieved the report.	Anjali received the report.
+proper_names	Sidharth have the tickets.	Sidharth has the tickets.
+proper_names	Kochi is a beautiful city.	Kochi is a beautiful city.
+proper_names	Dr. Nair will arrive at 10:30.	Dr. Nair will arrive at 10:30.
+technical	The Kotlin coroutine was cancelled.	The Kotlin coroutine was cancelled.
+technical	Please dont rename user_id.	Please don't rename user_id.
+technical	The API return HTTP 429.	The API returns HTTP 429.
+technical	Use Qwen3.5-4B with LiteRT-LM.	Use Qwen3.5-4B with LiteRT-LM.
+technical	The SHA-256 checksum matches.	The SHA-256 checksum matches.
+technical	Keep com.example.demo unchanged.	Keep com.example.demo unchanged.
+numeric_literals	The invoice total are £1,204.50.	The invoice total is £1,204.50.
+numeric_literals	Version 2.0.1 have a fix.	Version 2.0.1 has a fix.
+numeric_literals	Order AB-1049 was recieved.	Order AB-1049 was received.
+numeric_literals	The reading is -12.5 °C.	The reading is -12.5 °C.
+numeric_literals	I paid 5.25, not 52.50.	I paid 5.25, not 52.50.
+numeric_literals	Meet on 2026-10-18 at 09:15.	Meet on 2026-10-18 at 09:15.
+negation	I do not wants a refund.	I do not want a refund.
+negation	She has not recieved it.	She has not received it.
+negation	Do not delete the backup.	Do not delete the backup.
+negation	We never approved this change.	We never approved this change.
+negation	He did not said yes.	He did not say yes.
+negation	The service must not use the cloud.	The service must not use the cloud.
+questions	Does she knows the answer?	Does she know the answer?
+questions	Where did you went?	Where did you go?
+questions	Why is the files missing?	Why are the files missing?
+questions	Can we reschedule the meeting?	Can we reschedule the meeting?
+questions	Are you sure this is correct?	Are you sure this is correct?
+questions	Who have the key?	Who has the key?
+already_correct	Please let me know when you arrive.	Please let me know when you arrive.
+already_correct	I appreciate your help.	I appreciate your help.
+already_correct	The train leaves at six.	The train leaves at six.
+already_correct	Could you clarify the last point?	Could you clarify the last point?
+already_correct	We should review the results before publishing.	We should review the results before publishing.
+already_correct	Neither option is suitable.	Neither option is suitable.
+short	Thanks!	Thanks!
+short	See you soon.	See you soon.
+short	Im late.	I'm late.
+short	Yes, please.	Yes, please.
+malayalam	ഞാൻ നാളെ വരാം.	ഞാൻ നാളെ വരാം.
+malayalam	എനിക്ക് ഇന്ന് വരാൻ കഴിയില്ല.	എനിക്ക് ഇന്ന് വരാൻ കഴിയില്ല.
+malayalam	നിങ്ങൾ എവിടെയാണ്?	നിങ്ങൾ എവിടെയാണ്?
+malayalam	ദയവായി റിപ്പോർട്ട് അയയ്ക്കുക.	ദയവായി റിപ്പോർട്ട് അയയ്ക്കുക.
+malayalam	നാളെ രാവിലെ കാണാം.	നാളെ രാവിലെ കാണാം.
+malayalam	ഞാൻ ഇത് അംഗീകരിച്ചിട്ടില്ല.	ഞാൻ ഇത് അംഗീകരിച്ചിട്ടില്ല.
+malayalam	അഞ്ജലി ഇന്ന് ഓഫീസിൽ വന്നില്ല.	അഞ്ജലി ഇന്ന് ഓഫീസിൽ വന്നില്ല.
+malayalam	ഈ ഫയൽ ഇല്ലാതാക്കരുത്.	ഈ ഫയൽ ഇല്ലാതാക്കരുത്.
+malayalam	നിങ്ങളുടെ സഹായത്തിന് നന്ദി.	നിങ്ങളുടെ സഹായത്തിന് നന്ദി.
+malayalam	വില 250 രൂപയാണ്.	വില 250 രൂപയാണ്.
+manglish	njan naale varaam.	njan naale varaam.
+manglish	enikku innu varaan pattilla.	enikku innu varaan pattilla.
+manglish	nee evide aanu?	nee evide aanu?
+manglish	namukku naale kaanaam.	namukku naale kaanaam.
+manglish	Anjali innu office-il varilla.	Anjali innu office-il varilla.
+manglish	ee file delete cheyyaruthu.	ee file delete cheyyaruthu.
+manglish	meeting 10:30-nu aanu.	meeting 10:30-nu aanu.
+manglish	njan ithu approve cheythittilla.	njan ithu approve cheythittilla.
+mixed_language	നാളെ meeting ഉണ്ടോ?	നാളെ meeting ഉണ്ടോ?
+mixed_language	Please send the റിപ്പോർട്ട് today.	Please send the റിപ്പോർട്ട് today.
+mixed_language	ഇന്ന് office-il വരില്ല.	ഇന്ന് office-il വരില്ല.
+mixed_language	Anjali, report അയച്ചോ?	Anjali, report അയച്ചോ?
+mixed_language	The meeting നാളെ രാവിലെ 9-ന് ആണ്.	The meeting നാളെ രാവിലെ 9-ന് ആണ്.
+mixed_language	ഈ API key share ചെയ്യരുത്.	ഈ API key share ചെയ്യരുത്.
+long	I recieved the updated report yesterday, but I has not reviewed the final section yet. Please dont send it to the client until I confirm that the numbers are correct.	I received the updated report yesterday, but I have not reviewed the final section yet. Please don't send it to the client until I confirm that the numbers are correct.
+long	Anjali and I were discussing the release plan. We agreed to keep version 2.0 in internal testing until the migration, offline inference, and keyboard integration checks pass. Please preserve the existing downloads and app approvals.	Anjali and I were discussing the release plan. We agreed to keep version 2.0 in internal testing until the migration, offline inference, and keyboard integration checks pass. Please preserve the existing downloads and app approvals.
+long	The customer have paid invoice INV-2026-1049 for £1,204.50. They do not wants a refund, and they has asked us not to cancel order AB-1049. Please make sure these details is preserved.	The customer has paid invoice INV-2026-1049 for £1,204.50. They do not want a refund, and they have asked us not to cancel order AB-1049. Please make sure these details are preserved.
+long	ഞാൻ നാളെ രാവിലെ ഓഫീസിൽ വരാം. റിപ്പോർട്ട് പരിശോധിച്ച ശേഷം അഞ്ജലിക്ക് അയയ്ക്കാം. അതുവരെ ഈ ഫയൽ ഇല്ലാതാക്കരുത്.	ഞാൻ നാളെ രാവിലെ ഓഫീസിൽ വരാം. റിപ്പോർട്ട് പരിശോധിച്ച ശേഷം അഞ്ജലിക്ക് അയയ്ക്കാം. അതുവരെ ഈ ഫയൽ ഇല്ലാതാക്കരുത്.
+long	Please review this draft carefully. The API endpoint, user_id field, and SHA-256 checksum must remain unchanged. We are not asking for a summary or a translation; return the corrected draft only.	Please review this draft carefully. The API endpoint, user_id field, and SHA-256 checksum must remain unchanged. We are not asking for a summary or a translation; return the corrected draft only.

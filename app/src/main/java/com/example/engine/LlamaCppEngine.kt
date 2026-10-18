@@ -39,7 +39,7 @@ class LlamaCppEngine(
         get() = coreInferenceEngine.isReady()
 
     override val currentBackend: BackendType
-        get() = if (coreInferenceEngine.telemetry.value.activeGpuLayers > 0) BackendType.GPU else BackendType.CPU
+        get() = if (coreInferenceEngine.telemetry.value.let { it.isModelLoaded && it.activeBackend == "GPU" }) BackendType.GPU else BackendType.CPU
 
     override suspend fun initialize(
         modelPath: String,
@@ -88,6 +88,7 @@ class LlamaCppEngine(
             threads = config.threads,
             gpuLayers = config.gpuLayers,
             contextSize = config.contextSize,
+            history = config.history,
             accelerationMode = "Managed by Better Intelligence"
         )
 
@@ -134,6 +135,7 @@ class LlamaCppEngine(
             threads = config.threads,
             gpuLayers = config.gpuLayers,
             contextSize = config.contextSize,
+            history = config.history,
             accelerationMode = "Managed by Better Intelligence"
         )
 

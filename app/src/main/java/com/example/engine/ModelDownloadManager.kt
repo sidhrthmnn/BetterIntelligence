@@ -53,7 +53,8 @@ sealed class DownloadStateUpdate {
     data class Failure(val error: String) : DownloadStateUpdate()
 }
 
-class ModelDownloadManager(private val context: Context) {
+class ModelDownloadManager(private val context: Context,
+    private val openConnection: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection }) {
 
     private val activeDownloadFlags = ConcurrentHashMap<Long, Boolean>()
     private val TAG = "ModelDownloadManager"
@@ -164,30 +165,35 @@ class ModelDownloadManager(private val context: Context) {
         onUpdate: suspend (DownloadStateUpdate) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
         require(model.filename == File(model.filename).name && !model.filename.contains('\\')) { "Invalid model filename" }
-        activeDownloadFlags[model.id] = true
         val targetFile = File(modelsDirectory, model.filename)
         val tempFile = File(modelsDirectory, "${model.filename}.part")
+        require(targetFile.canonicalFile.parentFile == modelsDirectory.canonicalFile && tempFile.canonicalFile.parentFile == modelsDirectory.canonicalFile) { "Model path must stay in private model storage" }
+        activeDownloadFlags[model.id] = true
+        var connection: HttpURLConnection? = null
 
         try {
-            check(modelsDirectory.usableSpace > (model.fileSizeMb + 128) * 1024L * 1024L) { "Insufficient storage for model" }
+            var resumeOffset = if (!model.sha256Checksum.isNullOrBlank()) tempFile.length() else 0L
+            check(modelsDirectory.usableSpace > ((model.fileSizeMb + 128) * 1024L * 1024L - resumeOffset).coerceAtLeast(128L * 1024 * 1024)) { "Insufficient storage for the remaining model download" }
             val downloadUrl = model.downloadUrl ?: throw IllegalArgumentException("No download URL provided for model ${model.name}")
 
             // Follow HTTP redirects (Hugging Face resolve redirects to cloud CDN)
             var currentUrl = downloadUrl
-            var connection: HttpURLConnection? = null
             var redirects = 0
             val maxRedirects = 8
 
             while (redirects < maxRedirects) {
                 val url = URL(currentUrl)
                 require(url.protocol == "https") { "Model downloads require HTTPS" }
-                val conn = (url.openConnection() as HttpURLConnection).apply {
+                val conn = openConnection(url).apply {
                     connectTimeout = 15000
                     readTimeout = 30000
                     instanceFollowRedirects = false
                     setRequestProperty("User-Agent", "BetterIntelligence-AiCore/1.0 (Android ARM64)")
                     setRequestProperty("Accept", "*/*")
+                    setRequestProperty("Accept-Encoding", "identity")
+                    if (resumeOffset > 0) setRequestProperty("Range", "bytes=$resumeOffset-")
                 }
+                connection = conn
                 val code = conn.responseCode
                 if (code in listOf(HttpURLConnection.HTTP_MOVED_PERM, HttpURLConnection.HTTP_MOVED_TEMP, HttpURLConnection.HTTP_SEE_OTHER, 307, 308)) {
                     val location = conn.getHeaderField("Location")
@@ -203,35 +209,61 @@ class ModelDownloadManager(private val context: Context) {
             }
 
             val activeConn = connection ?: throw IllegalStateException("Failed to open connection to download source")
+            if (activeConn.responseCode == 416) {
+                // A complete or stale partial must not trap the user in an endless failed resume.
+                val complete = verifyLocalFile(tempFile, model.sha256Checksum)
+                if (complete.isMatch) {
+                    if (model.filename.endsWith(".gguf", true)) GgufParser().parseFromFile(tempFile).getOrThrow()
+                    else com.google.ai.edge.litertlm.ModelInfo.from(tempFile.absolutePath).use { require(it is com.google.ai.edge.litertlm.ModelInfo.Llm) }
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    check(tempFile.renameTo(targetFile)) { "Could not install completed download" }
+                    onUpdate(DownloadStateUpdate.Success(targetFile, complete.computedSha256, true))
+                    return@withContext true
+                }
+                tempFile.delete()
+                error("The partial download is stale. Retry to start a fresh verified download.")
+            }
             if (activeConn.responseCode !in 200..299) {
-                throw IllegalStateException("HTTP ${activeConn.responseCode}: ${activeConn.responseMessage}")
+                throw IllegalStateException(if (activeConn.responseCode in listOf(401, 403)) "The publisher requires download authorisation for this model. Choose a publicly accessible package." else "Download provider returned HTTP ${activeConn.responseCode}. Retry later.")
             }
 
+            if (activeConn.responseCode == 206) {
+                val start = Regex("bytes (\\d+)-\\d+/\\d+").matchEntire(activeConn.getHeaderField("Content-Range").orEmpty())?.groupValues?.get(1)?.toLongOrNull()
+                if (start != resumeOffset) { tempFile.delete(); error("The server returned an invalid resume range. Retry to start a fresh download.") }
+            } else resumeOffset = 0 // Server ignored Range; restart instead of appending a full file.
+
             val totalBytes = activeConn.contentLengthLong.let {
-                if (it > 0) it else (model.fileSizeMb * 1024L * 1024L)
+                if (it > 0) it + resumeOffset else (model.fileSizeMb * 1024L * 1024L)
             }
 
             val digest = MessageDigest.getInstance("SHA-256")
-            var downloadedBytes = 0L
+            if (resumeOffset > 0) FileInputStream(tempFile).use { existing ->
+                val buffer = ByteArray(64 * 1024)
+                while (true) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    val count = existing.read(buffer)
+                    if (count < 0) break
+                    digest.update(buffer, 0, count)
+                }
+            }
+            var downloadedBytes = resumeOffset
             var lastLogTime = System.currentTimeMillis()
-            var lastBytes = 0L
+            var lastBytes = resumeOffset
 
             activeConn.inputStream.use { input ->
-                FileOutputStream(tempFile).use { output ->
+                FileOutputStream(tempFile, resumeOffset > 0).use { output ->
                     val buffer = ByteArray(64 * 1024)
                     var bytesRead: Int
                     while (input.read(buffer).also { bytesRead = it } != -1) {
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()
                         if (activeDownloadFlags[model.id] != true) {
-                            // Download was cancelled
-                            tempFile.delete()
-                            onUpdate(DownloadStateUpdate.Failure("Download cancelled by user"))
-                            return@withContext false
+                            throw kotlinx.coroutines.CancellationException("Download paused")
                         }
 
                         output.write(buffer, 0, bytesRead)
                         digest.update(buffer, 0, bytesRead)
                         downloadedBytes += bytesRead
+                        check(downloadedBytes <= (model.fileSizeMb + 1) * 1024L * 1024L) { "Download exceeds its declared model size" }
 
                         val now = System.currentTimeMillis()
                         if (now - lastLogTime >= 400) {
@@ -247,6 +279,7 @@ class ModelDownloadManager(private val context: Context) {
                 }
             }
 
+            if (activeConn.contentLengthLong > 0 && downloadedBytes != totalBytes) throw java.io.IOException("Download interrupted. Retry to resume the remaining data.")
             // Checksum verification phase
             onUpdate(DownloadStateUpdate.VerifyingChecksum)
 
@@ -293,11 +326,11 @@ class ModelDownloadManager(private val context: Context) {
 
         } catch (e: Exception) {
             Log.e(TAG, "Download failed for ${model.name}: ${e.message}", e)
-            if (tempFile.exists()) tempFile.delete()
             if (e is kotlinx.coroutines.CancellationException) throw e
             onUpdate(DownloadStateUpdate.Failure(e.message ?: "Unknown download error"))
             return@withContext false
         } finally {
+            connection?.disconnect()
             activeDownloadFlags.remove(model.id)
         }
     }

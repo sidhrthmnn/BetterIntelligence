@@ -1,6 +1,7 @@
 package com.example.data
 
 import android.content.Context
+import androidx.room.withTransaction
 import com.example.engine.ChecksumVerificationResult
 import com.example.engine.DownloadStateUpdate
 import com.example.engine.EngineManager
@@ -51,6 +52,26 @@ class AiCoreRepository(
     private val ipcLogDao = database.ipcLogDao()
     private val clientPolicyDao = database.clientPolicyDao()
     private val chatDao = database.chatDao()
+    private val conversationDao = database.conversationDao()
+    val conversations = conversationDao.all()
+    fun messages(conversationId: Long) = chatDao.messages(conversationId)
+    suspend fun conversation(id: Long) = conversationDao.get(id)
+    suspend fun createConversation() = conversationDao.insert(ConversationEntity())
+    suspend fun saveDraft(id: Long, draft: String) = conversationDao.saveDraft(id, draft)
+    suspend fun saveGroundingMode(id: Long, mode: String) = conversationDao.saveGroundingMode(id, mode)
+    suspend fun deleteConversation(id: Long) = database.withTransaction {
+        chatDao.deleteConversationMessages(id)
+        conversationDao.delete(id)
+    }
+    suspend fun deleteMessagesFrom(conversationId: Long, messageId: Long) = chatDao.deleteFrom(conversationId, messageId)
+    suspend fun beginChatTurn(message: ChatMessageEntity, replaceFrom: Long?): List<ChatMessageEntity> = database.withTransaction {
+        check(conversationDao.get(message.conversationId) != null) { "Conversation is no longer available" }
+        if (replaceFrom != null) chatDao.deleteFrom(message.conversationId, replaceFrom)
+        val history = chatDao.messageSnapshot(message.conversationId)
+        chatDao.insertMessage(message)
+        conversationDao.touch(message.conversationId, message.content.replace('\n', ' ').take(70), message.timestamp)
+        history
+    }
     private val memoryDao = database.memoryDao()
     private val performanceLogDao = database.performanceLogDao()
 
@@ -68,6 +89,8 @@ class AiCoreRepository(
 
     // Download jobs map
     private val activeDownloadJobs = ConcurrentHashMap<Long, Job>()
+    private val _downloadErrors = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val downloadErrors = _downloadErrors.asStateFlow()
 
     // Rate limiting tracker: package -> list of request timestamps in ms
     private val rateLimitWindows = ConcurrentHashMap<String, MutableList<Long>>()
@@ -121,13 +144,11 @@ class AiCoreRepository(
     private suspend fun seedDefaultModelsIfEmpty() {
         // Replace old demo entries, preserving user imports and genuine installed files.
         val library = ModelLibrary.read(appContext)
-        val names = library.map { it.filename }.toSet()
         modelDao.getAllModels().first().filter { it.isCustom && it.isInstalled }.forEach { model ->
             model.localFilePath?.let { path -> com.example.engine.GgufParser().parseFromFile(File(path)).getOrNull()?.let { ModelLibrary.recordMetadata(model.filename, it) } }
         }
-        modelDao.getAllModels().first().filter { !it.isCustom && it.filename !in names }.forEach {
-            modelDao.deleteModel(it.id)
-        }
+        // Catalogue curation never deletes an existing model row or its weights.
+        // This also preserves downloads/imports if a publisher removes an entry.
         library.forEach { entry ->
             val existing = modelDao.getModelByFilename(entry.filename)
             val file = File(downloadManager.modelsDirectory, entry.filename)
@@ -135,10 +156,11 @@ class AiCoreRepository(
                 downloadManager.verifyLocalFile(file, entry.sha256Checksum).isMatch
             }
             val updated = entry.copy(id = existing?.id ?: 0L, isInstalled = installed,
+                lastUsedTimestamp = existing?.lastUsedTimestamp ?: 0L,
                 isActive = installed && existing?.isActive == true,
                 localFilePath = if (installed) file.absolutePath else null,
-                downloadState = if (installed) "DOWNLOADED" else "NOT_DOWNLOADED",
-                downloadProgress = if (installed) 1f else 0f,
+                downloadState = if (installed) "DOWNLOADED" else if (File(downloadManager.modelsDirectory, "${entry.filename}.part").length() > 0) "PAUSED" else "NOT_DOWNLOADED",
+                downloadProgress = if (installed) 1f else (File(downloadManager.modelsDirectory, "${entry.filename}.part").length().toFloat() / (entry.fileSizeMb * 1048576).coerceAtLeast(1)).coerceIn(0f, .99f),
                 isChecksumVerified = installed,
                 checksumVerificationStatus = if (installed) "VERIFIED" else "NOT_VERIFIED")
             modelDao.insertModel(updated)
@@ -173,9 +195,10 @@ class AiCoreRepository(
             val available = (profile.availableRamMb + oldWeightsMb).coerceAtMost(profile.totalRamMb)
             val adjusted = profile.copy(availableRamMb = available,
                 safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
-            ModelLibrary.incompatibilityReason(model, adjusted, if (model.filename.endsWith(".litertlm", true)) 2048 else 512)?.let { error(it) }
             val liteRt = model.filename.endsWith(".litertlm", true)
-            val result = if (liteRt) engine.loadLiteRt(file, model.name, model.sha256Checksum.orEmpty(), model.quantization)
+            val requestedContext = preferencesRepository.generationPreferences.first().contextSize
+            ModelLibrary.incompatibilityReason(model, adjusted, if (liteRt) minOf(requestedContext, model.contextLength) else 512)?.let { error(it) }
+            val result = if (liteRt) engine.loadLiteRt(file, model.name, model.sha256Checksum.orEmpty(), model.quantization, requestedContext)
                 else engine.loadCustomGguf(file, model.sha256Checksum.orEmpty()).map { Unit }
             if (result.isFailure) { modelDao.clearActiveModel(); result.getOrThrow() }
             engineManager.selectEngine(if (liteRt) SupportedEngine.LITERT else SupportedEngine.LLAMA_CPP)
@@ -186,8 +209,9 @@ class AiCoreRepository(
 
     fun startModelDownload(model: ModelEntity, scope: CoroutineScope) {
         if (activeDownloadJobs.containsKey(model.id)) return
+        _downloadErrors.value = _downloadErrors.value - model.id
 
-        val job = repositoryScope.launch(Dispatchers.IO) {
+        val job = repositoryScope.launch(Dispatchers.IO, start = kotlinx.coroutines.CoroutineStart.LAZY) {
             try {
                 // Set state to DOWNLOADING
                 modelDao.updateModel(
@@ -240,6 +264,7 @@ class AiCoreRepository(
                                 )
                             }
                             is DownloadStateUpdate.Failure -> {
+                                _downloadErrors.value = _downloadErrors.value + (model.id to update.error.take(300))
                                 modelDao.updateModel(
                                     current.copy(
                                         downloadState = "ERROR",
@@ -253,6 +278,7 @@ class AiCoreRepository(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                _downloadErrors.value = _downloadErrors.value + (model.id to (e.message ?: "Unable to download this model").take(300))
                 val current = modelDao.getModelById(model.id)
                 if (current != null) {
                     modelDao.updateModel(
@@ -264,24 +290,24 @@ class AiCoreRepository(
                     )
                 }
             } finally {
-                activeDownloadJobs.remove(model.id)
+                activeDownloadJobs.remove(model.id, kotlinx.coroutines.currentCoroutineContext()[Job])
             }
         }
-        activeDownloadJobs[model.id] = job
+        if (activeDownloadJobs.putIfAbsent(model.id, job) == null) job.start() else job.cancel()
     }
 
     fun cancelModelDownload(modelId: Long, scope: CoroutineScope) {
         downloadManager.cancelDownload(modelId)
-        val job = activeDownloadJobs.remove(modelId)
+        val job = activeDownloadJobs[modelId]
         job?.cancel()
-        scope.launch(Dispatchers.IO) {
+        repositoryScope.launch(Dispatchers.IO) {
+            job?.join()
             val model = modelDao.getModelById(modelId) ?: return@launch
             val partFile = File(downloadManager.modelsDirectory, "${model.filename}.part")
-            if (partFile.exists()) partFile.delete()
             modelDao.updateModel(
                 model.copy(
-                    downloadState = "NOT_DOWNLOADED",
-                    downloadProgress = 0.0f,
+                    downloadState = if (partFile.length() > 0) "PAUSED" else "NOT_DOWNLOADED",
+                    downloadProgress = (partFile.length().toFloat() / (model.fileSizeMb * 1048576).coerceAtLeast(1)).coerceIn(0f, .99f),
                     downloadSpeedMbps = 0f,
                     isInstalled = false,
                     checksumVerificationStatus = "NOT_VERIFIED"
@@ -390,6 +416,7 @@ class AiCoreRepository(
     }
 
     suspend fun updateModel(model: ModelEntity, scope: CoroutineScope) {
+        check(!model.isActive) { "Select another model before replacing this model's file" }
         // Triggers a fresh download / update check
         startModelDownload(model, scope)
     }
@@ -416,6 +443,27 @@ class AiCoreRepository(
         )
         val id = modelDao.insertModel(entity)
         return entity.copy(id = id)
+    }
+
+    suspend fun registerImportedLiteRt(file: File, displayName: String): ModelEntity {
+        val maximumContext = com.google.ai.edge.litertlm.ModelInfo.from(file.absolutePath).use { info ->
+            require(info is com.google.ai.edge.litertlm.ModelInfo.Llm) { "Import a text-generation .litertlm model" }
+            require(com.google.ai.edge.litertlm.BackendType.CPU in info.supportedBackends(com.google.ai.edge.litertlm.Modality.TEXT)) {
+                "This package has no compatible CPU fallback. Vendor-only NPU and GPU packages are not supported."
+            }
+            info.maxContextTokens().takeIf { it > 0 } ?: 2048
+        }
+        val checksum = downloadManager.verifyLocalFile(file, null).computedSha256
+        val entity = ModelEntity(name = displayName.take(120), filename = file.name, architecture = "litertlm-import",
+            quantization = "Model-defined", parameterCount = "Custom", contextLength = maximumContext,
+            fileSizeMb = (file.length() + 1048575) / 1048576,
+            ramRequiredMb = ModelMemoryPlanner.estimate(file.length(), minOf(maximumContext, 2048), 524288).totalMb.toInt(),
+            isInstalled = true, isActive = false, isCustom = true,
+            description = "Imported LiteRT-LM package. Review its publisher's licence. Unknown architectures use a fresh executor per request for context isolation; loading may take longer.",
+            capabilities = "Custom LiteRT-LM, Text generation", localFilePath = file.absolutePath,
+            downloadState = "DOWNLOADED", downloadProgress = 1f, sha256Checksum = checksum,
+            isChecksumVerified = false, checksumVerificationStatus = "LOCAL_HASH")
+        return entity.copy(id = modelDao.insertModel(entity))
     }
 
     suspend fun logIpcCall(log: IpcLogEntity) {
@@ -501,12 +549,19 @@ class AiCoreRepository(
         ipcLogDao.clearLogs()
     }
 
-    suspend fun insertChatMessage(message: ChatMessageEntity) {
-        chatDao.insertMessage(message)
+    suspend fun insertChatMessage(message: ChatMessageEntity): Long = database.withTransaction {
+            check(conversationDao.get(message.conversationId) != null) { "Conversation is no longer available" }
+            val id = chatDao.insertMessage(message)
+            conversationDao.touch(message.conversationId,
+                if (message.role == "user") message.content.replace('\n', ' ').take(70) else "New conversation",
+                message.timestamp)
+            id
     }
+    suspend fun updateChatMessage(message: ChatMessageEntity) = chatDao.updateMessage(message)
+    suspend fun recoverInterruptedMessages() = chatDao.recoverInterruptedMessages()
 
     suspend fun clearChatHistory() {
-        chatDao.clearChat()
+        database.withTransaction { chatDao.clearChat(); conversationDao.clear() }
     }
 
     suspend fun insertMemory(snippet: MemorySnippetEntity): Long {

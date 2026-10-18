@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.engine.SupportedEngine
+import com.example.engine.GenerationParams
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -24,6 +25,15 @@ class SettingsPreferencesRepository(private val context: Context) {
         val KEY_LLM_ENGINE = stringPreferencesKey("key_llm_engine_type")
         val KEY_DARK_THEME = stringPreferencesKey("key_dark_theme")
         val KEY_FOREGROUND_SERVICE = stringPreferencesKey("key_foreground_service")
+        private val KEY_APPEARANCE = stringPreferencesKey("appearance")
+        private val KEY_WEB_ALLOWED = stringPreferencesKey("web_allowed")
+        private val KEY_WEB_MODE = stringPreferencesKey("web_default_mode")
+        private val KEY_WEB_PROVIDER = stringPreferencesKey("web_provider")
+        private val KEY_CONVERSATION = stringPreferencesKey("active_conversation")
+        private val KEY_MEMORY = stringPreferencesKey("chat_memory_enabled")
+        private val KEY_CONTEXT = stringPreferencesKey("chat_context")
+        private val KEY_TEMPERATURE = stringPreferencesKey("chat_temperature")
+        private val KEY_OUTPUT = stringPreferencesKey("chat_output_tokens")
     }
 
     val selectedEngineFlow: Flow<SupportedEngine> = context.dataStore.data
@@ -54,6 +64,33 @@ class SettingsPreferencesRepository(private val context: Context) {
         .map { it[KEY_DARK_THEME]?.toBooleanStrictOrNull() ?: true }
 
     suspend fun saveDarkTheme(dark: Boolean) {
-        context.dataStore.edit { it[KEY_DARK_THEME] = dark.toString() }
+        saveAppearance(if (dark) "DARK" else "LIGHT")
     }
+
+    private val preferences = context.dataStore.data.catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+    val appearance = preferences.map { it[KEY_APPEARANCE] ?: if (it[KEY_DARK_THEME] == "false") "LIGHT" else "DARK" }
+    val webAllowed = preferences.map { it[KEY_WEB_ALLOWED] == "true" }
+    val webMode = preferences.map { it[KEY_WEB_MODE] ?: "OFF" }
+    val webProvider = preferences.map { it[KEY_WEB_PROVIDER] ?: "WIKIPEDIA" }
+    val activeConversation = preferences.map { it[KEY_CONVERSATION]?.toLongOrNull() ?: 0L }
+    val memoryEnabled = preferences.map { it[KEY_MEMORY] == "true" }
+    val foregroundEnabled = preferences.map { it[KEY_FOREGROUND_SERVICE]?.toBooleanStrictOrNull() ?: true }
+    val generationPreferences = preferences.map { values ->
+        val context = (values[KEY_CONTEXT]?.toIntOrNull() ?: 2048).coerceIn(512, 2048)
+        GenerationParams(contextSize = context, maxTokens = (values[KEY_OUTPUT]?.toIntOrNull() ?: 256).coerceIn(64, context / 2),
+            temperature = (values[KEY_TEMPERATURE]?.toFloatOrNull() ?: .7f).coerceIn(0f, 1.5f))
+    }
+    suspend fun saveGenerationPreferences(params: GenerationParams) { context.dataStore.edit {
+        it[KEY_CONTEXT] = params.contextSize.toString(); it[KEY_OUTPUT] = params.maxTokens.toString(); it[KEY_TEMPERATURE] = params.temperature.toString()
+    } }
+    suspend fun saveForegroundEnabled(enabled: Boolean) { context.dataStore.edit { it[KEY_FOREGROUND_SERVICE] = enabled.toString() } }
+    suspend fun saveAppearance(value: String) {
+        require(value in setOf("LIGHT", "DARK", "AMOLED"))
+        context.dataStore.edit { it[KEY_APPEARANCE] = value; it[KEY_DARK_THEME] = (value != "LIGHT").toString() }
+    }
+    suspend fun saveWebAllowed(value: Boolean) { context.dataStore.edit { it[KEY_WEB_ALLOWED] = value.toString() } }
+    suspend fun saveWebMode(value: String) { require(value in setOf("OFF", "AUTO", "ON")); context.dataStore.edit { it[KEY_WEB_MODE] = value } }
+    suspend fun saveWebProvider(value: String) { require(value in setOf("WIKIPEDIA", "BRAVE")); context.dataStore.edit { it[KEY_WEB_PROVIDER] = value } }
+    suspend fun saveActiveConversation(id: Long) { context.dataStore.edit { it[KEY_CONVERSATION] = id.toString() } }
+    suspend fun saveMemoryEnabled(enabled: Boolean) { context.dataStore.edit { it[KEY_MEMORY] = enabled.toString() } }
 }

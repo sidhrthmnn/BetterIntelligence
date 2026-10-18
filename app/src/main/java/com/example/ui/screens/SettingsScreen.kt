@@ -1,126 +1,273 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.ui.AiCoreViewModel
+import com.example.BuildConfig
 import com.example.engine.ProcessingMode
+import com.example.ui.AiCoreViewModel
+import com.example.ui.AppTab
+import com.example.ui.components.HardwareDiagnosticCard
+import com.example.ui.components.HardwarePerformanceComparisonCard
+import java.text.DateFormat
+import java.util.Date
+
+@Composable
+private fun SettingsRow(title: String, subtitle: String, onClick: () -> Unit) {
+    ListItem(headlineContent = { Text(title) }, supportingContent = { Text(subtitle) },
+        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("setting_$title"))
+}
 
 @Composable
 fun SettingsScreen(viewModel: AiCoreViewModel) {
-    val dark by viewModel.isDarkTheme.collectAsState()
-    val capture by viewModel.isAutoMemoryCaptureEnabled.collectAsState()
-    val memories by viewModel.allMemories.collectAsState()
-    val mode by viewModel.processingMode.collectAsState()
-    val caps by viewModel.accelerationCapabilities.collectAsState()
-    val layerLimit by viewModel.gpuLayerLimit.collectAsState()
-    val telemetry by viewModel.telemetry.collectAsState()
-    var clear by remember { mutableStateOf("") }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Text("Settings", style = MaterialTheme.typography.headlineMedium) }
-        item {
-            OutlinedCard {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Dark theme", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                        Switch(dark, { viewModel.setDarkTheme(it) }, modifier = Modifier.testTag("dark_theme_toggle"))
-                    }
-                    Text("Your appearance choice is saved on this device.", style = MaterialTheme.typography.bodySmall)
-                }
+    val active by viewModel.activeModel.collectAsState()
+    val allowed by viewModel.webAllowed.collectAsState()
+    val appearance by viewModel.appearance.collectAsState()
+    LazyColumn(Modifier.fillMaxSize().testTag("settings_list"), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)) {
+        item { SettingsSection("AI & models") }
+        item { SettingsRow("Models", active?.name ?: "Choose, download and manage storage") { viewModel.selectTab(AppTab.MODELS) } }
+        item { SettingsRow("Connected apps", "Manage access to local AI") { viewModel.selectTab(AppTab.CONNECT) } }
+        item { SettingsRow("Web & grounding", if (allowed) "Enabled for chat · Connected apps stay local" else "Off · Fully local answers") { viewModel.selectTab(AppTab.WEB) } }
+        item { SettingsSection("Personalisation") }
+        item { SettingsRow("Appearance", appearance.lowercase().replaceFirstChar { it.uppercase() }) { viewModel.selectTab(AppTab.APPEARANCE) } }
+        item { SettingsRow("Memory", "Choose what your chat remembers") { viewModel.selectTab(AppTab.MEMORY) } }
+        item { SettingsSection("Privacy & about") }
+        item { SettingsRow("Privacy & data", "Conversations, network and local storage") { viewModel.selectTab(AppTab.PRIVACY) } }
+        item { SettingsRow("Advanced & about", "Response settings, processing, diagnostics and licences") { viewModel.selectTab(AppTab.ADVANCED) } }
+    }
+}
+
+@Composable
+private fun SettingsSection(text: String) { Text(text, Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
+    style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+
+@Composable
+fun HistoryScreen(viewModel: AiCoreViewModel) {
+    val conversations by viewModel.conversations.collectAsState()
+    var deleting by remember { mutableStateOf<Long?>(null) }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
+        item { Text("Your conversations stay on this device.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        items(conversations, key = { it.id }) { conversation ->
+            ListItem(headlineContent = { Text(conversation.title) }, supportingContent = {
+                Text((if (conversation.draft.isNotEmpty()) "Draft · " else "") + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(conversation.updatedAt)))
+            }, trailingContent = { IconButton(onClick = { deleting = conversation.id }) { Icon(Icons.Default.DeleteOutline, "Delete ${conversation.title}") } },
+                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
+                modifier = Modifier.clickable { viewModel.openConversation(conversation.id) }.testTag("conversation_${conversation.id}"))
+        }
+    }
+    deleting?.let { id -> DeleteDialog("Delete conversation?", "This removes its messages and draft from this device.", { deleting = null }) {
+        viewModel.deleteConversation(id); deleting = null
+    } }
+}
+
+@Composable
+fun AppearanceScreen(viewModel: AiCoreViewModel) {
+    val appearance by viewModel.appearance.collectAsState()
+    Column(Modifier.fillMaxWidth().padding(20.dp)) {
+        Text("Make yourself at home", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(20.dp))
+        listOf("LIGHT" to "Light", "DARK" to "Dark", "AMOLED" to "AMOLED black").forEach { (value, label) ->
+            Row(Modifier.fillMaxWidth().clickable { viewModel.setAppearance(value) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(appearance == value, { viewModel.setAppearance(value) }, modifier = Modifier.testTag("appearance_$value"))
+                Text(label)
             }
         }
+        Text("Text follows your Android font and display size settings.", Modifier.padding(top = 24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun WebSettingsScreen(viewModel: AiCoreViewModel) {
+    val allowed by viewModel.webAllowed.collectAsState()
+    val mode by viewModel.defaultWebMode.collectAsState()
+    val provider by viewModel.webProvider.collectAsState()
+    var key by remember { mutableStateOf("") } // Never saved in instance state or logged.
+    var hasKey by remember { mutableStateOf(viewModel.credentials.hasBraveKey) }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item {
-            Text("Privacy", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            Text("AI requests use the selected model on this device. Internet is used to find and download models. There is no automatic cloud fallback.")
-            Spacer(Modifier.height(8.dp))
-            Text("Connected apps need your approval in Apps. Read and write access to shared memories can be controlled separately.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text("Allow web search", style = MaterialTheme.typography.titleMedium); Text("Off by default", style = MaterialTheme.typography.bodySmall) }
+                Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
+            }
+            Spacer(Modifier.height(12.dp))
+            Text("Search sends your current question to the selected provider. Your chat history, saved memories and connected-app requests are not sent. Do not include passwords or sensitive information in a web-enabled question.")
         }
         item {
-            OutlinedCard {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Remember facts from chat", style = MaterialTheme.typography.titleMedium)
-                            Text("Off by default. Applies to this chat only; AI Polish does not save your text.", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Switch(capture, { viewModel.toggleAutoMemoryCapture(it) })
-                    }
-                    Text("Saved memories: ${memories.size}", style = MaterialTheme.typography.bodyMedium)
+            Text("Default behaviour for new conversations", style = MaterialTheme.typography.titleMedium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("OFF" to "Off", "AUTO" to "Automatic", "ON" to "On").forEach { (value, label) ->
+                    FilterChip(mode == value, { viewModel.setDefaultWebMode(value) }, enabled = allowed, label = { Text(label) })
                 }
             }
+            Text("Automatic searches questions about current facts or verification. You can change this in each conversation.", style = MaterialTheme.typography.bodySmall)
         }
-        items(memories, key = { it.id }) { memory ->
-            OutlinedCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(memory.title, style = MaterialTheme.typography.titleMedium)
-                    Text(memory.content, style = MaterialTheme.typography.bodyMedium)
-                    TextButton(onClick = { viewModel.deleteMemorySnippet(memory.id) }) { Text("Delete memory") }
+        item {
+            Text("Search provider", style = MaterialTheme.typography.titleMedium)
+            listOf("WIKIPEDIA" to "Wikipedia · No key required", "BRAVE" to "Brave Search · Your API key").forEach { (id, label) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(provider == id, { viewModel.setWebProvider(id) }); Text(label, Modifier.weight(1f))
                 }
             }
-        }
-        item {
-            Text("Local data", style = MaterialTheme.typography.titleLarge)
-            TextButton(onClick = { clear = "chat" }) { Text("Clear chat history") }
-            TextButton(onClick = { clear = "logs" }) { Text("Clear app access logs") }
-            if (memories.isNotEmpty()) TextButton(onClick = { clear = "memories" }) { Text("Delete all memories") }
-        }
-        item {
-            Text("About", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            Text("Better Intelligence · Local AI API v2", style = MaterialTheme.typography.bodyMedium)
-            Text("GGUF models use llama.cpp; .litertlm models use LiteRT-LM. CPU and validated GPU processing stay on your device. Model quality and speed vary. Review AI results before using them.",
+            Text("Wikipedia provides encyclopedia summaries, not comprehensive live news or independent fact checking. Brave supplies search excerpts; full pages are not fetched. Sources may be incomplete or outdated. Always check important claims.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
-            Text("Advanced settings", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            OutlinedCard {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("AI Processing Mode", style = MaterialTheme.typography.titleMedium)
-                    ProcessingMode.entries.forEach { option ->
-                        val enabled = when (option) { ProcessingMode.GPU -> caps.gpuAvailable; ProcessingMode.NPU -> caps.npuAvailable; else -> true }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(mode == option, { viewModel.setProcessingMode(option) }, enabled = enabled,
-                                modifier = Modifier.testTag("processing_${option.name}"))
-                            Column(Modifier.weight(1f)) {
-                                Text(option.title)
-                                if (!enabled) Text(if (option == ProcessingMode.NPU) caps.npuReason else caps.gpuReason, style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                    Text("Automatic compares compatible CPU/GPU configurations and saves the result. Initial tuning may delay the first answer. Changes apply between requests.", style = MaterialTheme.typography.bodySmall)
-                    if (caps.gpuAvailable && !caps.gpuName.startsWith("LiteRT")) {
-                        Text("GPU layer limit: ${if (layerLimit < 0) "Automatic" else layerLimit.toString()}")
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf(-1, 8, 16, 32).forEach { layers ->
-                                FilterChip(layerLimit == layers, { viewModel.setProcessingMode(mode, layers) },
-                                    label = { Text(if (layers < 0) "Auto" else "$layers") })
-                            }
-                        }
-                        Text("Limits are reduced when shared RAM is insufficient. ${caps.gpuName}", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Text("Active: ${if (telemetry.isModelLoaded) telemetry.activeBackend else "No model loaded"}")
-                }
+            Text("Brave configuration", style = MaterialTheme.typography.titleMedium)
+            Text(if (hasKey) "A key is saved securely on this device." else "No key saved. Wikipedia works without one.", style = MaterialTheme.typography.bodySmall)
+            OutlinedTextField(key, { key = it }, label = { Text(if (hasKey) "Replace API key" else "API key") }, singleLine = true,
+                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(autoCorrectEnabled = false,
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Password))
+            FlowRow {
+                TextButton(onClick = { viewModel.saveBraveKey(key); key = ""; hasKey = viewModel.credentials.hasBraveKey }, enabled = key.isNotBlank()) { Text("Save securely") }
+                if (hasKey) TextButton(onClick = { viewModel.clearBraveKey(); key = ""; hasKey = false }) { Text("Remove key") }
             }
         }
+        item {
+            Text("Queries and keys are excluded from app logs. Temporary search data is held in memory for up to five minutes. Sources attached to an answer stay with that conversation until you delete it.", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
+        }
     }
-    if (clear.isNotEmpty()) AlertDialog(onDismissRequest = { clear = "" },
-        title = { Text(if (clear == "memories") "Delete all memories?" else if (clear == "logs") "Clear access logs?" else "Clear chat history?") },
-        text = { Text("This deletes the selected local data permanently.") },
-        confirmButton = { TextButton(onClick = {
-            when (clear) {
-                "chat" -> viewModel.clearChat()
-                "logs" -> viewModel.clearIpcLogs()
-                "memories" -> viewModel.clearAllMemories()
+}
+
+@Composable
+fun MemoryScreen(viewModel: AiCoreViewModel) {
+    val enabled by viewModel.isAutoMemoryCaptureEnabled.collectAsState()
+    val memories by viewModel.allMemories.collectAsState()
+    var clear by remember { mutableStateOf(false) }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Use and remember facts from chat", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                Switch(enabled, { viewModel.toggleAutoMemoryCapture(it) })
             }
-            clear = ""
-        }) { Text("Delete") } },
-        dismissButton = { TextButton(onClick = { clear = "" }) { Text("Cancel") } })
+            Text("Off by default. When enabled, explicit reminders and brief profile statements can be saved and used in chat. Connected apps need a separate memory permission. Web search never receives saved memories.", style = MaterialTheme.typography.bodyMedium)
+        }
+        items(memories, key = { it.id }) { memory ->
+            Column {
+                Text(memory.title, style = MaterialTheme.typography.titleMedium)
+                Text(memory.content)
+                Row { TextButton(onClick = { viewModel.toggleMemoryActive(memory) }) { Text(if (memory.isActive) "Pause" else "Use in chat") }
+                    TextButton(onClick = { viewModel.deleteMemorySnippet(memory.id) }) { Text("Delete") } }
+                HorizontalDivider()
+            }
+        }
+        if (memories.isNotEmpty()) item { TextButton(onClick = { clear = true }) { Text("Delete all memories") } }
+    }
+    if (clear) DeleteDialog("Delete all memories?", "This removes every saved memory from this device.", { clear = false }) { viewModel.clearAllMemories(); clear = false }
+}
+
+@Composable
+fun PrivacyScreen(viewModel: AiCoreViewModel) {
+    var clear by remember { mutableStateOf(false) }
+    val uri = LocalUriHandler.current
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        item { Text("You control your data", style = MaterialTheme.typography.headlineSmall) }
+        item { Text("Conversations, drafts, model files and app approvals are stored locally. Android backup may include settings and conversations according to your system backup preferences; model files and provider credentials are excluded.") }
+        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web grounding sends only your current chat question to Wikipedia or Brave. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
+        item { Text("Deleting a model frees its storage and leaves your conversations intact. Revoking app access prevents new requests. Personal memory sharing has separate app permissions.") }
+        item { TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Manage model storage") }
+            TextButton(onClick = { viewModel.selectTab(AppTab.CONNECT) }) { Text("Manage app access") }
+            TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
+            TextButton(onClick = { clear = true }) { Text("Delete all conversations") }
+            TextButton(onClick = { runCatching { uri.openUri("https://github.com/sidhrthmnn/BetterIntelligence/blob/main/PRIVACY.md") } }) { Text("Privacy policy") }
+        }
+    }
+    if (clear) DeleteDialog("Delete all conversations?", "All saved messages and drafts will be removed. Models, app approvals and memories are kept.", { clear = false }) { viewModel.clearChat(); clear = false }
+}
+
+@Composable
+private fun DeleteDialog(title: String, body: String, dismiss: () -> Unit, confirm: () -> Unit) {
+    AlertDialog(onDismissRequest = dismiss, title = { Text(title) }, text = { Text(body) },
+        confirmButton = { TextButton(confirm) { Text("Delete") } }, dismissButton = { TextButton(dismiss) { Text("Cancel") } })
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
+    val mode by viewModel.processingMode.collectAsState()
+    val caps by viewModel.accelerationCapabilities.collectAsState()
+    val limit by viewModel.gpuLayerLimit.collectAsState()
+    val telemetry by viewModel.telemetry.collectAsState()
+    val hardware by viewModel.hardwareProfile.collectAsState()
+    val params by viewModel.chatGenerationParams.collectAsState()
+    val models by viewModel.allModels.collectAsState()
+    val logs by viewModel.performanceLogs.collectAsState()
+    val quantization by viewModel.selectedQuantizationFilter.collectAsState()
+    val sort by viewModel.selectedSortMetric.collectAsState()
+    val benchmarking by viewModel.isBenchmarking.collectAsState()
+    val background by viewModel.isForegroundServiceEnabled.collectAsState()
+    val uri = LocalUriHandler.current
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        item {
+            Text("AI Processing Mode", style = MaterialTheme.typography.titleLarge)
+            ProcessingMode.entries.forEach { option ->
+                val enabled = when(option) { ProcessingMode.GPU -> caps.gpuAvailable; ProcessingMode.NPU -> caps.npuAvailable; else -> true }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(mode == option, { viewModel.setProcessingMode(option) }, enabled = enabled, modifier = Modifier.testTag("processing_${option.name}"))
+                    Column(Modifier.weight(1f)) {
+                        Text(option.title)
+                        if (!enabled) Text(if (option == ProcessingMode.NPU) caps.npuReason else caps.gpuReason, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            Text("Automatic measures compatible backends and caches a stable choice. Initial tuning can delay the first answer. CPU and GPU share your phone’s RAM.", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { viewModel.resetBackendDecisions() }, enabled = !telemetry.isRunning) { Text("Reset backend measurements and retry GPU") }
+            if (caps.gpuAvailable && !caps.gpuName.startsWith("LiteRT")) {
+                Text("GPU layer limit")
+                FlowRow { listOf(-1, 8, 16, 32).forEach { value -> FilterChip(limit == value, { viewModel.setProcessingMode(mode, value) }, label = { Text(if (value < 0) "Auto" else "$value") }) } }
+            }
+        }
+        item {
+            Text("Response preferences", style = MaterialTheme.typography.titleLarge)
+            Text("Context size (more context uses more RAM)")
+            FlowRow { listOf(512, 1024, 2048).forEach { size -> FilterChip(params.contextSize == size,
+                { viewModel.updateGenerationParams(params.copy(contextSize = size, maxTokens = minOf(params.maxTokens, size / 4))) }, label = { Text("$size") }) } }
+            Text("Response length: up to ${params.maxTokens} tokens")
+            Slider(params.maxTokens.toFloat(), { viewModel.updateGenerationParams(params.copy(maxTokens = it.toInt())) }, valueRange = 64f..minOf(768, params.contextSize / 2).toFloat())
+            Text("Creativity: ${"%.1f".format(params.temperature)}")
+            Slider(params.temperature, { viewModel.updateGenerationParams(params.copy(temperature = it)) }, valueRange = 0f..1.5f)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Continue chat in the background", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                Switch(background, { viewModel.toggleForegroundService(it) })
+            }
+            Text("Uses a foreground service and a bounded wake lock while an answer is running.", style = MaterialTheme.typography.bodySmall)
+        }
+        item {
+            Text("Hardware monitoring", style = MaterialTheme.typography.titleLarge)
+            Text("${telemetry.modelName} · ${if (telemetry.isModelLoaded) telemetry.activeBackend else "No model loaded"}")
+            Text("${"%.1f".format(telemetry.tokensPerSecond)} tokens/s · First token ${telemetry.timeToFirstTokenMs} ms")
+            Text("${telemetry.activeThreads} CPU threads · ${telemetry.activeGpuLayers} GGUF GPU layers · ${telemetry.memoryUsageMb.toInt()} MB app PSS")
+            Text("Thermal: ${telemetry.thermalState} · Backend init ${telemetry.backendInitializationMs} ms")
+            Text(telemetry.backendStatus)
+            if (telemetry.backendDecision.isNotBlank()) Text(telemetry.backendDecision, style = MaterialTheme.typography.bodySmall)
+            if (telemetry.fallbackCount > 0) Text("Fallbacks: ${telemetry.fallbackCount} · ${telemetry.lastFallback}")
+            Text("App PSS excludes some GPU/driver allocations. GPU memory is shared, not extra RAM.", style = MaterialTheme.typography.bodySmall)
+        }
+        item { HardwareDiagnosticCard(hardware, { viewModel.refreshHardwareDiagnostics() }) }
+        item { HardwarePerformanceComparisonCard(logs, models, hardware, quantization, sort, benchmarking,
+            { viewModel.setQuantizationFilter(it) }, { viewModel.setSortMetric(it) }, { viewModel.runBenchmarkForModel(it) },
+            { viewModel.deletePerformanceLog(it) }, { viewModel.clearAllPerformanceLogs() }) }
+        item {
+            TextButton(onClick = { viewModel.unloadActiveModel() }, enabled = !telemetry.isRunning) { Text("Unload model from memory") }
+            TextButton(onClick = { viewModel.clearIpcLogs() }) { Text("Clear app access logs") }
+            Text("Better Intelligence ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · API v2", style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = { runCatching { uri.openUri("https://github.com/sidhrthmnn/BetterIntelligence/blob/main/docs/THIRD_PARTY_NOTICES.md") } }) { Text("Open-source licences and model terms") }
+        }
+    }
 }
