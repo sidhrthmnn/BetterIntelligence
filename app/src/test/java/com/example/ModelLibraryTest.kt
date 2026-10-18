@@ -19,6 +19,10 @@ class ModelLibraryTest {
         val small = ModelLibrary.inferenceModel(context, "qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm")!!
         assertEquals(ModelLibrary.memoryEstimate(small, 1280), ModelLibrary.memoryEstimate(small, 2048))
         val dynamic = ModelLibrary.read(context).single { it.filename == "gemma-4-E2B-it.litertlm" }
+        assertEquals(ModelLibrary.memoryEstimate(dynamic, 1024), ModelLibrary.memoryEstimate(dynamic, 512))
+        val advanced = ModelLibrary.read(context).single { it.filename == "gemma-4-E4B-it.litertlm" }
+        assertEquals(1024, ModelLibrary.liteRtMinimumContext(advanced.sha256Checksum!!))
+        assertEquals(512, ModelLibrary.liteRtMinimumContext("unknown-export"))
         assertTrue(ModelLibrary.memoryEstimate(dynamic, 512).totalMb < ModelLibrary.memoryEstimate(dynamic, 2048).totalMb)
         val different = dynamic.copy(sha256Checksum = "different-content")
         assertTrue(ModelLibrary.memoryEstimate(different).weightsMb >= different.fileSizeMb)

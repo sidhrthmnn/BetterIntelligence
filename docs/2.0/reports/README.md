@@ -34,7 +34,13 @@ All 84 chat outputs were reviewed separately against their 12-case criteria; see
 
 E2B is the provisional preferred English-polish model. The actual service prompt was tightened after a measured digit-to-word failure; five real Binder checks now preserve numbers, negation, technical names, URLs and emails. The 113-case generic multilingual experiment uses a different prompt. Installed TypeRight 2.0 validation and latency remain mandatory; own-UID tests do not establish that gate. Every proposed edit needs review; no semantic correctness guarantee is made.
 
-## Native CPU / Vulkan recovery
+## Context and automatic-selection follow-up
+
+The 27 clean-cache primary-model context runs are in `contexts-before-minimum-fix/`; the four Gemma CPU/AUTO 512-token failures led to the SHA-bound 1024 minimum. All six CPU/GPU/AUTO reruns at a requested 512 now complete using a configured 1024; E4B retains an estimated static allocation floor of 2048. Requested, configured and estimated allocation are separate fields. See `MINIMUM_CONTEXT_FIXED.md`.
+
+Clean AUTO selected GPU for E2B/E4B at 1024/2048 and CPU for Qwen 0.6B after deterministic GPU/CPU output differences. In the later E4B minimum-context rerun AUTO selected CPU even though GPU validation passed: the controlled GPU probe moved Android thermal status from 0 to 1, and the existing thermal/cold-initialization penalty favored CPU. This is a conservative heuristic decision, not proof that CPU has lower raw latency or energy use. GPU remains available for that validated package/configuration. Cached choices are specific to configuration and should not be generalized across devices or operating conditions.
+
+## Native CPU / Vulkan recovery measurements
 
 The corrected native regression passed in **26.112 seconds**, with 16 recorded CPU/GPU-fallback samples across SmolLM2 135M and Qwen 2.5 0.5B, repeated switching, same-file reuse and native weight unmapping. On this phone the Vulkan shader compiler returned `vk::Device::createComputePipeline: ErrorUnknown`; every failed attempt returned to CPU. **No successful GGUF Vulkan inference is claimed on this HONOR.** LiteRT OpenCL GPU success is a separate runtime result.
 

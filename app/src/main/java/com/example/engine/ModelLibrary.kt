@@ -42,6 +42,15 @@ object ModelLibrary {
         else -> ""
     }
 
+    fun liteRtMinimumContext(sha256: String): Int = when (sha256) {
+        // Measured on both standard Gemma 4 exports: CPU tensor allocation fails at
+        // 512, while 1024 and 2048 decode successfully. Keep CPU fallback valid
+        // even when the GPU graph could accept the smaller request.
+        "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+        "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0" -> 1024
+        else -> 512
+    }
+
     private fun readAsset(context: Context, asset: String, primary: Boolean): List<ModelEntity> {
         val list = JSONArray(context.assets.open(asset).bufferedReader().use { it.readText() })
         return (0 until list.length()).map { index ->
@@ -79,7 +88,8 @@ object ModelLibrary {
             else identity?.let(identityShapes::get) ?: shapes[model.filename]
         val weights = if (liteRt && identity != null) identityWeights[identity]
             else identity?.let(identityWeights::get) ?: textWeights[model.filename]
-        val requested = identity?.let(runtimeContexts::get)?.let { minOf(context, it) } ?: context
+        val minimum = identity?.let(::liteRtMinimumContext) ?: 512
+        val requested = identity?.let(runtimeContexts::get)?.let { minOf(maxOf(context, minimum), it) } ?: maxOf(context, minimum)
         val allocation = maxOf(requested, identity?.let(fixedContexts::get) ?: if (liteRt && shape == null) 2048 else 0)
         // Unknown imports get a conservative KV estimate until their header is parsed on load.
         return ModelMemoryPlanner.estimate(weights ?: (model.fileSizeMb * 1048576), allocation,

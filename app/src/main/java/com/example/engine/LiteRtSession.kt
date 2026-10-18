@@ -35,10 +35,12 @@ internal class LiteRtSession(private val context: Context, val file: File,
     val supportsGpu: Boolean
     val gpuReason: String
     val maximumContext: Int
+    val minimumContext = ModelLibrary.liteRtMinimumContext(identity)
     val dynamicContext: Boolean
     val supportsThinking: Boolean
     val needsThoughtBudget: Boolean get() = supportsThinking && !reuseAttentionExecutor
-    fun allocationContext(requested: Int) = ModelMemoryPlanner.liteRtAllocationContext(requested, maximumContext, dynamicContext)
+    fun configurationContext(requested: Int) = requested.coerceIn(minimumContext, maximumContext)
+    fun allocationContext(requested: Int) = ModelMemoryPlanner.liteRtAllocationContext(configurationContext(requested), maximumContext, dynamicContext)
     private var engine: Engine? = null
     val isInitialized: Boolean get() = engine?.isInitialized() == true
     var backend = ProcessingMode.CPU; private set
@@ -46,8 +48,9 @@ internal class LiteRtSession(private val context: Context, val file: File,
     private var usedForConversation = false
     var initializationMs = 0L; private set
     var allocatedContext = 0; private set
+    var configuredContext = 0; private set
     var allocatedThreads = 0; private set
-    fun prepared(mode: ProcessingMode, threads: Int, context: Int) = isInitialized && configuration == "$mode:$threads:$context"
+    fun prepared(mode: ProcessingMode, threads: Int, context: Int) = isInitialized && configuration == "$mode:$threads:${configurationContext(context)}"
     private var privateBaselineMb = 0L
     // Credit only model-attributable private dirty allocations on unload.
     // Clean mmap pages are already reclaimable in Android's available RAM.
@@ -73,7 +76,8 @@ internal class LiteRtSession(private val context: Context, val file: File,
     fun prepare(mode: ProcessingMode, threads: Int, contextSize: Int) {
         require(mode == ProcessingMode.CPU || mode == ProcessingMode.GPU)
         require(mode != ProcessingMode.GPU || supportsGpu) { gpuReason }
-        val key = "$mode:$threads:$contextSize"
+        val graphContext = configurationContext(contextSize)
+        val key = "$mode:$threads:$graphContext"
         if (engine?.isInitialized() == true && key == configuration) return
         close()
         privateBaselineMb = privateDirtyMb()
@@ -81,12 +85,12 @@ internal class LiteRtSession(private val context: Context, val file: File,
         ExperimentalFlags.enableBenchmark = true
         val candidate = Engine(EngineConfig(modelPath = file.absolutePath,
             backend = if (mode == ProcessingMode.GPU) Backend.GPU() else Backend.CPU(threads),
-            maxNumTokens = contextSize.coerceAtMost(maximumContext),
+            maxNumTokens = graphContext,
             cacheDir = File(context.cacheDir, "litert-lm").apply { mkdirs() }.absolutePath))
         try {
             candidate.initialize()
             engine = candidate; backend = mode; configuration = key
-            allocatedContext = allocationContext(contextSize); allocatedThreads = threads
+            allocatedContext = allocationContext(graphContext); configuredContext = graphContext; allocatedThreads = threads
             initializationMs = SystemClock.elapsedRealtime() - start
         } catch (failure: Throwable) {
             if (candidate.isInitialized()) candidate.close()
@@ -100,7 +104,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
         if (usedForConversation && !reuseAttentionExecutor) {
             // LiteRT-LM #3165: rewinding a new Conversation does not reliably reset
             // recurrent state. Dispose before creating its replacement, under core admission.
-            val mode = backend; val threads = allocatedThreads; val size = allocatedContext
+            val mode = backend; val threads = allocatedThreads; val size = configuredContext
             close(); prepare(mode, threads, size)
         }
         usedForConversation = true
@@ -150,6 +154,6 @@ internal class LiteRtSession(private val context: Context, val file: File,
 
     override fun close() {
         engine?.let { if (it.isInitialized()) it.close() }
-        engine = null; configuration = ""; allocatedContext = 0; allocatedThreads = 0; usedForConversation = false
+        engine = null; configuration = ""; allocatedContext = 0; configuredContext = 0; allocatedThreads = 0; usedForConversation = false
     }
 }

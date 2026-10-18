@@ -22,6 +22,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 
 /**
  * Android System Service exposing secure Binder IPC for on-device GGUF LLM inference.
@@ -44,6 +45,12 @@ class LocalAiCoreService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
+
+    // AIDL v2 has no context argument. Use BI's user-selected mobile context
+    // instead of silently rebuilding a 4K graph behind chat's 2K configuration.
+    private fun clientContextSize(): Int = runBlocking(Dispatchers.IO) {
+        repository.preferencesRepository.generationPreferences.first().contextSize
+    }
 
     private fun enforceCallerPermission() {
         if (Binder.getCallingUid() != Process.myUid()) {
@@ -104,6 +111,7 @@ class LocalAiCoreService : Service() {
                     GenerationParams(
                         temperature = if (temperature.isFinite()) temperature.coerceIn(0f, 2f) else 0.7f,
                         maxTokens = if (maxTokens > 0) maxTokens.coerceIn(1, 4096) else 256,
+                        contextSize = clientContextSize(),
                         systemPrompt = safeSystemPrompt.ifBlank { null }
                     )
                 )
@@ -139,13 +147,14 @@ class LocalAiCoreService : Service() {
                 return
             }
 
-            if (!inferenceOwner.compareAndSet(-1, callingUid)) { callback.onError(409, "AI Core is busy"); return }
             val params = GenerationParams(
                 temperature = if (temperature.isFinite()) temperature.coerceIn(0f, 2f) else 0.7f,
                 topP = if (topP > 0) topP.coerceIn(0.1f, 1.0f) else 0.9f,
                 maxTokens = if (maxTokens > 0) maxTokens.coerceIn(1, 4096) else 512,
+                contextSize = clientContextSize(),
                 systemPrompt = safeSystemPrompt.ifBlank { null }
             )
+            if (!inferenceOwner.compareAndSet(-1, callingUid)) { callback.onError(409, "AI Core is busy"); return }
 
             repository.engine.generateStream(
                 safePrompt,

@@ -257,7 +257,7 @@ class InferenceEngine internal constructor(private val context: android.content.
                 catalogModel.architecture in setOf("gemma4", "gemma3", "qwen3", "qwen2", "phi3")
             val candidate = LiteRtSession(ctx, file, attentionOnly, identity) // Unknown/hybrid files get isolated executors.
             require(candidate.maximumContext >= 512) { "This package supports fewer than 512 context tokens; choose another mobile instruction model." }
-            val loadContext = minOf(initialContext.coerceIn(512, 2048), candidate.maximumContext)
+            val loadContext = candidate.configurationContext(initialContext.coerceIn(512, 2048))
             val threads = hardware.threads()
             val resources = hardware.resources()
             val selectionKey = SmartBackendSelector.key(android.os.Build.FINGERPRINT, SmartBackendSelector.LITERT_RUNTIME, key, loadContext, threads)
@@ -315,7 +315,7 @@ class InferenceEngine internal constructor(private val context: android.content.
     private suspend fun inferLiteRt(prompt: String, params: GenerationParams, listener: StreamTokenListener?, started: Long): String {
         val session = checkNotNull(liteSession)
         val state = hardware.resources()
-        val effective = params.copy(contextSize = params.contextSize.coerceIn(512, minOf(4096, session.maximumContext).coerceAtLeast(512)),
+        val effective = params.copy(contextSize = session.configurationContext(params.contextSize.coerceIn(512, 4096)),
             threads = hardware.threads(params.threads, state))
         val contextGrowth = (effective.contextSize - session.allocatedContext).coerceAtLeast(0)
         // The loaded graph already owns its weights/KV allocation. Admit only incremental growth here.

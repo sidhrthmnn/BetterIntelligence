@@ -13,12 +13,14 @@ This branch is a development candidate. The Play-installed 1.3 / code 4 app and 
 - Active-model deletion/caller approval: 2 tests passed (0.612 s). Busy deletion rejected, idle deletion retained chats. Simulated Android thermal-status throttling exercised conservative CPU selection; override cleared. This is not sustained physical-heating evidence.
 - Android 16 x86_64 emulator: 2 UI tests passed (30.007 s), 320 dp / 150% font. All themes/settings, recreation and keyboard geometry passed. Captures identify their APK and precede the last curated-category/polish refinements; HONOR captures are the latest product evidence.
 - CPU/optional Vulkan libraries compile for ARM64 and x86_64. Compilation is not GPU execution evidence.
+- Full-ABI signed 2.0/code 5 builds passed (7 min 4 s, then 4 min 4 s with the Binder context correction), including all 74 JVM tests and release lint. Bundletool validation, upload signature verification and native-content checks passed: both ABIs, 16 KB ELF alignment, optional Vulkan linkage, unchanged production authority/permission and no bundled model weights. Final source-commit provenance and release-gate tests are still being completed before upload.
+- All six minimum-context regression configurations completed: E2B/E4B CPU, GPU and AUTO with a requested 512 promoted to 1024. The 27 earlier context runs retain four original CPU/AUTO failures. E4B's later AUTO choice favored CPU after a measured thermal-status increase during GPU validation; raw GPU requests passed. See `reports/MINIMUM_CONTEXT_FIXED.md` and the conservative-selection caveat.
 - Foundation CI [39134772071](https://github.com/sidhrthmnn/BetterIntelligence/actions/runs/39134772071), commit `2f2f38f3b7707e6e6261cdffe61cb4beb566528d`, passed JVM/lint/ARM64 CPU+Vulkan. Follow-up changes require new CI.
 - **791 proofreading requests and 84 separate chat responses**: six distinct packages / seven backend cases. See reports and manual review. Edit-reference scores are proxies, not semantic accuracy. Smaller-context/clean-AUTO follow-ups are recorded separately, including failures.
 
 ## Open release gates
 
-- Complete final context/AUTO evidence and signed full-ABI 2.0 / code 5 bundle validation: 16 KB alignment, package, signature, no weights.
+- Finish the updated real Binder context/GPU-polish regression, final source provenance and internal release upload.
 - Final repository CI, release commit and tag.
 - Internal Play-delivered update; actual installed TypeRight approval/readiness, insertion/undo, boundaries, cancellation, reconnect/restart, consecutive requests, switching and isolation. No TypeRight installation/data replacement.
 - Play-signed upgrade preservation, privacy/Data Safety review and confirmed Console status before production rollout.

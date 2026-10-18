@@ -44,7 +44,7 @@ class CandidateEvaluationTest {
         val report = JSONObject().put("model", name).put("device", Build.FINGERPRINT)
             .put("requestedBackend", backend).put("requestedContext", contextSize).put("runtime", if (gguf) "llama.cpp 0.7.0" else "LiteRT-LM 0.18.0")
             .put("quality", quality).put("chatQuality", chatQuality).put("chargingDuringTest", true)
-            .put("backendPolicy", if (gguf) SmartBackendSelector.RUNTIME else SmartBackendSelector.LITERT_RUNTIME).put("harnessRevision", "2026-10-18-c")
+            .put("backendPolicy", if (gguf) SmartBackendSelector.RUNTIME else SmartBackendSelector.LITERT_RUNTIME).put("harnessRevision", "2026-10-18-d")
         val output = File(context.filesDir, "candidate-$phase-$backend-$contextSize$limitSuffix-$name.json")
         report.put("outputTokenLimitOverride", outputLimit)
         val samples = JSONArray(); report.put("samples", samples)
@@ -91,11 +91,11 @@ class CandidateEvaluationTest {
                 if (gguf) core.loadCustomGguf(file, identity).getOrThrow()
                 else core.loadLiteRt(file, identity = identity, initialContext = contextSize).getOrThrow()
                 core.setProcessingMode(ProcessingMode.valueOf(backend))
-                actualContext = minOf(contextSize, core.activeContextLength)
+                actualContext = minOf(maxOf(contextSize, if (gguf) 512 else ModelLibrary.liteRtMinimumContext(identity)), core.activeContextLength)
             } else {
                 val attentionOnly = name.startsWith("gemma-4-") || name.startsWith("qwen3_0.6b_") || name.startsWith("Qwen2.5-") || name.startsWith("Phi-4-") || name.startsWith("gemma3-")
                 session = LiteRtSession(context, file, attentionOnly, arguments.getString("candidateSha256").orEmpty())
-                actualContext = minOf(contextSize, session.maximumContext)
+                actualContext = session.configurationContext(contextSize)
                 session.prepare(ProcessingMode.valueOf(backend), 4, actualContext)
             }
             report.put("initializationMs", SystemClock.elapsedRealtime() - started).put("configuredContext", actualContext)

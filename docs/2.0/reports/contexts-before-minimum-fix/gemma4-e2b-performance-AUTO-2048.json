@@ -1,0 +1,272 @@
+{
+  "model": "gemma-4-E2B-it.litertlm",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "AUTO",
+  "requestedContext": 2048,
+  "runtime": "LiteRT-LM 0.18.0",
+  "quality": false,
+  "chatQuality": false,
+  "chargingDuringTest": true,
+  "backendPolicy": "litertlm-0.18.0-policy-4",
+  "harnessRevision": "2026-10-18-c",
+  "samples": [
+    {
+      "id": "math",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 4718071808,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 454428,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 7183,
+      "tokensPerSecond": 43.950512,
+      "inputTokens": 24,
+      "outputTokens": 4,
+      "actualBackend": "GPU",
+      "fallback": "",
+      "backendDecision": "GPU selected after CPU/GPU validation and latency, speed, memory and thermal comparison",
+      "durationMs": 7271,
+      "after": {
+        "availableRamBytes": 3360067584,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 678346,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "peakProcessPssKb": 1416671
+    },
+    {
+      "id": "polish",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 3359268864,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 678366,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "status": "complete",
+      "response": "I will be there in ten minutes, please wait for me.",
+      "firstTokenMs": 198,
+      "tokensPerSecond": 41.207054,
+      "inputTokens": 32,
+      "outputTokens": 14,
+      "actualBackend": "GPU",
+      "fallback": "",
+      "backendDecision": "GPU selected after CPU/GPU validation and latency, speed, memory and thermal comparison",
+      "durationMs": 524,
+      "after": {
+        "availableRamBytes": 3348164608,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 691418,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "peakProcessPssKb": 1416671
+    },
+    {
+      "id": "decode",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 3348164608,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 691442,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "status": "complete",
+      "response": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty.",
+      "firstTokenMs": 195,
+      "tokensPerSecond": 40.152122,
+      "inputTokens": 19,
+      "outputTokens": 79,
+      "actualBackend": "GPU",
+      "fallback": "",
+      "backendDecision": "GPU selected after CPU/GPU validation and latency, speed, memory and thermal comparison",
+      "durationMs": 2147,
+      "after": {
+        "availableRamBytes": 3337142272,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 734582,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "peakProcessPssKb": 1416671
+    },
+    {
+      "id": "math",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 3336912896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 734614,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 192,
+      "tokensPerSecond": 36.887165,
+      "inputTokens": 24,
+      "outputTokens": 4,
+      "actualBackend": "GPU",
+      "fallback": "",
+      "backendDecision": "GPU selected after CPU/GPU validation and latency, speed, memory and thermal comparison",
+      "durationMs": 285,
+      "after": {
+        "availableRamBytes": 3327619072,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 734734,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "peakProcessPssKb": 1416671
+    },
+    {
+      "id": "polish",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 3327619072,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 734770,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "status": "complete",
+      "response": "I will be there in ten minutes, please wait for me.",
+      "firstTokenMs": 194,
+      "tokensPerSecond": 40.3747,
+      "inputTokens": 32,
+      "outputTokens": 14,
+      "actualBackend": "GPU",
+      "fallback": "",
+      "backendDecision": "GPU selected after CPU/GPU validation and latency, speed, memory and thermal comparison",
+      "durationMs": 525,
+      "after": {
+        "availableRamBytes": 3326636032,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 734970,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "peakProcessPssKb": 1416671
+    },
+    {
+      "id": "decode",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 3326636032,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 735014,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "status": "complete",
+      "response": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty.",
+      "firstTokenMs": 183,
+      "tokensPerSecond": 40.8024,
+      "inputTokens": 19,
+      "outputTokens": 79,
+      "actualBackend": "GPU",
+      "fallback": "",
+      "backendDecision": "GPU selected after CPU/GPU validation and latency, speed, memory and thermal comparison",
+      "durationMs": 2111,
+      "after": {
+        "availableRamBytes": 3312766976,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 734038,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2121
+      },
+      "peakProcessPssKb": 1416671
+    }
+  ],
+  "before": {
+    "availableRamBytes": 4996218880,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 35386,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 290,
+    "chargeCounterMicroAh": 2121
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 641820,
+    "DMA-BUFKb": 994964
+  },
+  "status": "complete",
+  "declaredBackends": [
+    "CPU",
+    "GPU"
+  ],
+  "declaredMaxContext": 32003,
+  "dynamicContext": true,
+  "supportsThinking": false,
+  "speculativeDecodingSupported": true,
+  "initializationMs": 2818,
+  "configuredContext": 2048,
+  "allocationContextEstimate": 2048,
+  "afterInitialization": {
+    "availableRamBytes": 4723802112,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 453928,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 290,
+    "chargeCounterMicroAh": 2121
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 641812,
+    "DMA-BUFKb": 994964
+  },
+  "after": {
+    "availableRamBytes": 4623613952,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 314435,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 290,
+    "chargeCounterMicroAh": 2121
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 757004,
+    "DMA-BUFKb": 1087920
+  },
+  "peakProcessPssKb": 1416671,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "f3195c99a6c18955940c26138fb1968ae2527b88376c657438999c784e9e57f6",
+  "modelSha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+  "modelRevision": "b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1",
+  "resetAutoCache": true
+}

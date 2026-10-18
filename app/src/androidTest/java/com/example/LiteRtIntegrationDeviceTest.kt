@@ -52,6 +52,11 @@ class LiteRtIntegrationDeviceTest {
             val cpu = engine.generateSync("What is 17 multiplied by 6? Give only the number.",
                 GenerationParams(maxTokens = 16, contextSize = 2048, temperature = 0f))
             assertEquals("102", cpu.trim())
+            val small = engine.generateSync("What is 17 multiplied by 6? Give only the number.",
+                GenerationParams(maxTokens = 16, contextSize = 512, temperature = 0f))
+            assertEquals("102", small.trim())
+            assertEquals("The verified E2B export needs a 1K CPU allocation even for a 512 request",
+                1024, engine.allocatedLiteRtContext)
             if (offline) {
                 val coordinator = com.example.grounding.GroundingCoordinator(mapOf(
                     com.example.grounding.SearchProviderId.WIKIPEDIA to com.example.grounding.WikipediaSearch(com.example.grounding.SearchHttp())))
@@ -78,6 +83,29 @@ class LiteRtIntegrationDeviceTest {
             assertEquals(model.name, binder.activeModelName)
             assertEquals(model.quantization, binder.activeModelQuantization)
             assertEquals("102", binder.generateTextSync("What is 17 multiplied by 6? Give only the number.", "", 0f, 16).trim())
+            val previousParams = repository.preferencesRepository.generationPreferences.first()
+            try {
+                repository.preferencesRepository.saveGenerationPreferences(previousParams.copy(contextSize = 1024))
+                val streamed = CompletableDeferred<String>()
+                binder.generateStream("What is 17 multiplied by 6? Give only the number.", "", 0f, 1f, 16,
+                    object : com.example.ipc.ILocalAiStreamCallback.Stub() {
+                        override fun onToken(token: String?, tokenIndex: Int) {}
+                        override fun onComplete(text: String?, latencyMs: Long, tokensPerSecond: Float, promptTokens: Int, completionTokens: Int) {
+                            streamed.complete(text.orEmpty())
+                        }
+                        override fun onError(code: Int, message: String?) { streamed.completeExceptionally(IllegalStateException("$code: $message")) }
+                    })
+                assertEquals("102", withTimeout(30_000) { streamed.await() }.trim())
+                withTimeout(5_000) { while (engine.telemetry.value.isRunning) kotlinx.coroutines.delay(10) }
+                assertEquals("AIDL streaming must honor BI's context instead of allocating an unrequested 4K graph", 1024, engine.allocatedLiteRtContext)
+            } finally { repository.preferencesRepository.saveGenerationPreferences(previousParams) }
+            val polishBackend = InstrumentationRegistry.getArguments().getString("polishBackend") ?: "CPU"
+            if (polishBackend == "GPU") {
+                engine.setProcessingMode(ProcessingMode.AUTO)
+                assertEquals("102", engine.generateSync("What is 17 multiplied by 6? Give only the number.",
+                    GenerationParams(maxTokens = 16, contextSize = 2048, temperature = 0f)).trim())
+                engine.setProcessingMode(ProcessingMode.GPU)
+            }
             val polish = org.json.JSONArray()
             for ((input, expected) in listOf("i has 2 apples." to "I have 2 apples.",
                 "Do not delete the backup." to "Do not delete the backup.",
@@ -87,6 +115,7 @@ class LiteRtIntegrationDeviceTest {
                 val result = binder.polishText(input)
                 val row = org.json.JSONObject().put("input", input).put("expected", expected).put("status", result.getString("status"))
                     .put("output", result.getString("text")).put("latencyMs", result.getLong("latency_ms"))
+                    .put("actualBackend", engine.telemetry.value.activeBackend)
                 if (result.getString("status") != "SUCCESS") {
                     // Fixed synthetic text only: diagnose actual production-prompt failures without logging user text.
                     runCatching { engine.generateSync(com.example.ipc.PolishText.prompt(input),
@@ -100,6 +129,7 @@ class LiteRtIntegrationDeviceTest {
                 val row = polish.getJSONObject(index)
                 assertEquals(row.getString("input"), "SUCCESS", row.getString("status"))
                 assertEquals(row.getString("input"), row.getString("expected"), row.getString("output"))
+                assertEquals("Polish must execute on the requested qualified backend", polishBackend, row.getString("actualBackend"))
             }
 
             engine.setProcessingMode(ProcessingMode.AUTO)

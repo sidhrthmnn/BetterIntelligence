@@ -2,6 +2,8 @@
 
 Better Intelligence owns the downloaded GGUF or LiteRT-LM model and runs inference locally. A keyboard such as Typeright can submit text for proofreading and receive a replacement without carrying model weights or native inference code. The consumer needs an integration; installing Better Intelligence does not redirect existing AI buttons automatically. BI selects the runtime from the model format and manages CPU/GPU processing internally. Existing AIDL transaction IDs, permission names and response fields remain compatible.
 
+API v2 Binder generation has no context-size argument. BI uses the context selected in Advanced settings (2048 by default), bounded by the model's real limits and any measured minimum needed for CPU fallback. It does not create a separate unrequested 4096-token graph for a connected app. Clients should still bound input/output, handle BUSY/readiness and review proposed edits. TypeRight 213 supplies its own English proofreading prompt over the existing streaming Binder method; the built-in `polish` prompt is a separate path.
+
 ## Setup
 
 Install Better Intelligence, download a model in Models, and tap Use model. In the consumer manifest, declare:

@@ -14,16 +14,18 @@ Design tokens: 4/8/12/16/24/32 dp spacing; 48 dp minimum actions; 16 sp body wit
 
 ## Implementation and validation gates
 
-- [ ] Conversation migration from schema 7, preserved approvals and downloads, per-conversation drafts and safe cancellation.
-- [ ] Chat-first navigation, markdown/actions, complete settings routes and three themes.
-- [ ] Opt-in Wikipedia grounding, secure optional Brave configuration, citations and failure states; no external-client search path.
-- [ ] Pinned candidate manifest, verified downloads and per-model format/runtime/license checks.
-- [ ] CPU/GPU memory/context/cache improvements, measured backend behaviour and cancellation/switching.
-- [ ] At least 100 proofreading cases, separate chat quality and physical HONOR model results.
+- [x] Conversation migration from schema 7, preserved approvals and downloads, per-conversation drafts and safe cancellation (automated migration/process tests; final Play upgrade remains below).
+- [x] Chat-first navigation, markdown/actions, complete settings routes and three themes.
+- [x] Opt-in Wikipedia grounding, secure optional Brave configuration, citations and failure states; no external-client search path.
+- [x] Pinned candidate manifest, verified downloads and per-model format/runtime/license checks; unavailable exports explicitly documented.
+- [x] CPU/GPU memory/context/cache improvements, measured backend behaviour and cancellation/switching. LiteRT GPU works on HONOR; GGUF Vulkan safely falls back after this driver's pipeline failure.
+- [x] 791 proofreading requests, 84 separately reviewed chat responses and physical HONOR model measurements; see `reports/README.md` for limits.
 - [ ] Actual installed TypeRight end-to-end synthetic tests (diagnostic clients are supplemental).
 - [ ] JVM/instrumentation/lint/release checks, upgrade and lifecycle/accessibility screenshots.
 - [ ] Validated signed AAB, protected merge/main CI and tag.
 - [ ] Internal Play-delivered update on HONOR, production-package TypeRight regression and privacy declarations.
 - [ ] Production submission only after every mandatory release gate passes; report actual Console status.
+
+On 18 October, Console showed production access locked: closed testing must have at least 12 opted-in testers for 14 days (currently 0). Internal **Testers** is selected with 25 list members; membership is not evidence of closed-test opt-in. Internal testing is available while production access remains gated.
 
 Wikipedia is the user-approved no-key provider. Brave is optional user-supplied-key configuration. Search is off by default. Connected-app inference stays local-only. No model quality winners or benchmark values will be invented.

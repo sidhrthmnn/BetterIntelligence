@@ -238,7 +238,7 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
             Text("Conversation context")
             FlowRow { listOf(512, 1024, 2048).forEach { size -> FilterChip(params.contextSize == size,
                 { viewModel.updateGenerationParams(params.copy(contextSize = size, maxTokens = minOf(params.maxTokens, size / 4))) }, label = { Text("$size") }) } }
-            Text("A smaller context reduces memory only when the model supports resizing. Fixed-context LiteRT packages keep their exported allocation.", style = MaterialTheme.typography.bodySmall)
+            Text("A smaller context reduces memory only when the model supports resizing. Fixed-context LiteRT packages keep their exported allocation; models with a larger working minimum are raised to that size for safe CPU fallback.", style = MaterialTheme.typography.bodySmall)
             Text("Response length: up to ${params.maxTokens} tokens")
             Slider(params.maxTokens.toFloat(), { viewModel.updateGenerationParams(params.copy(maxTokens = it.toInt())) }, valueRange = 64f..minOf(768, params.contextSize / 2).toFloat())
             Text("Creativity: ${"%.1f".format(params.temperature)}")
