@@ -1,0 +1,45 @@
+{
+  "validationApkSha256": "ba3ed96fe19577d97d8efee22084af884cb6a353a070f0c1bf51a76aa5edf6ba",
+  "result": [
+    {
+      "input": "i has 2 apples.",
+      "expected": "I have 2 apples.",
+      "status": "SUCCESS",
+      "output": "I have 2 apples.",
+      "latencyMs": 377,
+      "actualBackend": "GPU"
+    },
+    {
+      "input": "Do not delete the backup.",
+      "expected": "Do not delete the backup.",
+      "status": "SUCCESS",
+      "output": "Do not delete the backup.",
+      "latencyMs": 389,
+      "actualBackend": "GPU"
+    },
+    {
+      "input": "Keep com.example.demo unchanged.",
+      "expected": "Keep com.example.demo unchanged.",
+      "status": "SUCCESS",
+      "output": "Keep com.example.demo unchanged.",
+      "latencyMs": 435,
+      "actualBackend": "GPU"
+    },
+    {
+      "input": "Visit https://example.com at 09:15.",
+      "expected": "Visit https://example.com at 09:15.",
+      "status": "SUCCESS",
+      "output": "Visit https://example.com at 09:15.",
+      "latencyMs": 664,
+      "actualBackend": "GPU"
+    },
+    {
+      "input": "Email dev@example.com, not user@example.com.",
+      "expected": "Email dev@example.com, not user@example.com.",
+      "status": "SUCCESS",
+      "output": "Email dev@example.com, not user@example.com.",
+      "latencyMs": 636,
+      "actualBackend": "GPU"
+    }
+  ]
+}
