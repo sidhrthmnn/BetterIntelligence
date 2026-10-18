@@ -1,0 +1,74 @@
+INSTRUMENTATION_STATUS: class=com.example.BetterIntelligenceReviewDeviceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.BetterIntelligenceReviewDeviceTest:
+INSTRUMENTATION_STATUS: test=actualModelOutputSurvivesFullMessageAndSelectionReview
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.example.BetterIntelligenceReviewDeviceTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stack=org.junit.ComparisonFailure: {"input":"what cab you do nos","expected":"What can you do now?","context":"plain","output":"What can you do?","isCompanionResponse":true,"fallback":false,"durationMs":529} expected:<What can you do[ now]?> but was:<What can you do[]?>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at com.example.BetterIntelligenceReviewDeviceTest$actualModelOutputSurvivesFullMessageAndSelectionReview$1.invokeSuspend(BetterIntelligenceReviewDeviceTest.kt:78)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:35)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:46)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:94)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:70)
+	at kotlinx.coroutines.BuildersKt.runBlocking(dex-id-8e21e93328e7d655902631db7762b7ffa7a26603:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:48)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(dex-id-8e21e93328e7d655902631db7762b7ffa7a26603:1)
+	at com.example.BetterIntelligenceReviewDeviceTest.actualModelOutputSurvivesFullMessageAndSelectionReview(BetterIntelligenceReviewDeviceTest.kt:48)
+
+INSTRUMENTATION_STATUS: stream=
+Error in actualModelOutputSurvivesFullMessageAndSelectionReview(com.example.BetterIntelligenceReviewDeviceTest):
+org.junit.ComparisonFailure: {"input":"what cab you do nos","expected":"What can you do now?","context":"plain","output":"What can you do?","isCompanionResponse":true,"fallback":false,"durationMs":529} expected:<What can you do[ now]?> but was:<What can you do[]?>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at com.example.BetterIntelligenceReviewDeviceTest$actualModelOutputSurvivesFullMessageAndSelectionReview$1.invokeSuspend(BetterIntelligenceReviewDeviceTest.kt:78)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:35)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:46)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:94)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:70)
+	at kotlinx.coroutines.BuildersKt.runBlocking(dex-id-8e21e93328e7d655902631db7762b7ffa7a26603:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:48)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(dex-id-8e21e93328e7d655902631db7762b7ffa7a26603:1)
+	at com.example.BetterIntelligenceReviewDeviceTest.actualModelOutputSurvivesFullMessageAndSelectionReview(BetterIntelligenceReviewDeviceTest.kt:48)
+
+INSTRUMENTATION_STATUS: test=actualModelOutputSurvivesFullMessageAndSelectionReview
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_RESULT: stream=
+
+Time: 2.913
+There was 1 failure:
+1) actualModelOutputSurvivesFullMessageAndSelectionReview(com.example.BetterIntelligenceReviewDeviceTest)
+org.junit.ComparisonFailure: {"input":"what cab you do nos","expected":"What can you do now?","context":"plain","output":"What can you do?","isCompanionResponse":true,"fallback":false,"durationMs":529} expected:<What can you do[ now]?> but was:<What can you do[]?>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at com.example.BetterIntelligenceReviewDeviceTest$actualModelOutputSurvivesFullMessageAndSelectionReview$1.invokeSuspend(BetterIntelligenceReviewDeviceTest.kt:78)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:35)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:46)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:94)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:70)
+	at kotlinx.coroutines.BuildersKt.runBlocking(dex-id-8e21e93328e7d655902631db7762b7ffa7a26603:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:48)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(dex-id-8e21e93328e7d655902631db7762b7ffa7a26603:1)
+	at com.example.BetterIntelligenceReviewDeviceTest.actualModelOutputSurvivesFullMessageAndSelectionReview(BetterIntelligenceReviewDeviceTest.kt:48)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1

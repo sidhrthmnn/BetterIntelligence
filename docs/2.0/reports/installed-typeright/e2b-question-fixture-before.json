@@ -1,0 +1,18 @@
+{
+  "phase": "polish",
+  "keyboardPackage": "com.aistudio.typerigh2.jkwpzq",
+  "keyboardVersionCode": "215",
+  "biVersionCode": "5",
+  "status": "failed",
+  "case": "question",
+  "modelVerifiedInHostUi": "Gemma4E2B",
+  "selectionStart": 19,
+  "selectionEnd": 19,
+  "editorPopulated": true,
+  "windowTypes": [
+    3,
+    2,
+    1
+  ],
+  "failure": "java.lang.IllegalStateException: Expected synthetic test control was not exposed by com.aistudio.typerigh2.jkwpzq"
+}

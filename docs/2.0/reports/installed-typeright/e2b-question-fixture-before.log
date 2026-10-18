@@ -1,0 +1,41 @@
+INSTRUMENTATION_STATUS: class=com.example.typingtesthost.InstalledCompanionUiTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.example.typingtesthost.InstalledCompanionUiTest:
+INSTRUMENTATION_STATUS: test=installedKeyboardReviewsAndInsertsSyntheticText
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.example.typingtesthost.InstalledCompanionUiTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stack=java.lang.IllegalStateException: Expected synthetic test control was not exposed by com.aistudio.typerigh2.jkwpzq
+	at com.example.typingtesthost.InstalledCompanionUiTest.installedKeyboardReviewsAndInsertsSyntheticText$awaitNode(InstalledCompanionUiTest.kt:70)
+	at com.example.typingtesthost.InstalledCompanionUiTest.installedKeyboardReviewsAndInsertsSyntheticText$awaitNode$default(InstalledCompanionUiTest.kt:64)
+	at com.example.typingtesthost.InstalledCompanionUiTest.installedKeyboardReviewsAndInsertsSyntheticText(InstalledCompanionUiTest.kt:146)
+
+INSTRUMENTATION_STATUS: stream=
+Error in installedKeyboardReviewsAndInsertsSyntheticText(com.example.typingtesthost.InstalledCompanionUiTest):
+java.lang.IllegalStateException: Expected synthetic test control was not exposed by com.aistudio.typerigh2.jkwpzq
+	at com.example.typingtesthost.InstalledCompanionUiTest.installedKeyboardReviewsAndInsertsSyntheticText$awaitNode(InstalledCompanionUiTest.kt:70)
+	at com.example.typingtesthost.InstalledCompanionUiTest.installedKeyboardReviewsAndInsertsSyntheticText$awaitNode$default(InstalledCompanionUiTest.kt:64)
+	at com.example.typingtesthost.InstalledCompanionUiTest.installedKeyboardReviewsAndInsertsSyntheticText(InstalledCompanionUiTest.kt:146)
+
+INSTRUMENTATION_STATUS: test=installedKeyboardReviewsAndInsertsSyntheticText
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_RESULT: stream=
+
+Time: 16.518
+There was 1 failure:
+1) installedKeyboardReviewsAndInsertsSyntheticText(com.example.typingtesthost.InstalledCompanionUiTest)
+java.lang.IllegalStateException: Expected synthetic test control was not exposed by com.aistudio.typerigh2.jkwpzq
+	at com.example.typingtesthost.InstalledCompanionUiTest.installedKeyboardReviewsAndInsertsSyntheticText$awaitNode(InstalledCompanionUiTest.kt:70)
+	at com.example.typingtesthost.InstalledCompanionUiTest.installedKeyboardReviewsAndInsertsSyntheticText$awaitNode$default(InstalledCompanionUiTest.kt:64)
+	at com.example.typingtesthost.InstalledCompanionUiTest.installedKeyboardReviewsAndInsertsSyntheticText(InstalledCompanionUiTest.kt:146)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1

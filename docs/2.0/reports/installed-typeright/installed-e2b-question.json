@@ -1,0 +1,24 @@
+{
+  "phase": "polish",
+  "keyboardPackage": "com.aistudio.typerigh2.jkwpzq",
+  "keyboardVersionCode": "215",
+  "biVersionCode": "5",
+  "status": "failed",
+  "case": "question",
+  "modelVerifiedInHostUi": "Gemma4E2B",
+  "selectionStart": 19,
+  "selectionEnd": 19,
+  "editorPopulated": true,
+  "windowTypes": [
+    3,
+    2,
+    1
+  ],
+  "input": "what cab you do nos",
+  "imeWindowExposed": true,
+  "writingToolsExposed": true,
+  "reviewReadyMs": 46661,
+  "uiPollIntervalMs": 50,
+  "observedReviewMarker": "Tap card to apply",
+  "failure": "java.lang.IllegalStateException: Expected synthetic test control was not exposed by com.example.typingtesthost"
+}

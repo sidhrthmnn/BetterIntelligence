@@ -36,6 +36,12 @@ The actual built-in service prompt was tightened after a measured digit-to-word 
 
 ## Context and automatic-selection follow-up
 
+The later TypeRight 215 JSON-prompt comparison retains E2B's numeric pass,
+meaning loss in the question and reordered selected-span preview. E4B was
+restored after freeing RAM and passed another installed correction/undo check.
+See [the follow-up record](installed-typeright/FOLLOWUP_MODELS.md); these narrow
+samples are separate from the 791-request study above.
+
 The 27 clean-cache primary-model context runs are in `contexts-before-minimum-fix/`; the four Gemma CPU/AUTO 512-token failures led to the SHA-bound 1024 minimum. All six CPU/GPU/AUTO reruns at a requested 512 now complete using a configured 1024; E4B retains an estimated static allocation floor of 2048. Requested, configured and estimated allocation are separate fields. See `MINIMUM_CONTEXT_FIXED.md`.
 
 Clean AUTO selected GPU for E2B/E4B at 1024/2048 and CPU for Qwen 0.6B after deterministic GPU/CPU output differences. In the later E4B minimum-context rerun AUTO selected CPU even though GPU validation passed: the controlled GPU probe moved Android thermal status from 0 to 1, and the existing thermal/cold-initialization penalty favored CPU. This is a conservative heuristic decision, not proof that CPU has lower raw latency or energy use. GPU remains available for that validated package/configuration. Cached choices are specific to configuration and should not be generalized across devices or operating conditions.

@@ -71,9 +71,14 @@ processes are not product crashes or passes. Raw final results are in
 
 E4B is the verified TypeRight option for these English samples on this phone.
 This narrow result is not a universal proofreading winner or semantic guarantee;
-the larger quality study retains E4B errors and false changes. E2B's earlier
-TypeRight-213-prompt miss is a different experiment, and the new JSON prompt has
-not been compared end to end across every candidate. Keep review before apply.
+the larger quality study retains E4B errors and false changes. A subsequent E2B
+comparison with the new JSON prompt passed the numeric example but dropped
+`now` in the question and reordered context in a selected-span preview. The
+question failed its expected-output check; the selection experiment was stopped
+and is not an insertion/undo pass. E4B was restored after the user freed RAM,
+then passed a fresh installed correction/insertion/exact-undo check (21.215 s
+whole UI test). See [follow-up results and raw evidence](installed-typeright/FOLLOWUP_MODELS.md).
+The new prompt has not been compared across every candidate. Keep review before apply.
 The Fast/Balanced/Advanced chat choices remain the separately measured tradeoffs.
 
 BI code 5 was available to internal testers at 21:18 UK time. Its signed AAB is
@@ -91,6 +96,12 @@ source `dadb39698f6eeea1cd480f3333f7524b4fc7bd02`. Both its source CI and
 [main CI](https://github.com/sidhrthmnn/TYPERIGHT/actions/runs/39170845106) passed.
 The temporary diagnostic keyboard was disabled after use. The production
 keyboard remains the default IME.
+
+The main release merges passed CI: [BI 39173793093](https://github.com/sidhrthmnn/BetterIntelligence/actions/runs/39173793093)
+at `18b7893ad88638667675b80d1603626d696d769d`, and
+[TypeRight 39173551441](https://github.com/sidhrthmnn/TYPERIGHT/actions/runs/39173551441)
+at `417c6c6232e9b51a722f5bdcbb629fdbcea338b8`. Later comparison records do not
+alter either published bundle.
 
 Production rollout remains blocked by Play's app-setup/closed-testing gate and
 the final Console privacy declarations. Internal publication is confirmed; it

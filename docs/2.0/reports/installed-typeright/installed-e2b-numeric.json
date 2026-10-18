@@ -1,0 +1,26 @@
+{
+  "phase": "polish",
+  "keyboardPackage": "com.aistudio.typerigh2.jkwpzq",
+  "keyboardVersionCode": "215",
+  "biVersionCode": "5",
+  "status": "polish_insert_complete",
+  "case": "numeric",
+  "modelVerifiedInHostUi": "Gemma4E2B",
+  "selectionStart": 15,
+  "selectionEnd": 15,
+  "editorPopulated": true,
+  "windowTypes": [
+    3,
+    2,
+    1
+  ],
+  "input": "i has 2 apples.",
+  "imeWindowExposed": true,
+  "writingToolsExposed": true,
+  "reviewReadyMs": 7329,
+  "uiPollIntervalMs": 50,
+  "observedReviewMarker": "I have 2 apples.",
+  "output": "I have 2 apples.",
+  "reviewBeforeInsertion": true,
+  "undoRestoredOriginal": true
+}
