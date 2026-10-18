@@ -11,13 +11,16 @@ data class ModelMemoryEstimate(val weightsMb: Long, val kvMb: Long, val overhead
  * Offloading moves weights within shared RAM; it does not create more memory.
  */
 object ModelMemoryPlanner {
+    fun liteRtAllocationContext(requested: Int, maximum: Int, dynamic: Boolean): Int =
+        if (dynamic) minOf(requested, maximum.takeIf { it > 0 } ?: requested)
+        else maximum.takeIf { it > 0 } ?: maxOf(requested, 2048)
     // Android's available-memory signal already includes reclaimable file-backed
     // CPU mmap pages. Only estimate credit for GPU weights that will be released.
     fun releasableGpuWeightsMb(meta: GgufMetadata, layers: Int): Long =
         (meta.totalSizeBytes / 1048576.0 * layers.coerceIn(0, meta.blockCount + 1) / (meta.blockCount + 1).coerceAtLeast(1)).toLong()
     fun estimate(bytes: Long, context: Int, kvBytesPerToken: Long, gpuLayers: Int = 0, blocks: Int = 0): ModelMemoryEstimate {
         val weights = ceil(bytes / 1048576.0).toLong()
-        val kv = ceil(kvBytesPerToken.coerceAtLeast(0) * context.coerceIn(512, 4096) / 1048576.0).toLong()
+        val kv = ceil(kvBytesPerToken.coerceAtLeast(0) * context.coerceIn(512, 131072) / 1048576.0).toLong()
         val graphAndRuntime = 256L + (weights * 0.08).toLong()
         val fraction = if (blocks > 0) gpuLayers.coerceIn(0, blocks + 1).toDouble() / (blocks + 1) else 0.0
         val gpu = if (gpuLayers > 0) 128 + ceil(weights * fraction * 0.15).toLong() else 0

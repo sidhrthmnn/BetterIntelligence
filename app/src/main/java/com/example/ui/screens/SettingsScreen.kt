@@ -39,7 +39,7 @@ fun SettingsScreen(viewModel: AiCoreViewModel) {
     val appearance by viewModel.appearance.collectAsState()
     LazyColumn(Modifier.fillMaxSize().testTag("settings_list"), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)) {
         item { SettingsSection("AI & models") }
-        item { SettingsRow("Models", active?.name ?: "Choose, download and manage storage") { viewModel.selectTab(AppTab.MODELS) } }
+        item { SettingsRow("Models", active?.name?.substringBefore(" · ") ?: "Choose, download and manage storage") { viewModel.selectTab(AppTab.MODELS) } }
         item { SettingsRow("Connected apps", "Manage access to local AI") { viewModel.selectTab(AppTab.CONNECT) } }
         item { SettingsRow("Web & grounding", if (allowed) "Enabled for chat · Connected apps stay local" else "Off · Fully local answers") { viewModel.selectTab(AppTab.WEB) } }
         item { SettingsSection("Personalisation") }
@@ -235,9 +235,10 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
         }
         item {
             Text("Response preferences", style = MaterialTheme.typography.titleLarge)
-            Text("Context size (more context uses more RAM)")
+            Text("Conversation context")
             FlowRow { listOf(512, 1024, 2048).forEach { size -> FilterChip(params.contextSize == size,
                 { viewModel.updateGenerationParams(params.copy(contextSize = size, maxTokens = minOf(params.maxTokens, size / 4))) }, label = { Text("$size") }) } }
+            Text("A smaller context reduces memory only when the model supports resizing. Fixed-context LiteRT packages keep their exported allocation.", style = MaterialTheme.typography.bodySmall)
             Text("Response length: up to ${params.maxTokens} tokens")
             Slider(params.maxTokens.toFloat(), { viewModel.updateGenerationParams(params.copy(maxTokens = it.toInt())) }, valueRange = 64f..minOf(768, params.contextSize / 2).toFloat())
             Text("Creativity: ${"%.1f".format(params.temperature)}")

@@ -1,0 +1,257 @@
+{
+  "model": "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "GPU",
+  "requestedContext": 2048,
+  "runtime": "LiteRT-LM 0.18.0",
+  "quality": false,
+  "chargingDuringTest": true,
+  "backendPolicy": "litertlm-0.18.0-policy-3",
+  "harnessRevision": "2026-10-18-b",
+  "samples": [
+    {
+      "id": "math",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2746068992,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 754370,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 918,
+      "tokensPerSecond": 4.6928835,
+      "inputTokens": 24,
+      "outputTokens": 4,
+      "actualBackend": "GPU",
+      "durationMs": 994,
+      "after": {
+        "availableRamBytes": 2752884736,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 743295,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "peakProcessPssKb": 754272
+    },
+    {
+      "id": "polish",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2752884736,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 743311,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "status": "complete",
+      "response": "I will be there in ten minutes. Please wait for me.",
+      "firstTokenMs": 261,
+      "tokensPerSecond": 22.662106,
+      "inputTokens": 32,
+      "outputTokens": 14,
+      "actualBackend": "GPU",
+      "durationMs": 728,
+      "after": {
+        "availableRamBytes": 2752765952,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 742871,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "peakProcessPssKb": 754272
+    },
+    {
+      "id": "decode",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2752765952,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 742891,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "status": "complete",
+      "response": "One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, Eighteen, Nineteen, Twenty, Twenty-One, Twenty-Two, Twenty-Three, Twenty-Four, Twenty-Five, Twenty-Six, Twenty-Seven, Twenty-Eight, Twenty-Nine, Thirty.",
+      "firstTokenMs": 283,
+      "tokensPerSecond": 24.092833,
+      "inputTokens": 19,
+      "outputTokens": 86,
+      "actualBackend": "GPU",
+      "durationMs": 3692,
+      "after": {
+        "availableRamBytes": 2750410752,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 742275,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "peakProcessPssKb": 754272
+    },
+    {
+      "id": "math",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 2750410752,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 742299,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 274,
+      "tokensPerSecond": 16.396008,
+      "inputTokens": 24,
+      "outputTokens": 4,
+      "actualBackend": "GPU",
+      "durationMs": 356,
+      "after": {
+        "availableRamBytes": 2749890560,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 742343,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "peakProcessPssKb": 754272
+    },
+    {
+      "id": "polish",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 2749890560,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 742379,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "status": "complete",
+      "response": "I will be there in ten minutes. Please wait for me.",
+      "firstTokenMs": 272,
+      "tokensPerSecond": 21.467402,
+      "inputTokens": 32,
+      "outputTokens": 14,
+      "actualBackend": "GPU",
+      "durationMs": 762,
+      "after": {
+        "availableRamBytes": 2748862464,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 742571,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "peakProcessPssKb": 754272
+    },
+    {
+      "id": "decode",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 2748862464,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 742611,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "status": "complete",
+      "response": "One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, Eighteen, Nineteen, Twenty, Twenty-One, Twenty-Two, Twenty-Three, Twenty-Four, Twenty-Five, Twenty-Six, Twenty-Seven, Twenty-Eight, Twenty-Nine, Thirty.",
+      "firstTokenMs": 286,
+      "tokensPerSecond": 24.087011,
+      "inputTokens": 19,
+      "outputTokens": 86,
+      "actualBackend": "GPU",
+      "durationMs": 3679,
+      "after": {
+        "availableRamBytes": 2731679744,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 741761,
+        "thermalStatus": 1,
+        "batteryTemperatureTenthsC": 390,
+        "chargeCounterMicroAh": 1846
+      },
+      "peakProcessPssKb": 754272
+    }
+  ],
+  "before": {
+    "availableRamBytes": 6047801344,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 201554,
+    "thermalStatus": 1,
+    "batteryTemperatureTenthsC": 390,
+    "chargeCounterMicroAh": 1847
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 771184,
+    "DMA-BUFKb": 963012
+  },
+  "status": "complete",
+  "declaredBackends": [
+    "CPU",
+    "GPU"
+  ],
+  "declaredMaxContext": 4096,
+  "minimumRuntime": "0.18.0",
+  "dynamicContext": false,
+  "speculativeDecodingSupported": false,
+  "initializationMs": 9827,
+  "configuredContext": 2048,
+  "afterInitialization": {
+    "availableRamBytes": 2754744320,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 753926,
+    "thermalStatus": 1,
+    "batteryTemperatureTenthsC": 390,
+    "chargeCounterMicroAh": 1846
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 3344064,
+    "DMA-BUFKb": 963012
+  },
+  "after": {
+    "availableRamBytes": 5456281600,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 386271,
+    "thermalStatus": 1,
+    "batteryTemperatureTenthsC": 390,
+    "chargeCounterMicroAh": 1846
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 771628,
+    "DMA-BUFKb": 963012
+  },
+  "peakProcessPssKb": 754272,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "c3e2c5d63fbc6c1d4c0c02a3ee04e0e03089e7cc9f99117be8e5d6d88d1c25e4",
+  "modelSha256": "c4a9b7289365ab80fe599b844b77ad253eb3c53fb0e5d963d699146a6f01255e",
+  "modelRevision": "5e6e7a58d03777898b31330a15d2e0a5a9107de3"
+}

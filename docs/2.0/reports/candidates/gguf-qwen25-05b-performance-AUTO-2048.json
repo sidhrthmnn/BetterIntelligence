@@ -1,0 +1,264 @@
+{
+  "model": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "AUTO",
+  "requestedContext": 2048,
+  "runtime": "llama.cpp 0.7.0",
+  "quality": false,
+  "chatQuality": false,
+  "chargingDuringTest": true,
+  "backendPolicy": "llama-0.7.0-vulkan-policy-4",
+  "harnessRevision": "2026-10-18-c",
+  "samples": [
+    {
+      "id": "math",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 4810182656,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 786106,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 327,
+      "tokensPerSecond": 52.3679,
+      "inputTokens": 23,
+      "outputTokens": 3,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "GPU retry deferred: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 436,
+      "after": {
+        "availableRamBytes": 4785647616,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 800314,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 818606
+    },
+    {
+      "id": "polish",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 4785647616,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 800330,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "I will be their in ten minutes, please wait for me.",
+      "firstTokenMs": 413,
+      "tokensPerSecond": 49.5714,
+      "inputTokens": 31,
+      "outputTokens": 13,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "GPU retry deferred: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 719,
+      "after": {
+        "availableRamBytes": 4781285376,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 802670,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 818606
+    },
+    {
+      "id": "decode",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 4781285376,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 802690,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty.",
+      "firstTokenMs": 244,
+      "tokensPerSecond": 49.237812,
+      "inputTokens": 18,
+      "outputTokens": 69,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "GPU retry deferred: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 1710,
+      "after": {
+        "availableRamBytes": 4776595456,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 802478,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 818606
+    },
+    {
+      "id": "math",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 4776599552,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 802506,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 318,
+      "tokensPerSecond": 49.547466,
+      "inputTokens": 23,
+      "outputTokens": 3,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "GPU retry deferred: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 426,
+      "after": {
+        "availableRamBytes": 4775538688,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 802634,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 818606
+    },
+    {
+      "id": "polish",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 4775538688,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 802670,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "I will be their in ten minutes, please wait for me.",
+      "firstTokenMs": 412,
+      "tokensPerSecond": 53.998146,
+      "inputTokens": 31,
+      "outputTokens": 13,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "GPU retry deferred: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 704,
+      "after": {
+        "availableRamBytes": 4766339072,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 802770,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 818606
+    },
+    {
+      "id": "decode",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 4766339072,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 802814,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty.",
+      "firstTokenMs": 248,
+      "tokensPerSecond": 49.589165,
+      "inputTokens": 18,
+      "outputTokens": 69,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "GPU retry deferred: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 1703,
+      "after": {
+        "availableRamBytes": 4757037056,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 802934,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 818606
+    }
+  ],
+  "before": {
+    "availableRamBytes": 4942237696,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 177983,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 2081
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 926208,
+    "DMA-BUFKb": 958284
+  },
+  "status": "complete",
+  "initializationMs": 634,
+  "configuredContext": 2048,
+  "allocationContextEstimate": 0,
+  "afterInitialization": {
+    "availableRamBytes": 4817399808,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 785260,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 2081
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 927276,
+    "DMA-BUFKb": 958284
+  },
+  "after": {
+    "availableRamBytes": 4757028864,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 330302,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 2081
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 927276,
+    "DMA-BUFKb": 958284
+  },
+  "peakProcessPssKb": 818606,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "92a36270ebfc9f6ebfc2d01e7dee27d785ba733bfab7bf3b40734f7f87cd2459",
+  "modelSha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+  "modelRevision": "9217f5db79a29953eb74d5343926648285ec7e67",
+  "resetAutoCache": false
+}

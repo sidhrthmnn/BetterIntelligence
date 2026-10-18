@@ -16,10 +16,14 @@ import java.io.File
 class ActiveModelDeletionTest {
     @Test fun busyModelIsKeptThenIdleModelCanBeDeletedWithoutLosingChats() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        check(context.packageName.endsWith(".validation"))
         val repository = AiCoreRepository.getInstance(context)
+        val expected = ModelLibrary.read(context).map { it.filename }.toSet()
         val models = withTimeout(300_000) {
-            repository.allModels.first { it.size == ModelLibrary.read(context).size }
+            repository.allModels.first { rows -> rows.map { it.filename }.containsAll(expected) }
         }
+        repository.unloadModel()
+        repository.engine.setProcessingMode(com.example.engine.ProcessingMode.CPU)
         val model = models.first { it.isBaseModel }
         val file = File(context.filesDir, "models/${model.filename}")
         assertTrue("Stage the base GGUF before this test", model.isInstalled && file.isFile)

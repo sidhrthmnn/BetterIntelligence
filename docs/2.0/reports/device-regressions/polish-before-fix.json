@@ -1,0 +1,23 @@
+[
+  {
+    "input": "i has 2 apples.",
+    "expected": "I have 2 apples.",
+    "status": "ERROR",
+    "latencyMs": 1978,
+    "diagnosticRaw": "I have two apples."
+  },
+  {
+    "input": "Do not delete the backup.",
+    "expected": "Do not delete the backup.",
+    "status": "SUCCESS",
+    "output": "Do not delete the backup.",
+    "latencyMs": 1960
+  },
+  {
+    "input": "Keep com.example.demo unchanged.",
+    "expected": "Keep com.example.demo unchanged.",
+    "status": "SUCCESS",
+    "output": "Keep com.example.demo unchanged.",
+    "latencyMs": 2168
+  }
+]

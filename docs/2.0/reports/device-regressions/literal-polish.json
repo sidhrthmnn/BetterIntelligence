@@ -1,0 +1,40 @@
+{
+  "validationApkSha256": "f3195c99a6c18955940c26138fb1968ae2527b88376c657438999c784e9e57f6",
+  "result": [
+    {
+      "input": "i has 2 apples.",
+      "expected": "I have 2 apples.",
+      "status": "SUCCESS",
+      "output": "I have 2 apples.",
+      "latencyMs": 2616
+    },
+    {
+      "input": "Do not delete the backup.",
+      "expected": "Do not delete the backup.",
+      "status": "SUCCESS",
+      "output": "Do not delete the backup.",
+      "latencyMs": 1623
+    },
+    {
+      "input": "Keep com.example.demo unchanged.",
+      "expected": "Keep com.example.demo unchanged.",
+      "status": "SUCCESS",
+      "output": "Keep com.example.demo unchanged.",
+      "latencyMs": 1739
+    },
+    {
+      "input": "Visit https://example.com at 09:15.",
+      "expected": "Visit https://example.com at 09:15.",
+      "status": "SUCCESS",
+      "output": "Visit https://example.com at 09:15.",
+      "latencyMs": 3170
+    },
+    {
+      "input": "Email dev@example.com, not user@example.com.",
+      "expected": "Email dev@example.com, not user@example.com.",
+      "status": "SUCCESS",
+      "output": "Email dev@example.com, not user@example.com.",
+      "latencyMs": 3136
+    }
+  ]
+}

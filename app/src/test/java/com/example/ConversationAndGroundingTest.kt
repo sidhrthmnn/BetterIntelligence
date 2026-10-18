@@ -129,6 +129,8 @@ class ConversationAndGroundingTest {
         assertTrue(cited); assertFalse(text.contains("999")); assertFalse(text.contains("https://"))
         assertFalse(GroundingPolicy.validateCitations("No sources", listOf(source)).second)
         assertFalse(GroundingPolicy.validateCitations("[1](https://invented.invalid)", listOf(source)).second)
+        assertEquals("Fact [1] other ", GroundingPolicy.validateCitations("Fact [1, 99] other [99, 88]", listOf(source)).first)
+        assertFalse(GroundingPolicy.validateCitations("Made up [99999999, 88]", listOf(source)).second)
         assertEquals("`array[999]` and array[512]", GroundingPolicy.validateCitations("`array[999]` and array[512]", listOf(source)).first)
         val prompt = GroundingPolicy.evidencePrompt("Question", listOf(source), 2000)
         assertTrue(prompt.contains("Untrusted source evidence")); assertTrue(prompt.contains("2001-01-01"))

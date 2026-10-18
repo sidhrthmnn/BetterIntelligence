@@ -1,0 +1,8 @@
+{
+  "device": "HONOR VKP-NX9, Android 16",
+  "capturedAt": "2026-10-18T17:03:23.547494+01:00",
+  "validationApkSha256": "f3195c99a6c18955940c26138fb1968ae2527b88376c657438999c784e9e57f6",
+  "screenshotCount": 26,
+  "tests": "5 tests passed87.386s (native CPU/GPU fallback/history/cleanup, real chat, navigation/themes, keyboard, live Wikipedia); separate real Binder/polish5cases test passed26.439s",
+  "data": "Fixed synthetic test conversations only. Installed TypeRight2.0 Play-delivered regression pending."
+}

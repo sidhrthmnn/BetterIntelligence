@@ -25,6 +25,8 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
     val policies by viewModel.clientPolicies.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
     val active by viewModel.activeModel.collectAsState()
+    val loadingModelId by viewModel.loadingModelId.collectAsState()
+    val preparing = !telemetry.isModelLoaded && (active != null || loadingModelId != null)
     var developer by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -34,9 +36,9 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
         item {
             Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(if (telemetry.isModelLoaded) "Local AI is ready" else "Set up a model first", style = MaterialTheme.typography.titleMedium)
-                    Text(if (telemetry.isModelLoaded) active?.name ?: "Local model" else "Download and select a model to enable AI for your apps.")
-                    if (!telemetry.isModelLoaded) Button(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Choose a model") }
+                    Text(if (telemetry.isModelLoaded) "Local AI is ready" else if (preparing) "Preparing local AI" else "Set up a model first", style = MaterialTheme.typography.titleMedium)
+                    Text(if (telemetry.isModelLoaded) active?.name?.substringBefore(" · ") ?: "Local model" else if (preparing) "Your selected model is loading. Connected apps can retry when it is ready." else "Download and select a model to enable AI for your apps.")
+                    if (!telemetry.isModelLoaded && !preparing) Button(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Choose a model") }
                 }
             }
         }

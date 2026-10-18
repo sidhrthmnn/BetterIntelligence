@@ -29,8 +29,13 @@ class LiteRtIntegrationDeviceTest {
     @Test fun sharedModelBinderAutoCancellationAndSwitching() = runBlocking {
         if (InstrumentationRegistry.getArguments().getString("gemmaIntegration") != "true") return@runBlocking
         val context = ApplicationProvider.getApplicationContext<Context>()
+        check(context.packageName.endsWith(".validation"))
+        val offline = InstrumentationRegistry.getArguments().getString("offlineIntegration") == "true"
+        if (offline) assertNull("Host must disable network connectivity for the offline fixture",
+            context.getSystemService(android.net.ConnectivityManager::class.java).activeNetwork)
         val repository = AiCoreRepository.getInstance(context)
-        val models = withTimeout(300_000) { repository.allModels.first { it.size == ModelLibrary.read(context).size } }
+        val expected = ModelLibrary.read(context).map { it.filename }.toSet()
+        val models = withTimeout(300_000) { repository.allModels.first { rows -> rows.map { it.filename }.containsAll(expected) } }
         repository.unloadModel()
         val model = models.single { it.filename == "gemma-4-E2B-it.litertlm" }
         assertTrue("Stage the pinned E2B file first", model.isInstalled)
@@ -47,6 +52,14 @@ class LiteRtIntegrationDeviceTest {
             val cpu = engine.generateSync("What is 17 multiplied by 6? Give only the number.",
                 GenerationParams(maxTokens = 16, contextSize = 2048, temperature = 0f))
             assertEquals("102", cpu.trim())
+            if (offline) {
+                val coordinator = com.example.grounding.GroundingCoordinator(mapOf(
+                    com.example.grounding.SearchProviderId.WIKIPEDIA to com.example.grounding.WikipediaSearch(com.example.grounding.SearchHttp())))
+                val result = coordinator.retrieve("Moon", true, com.example.grounding.GroundingMode.ON,
+                    com.example.grounding.SearchProviderId.WIKIPEDIA)
+                assertEquals("SEARCH_FAILED", result.status)
+                assertTrue(result.sources.isEmpty())
+            }
             assertEquals("CPU", engine.telemetry.value.activeBackend)
             assertEquals(0, engine.telemetry.value.activeGpuLayers)
             assertEquals(model.name, engine.activeModelName)
@@ -58,10 +71,36 @@ class LiteRtIntegrationDeviceTest {
             bound = context.bindService(Intent(context, LocalAiCoreService::class.java), connection, Context.BIND_AUTO_CREATE)
             assertTrue(bound)
             val binder = ILocalAiCoreService.Stub.asInterface(withTimeout(30_000) { serviceBinder.await() })
+            withTimeout(30_000) { while (repository.isModelLoading) kotlinx.coroutines.delay(50) }
+            assertEquals("READY", binder.serviceStatus.getString("status"))
+            assertFalse(binder.serviceStatus.getBoolean("model_loading"))
             assertTrue(binder.isModelLoaded)
             assertEquals(model.name, binder.activeModelName)
             assertEquals(model.quantization, binder.activeModelQuantization)
             assertEquals("102", binder.generateTextSync("What is 17 multiplied by 6? Give only the number.", "", 0f, 16).trim())
+            val polish = org.json.JSONArray()
+            for ((input, expected) in listOf("i has 2 apples." to "I have 2 apples.",
+                "Do not delete the backup." to "Do not delete the backup.",
+                "Keep com.example.demo unchanged." to "Keep com.example.demo unchanged.",
+                "Visit https://example.com at 09:15." to "Visit https://example.com at 09:15.",
+                "Email dev@example.com, not user@example.com." to "Email dev@example.com, not user@example.com.")) {
+                val result = binder.polishText(input)
+                val row = org.json.JSONObject().put("input", input).put("expected", expected).put("status", result.getString("status"))
+                    .put("output", result.getString("text")).put("latencyMs", result.getLong("latency_ms"))
+                if (result.getString("status") != "SUCCESS") {
+                    // Fixed synthetic text only: diagnose actual production-prompt failures without logging user text.
+                    runCatching { engine.generateSync(com.example.ipc.PolishText.prompt(input),
+                        com.example.ipc.PolishText.parameters(engine.activeContextLength)) }
+                        .onSuccess { row.put("diagnosticRaw", it) }.onFailure { row.put("diagnosticFailure", it.toString()) }
+                }
+                polish.put(row)
+                File(context.filesDir, "litert-integration-polish.json").writeText(polish.toString(2))
+            }
+            for (index in 0 until polish.length()) {
+                val row = polish.getJSONObject(index)
+                assertEquals(row.getString("input"), "SUCCESS", row.getString("status"))
+                assertEquals(row.getString("input"), row.getString("expected"), row.getString("output"))
+            }
 
             engine.setProcessingMode(ProcessingMode.AUTO)
             assertEquals("102", engine.generateSync("What is 17 multiplied by 6? Give only the number.",

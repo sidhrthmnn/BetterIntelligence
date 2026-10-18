@@ -31,9 +31,14 @@ internal data class LiteRtResult(val text: String, val inputTokens: Int, val out
  */
 @OptIn(ExperimentalApi::class)
 internal class LiteRtSession(private val context: Context, val file: File,
-    private val reuseAttentionExecutor: Boolean = false) : AutoCloseable {
+    private val reuseAttentionExecutor: Boolean = false, identity: String = "") : AutoCloseable {
     val supportsGpu: Boolean
+    val gpuReason: String
     val maximumContext: Int
+    val dynamicContext: Boolean
+    val supportsThinking: Boolean
+    val needsThoughtBudget: Boolean get() = supportsThinking && !reuseAttentionExecutor
+    fun allocationContext(requested: Int) = ModelMemoryPlanner.liteRtAllocationContext(requested, maximumContext, dynamicContext)
     private var engine: Engine? = null
     val isInitialized: Boolean get() = engine?.isInitialized() == true
     var backend = ProcessingMode.CPU; private set
@@ -56,14 +61,18 @@ internal class LiteRtSession(private val context: Context, val file: File,
             require(com.google.ai.edge.litertlm.BackendType.CPU in backends) {
                 "This LiteRT model has no CPU path. Select the standard CPU/GPU .litertlm file for safe fallback."
             }
-            supportsGpu = com.google.ai.edge.litertlm.BackendType.GPU in backends
+            val restriction = ModelLibrary.liteRtGpuRestriction(identity)
+            supportsGpu = com.google.ai.edge.litertlm.BackendType.GPU in backends && restriction.isEmpty()
+            gpuReason = restriction.ifEmpty { if (!supportsGpu) "This model package contains no LiteRT GPU graph" else "GPU graph requires runtime validation" }
             maximumContext = info.maxContextTokens().takeIf { it > 0 } ?: 2048
+            dynamicContext = info.isDynamicContext()
+            supportsThinking = info.supportsThinking()
         }
     }
 
     fun prepare(mode: ProcessingMode, threads: Int, contextSize: Int) {
         require(mode == ProcessingMode.CPU || mode == ProcessingMode.GPU)
-        require(mode != ProcessingMode.GPU || supportsGpu) { "This model contains no LiteRT GPU graph" }
+        require(mode != ProcessingMode.GPU || supportsGpu) { gpuReason }
         val key = "$mode:$threads:$contextSize"
         if (engine?.isInitialized() == true && key == configuration) return
         close()
@@ -77,7 +86,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
         try {
             candidate.initialize()
             engine = candidate; backend = mode; configuration = key
-            allocatedContext = contextSize.coerceAtMost(maximumContext); allocatedThreads = threads
+            allocatedContext = allocationContext(contextSize); allocatedThreads = threads
             initializationMs = SystemClock.elapsedRealtime() - start
         } catch (failure: Throwable) {
             if (candidate.isInitialized()) candidate.close()

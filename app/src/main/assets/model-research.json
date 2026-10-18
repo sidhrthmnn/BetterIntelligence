@@ -16,7 +16,9 @@
     "description": "Research package. Compatibility and quality are recorded in the 2.0 evaluation reports. Hybrid packages require fresh executors for independent requests.",
     "url": "https://huggingface.co/litert-community/Qwen3-0.6B-int4/resolve/256f33043931947c173d7f3cc1d84ee7a8538cc2/qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm",
     "layers": 28,
-    "kvBytesPerToken": 229376
+    "kvBytesPerToken": 229376,
+    "dynamicContext": false,
+    "runtimeMaxContext": 1280
   },
   {
     "name": "Qwen 3.5 0.8B · LiteRT",
@@ -35,7 +37,9 @@
     "description": "Research package. Compatibility and quality are recorded in the 2.0 evaluation reports. Hybrid packages require fresh executors for independent requests.",
     "url": "https://huggingface.co/litert-community/Qwen3.5-0.8B/resolve/ff11c109e8e56797cd1ee5befa856975bb465afc/Qwen3.5-0.8B_int8.litertlm",
     "layers": 24,
-    "kvBytesPerToken": 24576
+    "kvBytesPerToken": 24576,
+    "dynamicContext": false,
+    "runtimeMaxContext": 4096
   },
   {
     "name": "Qwen 3.5 2B · LiteRT",
@@ -54,7 +58,9 @@
     "description": "Research package. Compatibility and quality are recorded in the 2.0 evaluation reports. Hybrid packages require fresh executors for independent requests.",
     "url": "https://huggingface.co/litert-community/Qwen3.5-2B/resolve/a81697205288c632ca83361206af1e4b07133e76/Qwen3.5-2B_int8.litertlm",
     "layers": 24,
-    "kvBytesPerToken": 24576
+    "kvBytesPerToken": 24576,
+    "dynamicContext": false,
+    "runtimeMaxContext": 4096
   },
   {
     "name": "Qwen 3.5 4B · LiteRT",
@@ -73,7 +79,9 @@
     "description": "Research package. Compatibility and quality are recorded in the 2.0 evaluation reports. Hybrid packages require fresh executors for independent requests.",
     "url": "https://huggingface.co/litert-community/Qwen3.5-4B/resolve/7242aee4a04fa2ce8899558148aad1dd6afa201a/Qwen3.5-4B_mixed_int4.litertlm",
     "layers": 32,
-    "kvBytesPerToken": 65536
+    "kvBytesPerToken": 65536,
+    "dynamicContext": false,
+    "runtimeMaxContext": 4096
   },
   {
     "name": "LFM 2.5 2.6B · LiteRT",
@@ -92,7 +100,9 @@
     "description": "Research package. Compatibility and quality are recorded in the 2.0 evaluation reports. Hybrid packages require fresh executors for independent requests.",
     "url": "https://huggingface.co/litert-community/LFM2.5-2.6B/resolve/fd806c320e6cefeb6f7834a27d28b967ba3890da/LFM2.5-2.6B_int4.litertlm",
     "layers": 30,
-    "kvBytesPerToken": 32768
+    "kvBytesPerToken": 32768,
+    "dynamicContext": false,
+    "runtimeMaxContext": 4096
   },
   {
     "name": "Qwen 2.5 1.5B Instruct · LiteRT",
@@ -111,7 +121,9 @@
     "description": "Research package. Compatibility and quality are recorded in the 2.0 evaluation reports. Hybrid packages require fresh executors for independent requests.",
     "url": "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/5e6e7a58d03777898b31330a15d2e0a5a9107de3/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm",
     "layers": 28,
-    "kvBytesPerToken": 57344
+    "kvBytesPerToken": 57344,
+    "dynamicContext": false,
+    "runtimeMaxContext": 4096
   },
   {
     "name": "Phi-4 Mini Instruct · LiteRT",
@@ -130,6 +142,8 @@
     "description": "Research package. Compatibility and quality are recorded in the 2.0 evaluation reports. Hybrid packages require fresh executors for independent requests.",
     "url": "https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/8cd368be75fdb94d5a6f6f5b40f1ab22a6c2543e/Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm",
     "layers": 32,
-    "kvBytesPerToken": 262144
+    "kvBytesPerToken": 262144,
+    "dynamicContext": false,
+    "runtimeMaxContext": 0
   }
 ]

@@ -1,0 +1,68 @@
+{
+  "model": "Qwen3.5-0.8B_int8.litertlm",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "GPU",
+  "requestedContext": 2048,
+  "runtime": "LiteRT-LM 0.18.0",
+  "quality": false,
+  "chargingDuringTest": true,
+  "samples": [],
+  "before": {
+    "availableRamBytes": 5605920768,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 199916,
+    "thermalStatus": 1,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 1873
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 704236,
+    "DMA-BUFKb": 1138988
+  },
+  "status": "failed",
+  "declaredBackends": [
+    "CPU",
+    "GPU"
+  ],
+  "declaredMaxContext": 4096,
+  "dynamicContext": false,
+  "speculativeDecodingSupported": false,
+  "initializationMs": 188751,
+  "configuredContext": 2048,
+  "afterInitialization": {
+    "availableRamBytes": 130666496,
+    "totalRamBytes": 11784495104,
+    "lowMemory": true,
+    "processPssKb": 6444199,
+    "thermalStatus": 1,
+    "batteryTemperatureTenthsC": 350,
+    "chargeCounterMicroAh": 1873
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 5452200,
+    "DMA-BUFKb": 1107648
+  },
+  "failure": "java.lang.IllegalStateException: Memory pressure: stop experiment safely",
+  "after": {
+    "availableRamBytes": 4954243072,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 627592,
+    "thermalStatus": 1,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 1869
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 743596,
+    "DMA-BUFKb": 955888
+  },
+  "peakProcessPssKb": 6443837,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "8303cedcc5d47cc09a6a467c87e6916c379b482c73d55914f96f26e892cd8fcd",
+  "modelSha256": "25447e2550082aed6145bbc755ec4da5d535f98f6a0c386865fdae2ccb88aed1",
+  "modelRevision": "ff11c109e8e56797cd1ee5befa856975bb465afc"
+}

@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,6 +30,7 @@ import com.example.grounding.*
 import com.example.ui.AiCoreViewModel
 import com.example.ui.AppTab
 import com.example.ui.components.MarkdownText
+import com.example.engine.ModelLibrary
 
 @Composable
 fun ChatScreen(viewModel: AiCoreViewModel) {
@@ -44,11 +46,13 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
     val ready by viewModel.telemetry.collectAsState()
     val editing by viewModel.isEditingMessage.collectAsState()
     val clipboard = LocalClipboardManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     var showWebMenu by remember { mutableStateOf(false) }
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize()) {
         TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }, modifier = Modifier.padding(horizontal = 12.dp)) {
-            Text(model?.name ?: "Choose a model", style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(model?.let { selected -> listOfNotNull(ModelLibrary.categoryLabel(selected), selected.name.substringBefore(" · ")).joinToString(" · ") } ?: "Choose a model",
+                style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Icon(Icons.Default.KeyboardArrowDown, null, Modifier.size(18.dp))
         }
         if (messages.isEmpty() && !generating) {
@@ -75,6 +79,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                             Text("Editing a message", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
                             TextButton(onClick = { viewModel.cancelEditingMessage() }) { Text("Cancel edit") }
                         }
+                        if (editing) Text("Sending replaces later replies in this conversation.", Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodySmall)
                         TextField(value = draft, onValueChange = { viewModel.updateDraft(it) },
                             placeholder = { Text("Message Better Intelligence…") },
                             modifier = Modifier.fillMaxWidth().testTag("chat_input_field"), maxLines = 5,
@@ -95,7 +100,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                                 }
                             }
                             Spacer(Modifier.weight(1f))
-                            FilledIconButton(onClick = { if (generating) viewModel.cancelGeneration() else viewModel.sendChatMessage(draft) },
+                            FilledIconButton(onClick = { if (generating) viewModel.cancelGeneration() else { keyboard?.hide(); viewModel.sendChatMessage(draft) } },
                                 enabled = generating || (draft.isNotBlank() && conversation != 0L),
                                 modifier = Modifier.size(48.dp).testTag(if (generating) "stop_generation_btn" else "send_message_btn")) {
                                 Icon(if (generating) Icons.Default.Stop else Icons.AutoMirrored.Filled.Send, if (generating) "Stop response" else "Send message")
@@ -127,12 +132,24 @@ internal fun ChatTranscript(
     LaunchedEffect(messages.lastOrNull { it.role == "user" }?.id) { followLatest = true }
     LaunchedEffect(listState) { snapshotFlow { !listState.canScrollForward }.collect { if (it) followLatest = true } }
     LaunchedEffect(listState, followLatest) {
+        var previousIndex = listState.firstVisibleItemIndex
+        var previousOffset = listState.firstVisibleItemScrollOffset
         if (followLatest) snapshotFlow {
             val layout = listState.layoutInfo; val last = layout.visibleItemsInfo.lastOrNull()
-            listOf(layout.totalItemsCount, layout.viewportEndOffset, last?.index, last?.offset, last?.size)
+            listOf(layout.totalItemsCount, layout.viewportEndOffset, last?.index, last?.offset, last?.size,
+                listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset, listState.isScrollInProgress)
         }.collect {
             val index = listState.layoutInfo.totalItemsCount - 1
-            if (index >= 0 && listState.canScrollForward) listState.scrollToItem(index)
+            val movedEarlier = listState.firstVisibleItemIndex < previousIndex ||
+                (listState.firstVisibleItemIndex == previousIndex && listState.firstVisibleItemScrollOffset < previousOffset)
+            // TalkBack/keyboard scroll actions can bypass the touch nested-scroll
+            // callback. Respect those readers too, before following another token.
+            if (listState.canScrollForward && (movedEarlier || listState.isScrollInProgress)) followLatest = false
+            // Schedule the next measure instead of synchronously forcing a
+            // remeasure from a layoutInfo snapshot (not safe during recreation).
+            else if (index >= 0 && listState.canScrollForward) listState.requestScrollToItem(index)
+            previousIndex = listState.firstVisibleItemIndex
+            previousOffset = listState.firstVisibleItemScrollOffset
         }
     }
     Box(modifier) {
@@ -195,7 +212,11 @@ private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: 
                     }
                 }
             }
-            if (message.messageState != "COMPLETE") Text(if (message.messageState == "STOPPED") "Response stopped" else "Unable to complete this response. You can retry.",
+            if (message.messageState != "COMPLETE") Text(when (message.messageState) {
+                "STOPPED" -> "Response stopped"
+                "LENGTH_LIMIT" -> "Response length limit reached. Ask it to continue, or increase the response length in Advanced settings."
+                else -> "Unable to complete this response. You can retry."
+            },
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row {

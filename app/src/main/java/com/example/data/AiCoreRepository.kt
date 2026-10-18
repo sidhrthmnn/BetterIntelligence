@@ -106,17 +106,26 @@ class AiCoreRepository(
     private val modelLock = Mutex()
     private val verifiedFiles = com.example.engine.VerifiedModelFileCache(appContext)
     @Volatile private var explicitModelSelection = false
+    private val modelOperations = java.util.concurrent.atomic.AtomicInteger(1) // Startup/restore owns the first lease.
+    val isModelLoading: Boolean get() = modelOperations.get() > 0
+
+    private suspend fun <T> withModelLoading(block: suspend () -> T): T {
+        modelOperations.incrementAndGet()
+        try { return block() } finally { modelOperations.decrementAndGet() }
+    }
 
     init {
         repositoryScope.launch {
-            engine.refreshHardware()
-            modelLock.withLock { seedDefaultModelsIfEmpty() }
-            analyzeHardware(appContext)
-            val previous = modelDao.getActiveModel().first()
-            if (previous != null) {
-                try { activateModel(previous, restoring = true) }
-                catch (e: Exception) { if (!explicitModelSelection && !engine.isReady()) modelDao.clearActiveModel() }
-            }
+            try {
+                engine.refreshHardware()
+                modelLock.withLock { seedDefaultModelsIfEmpty() }
+                analyzeHardware(appContext)
+                val previous = modelDao.getActiveModel().first()
+                if (previous != null) {
+                    try { activateModel(previous, restoring = true) }
+                    catch (e: Exception) { if (!explicitModelSelection && !engine.isReady()) modelDao.clearActiveModel() }
+                }
+            } finally { modelOperations.decrementAndGet() }
         }
         repositoryScope.launch {
             while (true) {
@@ -180,30 +189,32 @@ class AiCoreRepository(
     private suspend fun activateModel(model: ModelEntity, restoring: Boolean = false) = withContext(Dispatchers.IO) {
         modelLock.withLock {
             if (restoring && (explicitModelSelection || engine.isReady())) return@withLock
-            check(model.isInstalled) { "Download this model first" }
-            require(model.filename.endsWith(".gguf", true) || model.filename.endsWith(".litertlm", true)) { "Select a GGUF or LiteRT-LM instruction model" }
-            val file = File(model.localFilePath ?: File(downloadManager.modelsDirectory, model.filename).absolutePath)
-            check(file.isFile) { "Model file is missing; download it again" }
-            if (model.architecture.startsWith("gemma") && !model.architecture.startsWith("gemma4")) {
-                check(appContext.getSharedPreferences("model_terms", Context.MODE_PRIVATE).getBoolean("gemma", false)) {
-                    "Accept the Gemma terms in Models first"
+            withModelLoading {
+                check(model.isInstalled) { "Download this model first" }
+                require(model.filename.endsWith(".gguf", true) || model.filename.endsWith(".litertlm", true)) { "Select a GGUF or LiteRT-LM instruction model" }
+                val file = File(model.localFilePath ?: File(downloadManager.modelsDirectory, model.filename).absolutePath)
+                check(file.isFile) { "Model file is missing; download it again" }
+                if (model.architecture.startsWith("gemma") && !model.architecture.startsWith("gemma4")) {
+                    check(appContext.getSharedPreferences("model_terms", Context.MODE_PRIVATE).getBoolean("gemma", false)) {
+                        "Accept the Gemma terms in Models first"
+                    }
                 }
+                val profile = HardwareAnalyzer.analyze(appContext)
+                // Do not credit CPU mmap weights: available RAM already includes file cache.
+                val oldWeightsMb = engine.releasableGpuWeightsMb()
+                val available = (profile.availableRamMb + oldWeightsMb).coerceAtMost(profile.totalRamMb)
+                val adjusted = profile.copy(availableRamMb = available,
+                    safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
+                val liteRt = model.filename.endsWith(".litertlm", true)
+                val requestedContext = preferencesRepository.generationPreferences.first().contextSize
+                ModelLibrary.incompatibilityReason(model, adjusted, if (liteRt) minOf(requestedContext, model.contextLength) else 512)?.let { error(it) }
+                val result = if (liteRt) engine.loadLiteRt(file, model.name, model.sha256Checksum.orEmpty(), model.quantization, requestedContext)
+                    else engine.loadCustomGguf(file, model.sha256Checksum.orEmpty()).map { Unit }
+                if (result.isFailure) { modelDao.clearActiveModel(); result.getOrThrow() }
+                engineManager.selectEngine(if (liteRt) SupportedEngine.LITERT else SupportedEngine.LLAMA_CPP)
+                modelDao.clearActiveModel()
+                modelDao.setActiveModel(model.id)
             }
-            val profile = HardwareAnalyzer.analyze(appContext)
-            // Do not credit CPU mmap weights: available RAM already includes file cache.
-            val oldWeightsMb = engine.releasableGpuWeightsMb()
-            val available = (profile.availableRamMb + oldWeightsMb).coerceAtMost(profile.totalRamMb)
-            val adjusted = profile.copy(availableRamMb = available,
-                safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
-            val liteRt = model.filename.endsWith(".litertlm", true)
-            val requestedContext = preferencesRepository.generationPreferences.first().contextSize
-            ModelLibrary.incompatibilityReason(model, adjusted, if (liteRt) minOf(requestedContext, model.contextLength) else 512)?.let { error(it) }
-            val result = if (liteRt) engine.loadLiteRt(file, model.name, model.sha256Checksum.orEmpty(), model.quantization, requestedContext)
-                else engine.loadCustomGguf(file, model.sha256Checksum.orEmpty()).map { Unit }
-            if (result.isFailure) { modelDao.clearActiveModel(); result.getOrThrow() }
-            engineManager.selectEngine(if (liteRt) SupportedEngine.LITERT else SupportedEngine.LLAMA_CPP)
-            modelDao.clearActiveModel()
-            modelDao.setActiveModel(model.id)
         }
     }
 
@@ -454,7 +465,8 @@ class AiCoreRepository(
             info.maxContextTokens().takeIf { it > 0 } ?: 2048
         }
         val checksum = downloadManager.verifyLocalFile(file, null).computedSha256
-        val entity = ModelEntity(name = displayName.take(120), filename = file.name, architecture = "litertlm-import",
+        val known = ModelLibrary.inferenceModel(appContext, file.name, checksum)
+        val entity = (known ?: ModelEntity(name = displayName.take(120), filename = file.name, architecture = "litertlm-import",
             quantization = "Model-defined", parameterCount = "Custom", contextLength = maximumContext,
             fileSizeMb = (file.length() + 1048575) / 1048576,
             ramRequiredMb = ModelMemoryPlanner.estimate(file.length(), minOf(maximumContext, 2048), 524288).totalMb.toInt(),
@@ -462,7 +474,11 @@ class AiCoreRepository(
             description = "Imported LiteRT-LM package. Review its publisher's licence. Unknown architectures use a fresh executor per request for context isolation; loading may take longer.",
             capabilities = "Custom LiteRT-LM, Text generation", localFilePath = file.absolutePath,
             downloadState = "DOWNLOADED", downloadProgress = 1f, sha256Checksum = checksum,
-            isChecksumVerified = false, checksumVerificationStatus = "LOCAL_HASH")
+            isChecksumVerified = false, checksumVerificationStatus = "LOCAL_HASH")).copy(
+                name = displayName.take(120), filename = file.name, isInstalled = true, isActive = false, isCustom = true,
+                localFilePath = file.absolutePath, downloadUrl = null, downloadState = "DOWNLOADED", downloadProgress = 1f,
+                sha256Checksum = checksum, isChecksumVerified = known != null,
+                checksumVerificationStatus = if (known != null) "VERIFIED" else "LOCAL_HASH")
         return entity.copy(id = modelDao.insertModel(entity))
     }
 

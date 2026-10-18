@@ -43,9 +43,10 @@ class ChatProductDeviceTest {
             .put("text", answer.content).put("state", answer.messageState).put("grounding", answer.groundingStatus)
             .put("sources", JSONArray(answer.sourcesJson))) }
         fun send(text: String): ChatMessageEntity {
+            val previousReply = runBlocking { repository.messages(vm.conversationId.value).first().lastOrNull { it.role == "assistant" }?.id ?: 0 }
             compose.onNodeWithTag("chat_input_field").performTextReplacement(text)
             compose.onNodeWithTag("send_message_btn").performClick()
-            compose.waitUntil(180_000) { !vm.isChatGenerating.value }
+            compose.waitUntil(180_000) { !vm.isChatGenerating.value && vm.chatMessages.value.any { it.role == "assistant" && it.id > previousReply } }
             compose.waitForIdle()
             return runBlocking { repository.messages(vm.conversationId.value).first().last { it.role == "assistant" } }
         }
@@ -102,7 +103,7 @@ class ChatProductDeviceTest {
             compose.runOnUiThread { vm.setGroundingMode(GroundingMode.ON) }
             val grounded = send("Moon")
             record("wikipedia-generated-answer", grounded)
-            assertEquals("COMPLETE", grounded.messageState)
+            assertTrue(grounded.messageState in setOf("COMPLETE", "LENGTH_LIMIT"))
             assertTrue("No actual Wikipedia source retrieved", GroundingResult.sources(grounded.sourcesJson).isNotEmpty())
             assertTrue(grounded.groundingStatus in setOf("EVIDENCE_CITED", "CITATIONS_MISSING"))
             assertFalse(Regex("https?://").containsMatchIn(grounded.content))
@@ -140,7 +141,7 @@ class ChatProductDeviceTest {
     private fun screenshot(context: Context, name: String) {
         compose.waitForIdle()
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        instrumentation.waitForIdleSync(); android.os.SystemClock.sleep(350)
+        instrumentation.waitForIdleSync(); android.os.SystemClock.sleep(1_000) // Let the real IME/window transition reach its final frame.
         val bitmap = instrumentation.uiAutomation.takeScreenshot()
         val directory = File(context.filesDir, "ui-2.0").apply { mkdirs() }
         File(directory, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }

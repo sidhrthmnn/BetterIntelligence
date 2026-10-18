@@ -68,8 +68,9 @@ object GroundingPolicy {
         var cited = false
         // Source links are supplied by the app. Model-authored Markdown links never establish citations.
         var clean = Regex("\\[([^]\\n]+)]\\([^)]*\\)").replace(masked, "$1")
-        clean = Regex("(?<![\\w])\\[(\\d{1,4})]").replace(clean) { match ->
-            if (match.groupValues[1] in ids) { cited = true; match.value } else ""
+        clean = Regex("(?<![\\w])\\[(\\d{1,9}(?:\\s*,\\s*\\d{1,9})*)]").replace(clean) { match ->
+            val verified = match.groupValues[1].split(',').map(String::trim).filter { it in ids }.distinct()
+            if (verified.isNotEmpty()) { cited = true; verified.joinToString(", ", "[", "]") } else ""
         }
         // The UI provides trusted source links separately. Strip model-authored links in grounded responses.
         clean = Regex("https?://\\S+").replace(clean, "")
@@ -153,10 +154,12 @@ class WikipediaSearch(private val http: SearchHttp) : SearchProvider {
             .addQueryParameter("format", "json").addQueryParameter("formatversion", "2").build()
         val results = http.json(Request.Builder().url(url).build()).optJSONObject("query")?.optJSONArray("search") ?: return emptyList()
         val sources = mutableListOf<EvidenceSource>()
-        for (index in 0 until results.length().coerceAtMost(3)) {
-            val title = results.getJSONObject(index).getString("title")
+        val titles = (0 until results.length().coerceAtMost(3)).map { results.getJSONObject(it).getString("title") }
+        val exact = titles.firstOrNull { it.equals(question.trim().trimEnd('?', '.', '!'), ignoreCase = true) }
+        for (title in exact?.let(::listOf) ?: titles) {
             val summaryUrl = "https://$language.wikipedia.org/api/rest_v1/page/summary/".toHttpUrl().newBuilder().addPathSegment(title.replace(' ', '_')).build()
             val summary = http.json(Request.Builder().url(summaryUrl).build())
+            if (summary.optString("type") == "disambiguation") continue
             val pageUrl = summary.optJSONObject("content_urls")?.optJSONObject("desktop")?.optString("page").orEmpty()
             val extract = summary.optString("extract").take(1400)
             if (extract.isNotBlank() && GroundingPolicy.publicHttpsUrl(pageUrl)) sources += EvidenceSource(sources.size + 1,

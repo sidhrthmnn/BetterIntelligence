@@ -44,6 +44,10 @@ class AccelerationTest {
     }
 
     @Test fun resourcePolicyBoundsThreadsAndAccountsForSharedRam() {
+        assertEquals(4096, ModelMemoryPlanner.liteRtAllocationContext(512, 4096, false))
+        assertEquals(512, ModelMemoryPlanner.liteRtAllocationContext(512, 32000, true))
+        assertEquals(1280, ModelMemoryPlanner.liteRtAllocationContext(2048, 1280, true))
+        assertEquals(2048, ModelMemoryPlanner.liteRtAllocationContext(512, 0, false))
         assertEquals(1, ResourcePolicy.threads(1, 0, 8, ResourceState()))
         assertEquals(4, ResourcePolicy.threads(12, 6, 0, ResourceState()))
         assertEquals(2, ResourcePolicy.threads(12, 6, 0, ResourceState(thermal = 3)))
@@ -141,6 +145,7 @@ class AccelerationTest {
             assertEquals("CPU", engine.telemetry.value.activeBackend)
             assertEquals(0, engine.telemetry.value.activeGpuLayers)
             assertEquals(1, engine.telemetry.value.fallbackCount)
+            assertTrue(engine.telemetry.value.backendDecision.contains("using CPU"))
             assertEquals(1, runtime.maxModels)
         } finally { engine.unloadActiveModel() }
         assertEquals(0, runtime.models)
@@ -172,6 +177,27 @@ class AccelerationTest {
             assertTrue("User-visible TTFT includes initial tuning", engine.telemetry.value.timeToFirstTokenMs >= 40)
             engine.generateSync("Hello again", GenerationParams(maxTokens = 2))
             assertEquals(calls + 1, runtime.generations)
+        } finally { engine.unloadActiveModel() }
+    }
+
+    @Test fun manualGpuModeReusesSuccessfulValidationAfterCpuSwitch() = runBlocking {
+        val runtime = FakeRuntime(gpu = true)
+        val engine = InferenceEngine(null, runtime)
+        try {
+            engine.loadCustomGguf(base).getOrThrow()
+            engine.setProcessingMode(ProcessingMode.GPU, 8)
+            engine.generateSync("First", GenerationParams(maxTokens = 2))
+            assertEquals(5, runtime.generations)
+            assertEquals("GPU", engine.telemetry.value.activeBackend)
+            engine.setProcessingMode(ProcessingMode.CPU)
+            engine.generateSync("Second", GenerationParams(maxTokens = 2))
+            val calls = runtime.generations
+            engine.setProcessingMode(ProcessingMode.GPU)
+            engine.generateSync("Third", GenerationParams(maxTokens = 2))
+            assertEquals(calls + 1, runtime.generations)
+            assertEquals(8, engine.telemetry.value.activeGpuLayers)
+            assertTrue(engine.telemetry.value.backendDecision.contains("cached"))
+            assertEquals(1, runtime.maxModels)
         } finally { engine.unloadActiveModel() }
     }
 

@@ -1,0 +1,264 @@
+{
+  "model": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "CPU",
+  "requestedContext": 1024,
+  "runtime": "llama.cpp 0.7.0",
+  "quality": false,
+  "chatQuality": false,
+  "chargingDuringTest": true,
+  "backendPolicy": "llama-0.7.0-vulkan-policy-4",
+  "harnessRevision": "2026-10-18-c",
+  "samples": [
+    {
+      "id": "math",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 5435441152,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 786451,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 317,
+      "tokensPerSecond": 35.370266,
+      "inputTokens": 23,
+      "outputTokens": 3,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "CPU selected in Advanced settings",
+      "durationMs": 457,
+      "after": {
+        "availableRamBytes": 5448679424,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 788681,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 808853
+    },
+    {
+      "id": "polish",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 5448679424,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 788693,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "I will be their in ten minutes, please wait for me.",
+      "firstTokenMs": 441,
+      "tokensPerSecond": 46.86407,
+      "inputTokens": 31,
+      "outputTokens": 13,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "CPU selected in Advanced settings",
+      "durationMs": 759,
+      "after": {
+        "availableRamBytes": 5446234112,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 791009,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 808853
+    },
+    {
+      "id": "decode",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 5446234112,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 791029,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty.",
+      "firstTokenMs": 245,
+      "tokensPerSecond": 49.745575,
+      "inputTokens": 18,
+      "outputTokens": 69,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "CPU selected in Advanced settings",
+      "durationMs": 1694,
+      "after": {
+        "availableRamBytes": 5439668224,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 790817,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 808853
+    },
+    {
+      "id": "math",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 5439668224,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 790841,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 309,
+      "tokensPerSecond": 51.366344,
+      "inputTokens": 23,
+      "outputTokens": 3,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "CPU selected in Advanced settings",
+      "durationMs": 412,
+      "after": {
+        "availableRamBytes": 5438640128,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 790921,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 808853
+    },
+    {
+      "id": "polish",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 5438640128,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 790957,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "I will be their in ten minutes, please wait for me.",
+      "firstTokenMs": 410,
+      "tokensPerSecond": 49.875694,
+      "inputTokens": 31,
+      "outputTokens": 13,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "CPU selected in Advanced settings",
+      "durationMs": 718,
+      "after": {
+        "availableRamBytes": 5439229952,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 791121,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 808853
+    },
+    {
+      "id": "decode",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 5439229952,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 791161,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty.",
+      "firstTokenMs": 245,
+      "tokensPerSecond": 49.30195,
+      "inputTokens": 18,
+      "outputTokens": 69,
+      "actualBackend": "CPU",
+      "fallback": "",
+      "backendDecision": "CPU selected in Advanced settings",
+      "durationMs": 1724,
+      "after": {
+        "availableRamBytes": 5433778176,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 791265,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 808853
+    }
+  ],
+  "before": {
+    "availableRamBytes": 5547667456,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 179081,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 2081
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 925840,
+    "DMA-BUFKb": 958284
+  },
+  "status": "complete",
+  "initializationMs": 606,
+  "configuredContext": 1024,
+  "allocationContextEstimate": 0,
+  "afterInitialization": {
+    "availableRamBytes": 5420122112,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 785584,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 2081
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 926840,
+    "DMA-BUFKb": 958284
+  },
+  "after": {
+    "availableRamBytes": 5431963648,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 318701,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 2081
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 926776,
+    "DMA-BUFKb": 958284
+  },
+  "peakProcessPssKb": 808853,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "92a36270ebfc9f6ebfc2d01e7dee27d785ba733bfab7bf3b40734f7f87cd2459",
+  "modelSha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+  "modelRevision": "9217f5db79a29953eb74d5343926648285ec7e67",
+  "resetAutoCache": false
+}

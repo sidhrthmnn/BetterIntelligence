@@ -24,6 +24,21 @@ def median(values):
     return round(statistics.median(values), 2) if values else None
 
 
+def group_metrics(rows):
+    expected = predicted = matched = unchanged = false_corrections = exact = 0
+    for sample in rows:
+        case = sample['case']; response = sample.get('response', '').strip()
+        gold = edits(case['input'], case['gold']); actual = edits(case['input'], response)
+        expected += len(gold); predicted += len(actual); matched += len(gold & actual)
+        exact += tokens(response) == tokens(case['gold'])
+        if case['unchanged']:
+            unchanged += 1; false_corrections += tokens(response) != tokens(case['input'])
+    return dict(cases=len(rows), referenceEditPrecision=matched / predicted if predicted else 1.0,
+        referenceEditRecall=matched / expected if expected else 1.0, unchangedCases=unchanged,
+        falseCorrectionsOnUnchanged=false_corrections, exactReferenceMatches=exact,
+        medianEndToEndMs=median([s['durationMs'] for s in rows if 'durationMs' in s]))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--reports', type=pathlib.Path, required=True)
@@ -32,7 +47,7 @@ def main():
     summaries = []
     for path in sorted(args.reports.glob('*-quality-*.json')):
         data = json.loads(path.read_text(encoding='utf-8'))
-        gold_edits = predicted_edits = matched_edits = unchanged = false_corrections = exact = formatting = literals = 0
+        gold_edits = predicted_edits = matched_edits = unchanged = false_corrections = exact = formatting = literals = literal_cases = 0
         categories = collections.Counter()
         review = []
         samples = [sample for sample in data.get('samples', []) if sample.get('status') == 'complete' and 'case' in sample]
@@ -46,7 +61,8 @@ def main():
                 unchanged += 1; false_corrections += not same
             exact += tokens(response) == tokens(reference)
             literal_ok = all(value in response for value in case.get('mustPreserve', []))
-            literals += literal_ok
+            if case.get('mustPreserve'):
+                literal_cases += 1; literals += literal_ok
             format_ok = bool(response) and not re.search(r'(?i)^(here\b|sure\b|corrected\b|the corrected\b|proofread\b)|```|<think>|</think>', response)
             format_ok = format_ok and not (response.startswith('"') and not source.startswith('"'))
             formatting += format_ok
@@ -59,11 +75,16 @@ def main():
             referenceEditRecall=matched_edits / gold_edits if gold_edits else 1.0,
             unchangedCases=unchanged, falseCorrectionsOnUnchanged=false_corrections,
             falseCorrectionRate=false_corrections / unchanged if unchanged else None,
-            exactReferenceMatches=exact, formatProxyPasses=formatting, literalInvariantPasses=literals,
+            exactReferenceMatches=exact, formatProxyPasses=formatting, literalInvariantCases=literal_cases, literalInvariantPasses=literals,
             medianFirstTokenMs=median([s['firstTokenMs'] for s in samples if 'firstTokenMs' in s]),
             medianTokensPerSecond=median([s['tokensPerSecond'] for s in samples if s.get('tokensPerSecond', 0) > 0]),
             medianEndToEndMs=median([s['durationMs'] for s in samples if 'durationMs' in s]),
             peakProcessPssKb=data.get('peakProcessPssKb'), categories=dict(categories),
+            byCategory={category: group_metrics([s for s in samples if s['case']['category'] == category]) for category in categories},
+            englishCases=group_metrics([s for s in samples if s['case']['category'] not in ('malayalam', 'manglish', 'mixed_language')
+                and not re.search(r'[\u0d00-\u0d7f]', s['case']['input'])]),
+            runtime=data.get('runtime'), backendPolicy=data.get('backendPolicy'), validationApkSha256=data.get('validationApkSha256'),
+            configuredContext=data.get('configuredContext'), outputTokenLimitOverride=data.get('outputTokenLimitOverride'),
             semanticAccuracy='NOT_AUTOMATICALLY_SCORED; inspect raw outputs and invariants',
             caveat='Reference edits penalize valid alternative wording; do not use this proxy alone to rank models.')
         summaries.append(summary)

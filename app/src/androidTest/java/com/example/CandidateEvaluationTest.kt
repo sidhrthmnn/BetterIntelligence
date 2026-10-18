@@ -35,14 +35,18 @@ class CandidateEvaluationTest {
         val contextSize = (arguments.getString("candidateContext")?.toIntOrNull() ?: 2048).coerceIn(512, 2048)
         val quality = arguments.getString("candidateQuality") == "true"
         val chatQuality = arguments.getString("candidateChatQuality") == "true"
+        val outputLimit = arguments.getString("candidateMaxOutputTokens")?.toIntOrNull()?.coerceIn(1, 1024)
+        val limitSuffix = outputLimit?.let { "-max$it" }.orEmpty()
         val phase = if (quality) "quality" else if (chatQuality) "chat" else "performance"
         val file = File(context.filesDir, "models/$name")
         require(file.isFile)
+        val gguf = name.endsWith(".gguf", true)
         val report = JSONObject().put("model", name).put("device", Build.FINGERPRINT)
-            .put("requestedBackend", backend).put("requestedContext", contextSize).put("runtime", "LiteRT-LM 0.18.0")
+            .put("requestedBackend", backend).put("requestedContext", contextSize).put("runtime", if (gguf) "llama.cpp 0.7.0" else "LiteRT-LM 0.18.0")
             .put("quality", quality).put("chatQuality", chatQuality).put("chargingDuringTest", true)
-            .put("backendPolicy", SmartBackendSelector.LITERT_RUNTIME).put("harnessRevision", "2026-10-18-b")
-        val output = File(context.filesDir, "candidate-$phase-$backend-$contextSize-$name.json")
+            .put("backendPolicy", if (gguf) SmartBackendSelector.RUNTIME else SmartBackendSelector.LITERT_RUNTIME).put("harnessRevision", "2026-10-18-c")
+        val output = File(context.filesDir, "candidate-$phase-$backend-$contextSize$limitSuffix-$name.json")
+        report.put("outputTokenLimitOverride", outputLimit)
         val samples = JSONArray(); report.put("samples", samples)
         fun save() = output.writeText(report.toString(2))
         val am = context.getSystemService(ActivityManager::class.java)
@@ -73,27 +77,29 @@ class CandidateEvaluationTest {
         var session: LiteRtSession? = null
         var core: InferenceEngine? = null
         try {
-            val info = ModelInfo.from(file.absolutePath)
-            info.use {
+            if (!gguf) ModelInfo.from(file.absolutePath).use {
                 report.put("declaredBackends", JSONArray(it.supportedBackends(Modality.TEXT).map { b -> b.name }))
                     .put("declaredMaxContext", it.maxContextTokens()).put("minimumRuntime", it.minRuntimeVersion())
-                if (it is ModelInfo.Llm) report.put("dynamicContext", it.isDynamicContext()).put("speculativeDecodingSupported", it.hasSpeculativeDecodingSupport())
+                if (it is ModelInfo.Llm) report.put("dynamicContext", it.isDynamicContext()).put("supportsThinking", it.supportsThinking()).put("speculativeDecodingSupported", it.hasSpeculativeDecodingSupport())
             }
             val started = SystemClock.elapsedRealtime()
             var actualContext: Int
-            if (backend == "AUTO") {
+            if (backend == "AUTO" || gguf) {
                 core = InferenceEngine(context)
                 if (arguments.getString("candidateResetCache") == "true") core.resetBackendDecisions()
-                core.loadLiteRt(file, identity = arguments.getString("candidateSha256").orEmpty(), initialContext = contextSize).getOrThrow()
-                core.setProcessingMode(ProcessingMode.AUTO)
+                val identity = arguments.getString("candidateSha256").orEmpty()
+                if (gguf) core.loadCustomGguf(file, identity).getOrThrow()
+                else core.loadLiteRt(file, identity = identity, initialContext = contextSize).getOrThrow()
+                core.setProcessingMode(ProcessingMode.valueOf(backend))
                 actualContext = minOf(contextSize, core.activeContextLength)
             } else {
                 val attentionOnly = name.startsWith("gemma-4-") || name.startsWith("qwen3_0.6b_") || name.startsWith("Qwen2.5-") || name.startsWith("Phi-4-") || name.startsWith("gemma3-")
-                session = LiteRtSession(context, file, attentionOnly)
+                session = LiteRtSession(context, file, attentionOnly, arguments.getString("candidateSha256").orEmpty())
                 actualContext = minOf(contextSize, session.maximumContext)
                 session.prepare(ProcessingMode.valueOf(backend), 4, actualContext)
             }
             report.put("initializationMs", SystemClock.elapsedRealtime() - started).put("configuredContext", actualContext)
+                .put("allocationContextEstimate", session?.allocationContext(actualContext) ?: core?.allocatedLiteRtContext)
                 .put("afterInitialization", resources()).put("driverAfterInitialization", driverMemory()); save()
             val tests = if (quality || chatQuality) {
                 val asset = if (quality) "proofreading-cases.json" else "chat-quality-cases.json"
@@ -116,7 +122,7 @@ class CandidateEvaluationTest {
                     samples.put(sample); save()
                     val start = SystemClock.elapsedRealtime()
                     val params = GenerationParams(temperature = 0f, topK = 1, topP = 1f,
-                        maxTokens = if (chatQuality || (quality && test.optString("category") == "long")) minOf(192, actualContext / 3) else minOf(96, actualContext / 4), contextSize = actualContext, threads = 4)
+                        maxTokens = outputLimit?.coerceAtMost(actualContext / 2) ?: if (chatQuality || (quality && test.optString("category") == "long")) minOf(192, actualContext / 3) else minOf(96, actualContext / 4), contextSize = actualContext, threads = 4)
                     if (session != null) {
                         val result = session.generate(prompt, params)
                         sample.put("response", result.text).put("firstTokenMs", result.firstTokenMs)
@@ -134,7 +140,8 @@ class CandidateEvaluationTest {
                     save()
                 }
             }
-            report.put("status", "complete")
+            val fellBack = backend == "GPU" && (0 until samples.length()).any { samples.getJSONObject(it).optString("actualBackend") != "GPU" }
+            report.put("status", if (fellBack) "fallback" else "complete")
         } catch (failure: Throwable) {
             report.put("status", "failed").put("failure", failure.toString()); throw failure
         } finally {

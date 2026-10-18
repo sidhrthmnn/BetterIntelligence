@@ -1,0 +1,65 @@
+{
+  "researched": "2026-10-18",
+  "models": [
+    {
+      "id": "gguf-smollm2-135m",
+      "repo": "Segilmez06/SmolLM2-135M-Instruct-Q4_K_M-GGUF",
+      "revision": "0fbb5f440a58f880aeb698a615bc341dd7015168",
+      "license": "apache-2.0",
+      "file": "smollm2-135m-instruct-q4_k_m.gguf",
+      "bytes": 105454144,
+      "sha256": "8030f04528538d47bda434f6f0bdf3952c40a58123e4d5e755332f23731a8684",
+      "format": "GGUF",
+      "runtime": "llama.cpp 0.7.0",
+      "quantization": "Q4_K_M"
+    },
+    {
+      "id": "gguf-qwen25-05b",
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+      "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+      "license": "apache-2.0",
+      "file": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+      "bytes": 491400032,
+      "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+      "format": "GGUF",
+      "runtime": "llama.cpp 0.7.0",
+      "quantization": "Q4_K_M"
+    },
+    {
+      "id": "gguf-gemma3-1b",
+      "repo": "ggml-org/gemma-3-1b-it-GGUF",
+      "revision": "f9c28bcd85737ffc5aef028638d3341d49869c27",
+      "license": "gemma",
+      "file": "gemma-3-1b-it-Q4_K_M.gguf",
+      "bytes": 806058240,
+      "sha256": "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
+      "format": "GGUF",
+      "runtime": "llama.cpp 0.7.0",
+      "quantization": "Q4_K_M"
+    },
+    {
+      "id": "gguf-gemma4-e2b",
+      "repo": "unsloth/gemma-4-E2B-it-GGUF",
+      "revision": "0314792d7f1f7e229411f620751375812bb9faf2",
+      "license": "apache-2.0",
+      "file": "gemma-4-E2B-it-Q4_K_M.gguf",
+      "bytes": 3106738272,
+      "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8",
+      "format": "GGUF",
+      "runtime": "llama.cpp 0.7.0",
+      "quantization": "Q4_K_M"
+    },
+    {
+      "id": "gguf-gemma4-e4b",
+      "repo": "unsloth/gemma-4-E4B-it-GGUF",
+      "revision": "bfc15c382204943c3a8fff0c750b94ae2364d7a3",
+      "license": "apache-2.0",
+      "file": "gemma-4-E4B-it-Q4_K_M.gguf",
+      "bytes": 4977171584,
+      "sha256": "85a896a047553e842f25297ee5b031d64ff30147d9c4af17b1e4b394cd1fab87",
+      "format": "GGUF",
+      "runtime": "llama.cpp 0.7.0",
+      "quantization": "Q4_K_M"
+    }
+  ]
+}

@@ -25,8 +25,8 @@ class SmartBackendSelector(context: Context? = null, private val now: () -> Long
         // Several facades may be constructed in one process. A live attempt is
         // not a crashed previous launch simply because another facade is created.
         private val processToken = java.util.UUID.randomUUID().toString()
-        const val RUNTIME = "llama-0.7.0-vulkan-policy-3"
-        const val LITERT_RUNTIME = "litertlm-0.18.0-policy-3"
+        const val RUNTIME = "llama-0.7.0-vulkan-policy-4"
+        const val LITERT_RUNTIME = "litertlm-0.18.0-policy-4"
         const val MAX_AGE_MS = 30L * 24 * 60 * 60 * 1000
         const val FAILURE_COOLDOWN_MS = 24L * 60 * 60 * 1000
         fun key(vararg parts: Any): String = MessageDigest.getInstance("SHA-256").digest(parts.joinToString("|").toByteArray())

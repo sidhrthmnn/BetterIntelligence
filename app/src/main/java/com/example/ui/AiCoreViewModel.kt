@@ -57,7 +57,7 @@ import java.io.FileOutputStream
 enum class AppTab(val title: String) {
     MODELS("Models"),
     CHAT("Chat"),
-    CONNECT("Apps"),
+    CONNECT("Connected apps"),
     SETTINGS("Settings"),
     HISTORY("Conversations"),
     WEB("Web & grounding"),
@@ -366,7 +366,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         if (editingMessageId == null) savedState["draftBeforeEdit"] = _draft.value
         editingMessageId = message.id; updateDraft(message.content)
         _isEditingMessage.value = true
-        _userMessage.value = "Edit the message and send. Later replies in this conversation will be replaced."
     }
     fun cancelEditingMessage() {
         editingMessageId = null; _isEditingMessage.value = false
@@ -804,7 +803,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
 
     fun sendChatMessage(userText: String, replaceFrom: Long? = editingMessageId, clearDraft: Boolean = true) {
         if (userText.isBlank() || _isChatGenerating.value || _conversationId.value == 0L || conversationLock.isLocked) return
-        if (_loadingModelId.value != null) { _userMessage.value = "Wait for model loading to finish. Your draft is kept."; return }
+        if (_loadingModelId.value != null || repository.isModelLoading) { _userMessage.value = "Wait for model loading to finish. Your draft is kept."; return }
         if (!repository.engine.isReady()) {
             _userMessage.value = "Choose a downloaded model in Settings to start chatting."
             selectTab(AppTab.MODELS)
@@ -833,6 +832,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             var speed = 0f
             var promptTokens = 0
             var outputTokens = 0
+            var reachedOutputLimit = false
             var evidence = GroundingResult()
             var pendingId: Long? = null
             var partialWriter: kotlinx.coroutines.Job? = null
@@ -841,7 +841,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 if (_isForegroundServiceEnabled.value) foregroundToken = InferenceForegroundService.start(getApplication(),
                     "Preparing your answer on this device", model) { chatPreparationJob?.cancel() }
                 val previous = repository.beginChatTurn(ChatMessageEntity(role = "user", content = text, modelName = model, conversationId = conversation), replaceFrom)
-                    .filter { it.messageState == "COMPLETE" && it.role in setOf("user", "assistant") }
+                    .filter { it.messageState in setOf("COMPLETE", "STOPPED", "LENGTH_LIMIT") && it.role in setOf("user", "assistant") && it.content != "Response stopped." }
                 savedUser = true
                 pendingId = repository.insertChatMessage(ChatMessageEntity(role = "assistant", content = "", modelName = model,
                     conversationId = conversation, messageState = "STREAMING"))
@@ -883,8 +883,11 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 ensureActive()
                 promptTokens = repository.engine.telemetry.value.promptTokens
                 outputTokens = repository.engine.telemetry.value.completionTokens
+                reachedOutputLimit = outputTokens >= params.maxTokens
                 if (error != null) result = _streamingChatText.value
-                if (result.isBlank() && error == null) error = "The model returned no text. Try again or select another model."
+                if (result.isBlank() && error == null) error = if (reachedOutputLimit)
+                    "The response budget ended before visible text. Increase response length in Advanced settings, or choose a non-thinking model."
+                    else "The model returned no text. Try again or select another model."
             } catch (e: kotlinx.coroutines.CancellationException) {
                 cancelled = true
                 result = _streamingChatText.value
@@ -906,7 +909,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                             conversationId = conversation, modelName = model, latencyMs = latency, tokensPerSec = speed,
                             promptTokens = promptTokens, completionTokens = outputTokens,
                             sourcesJson = evidence.json(), groundingStatus = status,
-                            messageState = if (cancelled) "STOPPED" else if (error != null) "ERROR" else "COMPLETE"))
+                            messageState = if (cancelled) "STOPPED" else if (error != null) "ERROR" else if (reachedOutputLimit) "LENGTH_LIMIT" else "COMPLETE"))
                     } else if (error != null) { _userMessage.value = error; if (_draft.value.isBlank()) updateDraft(text) }
                     } finally { _streamingChatText.value = ""; _chatStatus.value = ""; _isChatGenerating.value = false }
                 }

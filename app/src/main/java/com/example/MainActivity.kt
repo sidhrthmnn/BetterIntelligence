@@ -62,7 +62,6 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
         // A single IME owner. Screens consume these insets and never add another keyboard spacer.
         modifier = Modifier.fillMaxSize().imePadding(),
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(title = {
                 Text(if (destination == AppTab.CHAT) "Better Intelligence" else destination.title,
@@ -84,7 +83,11 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
         }
     ) { insets ->
         Box(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets), contentAlignment = Alignment.TopCenter) {
-            Box(Modifier.widthIn(max = 840.dp).fillMaxSize()) { TabContent(destination, viewModel) }
+            Column(Modifier.widthIn(max = 840.dp).fillMaxSize()) {
+                // A content-sized notice must not cover Send/Stop or the IME.
+                SnackbarHost(snackbar)
+                Box(Modifier.weight(1f).fillMaxWidth()) { TabContent(destination, viewModel) }
+            }
         }
     }
 }

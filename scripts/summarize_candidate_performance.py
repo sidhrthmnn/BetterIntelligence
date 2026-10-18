@@ -18,8 +18,8 @@ def main():
     lines = ['# Physical HONOR candidate performance', '',
         'These are recorded validation-app measurements, not estimates or quality rankings. '
         'Read the raw JSON alongside each row for model revision, checksum, APK hash, device fingerprint and failure details.', '',
-        '| Model | Requested | Context requested / configured | Status / actual | Init ms | Warm decode tok/s | Warm TTFT ms | Warm request ms | Peak app PSS MiB | Thermal max | File mappings after close |',
-        '|---|---|---|---|---:|---:|---:|---:|---:|---:|---|']
+        '| Model | Requested | Context requested / configured | Status / actual | Visible replies | Init ms | Warm decode tok/s | Warm TTFT ms | Warm request ms | Peak app PSS MiB | Thermal max | File mappings after close |',
+        '|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---|']
     failures = []
     for path in sorted(args.reports.glob('*-performance-*.json')):
         data = json.loads(path.read_text(encoding='utf-8'))
@@ -34,7 +34,8 @@ def main():
         configured = data.get('configuredContext', '—')
         context = f"{data.get('requestedContext', '—')} / {configured}"
         row = [path.name.split('-performance-')[0], data.get('requestedBackend', '?'), context,
-            f"{data.get('status', '?')} / {actual}", str(data.get('initializationMs', '—')),
+            f"{data.get('status', '?')} / {actual}", f"{sum(bool(s.get('response', '').strip()) for s in samples)} / {len(samples)}",
+            str(data.get('initializationMs', '—')),
             median(decode, 'tokensPerSecond'), median(warm, 'firstTokenMs'), median(warm, 'durationMs'),
             f'{peak / 1024:.1f}' if peak is not None else '—', str(thermal) if thermal is not None else '—',
             str(data.get('modelMappingsRetainedAfterClose', 'unmeasured')).lower()]
@@ -45,6 +46,8 @@ def main():
         '## Interpretation', '',
         '- Warm decode uses the repeated counting prompt; TTFT and request duration use the three repeated prompts. '
         'Actual runtime token counts are used. Init is a fresh process/session load, with OS file/compiler caches potentially already warm.',
+        '- A completed runtime call can still return no visible reply. Thinking models can exhaust a short output budget in their thought channel. '
+        'Explicit larger-budget probes have a maxN filename suffix and must be reviewed separately; blank replies are not evidence of a usable answer.',
         '- AUTO first requests include controlled tuning; later requests reuse the decision. '
         'A prior interrupted experiment may leave a crash cooldown, so record whether the controlled run reset the cache. '
         'Normal app launches retain it.',

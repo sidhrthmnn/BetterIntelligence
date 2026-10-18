@@ -39,6 +39,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val context = LocalContext.current
     var source by rememberSaveable { mutableStateOf("library") }
     var tier by rememberSaveable { mutableStateOf("ALL") }
+    var otherModels by rememberSaveable { mutableStateOf(false) }
     var advanced by rememberSaveable { mutableStateOf(false) }
     var details by remember { mutableStateOf<ModelEntity?>(null) }
     var deleting by remember { mutableStateOf<ModelEntity?>(null) }
@@ -95,14 +96,18 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         if (source == "library") item {
             Text("Mobile-friendly library", style = MaterialTheme.typography.titleLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("ALL" to "All", "LIGHTWEIGHT" to "Lightweight", "BALANCED" to "Balanced", "QUALITY" to "More capable").forEach { (key, label) ->
+                listOf("ALL" to "All", "FAST" to "Fast", "BALANCED" to "Balanced", "ADVANCED" to "Advanced").forEach { (key, label) ->
                     FilterChip(tier == key, { tier = key }, label = { Text(label) })
                 }
+            }
+            TextButton(onClick = { otherModels = !otherModels; tier = "ALL" }) {
+                Text(if (otherModels) "Hide other models" else "Other models and existing downloads")
             }
         }
         val visibleModels = models.filter {
             when (source) {
-                "library" -> !it.isCustom && (tier == "ALL" || it.recommendedTier == tier)
+                "library" -> !it.isCustom && (otherModels || ModelLibrary.category(it) != null || it.isInstalled || it.id == recommended?.id) &&
+                    (tier == "ALL" || ModelLibrary.category(it) == tier)
                 "my_models" -> it.isInstalled || it.isCustom
                 else -> false
             }
@@ -124,9 +129,13 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             val canDownload = hardware?.let { ModelLibrary.canDownload(model, it) } ?: true
             OutlinedCard(Modifier.fillMaxWidth().testTag("model_card_${model.id}")) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(model.name, style = MaterialTheme.typography.titleMedium)
-                    Text("${model.fileSizeMb} MB download · About ${ModelLibrary.memoryEstimate(model).totalMb} MB at 2K context",
+                    ModelLibrary.categoryLabel(model)?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+                    Text(model.name.substringBefore(" · "), style = MaterialTheme.typography.titleMedium)
+                    Text("${model.fileSizeMb} MB download · About ${ModelLibrary.memoryEstimate(model).totalMb} MB RAM",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (ModelLibrary.category(model) == "FAST") Text("Small download for basic English tasks. Choose Balanced for more reliable writing and multilingual chat.", style = MaterialTheme.typography.bodySmall)
+                    if (ModelLibrary.category(model) == "BALANCED") Text("Recommended for everyday chat and English AI Polish.", style = MaterialTheme.typography.bodySmall)
+                    if (ModelLibrary.category(model) == "ADVANCED") Text("Stronger multilingual writing; higher memory use and slower responses.", style = MaterialTheme.typography.bodySmall)
                     if (selected) Text("Selected · available to approved apps", color = MaterialTheme.colorScheme.primary)
                     Text(model.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (!selected && !fits) Text(loadProfile?.let { ModelLibrary.incompatibilityReason(model, it, 512) }.orEmpty(), style = MaterialTheme.typography.bodySmall)

@@ -49,6 +49,8 @@ withContext(Dispatchers.IO) {
 
 `status` returns a Bundle with `api_version=2`, `supports_polish=true`, `polish_language=en`, `model_loaded`, `active_model`, `max_polish_characters=4000`, `settings_package`, and `status`. It registers the caller but does not consume the inference rate limit. Readiness reflects the actual runtime; an installed but unloaded model is not ready.
 
+Version 2.0 adds the optional `model_loading` boolean. Startup restoration and model replacement return the existing `BUSY` status while work is in progress, so older clients can show their normal wait/retry message. `MODEL_REQUIRED` means initialization has settled without a ready selected model. Approval/denial still takes priority over either state. No AIDL method or transaction ordering changes.
+
 `polish` accepts text in the `arg` parameter (or `extras["text"]`). It returns `status` and `latency_ms`. Only `SUCCESS` includes `text`. Some failures also contain an `error` for display. Keys unrelated to caller identity are optional; `calling_package` is ignored.
 
 | Status | Consumer behavior |

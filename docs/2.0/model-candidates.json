@@ -7,10 +7,27 @@
       "revision": "b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1",
       "license": "apache-2.0",
       "file": "gemma-4-E2B-it.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
-      "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
+      "validation": "PHYSICAL_PERFORMANCE_MEASURED_WITH_LIMITS",
+      "runtime": "LiteRT-LM 0.18.0; see actual requested/selected backend and output checks in reports",
       "bytes": 2588147712,
-      "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c"
+      "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+      "performanceEvidence": {
+        "CPU": {
+          "status": "complete",
+          "report": "reports/candidates/gemma4-e2b-performance-CPU-2048.json",
+          "configuredContext": 2048
+        },
+        "GPU": {
+          "status": "complete",
+          "report": "reports/candidates/gemma4-e2b-performance-GPU-2048.json",
+          "configuredContext": 2048
+        },
+        "AUTO": {
+          "status": "complete",
+          "report": "reports/candidates/gemma4-e2b-performance-AUTO-2048.json",
+          "configuredContext": 2048
+        }
+      }
     },
     {
       "id": "gemma4-e4b",
@@ -18,10 +35,27 @@
       "revision": "2eee7ac325f20eb8c9ac1d0e972f7c84663062da",
       "license": "apache-2.0",
       "file": "gemma-4-E4B-it.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
-      "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
+      "validation": "PHYSICAL_PERFORMANCE_MEASURED_WITH_LIMITS",
+      "runtime": "LiteRT-LM 0.18.0; see actual requested/selected backend and output checks in reports",
       "bytes": 3659530240,
-      "sha256": "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0"
+      "sha256": "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0",
+      "performanceEvidence": {
+        "CPU": {
+          "status": "complete",
+          "report": "reports/candidates/gemma4-e4b-performance-CPU-2048.json",
+          "configuredContext": 2048
+        },
+        "GPU": {
+          "status": "complete",
+          "report": "reports/candidates/gemma4-e4b-performance-GPU-2048.json",
+          "configuredContext": 2048
+        },
+        "AUTO": {
+          "status": "complete",
+          "report": "reports/candidates/gemma4-e4b-performance-AUTO-2048.json",
+          "configuredContext": 2048
+        }
+      }
     },
     {
       "id": "qwen3-06b",
@@ -29,15 +63,32 @@
       "revision": "256f33043931947c173d7f3cc1d84ee7a8538cc2",
       "license": "apache-2.0",
       "file": "qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
-      "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
+      "validation": "PHYSICAL_PERFORMANCE_MEASURED_WITH_LIMITS",
+      "runtime": "LiteRT-LM 0.18.0; see actual requested/selected backend and output checks in reports",
       "bytes": 347251840,
       "sha256": "2df6821ec12702dafd33915e7a1a1adc7c4b053f3672fd9555dfaf3a114c4139",
       "memoryConfigSource": "https://huggingface.co/Qwen/Qwen3-0.6B/resolve/c1899de289a04d12100db370d81485cdf75e47ca/config.json",
       "memoryConfigSha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
       "layers": 28,
       "kvBytesPerToken": 229376,
-      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately."
+      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately.",
+      "performanceEvidence": {
+        "CPU": {
+          "status": "complete",
+          "report": "reports/candidates/qwen3-06b-performance-CPU-2048.json",
+          "configuredContext": 1280
+        },
+        "GPU": {
+          "status": "complete",
+          "report": "reports/candidates/qwen3-06b-performance-GPU-2048.json",
+          "configuredContext": 1280
+        },
+        "AUTO": {
+          "status": "complete",
+          "report": "reports/candidates/qwen3-06b-performance-AUTO-2048.json",
+          "configuredContext": 1280
+        }
+      }
     },
     {
       "id": "qwen35-08b",
@@ -45,15 +96,32 @@
       "revision": "ff11c109e8e56797cd1ee5befa856975bb465afc",
       "license": "apache-2.0",
       "file": "Qwen3.5-0.8B_int8.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
-      "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
+      "validation": "PHYSICAL_PERFORMANCE_MEASURED_WITH_LIMITS",
+      "runtime": "LiteRT-LM 0.18.0; see actual requested/selected backend and output checks in reports",
       "bytes": 964566992,
       "sha256": "25447e2550082aed6145bbc755ec4da5d535f98f6a0c386865fdae2ccb88aed1",
       "memoryConfigSource": "https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/2fc06364715b967f1860aea9cf38778875588b17/config.json",
       "memoryConfigSha256": "b90b86f35c8e6925ef74ee04d0e758f0a845c83a42089ad82bbaa948de9b4204",
       "layers": 24,
       "kvBytesPerToken": 24576,
-      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately."
+      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately.",
+      "performanceEvidence": {
+        "CPU": {
+          "status": "complete",
+          "report": "reports/candidates/qwen35-08b-performance-CPU-2048.json",
+          "configuredContext": 2048
+        },
+        "GPU": {
+          "status": "failed",
+          "report": "reports/candidates/qwen35-08b-performance-GPU-2048.json",
+          "configuredContext": 2048
+        },
+        "AUTO": {
+          "status": "complete",
+          "report": "reports/candidates/qwen35-08b-performance-AUTO-2048.json",
+          "configuredContext": 2048
+        }
+      }
     },
     {
       "id": "qwen35-2b",
@@ -61,15 +129,32 @@
       "revision": "a81697205288c632ca83361206af1e4b07133e76",
       "license": "apache-2.0",
       "file": "Qwen3.5-2B_int8.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
-      "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
+      "validation": "PHYSICAL_PERFORMANCE_MEASURED_WITH_LIMITS",
+      "runtime": "LiteRT-LM 0.18.0; see actual requested/selected backend and output checks in reports",
       "bytes": 2119744416,
       "sha256": "fa4ac3259404567c7f82533746549eed94e2e1c8222095706c63cce17653c68a",
       "memoryConfigSource": "https://huggingface.co/Qwen/Qwen3.5-2B/resolve/15852e8c16360a2fea060d615a32b45270f8a8fc/config.json",
       "memoryConfigSha256": "ed1c1723241f23f7f4e23430759cbd7dcfb4103cbdfe052bfe7626b57c2615b4",
       "layers": 24,
       "kvBytesPerToken": 24576,
-      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately."
+      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately.",
+      "performanceEvidence": {
+        "CPU": {
+          "status": "complete",
+          "report": "reports/candidates/qwen35-2b-performance-CPU-2048.json",
+          "configuredContext": 2048
+        },
+        "GPU": {
+          "status": "failed",
+          "report": "reports/candidates/qwen35-2b-performance-GPU-2048.json",
+          "configuredContext": 2048
+        },
+        "AUTO": {
+          "status": "complete",
+          "report": "reports/candidates/qwen35-2b-performance-AUTO-2048.json",
+          "configuredContext": 2048
+        }
+      }
     },
     {
       "id": "qwen35-4b",
@@ -77,15 +162,32 @@
       "revision": "7242aee4a04fa2ce8899558148aad1dd6afa201a",
       "license": "apache-2.0",
       "file": "Qwen3.5-4B_mixed_int4.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
-      "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
+      "validation": "PHYSICAL_PERFORMANCE_MEASURED_WITH_LIMITS",
+      "runtime": "LiteRT-LM 0.18.0; see actual requested/selected backend and output checks in reports",
       "bytes": 2754070624,
       "sha256": "7243c33c9c6192150ab6da7ac13a9efdc24ff1a653eabc93b2757de4b44b012a",
       "memoryConfigSource": "https://huggingface.co/Qwen/Qwen3.5-4B/resolve/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a/config.json",
       "memoryConfigSha256": "ddc63e1c717afa86c865bb5e01313d89d72bb53b97ad4a8a03ba8510c0621670",
       "layers": 32,
       "kvBytesPerToken": 65536,
-      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately."
+      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately.",
+      "performanceEvidence": {
+        "CPU": {
+          "status": "complete",
+          "report": "reports/candidates/qwen35-4b-performance-CPU-2048.json",
+          "configuredContext": 2048
+        },
+        "GPU": {
+          "status": "not_run",
+          "report": "reports/candidates/qwen35-4b-performance-GPU-2048.json",
+          "configuredContext": null
+        },
+        "AUTO": {
+          "status": "not_run",
+          "report": "reports/candidates/qwen35-4b-performance-AUTO-2048.json",
+          "configuredContext": null
+        }
+      }
     },
     {
       "id": "gemma3-1b",
@@ -93,26 +195,45 @@
       "revision": "d448835d84411a08f577e25f3afebe528402d73b",
       "license": "gemma",
       "file": "gemma3-1b-it-int4.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
+      "validation": "DOWNLOAD_REQUIRES_HUGGING_FACE_AUTHORIZATION",
       "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
       "bytes": 584417280,
-      "sha256": "1325ae366d31950f137c9c357b9fa89448b176d76998180c08ceaca78bba98be"
+      "sha256": "1325ae366d31950f137c9c357b9fa89448b176d76998180c08ceaca78bba98be",
+      "note": "Pinned file returned HTTP 401 anonymously. LiteRT execution not tested; Gemma GGUF remains available."
     },
     {
       "id": "lfm25-26b",
       "repo": "litert-community/LFM2.5-2.6B",
       "revision": "fd806c320e6cefeb6f7834a27d28b967ba3890da",
-      "license": "other",
+      "license": "LFM-Open-License-1.0",
       "file": "LFM2.5-2.6B_int4.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
-      "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
+      "validation": "PHYSICAL_PERFORMANCE_MEASURED_WITH_LIMITS",
+      "runtime": "LiteRT-LM 0.18.0; see actual requested/selected backend and output checks in reports",
       "bytes": 1668151680,
       "sha256": "d18381eaee160ede8703cab577d6dd7ff22933d0765d6d5bb025a7ddd1f6f3b8",
       "memoryConfigSource": "https://huggingface.co/LiquidAI/LFM2.5-2.6B/resolve/654f9463ce32b05d0429d76fe1f580b27d4c1ac0/config.json",
       "memoryConfigSha256": "480f63fa8e1efa534ae8b92774b3b53b8d6812d62a726e9ecfc866933662f273",
       "layers": 30,
       "kvBytesPerToken": 32768,
-      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately."
+      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately.",
+      "performanceEvidence": {
+        "CPU": {
+          "status": "complete",
+          "report": "reports/candidates/lfm25-26b-performance-CPU-2048.json",
+          "configuredContext": 2048
+        },
+        "GPU": {
+          "status": "complete",
+          "report": "reports/candidates/lfm25-26b-performance-GPU-2048.json",
+          "configuredContext": 2048
+        },
+        "AUTO": {
+          "status": "complete",
+          "report": "reports/candidates/lfm25-26b-performance-AUTO-2048.json",
+          "configuredContext": 2048
+        }
+      },
+      "note": "96-token probes exhausted the hidden thought budget and often returned no visible text. Longer-budget evaluation required; not a qualified interactive default."
     },
     {
       "id": "qwen25-05b",
@@ -130,15 +251,32 @@
       "revision": "5e6e7a58d03777898b31330a15d2e0a5a9107de3",
       "license": "apache-2.0",
       "file": "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
-      "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
+      "validation": "PHYSICAL_PERFORMANCE_MEASURED_WITH_LIMITS",
+      "runtime": "LiteRT-LM 0.18.0; see actual requested/selected backend and output checks in reports",
       "bytes": 1597922856,
       "sha256": "c4a9b7289365ab80fe599b844b77ad253eb3c53fb0e5d963d699146a6f01255e",
       "memoryConfigSource": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct/resolve/989aa7980e4cf806f80c7fef2b1adb7bc71aa306/config.json",
       "memoryConfigSha256": "98d2ff8cc47488d08a2b0b3acf4eb99ef210779b42bd48605f6b8e36acdbf670",
       "layers": 28,
       "kvBytesPerToken": 57344,
-      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately."
+      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately.",
+      "performanceEvidence": {
+        "CPU": {
+          "status": "complete",
+          "report": "reports/candidates/qwen25-15b-performance-CPU-2048.json",
+          "configuredContext": 2048
+        },
+        "GPU": {
+          "status": "complete",
+          "report": "reports/candidates/qwen25-15b-performance-GPU-2048.json",
+          "configuredContext": 2048
+        },
+        "AUTO": {
+          "status": "complete",
+          "report": "reports/candidates/qwen25-15b-performance-AUTO-2048.json",
+          "configuredContext": 2048
+        }
+      }
     },
     {
       "id": "phi4-mini",
@@ -146,15 +284,32 @@
       "revision": "8cd368be75fdb94d5a6f6f5b40f1ab22a6c2543e",
       "license": "mit",
       "file": "Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm",
-      "validation": "PENDING_PHYSICAL_DEVICE",
-      "runtime": "LiteRT-LM 0.18.0; actual compatibility must be tested",
+      "validation": "PHYSICAL_PERFORMANCE_MEASURED_WITH_LIMITS",
+      "runtime": "LiteRT-LM 0.18.0; see actual requested/selected backend and output checks in reports",
       "bytes": 3910090752,
       "sha256": "7764d4deb53800578307be33039476b38a6c370fff71bedb3c0552563e23ab02",
       "memoryConfigSource": "https://huggingface.co/microsoft/Phi-4-mini-instruct/resolve/cfbefacb99257ffa30c83adab238a50856ac3083/config.json",
       "memoryConfigSha256": "ac65d86061d3d0d704ee2511fd0eb8713ef19eb6eedba17c3080a4165d5b933b",
       "layers": 32,
       "kvBytesPerToken": 262144,
-      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately."
+      "kvEstimateNote": "Upper-bound FP32 K/V at full-attention layers; runtime/compiler/recurrent overhead budgeted separately.",
+      "performanceEvidence": {
+        "CPU": {
+          "status": "complete",
+          "report": "reports/candidates/phi4-mini-performance-CPU-2048.json",
+          "configuredContext": 2048
+        },
+        "GPU": {
+          "status": "failed",
+          "report": "reports/candidates/phi4-mini-performance-GPU-2048.json",
+          "configuredContext": 2048
+        },
+        "AUTO": {
+          "status": "complete",
+          "report": "reports/candidates/phi4-mini-performance-AUTO-2048.json",
+          "configuredContext": 2048
+        }
+      }
     }
   ]
 }

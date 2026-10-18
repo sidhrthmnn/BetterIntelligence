@@ -70,6 +70,7 @@ FetchContent_Declare(llama
 FetchContent_MakeAvailable(llama)
 target_link_libraries(ggml-vulkan PRIVATE SPIRV-Headers::SPIRV-Headers)
 include(cmake/AndroidCompatibility.cmake)
+include(cmake/VulkanFailureRecovery.cmake)
 add_library(better_gguf SHARED gguf_jni.cpp)
 target_link_libraries(better_gguf PRIVATE llama android log dl)
 target_compile_options(better_gguf PRIVATE -O3)
