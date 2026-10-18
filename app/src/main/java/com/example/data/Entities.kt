@@ -83,7 +83,21 @@ data class ChatMessageEntity(
     val tokensPerSec: Float = 0f,
     val promptTokens: Int = 0,
     val completionTokens: Int = 0,
-    val modelName: String = ""
+    val modelName: String = "",
+    val conversationId: Long = 1L,
+    val sourcesJson: String = "[]",
+    val groundingStatus: String = "LOCAL",
+    val messageState: String = "COMPLETE"
+)
+
+@Entity(tableName = "conversations")
+data class ConversationEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val title: String = "New conversation",
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val draft: String = "",
+    val groundingMode: String = "OFF"
 )
 
 @Entity(tableName = "memory_snippets")

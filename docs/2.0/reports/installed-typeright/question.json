@@ -1,0 +1,26 @@
+{
+  "phase": "polish",
+  "keyboardPackage": "com.aistudio.typerigh2.jkwpzq",
+  "keyboardVersionCode": "215",
+  "biVersionCode": "5",
+  "status": "polish_insert_complete",
+  "case": "question",
+  "modelVerifiedInHostUi": "Gemma4E4B",
+  "selectionStart": 19,
+  "selectionEnd": 19,
+  "editorPopulated": true,
+  "windowTypes": [
+    3,
+    2,
+    1
+  ],
+  "input": "what cab you do nos",
+  "imeWindowExposed": true,
+  "writingToolsExposed": true,
+  "reviewReadyMs": 5369,
+  "uiPollIntervalMs": 50,
+  "observedReviewMarker": "What can you do now?",
+  "output": "What can you do now?",
+  "reviewBeforeInsertion": true,
+  "undoRestoredOriginal": true
+}

@@ -1,0 +1,8 @@
+{
+  "networkDisabledForSyntheticTest": true,
+  "previousWifiEnabled": true,
+  "previousMobileDataEnabled": true,
+  "testPassed": true,
+  "restoredWifiFlag": "1",
+  "restoredMobileDataFlag": "1"
+}

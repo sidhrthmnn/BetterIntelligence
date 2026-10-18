@@ -1,0 +1,27 @@
+{
+  "phase": "polish",
+  "keyboardPackage": "com.aistudio.typerigh2.jkwpzq",
+  "keyboardVersionCode": "215",
+  "biVersionCode": "5",
+  "status": "polish_insert_complete",
+  "case": "selection",
+  "modelVerifiedInHostUi": "Gemma4E4B",
+  "selectedStart": 9,
+  "selectedEnd": 15,
+  "selectionStart": 19,
+  "selectionEnd": 19,
+  "editorPopulated": true,
+  "windowTypes": [
+    3,
+    2,
+    1
+  ],
+  "input": "send the mesage now",
+  "imeWindowExposed": true,
+  "writingToolsExposed": true,
+  "reviewReadyMs": 56292,
+  "uiPollIntervalMs": 50,
+  "output": "send the message now",
+  "reviewBeforeInsertion": true,
+  "undoRestoredOriginal": true
+}

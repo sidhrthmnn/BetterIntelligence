@@ -1,0 +1,16 @@
+# Separate chat review
+
+Physical HONOR, 18 October 2026. Seven model/backend cases each completed the same 12 synthetic chat requests: **84 responses**. The raw `*-chat-*.json` files contain the prompts, criteria, responses, model hashes, runtime/backend and timing. This is qualitative inspection against those criteria, not a blinded human study or a numeric semantic-accuracy score. No private keyboard input was used.
+
+| Package / actual backend | Observations affecting the recommendation |
+| --- | --- |
+| Gemma 4 E2B / LiteRT GPU | Correct £4 arithmetic and requested JSON; preserved the invoice negation; admitted no live-temperature access and did not invent a fictional news URL. Malayalam/Manglish responses were less natural than E4B and sometimes included extra translations. Some answers ignored brevity/table-shape instructions. Asserted an owner in the intentionally ambiguous ownership case. Best practical everyday balance in this cohort, with limitations. |
+| Gemma 4 E4B / LiteRT GPU | Correct arithmetic/JSON and no fabricated live-temperature/news URL. Stronger Malayalam, Manglish and table output in this small set. Still asserted an unsupported ownership interpretation. Higher memory and slower response cost; Advanced choice, not a guarantee of correctness. |
+| Qwen 3 0.6B / LiteRT CPU and GPU | Correct arithmetic/JSON and declined live temperature; no invented URL, although it suggested unsupported public discussion. Weak Malayalam and incorrect table claim that local inference needs internet; assumed Alex owned the ambiguous object. Small download supports the Fast resource tier, with an explicit quality warning. CPU/GPU output differences mean AUTO may conservatively select CPU. |
+| Qwen 2.5 1.5B / LiteRT GPU | Returned £15 instead of £4 for arithmetic; wrapped requested JSON in a code fence; weak Malayalam. Some English tasks were reasonable, but results do not justify replacing the stronger Gemma primary recommendations. Existing downloads remain usable. |
+| Phi-4 Mini / LiteRT CPU | Some good English answers, but JSON fencing, repetitive Malayalam and a Manglish summary reversing the intended meeting/attendance meaning. Slower end-to-end proofreading and GPU memory guard also weigh against a primary mobile recommendation. |
+| Qwen 2.5 0.5B / GGUF CPU | Returned £18 instead of £4, invented current outdoor temperature and a news URL for the deliberately fictional event. Weak Malayalam and reversed table behavior. Retain for compatibility and small-device experiments, outside the primary catalog recommendations. |
+
+The separate 113-case proofreading cohort exposes additional false corrections even for Gemma. E2B is a provisional preferred English-polish model; the tightened actual Binder prompt passes five literal-preservation examples, but the installed TypeRight 2.0 regression is still required. The app must keep review/insertion under user control and must not describe these observations as verified truth or universal model rankings.
+
+Qwen 3.5 hybrids and LFM were not given a fabricated chat/113-case quality score. Their measured fresh-executor latency, memory guards and visible-output limits are recorded separately. Gemma 3 LiteRT needs publisher authorization; the verified Qwen 2.5 0.5B repository has no LiteRT-LM export.

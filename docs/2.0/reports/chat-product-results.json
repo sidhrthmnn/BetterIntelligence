@@ -1,0 +1,68 @@
+[
+  {
+    "scenario": "remember",
+    "text": "OK",
+    "state": "COMPLETE",
+    "grounding": "LOCAL",
+    "sources": []
+  },
+  {
+    "scenario": "same-conversation-recall",
+    "text": "MARIGOLD-47",
+    "state": "COMPLETE",
+    "grounding": "LOCAL",
+    "sources": []
+  },
+  {
+    "scenario": "edit-and-resend",
+    "text": "102",
+    "state": "COMPLETE",
+    "grounding": "LOCAL",
+    "sources": []
+  },
+  {
+    "scenario": "new-conversation-isolation",
+    "text": "unknown",
+    "state": "COMPLETE",
+    "grounding": "LOCAL",
+    "sources": []
+  },
+  {
+    "scenario": "cancelled-stream",
+    "text": "1",
+    "state": "STOPPED",
+    "grounding": "LOCAL",
+    "sources": []
+  },
+  {
+    "scenario": "wikipedia-generated-answer",
+    "text": "The provided source evidence offers information about the Moon.\n\n**Information from the source:**\n\n*   The Moon is the only natural satellite of Earth [1].\n*   It orbits Earth in an elliptical path, with an average distance of about 378,000 kilometers (235,000 mi) [1].\n*   It completes an orbit in relation to the Earth and the Sun (synodically) every 29.5 days [1].\n*   The Moon and Earth are bound by gravitational attraction, which is stronger on the sides facing each other [1].\n*",
+    "state": "LENGTH_LIMIT",
+    "grounding": "EVIDENCE_CITED",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Moon",
+        "url": "https:\/\/en.wikipedia.org\/wiki\/Moon",
+        "excerpt": "The Moon is the only natural satellite of Earth. It orbits Earth in an elliptical path, at a distance that varies over the year, averaging around 378,000 kilometers (235,000 mi). It completes an orbit in relation to Earth and the Sun (synodically) every 29.5 days. The Moon and Earth are bound by gravitational attraction, which is stronger on the sides facing each other. The resulting tidal forces are the main driver of Earth's tides, and have pulled the Moon to always face Earth with the same near side. This tidal locking effectively synchronizes the Moon's rotation period to its orbital period.",
+        "retrievedAt": 1792339260032,
+        "updatedAt": "2026-10-17T08:45:01Z",
+        "kind": "ARTICLE_SUMMARY"
+      }
+    ]
+  },
+  {
+    "scenario": "provider-unavailable",
+    "text": "The capital of France is Paris.",
+    "state": "COMPLETE",
+    "grounding": "SEARCH_FAILED",
+    "sources": []
+  },
+  {
+    "scenario": "web-off",
+    "text": "17",
+    "state": "COMPLETE",
+    "grounding": "LOCAL",
+    "sources": []
+  }
+]

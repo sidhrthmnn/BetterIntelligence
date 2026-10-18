@@ -1,0 +1,24 @@
+{
+  "phase": "polish",
+  "keyboardPackage": "com.aistudio.typerigh2.jkwpzq",
+  "keyboardVersionCode": "215",
+  "biVersionCode": "5",
+  "status": "unchanged_review_complete",
+  "case": "negation",
+  "modelVerifiedInHostUi": "Gemma4E4B",
+  "selectionStart": 25,
+  "selectionEnd": 25,
+  "editorPopulated": true,
+  "windowTypes": [
+    3,
+    2,
+    1
+  ],
+  "input": "Do not delete the backup.",
+  "imeWindowExposed": true,
+  "writingToolsExposed": true,
+  "reviewReadyMs": 63156,
+  "uiPollIntervalMs": 50,
+  "observedReviewMarker": "Do not delete the backup.",
+  "output": "Do not delete the backup."
+}

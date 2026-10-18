@@ -1,0 +1,4516 @@
+{
+  "model": "gemma-4-E4B-it.litertlm",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "GPU",
+  "requestedContext": 2048,
+  "runtime": "LiteRT-LM 0.18.0",
+  "quality": true,
+  "chatQuality": false,
+  "chargingDuringTest": true,
+  "backendPolicy": "litertlm-0.18.0-policy-4",
+  "harnessRevision": "2026-10-18-c",
+  "samples": [
+    {
+      "id": "proof-001",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2241736704,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 885953,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "I recieved your message.",
+        "gold": "I received your message.",
+        "id": "proof-001",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I received your message.",
+      "firstTokenMs": 1132,
+      "tokensPerSecond": 7.802986,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 1335,
+      "after": {
+        "availableRamBytes": 2285875200,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 969767,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 969673
+    },
+    {
+      "id": "proof-002",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2285928448,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 969799,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "Please check the adress.",
+        "gold": "Please check the address.",
+        "id": "proof-002",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Please check the address.",
+      "firstTokenMs": 339,
+      "tokensPerSecond": 18.87045,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 541,
+      "after": {
+        "availableRamBytes": 2296455168,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 972807,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 972711
+    },
+    {
+      "id": "proof-003",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2296455168,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 972831,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "The meeting is tommorow.",
+        "gold": "The meeting is tomorrow.",
+        "id": "proof-003",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "The meeting is tomorrow.",
+      "firstTokenMs": 295,
+      "tokensPerSecond": 18.807894,
+      "inputTokens": 68,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 503,
+      "after": {
+        "availableRamBytes": 2297098240,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 970823,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 972711
+    },
+    {
+      "id": "proof-004",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2297098240,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 970859,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "This is a seperate issue.",
+        "gold": "This is a separate issue.",
+        "id": "proof-004",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "This is a separate issue.",
+      "firstTokenMs": 333,
+      "tokensPerSecond": 18.23724,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 591,
+      "after": {
+        "availableRamBytes": 2300104704,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 976575,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 973787
+    },
+    {
+      "id": "proof-005",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2300104704,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 976615,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "We need more accomodation.",
+        "gold": "We need more accommodation.",
+        "id": "proof-005",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "We need more accommodation.",
+      "firstTokenMs": 299,
+      "tokensPerSecond": 16.387608,
+      "inputTokens": 66,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 539,
+      "after": {
+        "availableRamBytes": 2299875328,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 979651,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 976859
+    },
+    {
+      "id": "proof-006",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2299875328,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 979695,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "I definately agree.",
+        "gold": "I definitely agree.",
+        "id": "proof-006",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I definitely agree.",
+      "firstTokenMs": 283,
+      "tokensPerSecond": 18.066593,
+      "inputTokens": 65,
+      "outputTokens": 5,
+      "actualBackend": "GPU",
+      "durationMs": 449,
+      "after": {
+        "availableRamBytes": 2299600896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 979911,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 979815
+    },
+    {
+      "id": "proof-007",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2299600896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 979955,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "The report is availble now.",
+        "gold": "The report is available now.",
+        "id": "proof-007",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "The report is available now.",
+      "firstTokenMs": 290,
+      "tokensPerSecond": 18.673685,
+      "inputTokens": 67,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 560,
+      "after": {
+        "availableRamBytes": 2352246784,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 986046,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 986006
+    },
+    {
+      "id": "proof-008",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2352246784,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 986094,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "Thank you for your patiance.",
+        "gold": "Thank you for your patience.",
+        "id": "proof-008",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Thank you for your patience.",
+      "firstTokenMs": 279,
+      "tokensPerSecond": 18.474615,
+      "inputTokens": 67,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 549,
+      "after": {
+        "availableRamBytes": 2355961856,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 987442,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 986298
+    },
+    {
+      "id": "proof-009",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2355998720,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 987502,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "Please send the attachement.",
+        "gold": "Please send the attachment.",
+        "id": "proof-009",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Please send the attachment.",
+      "firstTokenMs": 282,
+      "tokensPerSecond": 16.894726,
+      "inputTokens": 67,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 527,
+      "after": {
+        "availableRamBytes": 2343387136,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 990512,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 990512
+    },
+    {
+      "id": "proof-010",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2356166656,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 990576,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "spelling",
+        "input": "This is an important decission.",
+        "gold": "This is an important decision.",
+        "id": "proof-010",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "This is an important decision.",
+      "firstTokenMs": 279,
+      "tokensPerSecond": 19.067665,
+      "inputTokens": 67,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 538,
+      "after": {
+        "availableRamBytes": 2361671680,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 990708,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 990692
+    },
+    {
+      "id": "proof-011",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2362310656,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 990788,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "She don't like coffee.",
+        "gold": "She doesn't like coffee.",
+        "id": "proof-011",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "She doesn't like coffee.",
+      "firstTokenMs": 281,
+      "tokensPerSecond": 19.220507,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 587,
+      "after": {
+        "availableRamBytes": 2363109376,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 993815,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 993799
+    },
+    {
+      "id": "proof-012",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2363109376,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 993899,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "They was waiting outside.",
+        "gold": "They were waiting outside.",
+        "id": "proof-012",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "They were waiting outside.",
+      "firstTokenMs": 277,
+      "tokensPerSecond": 19.192438,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 483,
+      "after": {
+        "availableRamBytes": 2362859520,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 994203,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 994187
+    },
+    {
+      "id": "proof-013",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2362859520,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 994287,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "He have two tickets.",
+        "gold": "He has two tickets.",
+        "id": "proof-013",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "He has two tickets.",
+      "firstTokenMs": 286,
+      "tokensPerSecond": 19.39827,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 491,
+      "after": {
+        "availableRamBytes": 2362179584,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 994487,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 994479
+    },
+    {
+      "id": "proof-014",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2362179584,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 994575,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "I has finished the task.",
+        "gold": "I have finished the task.",
+        "id": "proof-014",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I have finished the task.",
+      "firstTokenMs": 294,
+      "tokensPerSecond": 18.301882,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 553,
+      "after": {
+        "availableRamBytes": 2353606656,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 994823,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 994807
+    },
+    {
+      "id": "proof-015",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2353606656,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 994939,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "We is ready to leave.",
+        "gold": "We are ready to leave.",
+        "id": "proof-015",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "We are ready to leave.",
+      "firstTokenMs": 289,
+      "tokensPerSecond": 18.7375,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 543,
+      "after": {
+        "availableRamBytes": 2353491968,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 995235,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 995219
+    },
+    {
+      "id": "proof-016",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2353491968,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 995351,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "There is three options.",
+        "gold": "There are three options.",
+        "id": "proof-016",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "There are three options.",
+      "firstTokenMs": 288,
+      "tokensPerSecond": 18.263794,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 498,
+      "after": {
+        "availableRamBytes": 2352766976,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 995659,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 995643
+    },
+    {
+      "id": "proof-017",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2352766976,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 995795,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "The files was uploaded.",
+        "gold": "The files were uploaded.",
+        "id": "proof-017",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "The files were uploaded.",
+      "firstTokenMs": 274,
+      "tokensPerSecond": 18.623632,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 492,
+      "after": {
+        "availableRamBytes": 2351644672,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 993061,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 995643
+    },
+    {
+      "id": "proof-018",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2351644672,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 993201,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "She go to work by bus.",
+        "gold": "She goes to work by bus.",
+        "id": "proof-018",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "She goes to work by bus.",
+      "firstTokenMs": 280,
+      "tokensPerSecond": 18.562267,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 601,
+      "after": {
+        "availableRamBytes": 2343362560,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 993554,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 995643
+    },
+    {
+      "id": "proof-019",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2343362560,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 993702,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "He did not went home.",
+        "gold": "He did not go home.",
+        "id": "proof-019",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "He did not go home.",
+      "firstTokenMs": 281,
+      "tokensPerSecond": 18.27737,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 553,
+      "after": {
+        "availableRamBytes": 2343378944,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 993914,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 995643
+    },
+    {
+      "id": "proof-020",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2343378944,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 994058,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "grammar",
+        "input": "I am agree with you.",
+        "gold": "I agree with you.",
+        "id": "proof-020",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I agree with you.",
+      "firstTokenMs": 282,
+      "tokensPerSecond": 17.866383,
+      "inputTokens": 66,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 505,
+      "after": {
+        "availableRamBytes": 2343362560,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 994258,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 995643
+    },
+    {
+      "id": "proof-021",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2343362560,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 994406,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "Its raining outside.",
+        "gold": "It's raining outside.",
+        "id": "proof-021",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "It's raining outside.",
+      "firstTokenMs": 300,
+      "tokensPerSecond": 18.977903,
+      "inputTokens": 64,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 557,
+      "after": {
+        "availableRamBytes": 2343030784,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 997406,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 997374
+    },
+    {
+      "id": "proof-022",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2343030784,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 997656,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "Lets begin the meeting.",
+        "gold": "Let's begin the meeting.",
+        "id": "proof-022",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Let's begin the meeting.",
+      "firstTokenMs": 284,
+      "tokensPerSecond": 19.136532,
+      "inputTokens": 65,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 590,
+      "after": {
+        "availableRamBytes": 2330464256,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 998272,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 998228
+    },
+    {
+      "id": "proof-023",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2330464256,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 998428,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "Dont close the window.",
+        "gold": "Don't close the window.",
+        "id": "proof-023",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Don't close the window.",
+      "firstTokenMs": 319,
+      "tokensPerSecond": 18.460762,
+      "inputTokens": 65,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 642,
+      "after": {
+        "availableRamBytes": 2340982784,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1001552,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 1001536
+    },
+    {
+      "id": "proof-024",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2340982784,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1001716,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "Where are you going",
+        "gold": "Where are you going?",
+        "id": "proof-024",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Where are you going?",
+      "firstTokenMs": 275,
+      "tokensPerSecond": 19.10218,
+      "inputTokens": 64,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 485,
+      "after": {
+        "availableRamBytes": 2340724736,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1002052,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 1002036
+    },
+    {
+      "id": "proof-025",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2340728832,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1002216,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "Can you send the file",
+        "gold": "Can you send the file?",
+        "id": "proof-025",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Can you send the file?",
+      "firstTokenMs": 278,
+      "tokensPerSecond": 19.23446,
+      "inputTokens": 65,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 537,
+      "after": {
+        "availableRamBytes": 2315337728,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1002280,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 1002420
+    },
+    {
+      "id": "proof-026",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2306519040,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1002435,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "I cant attend today.",
+        "gold": "I can't attend today.",
+        "id": "proof-026",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I can't attend today.",
+      "firstTokenMs": 286,
+      "tokensPerSecond": 19.316559,
+      "inputTokens": 65,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 597,
+      "after": {
+        "availableRamBytes": 2310520832,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1002743,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 1002707
+    },
+    {
+      "id": "proof-027",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2310520832,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1002911,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "Youre welcome.",
+        "gold": "You're welcome.",
+        "id": "proof-027",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "You're welcome.",
+      "firstTokenMs": 290,
+      "tokensPerSecond": 19.412588,
+      "inputTokens": 64,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 494,
+      "after": {
+        "availableRamBytes": 2310242304,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 999471,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "peakProcessPssKb": 1002707
+    },
+    {
+      "id": "proof-028",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2309976064,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 999647,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2234
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "Thats a good idea.",
+        "gold": "That's a good idea.",
+        "id": "proof-028",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "That's a good idea.",
+      "firstTokenMs": 331,
+      "tokensPerSecond": 19.12198,
+      "inputTokens": 65,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 638,
+      "after": {
+        "availableRamBytes": 2313588736,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1002779,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1002739
+    },
+    {
+      "id": "proof-029",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2313588736,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1002951,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "Weve already paid.",
+        "gold": "We've already paid.",
+        "id": "proof-029",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "We've already paid.",
+      "firstTokenMs": 293,
+      "tokensPerSecond": 18.790848,
+      "inputTokens": 65,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 555,
+      "after": {
+        "availableRamBytes": 2313703424,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1003223,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1003207
+    },
+    {
+      "id": "proof-030",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2313703424,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1003403,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "punctuation",
+        "input": "Please bring bread milk and eggs.",
+        "gold": "Please bring bread, milk, and eggs.",
+        "id": "proof-030",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Please bring bread, milk, and eggs.",
+      "firstTokenMs": 295,
+      "tokensPerSecond": 19.254913,
+      "inputTokens": 67,
+      "outputTokens": 10,
+      "actualBackend": "GPU",
+      "durationMs": 704,
+      "after": {
+        "availableRamBytes": 2313265152,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1003874,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1003839
+    },
+    {
+      "id": "proof-031",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2313265152,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1004062,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "joined_words",
+        "input": "I willcall you tomorrow.",
+        "gold": "I will call you tomorrow.",
+        "id": "proof-031",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I will call you tomorrow.",
+      "firstTokenMs": 288,
+      "tokensPerSecond": 18.996037,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 546,
+      "after": {
+        "availableRamBytes": 2327101440,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1004282,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1004262
+    },
+    {
+      "id": "proof-032",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2327101440,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1004470,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "joined_words",
+        "input": "Please sendme the file.",
+        "gold": "Please send me the file.",
+        "id": "proof-032",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Please send me the file.",
+      "firstTokenMs": 296,
+      "tokensPerSecond": 18.915073,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 553,
+      "after": {
+        "availableRamBytes": 2326605824,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1004784,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1004744
+    },
+    {
+      "id": "proof-033",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2326605824,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1004972,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "joined_words",
+        "input": "We aregoing home.",
+        "gold": "We are going home.",
+        "id": "proof-033",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "We are going home.",
+      "firstTokenMs": 296,
+      "tokensPerSecond": 18.946554,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 500,
+      "after": {
+        "availableRamBytes": 2326253568,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1005268,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1005228
+    },
+    {
+      "id": "proof-034",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2326253568,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1005502,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "joined_words",
+        "input": "Thisis my notebook.",
+        "gold": "This is my notebook.",
+        "id": "proof-034",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "This is my notebook.",
+      "firstTokenMs": 297,
+      "tokensPerSecond": 18.906998,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 503,
+      "after": {
+        "availableRamBytes": 2323939328,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1008373,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1008334
+    },
+    {
+      "id": "proof-035",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2323939328,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1008613,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "joined_words",
+        "input": "Can youhelp me?",
+        "gold": "Can you help me?",
+        "id": "proof-035",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Can you help me?",
+      "firstTokenMs": 293,
+      "tokensPerSecond": 18.243008,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 498,
+      "after": {
+        "availableRamBytes": 2323410944,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1008965,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1008925
+    },
+    {
+      "id": "proof-036",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2323152896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1006905,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "joined_words",
+        "input": "I donot agree.",
+        "gold": "I do not agree.",
+        "id": "proof-036",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I do not agree.",
+      "firstTokenMs": 282,
+      "tokensPerSecond": 18.168505,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 500,
+      "after": {
+        "availableRamBytes": 2321960960,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1005609,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1008925
+    },
+    {
+      "id": "proof-037",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2322563072,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1005861,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "joined_words",
+        "input": "She willbe here soon.",
+        "gold": "She will be here soon.",
+        "id": "proof-037",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "She will be here soon.",
+      "firstTokenMs": 289,
+      "tokensPerSecond": 17.95303,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 561,
+      "after": {
+        "availableRamBytes": 2321436672,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1006174,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1008925
+    },
+    {
+      "id": "proof-038",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2321436672,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1006426,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "joined_words",
+        "input": "They arewaiting outside.",
+        "gold": "They are waiting outside.",
+        "id": "proof-038",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "They are waiting outside.",
+      "firstTokenMs": 281,
+      "tokensPerSecond": 18.208864,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 501,
+      "after": {
+        "availableRamBytes": 2320207872,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1009481,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1009481
+    },
+    {
+      "id": "proof-039",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2320207872,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1009733,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "nearby_keys",
+        "input": "I will be therr soon.",
+        "gold": "I will be there soon.",
+        "id": "proof-039",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I will be there soon.",
+      "firstTokenMs": 280,
+      "tokensPerSecond": 18.33636,
+      "inputTokens": 67,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 550,
+      "after": {
+        "availableRamBytes": 2319097856,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1010045,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1010037
+    },
+    {
+      "id": "proof-040",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2319097856,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1010301,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "nearby_keys",
+        "input": "Please senf the report.",
+        "gold": "Please send the report.",
+        "id": "proof-040",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Please send the report.",
+      "firstTokenMs": 280,
+      "tokensPerSecond": 19.022657,
+      "inputTokens": 66,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 492,
+      "after": {
+        "availableRamBytes": 2319007744,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1010669,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1010657
+    },
+    {
+      "id": "proof-041",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2319007744,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1010929,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "nearby_keys",
+        "input": "We need to talj today.",
+        "gold": "We need to talk today.",
+        "id": "proof-041",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "We need to talk today.",
+      "firstTokenMs": 292,
+      "tokensPerSecond": 19.065794,
+      "inputTokens": 67,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 549,
+      "after": {
+        "availableRamBytes": 2317729792,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1011313,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1011305
+    },
+    {
+      "id": "proof-042",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2317729792,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1011577,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "nearby_keys",
+        "input": "The meeting starts at ninr.",
+        "gold": "The meeting starts at nine.",
+        "id": "proof-042",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "The meeting starts at nine.",
+      "firstTokenMs": 286,
+      "tokensPerSecond": 19.48625,
+      "inputTokens": 67,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 542,
+      "after": {
+        "availableRamBytes": 2316644352,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1008133,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1011917
+    },
+    {
+      "id": "proof-043",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2316644352,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1008401,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "nearby_keys",
+        "input": "I csn help you.",
+        "gold": "I can help you.",
+        "id": "proof-043",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I can help you.",
+      "firstTokenMs": 284,
+      "tokensPerSecond": 19.678694,
+      "inputTokens": 66,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 486,
+      "after": {
+        "availableRamBytes": 2323054592,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1008781,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1011917
+    },
+    {
+      "id": "proof-044",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2323054592,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1009049,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "nearby_keys",
+        "input": "Thank yoi for coming.",
+        "gold": "Thank you for coming.",
+        "id": "proof-044",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Thank you for coming.",
+      "firstTokenMs": 294,
+      "tokensPerSecond": 18.2237,
+      "inputTokens": 66,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 498,
+      "after": {
+        "availableRamBytes": 2322284544,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1009357,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "peakProcessPssKb": 1011917
+    },
+    {
+      "id": "proof-045",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2322018304,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1009629,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2232
+      },
+      "status": "complete",
+      "case": {
+        "category": "nearby_keys",
+        "input": "Please checj this file.",
+        "gold": "Please check this file.",
+        "id": "proof-045",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Please check this file.",
+      "firstTokenMs": 283,
+      "tokensPerSecond": 17.685907,
+      "inputTokens": 66,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 513,
+      "after": {
+        "availableRamBytes": 2320433152,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1012729,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1012717
+    },
+    {
+      "id": "proof-046",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2320166912,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1013005,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "nearby_keys",
+        "input": "This is a goof example.",
+        "gold": "This is a good example.",
+        "id": "proof-046",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "This is a good example.",
+      "firstTokenMs": 312,
+      "tokensPerSecond": 18.728603,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 580,
+      "after": {
+        "availableRamBytes": 2319482880,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1016157,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1016141
+    },
+    {
+      "id": "proof-047",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2319482880,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1016437,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "proper_names",
+        "input": "Anjali recieved the report.",
+        "gold": "Anjali received the report.",
+        "id": "proof-047",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Anjali received the report.",
+      "firstTokenMs": 275,
+      "tokensPerSecond": 19.24403,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 536,
+      "after": {
+        "availableRamBytes": 2294882304,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1019522,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1019502
+    },
+    {
+      "id": "proof-048",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2294882304,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1019806,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "proper_names",
+        "input": "Sidharth have the tickets.",
+        "gold": "Sidharth has the tickets.",
+        "id": "proof-048",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Sidharth has the tickets.",
+      "firstTokenMs": 273,
+      "tokensPerSecond": 18.839214,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 594,
+      "after": {
+        "availableRamBytes": 2294317056,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1020162,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1020130
+    },
+    {
+      "id": "proof-049",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2294317056,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1020450,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "proper_names",
+        "input": "Kochi is a beautiful city.",
+        "gold": "Kochi is a beautiful city.",
+        "id": "proof-049",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Kochi is a beautiful city.",
+      "firstTokenMs": 282,
+      "tokensPerSecond": 18.71636,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 600,
+      "after": {
+        "availableRamBytes": 2293714944,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1019594,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1023562
+    },
+    {
+      "id": "proof-050",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2293624832,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1019886,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "proper_names",
+        "input": "Dr. Nair will arrive at 10:30.",
+        "gold": "Dr. Nair will arrive at 10:30.",
+        "id": "proof-050",
+        "unchanged": true,
+        "mustPreserve": [
+          "10:30"
+        ]
+      },
+      "response": "Dr. Nair will arrive at 10:30.",
+      "firstTokenMs": 311,
+      "tokensPerSecond": 18.982126,
+      "inputTokens": 73,
+      "outputTokens": 14,
+      "actualBackend": "GPU",
+      "durationMs": 938,
+      "after": {
+        "availableRamBytes": 2298150912,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1025862,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1025838
+    },
+    {
+      "id": "proof-051",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2298150912,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1026154,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "technical",
+        "input": "The Kotlin coroutine was cancelled.",
+        "gold": "The Kotlin coroutine was cancelled.",
+        "id": "proof-051",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "The Kotlin coroutine was cancelled.",
+      "firstTokenMs": 297,
+      "tokensPerSecond": 19.256767,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 603,
+      "after": {
+        "availableRamBytes": 2296594432,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1034770,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1034738
+    },
+    {
+      "id": "proof-052",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2296594432,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1035070,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "technical",
+        "input": "Please dont rename user_id.",
+        "gold": "Please don't rename user_id.",
+        "id": "proof-052",
+        "unchanged": false,
+        "mustPreserve": [
+          "user_id"
+        ]
+      },
+      "response": "Please don't rename user_id.",
+      "firstTokenMs": 325,
+      "tokensPerSecond": 18.765043,
+      "inputTokens": 67,
+      "outputTokens": 10,
+      "actualBackend": "GPU",
+      "durationMs": 745,
+      "after": {
+        "availableRamBytes": 2294206464,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1038270,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1038246
+    },
+    {
+      "id": "proof-053",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2294206464,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1038570,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "technical",
+        "input": "The API return HTTP 429.",
+        "gold": "The API returns HTTP 429.",
+        "id": "proof-053",
+        "unchanged": false,
+        "mustPreserve": [
+          "HTTP 429"
+        ]
+      },
+      "response": "The API returned HTTP 429.",
+      "firstTokenMs": 284,
+      "tokensPerSecond": 18.583254,
+      "inputTokens": 69,
+      "outputTokens": 10,
+      "actualBackend": "GPU",
+      "durationMs": 708,
+      "after": {
+        "availableRamBytes": 2292797440,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1039146,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1039134
+    },
+    {
+      "id": "proof-054",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2292797440,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1039446,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "technical",
+        "input": "Use Qwen3.5-4B with LiteRT-LM.",
+        "gold": "Use Qwen3.5-4B with LiteRT-LM.",
+        "id": "proof-054",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "I went to the market yesterday. I bought some fruits and vegetables. The weather was very nice. I also bought some snacks for my family.",
+      "firstTokenMs": 285,
+      "tokensPerSecond": 18.89086,
+      "inputTokens": 75,
+      "outputTokens": 30,
+      "actualBackend": "GPU",
+      "durationMs": 1761,
+      "after": {
+        "availableRamBytes": 2292260864,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1048442,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1048418
+    },
+    {
+      "id": "proof-055",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2291941376,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1046378,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "technical",
+        "input": "The SHA-256 checksum matches.",
+        "gold": "The SHA-256 checksum matches.",
+        "id": "proof-055",
+        "unchanged": true,
+        "mustPreserve": [
+          "SHA-256"
+        ]
+      },
+      "response": "The SHA-256 checksum matches.",
+      "firstTokenMs": 292,
+      "tokensPerSecond": 18.633463,
+      "inputTokens": 69,
+      "outputTokens": 10,
+      "actualBackend": "GPU",
+      "durationMs": 709,
+      "after": {
+        "availableRamBytes": 2288640000,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1052018,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1052006
+    },
+    {
+      "id": "proof-056",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2288640000,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1052330,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "technical",
+        "input": "Keep com.example.demo unchanged.",
+        "gold": "Keep com.example.demo unchanged.",
+        "id": "proof-056",
+        "unchanged": true,
+        "mustPreserve": [
+          "com.example.demo"
+        ]
+      },
+      "response": "Keep com.example.demo unchanged.",
+      "firstTokenMs": 283,
+      "tokensPerSecond": 18.515696,
+      "inputTokens": 68,
+      "outputTokens": 9,
+      "actualBackend": "GPU",
+      "durationMs": 658,
+      "after": {
+        "availableRamBytes": 2282496000,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1058222,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "peakProcessPssKb": 1058190
+    },
+    {
+      "id": "proof-057",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2282229760,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1058538,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2227
+      },
+      "status": "complete",
+      "case": {
+        "category": "numeric_literals",
+        "input": "The invoice total are £1,204.50.",
+        "gold": "The invoice total is £1,204.50.",
+        "id": "proof-057",
+        "unchanged": false,
+        "mustPreserve": [
+          "£1,204.50"
+        ]
+      },
+      "response": "The invoice total is £1,204.50.",
+      "firstTokenMs": 297,
+      "tokensPerSecond": 18.743979,
+      "inputTokens": 74,
+      "outputTokens": 15,
+      "actualBackend": "GPU",
+      "durationMs": 972,
+      "after": {
+        "availableRamBytes": 2281082880,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1061878,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1061866
+    },
+    {
+      "id": "proof-058",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2281082880,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1062258,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "numeric_literals",
+        "input": "Version 2.0.1 have a fix.",
+        "gold": "Version 2.0.1 has a fix.",
+        "id": "proof-058",
+        "unchanged": false,
+        "mustPreserve": [
+          "2.0.1"
+        ]
+      },
+      "response": "Version 2.0.1 has a fix.",
+      "firstTokenMs": 285,
+      "tokensPerSecond": 18.755293,
+      "inputTokens": 71,
+      "outputTokens": 12,
+      "actualBackend": "GPU",
+      "durationMs": 808,
+      "after": {
+        "availableRamBytes": 2408857600,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1062482,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1062678
+    },
+    {
+      "id": "proof-059",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2396344320,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1062874,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "numeric_literals",
+        "input": "Order AB-1049 was recieved.",
+        "gold": "Order AB-1049 was received.",
+        "id": "proof-059",
+        "unchanged": false,
+        "mustPreserve": [
+          "AB-1049"
+        ]
+      },
+      "response": "Order AB-1049 was received.",
+      "firstTokenMs": 277,
+      "tokensPerSecond": 18.95364,
+      "inputTokens": 70,
+      "outputTokens": 11,
+      "actualBackend": "GPU",
+      "durationMs": 751,
+      "after": {
+        "availableRamBytes": 2395013120,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1063446,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1063446
+    },
+    {
+      "id": "proof-060",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2395013120,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1063838,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "numeric_literals",
+        "input": "The reading is -12.5 °C.",
+        "gold": "The reading is -12.5 °C.",
+        "id": "proof-060",
+        "unchanged": true,
+        "mustPreserve": [
+          "12.5"
+        ]
+      },
+      "response": "The reading is -12.5 °C.",
+      "firstTokenMs": 295,
+      "tokensPerSecond": 18.93444,
+      "inputTokens": 71,
+      "outputTokens": 12,
+      "actualBackend": "GPU",
+      "durationMs": 819,
+      "after": {
+        "availableRamBytes": 2393563136,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1060274,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1063446
+    },
+    {
+      "id": "proof-061",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2393296896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1060670,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "numeric_literals",
+        "input": "I paid 5.25, not 52.50.",
+        "gold": "I paid 5.25, not 52.50.",
+        "id": "proof-061",
+        "unchanged": true,
+        "mustPreserve": [
+          "5.25",
+          "52.50"
+        ]
+      },
+      "response": "I paid 5.25, not 52.50.",
+      "firstTokenMs": 280,
+      "tokensPerSecond": 19.061739,
+      "inputTokens": 76,
+      "outputTokens": 17,
+      "actualBackend": "GPU",
+      "durationMs": 1061,
+      "after": {
+        "availableRamBytes": 2386448384,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1061206,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1063446
+    },
+    {
+      "id": "proof-062",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2386182144,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1061602,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "numeric_literals",
+        "input": "Meet on 2026-10-18 at 09:15.",
+        "gold": "Meet on 2026-10-18 at 09:15.",
+        "id": "proof-062",
+        "unchanged": true,
+        "mustPreserve": [
+          "2026-10-18",
+          "09:15"
+        ]
+      },
+      "response": "Meet on 2026-10-18 at 09:15.",
+      "firstTokenMs": 310,
+      "tokensPerSecond": 18.826677,
+      "inputTokens": 81,
+      "outputTokens": 22,
+      "actualBackend": "GPU",
+      "durationMs": 1363,
+      "after": {
+        "availableRamBytes": 2381189120,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1065265,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1065265
+    },
+    {
+      "id": "proof-063",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2380922880,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1065673,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "negation",
+        "input": "I do not wants a refund.",
+        "gold": "I do not want a refund.",
+        "id": "proof-063",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I do not want a refund.",
+      "firstTokenMs": 287,
+      "tokensPerSecond": 18.292664,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 608,
+      "after": {
+        "availableRamBytes": 2379759616,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1068977,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1068961
+    },
+    {
+      "id": "proof-064",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2379493376,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1069389,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "negation",
+        "input": "She has not recieved it.",
+        "gold": "She has not received it.",
+        "id": "proof-064",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "She has not received it.",
+      "firstTokenMs": 273,
+      "tokensPerSecond": 18.397799,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 551,
+      "after": {
+        "availableRamBytes": 2378399744,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1069857,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1069833
+    },
+    {
+      "id": "proof-065",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2377867264,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1070833,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "negation",
+        "input": "Do not delete the backup.",
+        "gold": "Do not delete the backup.",
+        "id": "proof-065",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Do not delete the backup.",
+      "firstTokenMs": 286,
+      "tokensPerSecond": 17.96414,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 562,
+      "after": {
+        "availableRamBytes": 2369007616,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1066853,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1069833
+    },
+    {
+      "id": "proof-066",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2369007616,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1067349,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "negation",
+        "input": "We never approved this change.",
+        "gold": "We never approved this change.",
+        "id": "proof-066",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "We never approved this change.",
+      "firstTokenMs": 282,
+      "tokensPerSecond": 19.159332,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 536,
+      "after": {
+        "availableRamBytes": 2369011712,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1068033,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1069833
+    },
+    {
+      "id": "proof-067",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2369011712,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1068533,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "negation",
+        "input": "He did not said yes.",
+        "gold": "He did not say yes.",
+        "id": "proof-067",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "He did not say yes.",
+      "firstTokenMs": 281,
+      "tokensPerSecond": 19.065516,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 537,
+      "after": {
+        "availableRamBytes": 2368536576,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1069156,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1069833
+    },
+    {
+      "id": "proof-068",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2368536576,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1069660,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "negation",
+        "input": "The service must not use the cloud.",
+        "gold": "The service must not use the cloud.",
+        "id": "proof-068",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "The service must not use the cloud.",
+      "firstTokenMs": 286,
+      "tokensPerSecond": 18.410988,
+      "inputTokens": 68,
+      "outputTokens": 9,
+      "actualBackend": "GPU",
+      "durationMs": 663,
+      "after": {
+        "availableRamBytes": 2374676480,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1070238,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1070222
+    },
+    {
+      "id": "proof-069",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2374676480,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1070618,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "questions",
+        "input": "Does she knows the answer?",
+        "gold": "Does she know the answer?",
+        "id": "proof-069",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Does she know the answer?",
+      "firstTokenMs": 275,
+      "tokensPerSecond": 19.634491,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 528,
+      "after": {
+        "availableRamBytes": 2374733824,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1069622,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1070222
+    },
+    {
+      "id": "proof-070",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2374733824,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1070138,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "status": "complete",
+      "case": {
+        "category": "questions",
+        "input": "Where did you went?",
+        "gold": "Where did you go?",
+        "id": "proof-070",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Where did you go?",
+      "firstTokenMs": 274,
+      "tokensPerSecond": 19.072937,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 484,
+      "after": {
+        "availableRamBytes": 2382454784,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1070674,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2224
+      },
+      "peakProcessPssKb": 1070670
+    },
+    {
+      "id": "proof-071",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2384273408,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1071190,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "questions",
+        "input": "Why is the files missing?",
+        "gold": "Why are the files missing?",
+        "id": "proof-071",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Why are the files missing?",
+      "firstTokenMs": 285,
+      "tokensPerSecond": 19.60454,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 539,
+      "after": {
+        "availableRamBytes": 2384089088,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1071834,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1071818
+    },
+    {
+      "id": "proof-072",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2383863808,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1072356,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "questions",
+        "input": "Can we reschedule the meeting?",
+        "gold": "Can we reschedule the meeting?",
+        "id": "proof-072",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Can we reschedule the meeting?",
+      "firstTokenMs": 329,
+      "tokensPerSecond": 18.735605,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 590,
+      "after": {
+        "availableRamBytes": 2382598144,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1075688,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1075652
+    },
+    {
+      "id": "proof-073",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2382598144,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1076208,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "questions",
+        "input": "Are you sure this is correct?",
+        "gold": "Are you sure this is correct?",
+        "id": "proof-073",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Are you sure this is correct?",
+      "firstTokenMs": 295,
+      "tokensPerSecond": 19.21478,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 600,
+      "after": {
+        "availableRamBytes": 2381520896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1072236,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1075652
+    },
+    {
+      "id": "proof-074",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2381520896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1072772,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "questions",
+        "input": "Who have the key?",
+        "gold": "Who has the key?",
+        "id": "proof-074",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "Who has the key?",
+      "firstTokenMs": 295,
+      "tokensPerSecond": 19.103853,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 498,
+      "after": {
+        "availableRamBytes": 2377216000,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1073394,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1075652
+    },
+    {
+      "id": "proof-075",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2376957952,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1073930,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "already_correct",
+        "input": "Please let me know when you arrive.",
+        "gold": "Please let me know when you arrive.",
+        "id": "proof-075",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Please let me know when you arrive.",
+      "firstTokenMs": 294,
+      "tokensPerSecond": 18.964636,
+      "inputTokens": 68,
+      "outputTokens": 9,
+      "actualBackend": "GPU",
+      "durationMs": 657,
+      "after": {
+        "availableRamBytes": 2376167424,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1074570,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1075652
+    },
+    {
+      "id": "proof-076",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2376167424,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1075106,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "already_correct",
+        "input": "I appreciate your help.",
+        "gold": "I appreciate your help.",
+        "id": "proof-076",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "I appreciate your help.",
+      "firstTokenMs": 293,
+      "tokensPerSecond": 19.274244,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 494,
+      "after": {
+        "availableRamBytes": 2373767168,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1075758,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1075738
+    },
+    {
+      "id": "proof-077",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2373500928,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1076306,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "already_correct",
+        "input": "The train leaves at six.",
+        "gold": "The train leaves at six.",
+        "id": "proof-077",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "The train leaves at six.",
+      "firstTokenMs": 286,
+      "tokensPerSecond": 19.404129,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 544,
+      "after": {
+        "availableRamBytes": 2372481024,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1072406,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1075738
+    },
+    {
+      "id": "proof-078",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2372214784,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1072958,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "already_correct",
+        "input": "Could you clarify the last point?",
+        "gold": "Could you clarify the last point?",
+        "id": "proof-078",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Could you clarify the last point?",
+      "firstTokenMs": 294,
+      "tokensPerSecond": 18.765026,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 600,
+      "after": {
+        "availableRamBytes": 2371952640,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1079078,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1079046
+    },
+    {
+      "id": "proof-079",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2371420160,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1079634,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "already_correct",
+        "input": "We should review the results before publishing.",
+        "gold": "We should review the results before publishing.",
+        "id": "proof-079",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "We should review the results before publishing.",
+      "firstTokenMs": 294,
+      "tokensPerSecond": 19.237925,
+      "inputTokens": 68,
+      "outputTokens": 9,
+      "actualBackend": "GPU",
+      "durationMs": 650,
+      "after": {
+        "availableRamBytes": 2370469888,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1080330,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1080318
+    },
+    {
+      "id": "proof-080",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2370203648,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1080882,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "already_correct",
+        "input": "Neither option is suitable.",
+        "gold": "Neither option is suitable.",
+        "id": "proof-080",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Neither option is suitable.",
+      "firstTokenMs": 288,
+      "tokensPerSecond": 19.395437,
+      "inputTokens": 65,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 492,
+      "after": {
+        "availableRamBytes": 2369695744,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1084250,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1084238
+    },
+    {
+      "id": "proof-081",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2369429504,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1084818,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "short",
+        "input": "Thanks!",
+        "gold": "Thanks!",
+        "id": "proof-081",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Thanks!",
+      "firstTokenMs": 291,
+      "tokensPerSecond": 18.579016,
+      "inputTokens": 62,
+      "outputTokens": 3,
+      "actualBackend": "GPU",
+      "durationMs": 344,
+      "after": {
+        "availableRamBytes": 2370732032,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1081150,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1084238
+    },
+    {
+      "id": "proof-082",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2370199552,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1081722,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "short",
+        "input": "See you soon.",
+        "gold": "See you soon.",
+        "id": "proof-082",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "See you soon.",
+      "firstTokenMs": 279,
+      "tokensPerSecond": 17.523338,
+      "inputTokens": 64,
+      "outputTokens": 5,
+      "actualBackend": "GPU",
+      "durationMs": 454,
+      "after": {
+        "availableRamBytes": 2369957888,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1082398,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1084238
+    },
+    {
+      "id": "proof-083",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2369691648,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1082974,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "short",
+        "input": "Im late.",
+        "gold": "I'm late.",
+        "id": "proof-083",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I'm late.",
+      "firstTokenMs": 270,
+      "tokensPerSecond": 19.506298,
+      "inputTokens": 63,
+      "outputTokens": 6,
+      "actualBackend": "GPU",
+      "durationMs": 475,
+      "after": {
+        "availableRamBytes": 2368929792,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1083612,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1084238
+    },
+    {
+      "id": "proof-084",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2368131072,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1084188,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "short",
+        "input": "Yes, please.",
+        "gold": "Yes, please.",
+        "id": "proof-084",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Yes, please.",
+      "firstTokenMs": 281,
+      "tokensPerSecond": 18.740652,
+      "inputTokens": 64,
+      "outputTokens": 5,
+      "actualBackend": "GPU",
+      "durationMs": 436,
+      "after": {
+        "availableRamBytes": 2367111168,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1084820,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1084784
+    },
+    {
+      "id": "proof-085",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2366578688,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1085400,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 300,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "ഞാൻ നാളെ വരാം.",
+        "gold": "ഞാൻ നാളെ വരാം.",
+        "id": "proof-085",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "ഞാൻ നാളെ വരാം.",
+      "firstTokenMs": 292,
+      "tokensPerSecond": 19.422977,
+      "inputTokens": 68,
+      "outputTokens": 9,
+      "actualBackend": "GPU",
+      "durationMs": 650,
+      "after": {
+        "availableRamBytes": 2366517248,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1086824,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1086800
+    },
+    {
+      "id": "proof-086",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2365984768,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1087596,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "എനിക്ക് ഇന്ന് വരാൻ കഴിയില്ല.",
+        "gold": "എനിക്ക് ഇന്ന് വരാൻ കഴിയില്ല.",
+        "id": "proof-086",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "എനിക്ക് ഇന്ന് വരാൻ കഴിയില്ല.",
+      "firstTokenMs": 343,
+      "tokensPerSecond": 18.964888,
+      "inputTokens": 70,
+      "outputTokens": 11,
+      "actualBackend": "GPU",
+      "durationMs": 813,
+      "after": {
+        "availableRamBytes": 2370789376,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1099424,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2217
+      },
+      "peakProcessPssKb": 1099400
+    },
+    {
+      "id": "proof-087",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2370256896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1100204,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2217
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "നിങ്ങൾ എവിടെയാണ്?",
+        "gold": "നിങ്ങൾ എവിടെയാണ്?",
+        "id": "proof-087",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "നിങ്ങൾ എവിടെയാണ്?",
+      "firstTokenMs": 281,
+      "tokensPerSecond": 18.542204,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 549,
+      "after": {
+        "availableRamBytes": 2369265664,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1104020,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1103996
+    },
+    {
+      "id": "proof-088",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2368466944,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1104928,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "ദയവായി റിപ്പോർട്ട് അയയ്ക്കുക.",
+        "gold": "ദയവായി റിപ്പോർട്ട് അയയ്ക്കുക.",
+        "id": "proof-088",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "ദയവായി റിപ്പോർട്ട് അയയ്ക്കുക.",
+      "firstTokenMs": 338,
+      "tokensPerSecond": 18.541931,
+      "inputTokens": 71,
+      "outputTokens": 12,
+      "actualBackend": "GPU",
+      "durationMs": 872,
+      "after": {
+        "availableRamBytes": 2371731456,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1110056,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1110012
+    },
+    {
+      "id": "proof-089",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2371727360,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1110848,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "നാളെ രാവിലെ കാണാം.",
+        "gold": "നാളെ രാവിലെ കാണാം.",
+        "id": "proof-089",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "നാളെ രാവിലെ കാണാം.",
+      "firstTokenMs": 290,
+      "tokensPerSecond": 18.908077,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 544,
+      "after": {
+        "availableRamBytes": 2370469888,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1114308,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1114268
+    },
+    {
+      "id": "proof-090",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2369937408,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1115108,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "ഞാൻ ഇത് അംഗീകരിച്ചിട്ടില്ല.",
+        "gold": "ഞാൻ ഇത് അംഗീകരിച്ചിട്ടില്ല.",
+        "id": "proof-090",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "ഞാൻ ഇത് അംഗീകരിച്ചിട്ടില്ല.",
+      "firstTokenMs": 295,
+      "tokensPerSecond": 18.648573,
+      "inputTokens": 68,
+      "outputTokens": 9,
+      "actualBackend": "GPU",
+      "durationMs": 657,
+      "after": {
+        "availableRamBytes": 2368540672,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1123200,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1123176
+    },
+    {
+      "id": "proof-091",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2368540672,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1119824,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "അഞ്ജലി ഇന്ന് ഓഫീസിൽ വന്നില്ല.",
+        "gold": "അഞ്ജലി ഇന്ന് ഓഫീസിൽ വന്നില്ല.",
+        "id": "proof-091",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "അഞ്ജലി ഇന്ന് ഓഫീസിൽ വന്നില്ല.",
+      "firstTokenMs": 305,
+      "tokensPerSecond": 18.776201,
+      "inputTokens": 70,
+      "outputTokens": 11,
+      "actualBackend": "GPU",
+      "durationMs": 783,
+      "after": {
+        "availableRamBytes": 2368913408,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1128064,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1128044
+    },
+    {
+      "id": "proof-092",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2368114688,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1128872,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+        "gold": "ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+        "id": "proof-092",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+      "firstTokenMs": 292,
+      "tokensPerSecond": 18.619978,
+      "inputTokens": 70,
+      "outputTokens": 11,
+      "actualBackend": "GPU",
+      "durationMs": 772,
+      "after": {
+        "availableRamBytes": 2368454656,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1135540,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1135520
+    },
+    {
+      "id": "proof-093",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2368454656,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1136356,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "നിങ്ങളുടെ സഹായത്തിന് നന്ദി.",
+        "gold": "നിങ്ങളുടെ സഹായത്തിന് നന്ദി.",
+        "id": "proof-093",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "നിങ്ങളുടെ സഹായത്തിന് നന്ദി.",
+      "firstTokenMs": 284,
+      "tokensPerSecond": 18.695055,
+      "inputTokens": 69,
+      "outputTokens": 10,
+      "actualBackend": "GPU",
+      "durationMs": 716,
+      "after": {
+        "availableRamBytes": 2367246336,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1140520,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1140352
+    },
+    {
+      "id": "proof-094",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2366980096,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1137016,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "malayalam",
+        "input": "വില 250 രൂപയാണ്.",
+        "gold": "വില 250 രൂപയാണ്.",
+        "id": "proof-094",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "വില 250 രൂപയാണ്.",
+      "firstTokenMs": 301,
+      "tokensPerSecond": 18.894108,
+      "inputTokens": 69,
+      "outputTokens": 10,
+      "actualBackend": "GPU",
+      "durationMs": 707,
+      "after": {
+        "availableRamBytes": 2366201856,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1140564,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1140532
+    },
+    {
+      "id": "proof-095",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2366201856,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1141388,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "manglish",
+        "input": "njan naale varaam.",
+        "gold": "njan naale varaam.",
+        "id": "proof-095",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Njan naale varaam.",
+      "firstTokenMs": 306,
+      "tokensPerSecond": 19.183144,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 610,
+      "after": {
+        "availableRamBytes": 2364964864,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1145104,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1145104
+    },
+    {
+      "id": "proof-096",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2364432384,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1145936,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "manglish",
+        "input": "enikku innu varaan pattilla.",
+        "gold": "enikku innu varaan pattilla.",
+        "id": "proof-096",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Enikku innu varaan pattilla.",
+      "firstTokenMs": 305,
+      "tokensPerSecond": 18.764866,
+      "inputTokens": 70,
+      "outputTokens": 11,
+      "actualBackend": "GPU",
+      "durationMs": 783,
+      "after": {
+        "availableRamBytes": 2371444736,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1144452,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1145104
+    },
+    {
+      "id": "proof-097",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2371444736,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1145288,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "manglish",
+        "input": "nee evide aanu?",
+        "gold": "nee evide aanu?",
+        "id": "proof-097",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "nee evide aanu?",
+      "firstTokenMs": 285,
+      "tokensPerSecond": 18.711836,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 551,
+      "after": {
+        "availableRamBytes": 2370412544,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1146256,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1146236
+    },
+    {
+      "id": "proof-098",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2370412544,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1147096,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "manglish",
+        "input": "namukku naale kaanaam.",
+        "gold": "namukku naale kaanaam.",
+        "id": "proof-098",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Namukku naale kaanaam.",
+      "firstTokenMs": 278,
+      "tokensPerSecond": 19.05805,
+      "inputTokens": 69,
+      "outputTokens": 10,
+      "actualBackend": "GPU",
+      "durationMs": 695,
+      "after": {
+        "availableRamBytes": 2374180864,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1150840,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1150796
+    },
+    {
+      "id": "proof-099",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2373914624,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1151808,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "manglish",
+        "input": "Anjali innu office-il varilla.",
+        "gold": "Anjali innu office-il varilla.",
+        "id": "proof-099",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Anjali innu office-il varilla.",
+      "firstTokenMs": 291,
+      "tokensPerSecond": 18.927488,
+      "inputTokens": 70,
+      "outputTokens": 11,
+      "actualBackend": "GPU",
+      "durationMs": 758,
+      "after": {
+        "availableRamBytes": 2374029312,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1148560,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "peakProcessPssKb": 1150796
+    },
+    {
+      "id": "proof-100",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2373771264,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1149416,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2209
+      },
+      "status": "complete",
+      "case": {
+        "category": "manglish",
+        "input": "ee file delete cheyyaruthu.",
+        "gold": "ee file delete cheyyaruthu.",
+        "id": "proof-100",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Ee file delete cheyyaruthu.",
+      "firstTokenMs": 296,
+      "tokensPerSecond": 19.30581,
+      "inputTokens": 69,
+      "outputTokens": 10,
+      "actualBackend": "GPU",
+      "durationMs": 701,
+      "after": {
+        "availableRamBytes": 2374287360,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1151652,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 320,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1151636
+    },
+    {
+      "id": "proof-101",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2374021120,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1152512,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "manglish",
+        "input": "meeting 10:30-nu aanu.",
+        "gold": "meeting 10:30-nu aanu.",
+        "id": "proof-101",
+        "unchanged": true,
+        "mustPreserve": [
+          "10:30"
+        ]
+      },
+      "response": "Meeting 10:30-nu aanu.",
+      "firstTokenMs": 317,
+      "tokensPerSecond": 18.457388,
+      "inputTokens": 72,
+      "outputTokens": 13,
+      "actualBackend": "GPU",
+      "durationMs": 893,
+      "after": {
+        "availableRamBytes": 2370306048,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1150570,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1155674
+    },
+    {
+      "id": "proof-102",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2370306048,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1151438,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "manglish",
+        "input": "njan ithu approve cheythittilla.",
+        "gold": "njan ithu approve cheythittilla.",
+        "id": "proof-102",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Njan ithu approve cheythittilla.",
+      "firstTokenMs": 316,
+      "tokensPerSecond": 18.878128,
+      "inputTokens": 70,
+      "outputTokens": 11,
+      "actualBackend": "GPU",
+      "durationMs": 786,
+      "after": {
+        "availableRamBytes": 2369978368,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1157962,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1157938
+    },
+    {
+      "id": "proof-103",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2369978368,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1158838,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "mixed_language",
+        "input": "നാളെ meeting ഉണ്ടോ?",
+        "gold": "നാളെ meeting ഉണ്ടോ?",
+        "id": "proof-103",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "നാളെ meeting ഉണ്ടോ?",
+      "firstTokenMs": 292,
+      "tokensPerSecond": 19.129456,
+      "inputTokens": 66,
+      "outputTokens": 7,
+      "actualBackend": "GPU",
+      "durationMs": 549,
+      "after": {
+        "availableRamBytes": 2369732608,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1159898,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1159866
+    },
+    {
+      "id": "proof-104",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2369732608,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1160774,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "mixed_language",
+        "input": "Please send the റിപ്പോർട്ട് today.",
+        "gold": "Please send the റിപ്പോർട്ട് today.",
+        "id": "proof-104",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Please send the റിപ്പോർട്ട് today.",
+      "firstTokenMs": 302,
+      "tokensPerSecond": 19.171095,
+      "inputTokens": 68,
+      "outputTokens": 9,
+      "actualBackend": "GPU",
+      "durationMs": 659,
+      "after": {
+        "availableRamBytes": 2364198912,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1157130,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1159866
+    },
+    {
+      "id": "proof-105",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2364198912,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1158014,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "mixed_language",
+        "input": "ഇന്ന് office-il വരില്ല.",
+        "gold": "ഇന്ന് office-il വരില്ല.",
+        "id": "proof-105",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "ഇന്ന് office-il വരില്ല.",
+      "firstTokenMs": 297,
+      "tokensPerSecond": 19.630852,
+      "inputTokens": 68,
+      "outputTokens": 9,
+      "actualBackend": "GPU",
+      "durationMs": 652,
+      "after": {
+        "availableRamBytes": 2362830848,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1161730,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1161694
+    },
+    {
+      "id": "proof-106",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2361741312,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1162614,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "mixed_language",
+        "input": "Anjali, report അയച്ചോ?",
+        "gold": "Anjali, report അയച്ചോ?",
+        "id": "proof-106",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "Anjali, report അയച്ചോ?",
+      "firstTokenMs": 283,
+      "tokensPerSecond": 19.028133,
+      "inputTokens": 68,
+      "outputTokens": 9,
+      "actualBackend": "GPU",
+      "durationMs": 654,
+      "after": {
+        "availableRamBytes": 2394963968,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1158954,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1163514
+    },
+    {
+      "id": "proof-107",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2394963968,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1159854,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "mixed_language",
+        "input": "The meeting നാളെ രാവിലെ 9-ന് ആണ്.",
+        "gold": "The meeting നാളെ രാവിലെ 9-ന് ആണ്.",
+        "id": "proof-107",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "The meeting നാളെ രാവിലെ 9-ന് ആണ്.",
+      "firstTokenMs": 288,
+      "tokensPerSecond": 18.851507,
+      "inputTokens": 71,
+      "outputTokens": 12,
+      "actualBackend": "GPU",
+      "durationMs": 819,
+      "after": {
+        "availableRamBytes": 2394062848,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1163457,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1163514
+    },
+    {
+      "id": "proof-108",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2393530368,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1164349,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "mixed_language",
+        "input": "ഈ API key share ചെയ്യരുത്.",
+        "gold": "ഈ API key share ചെയ്യരുത്.",
+        "id": "proof-108",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "ഈ API key share ചെയ്യരുത്.",
+      "firstTokenMs": 295,
+      "tokensPerSecond": 19.001776,
+      "inputTokens": 67,
+      "outputTokens": 8,
+      "actualBackend": "GPU",
+      "durationMs": 600,
+      "after": {
+        "availableRamBytes": 2391965696,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1165378,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1165350
+    },
+    {
+      "id": "proof-109",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2390659072,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1166282,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "long",
+        "input": "I recieved the updated report yesterday, but I has not reviewed the final section yet. Please dont send it to the client until I confirm that the numbers are correct.",
+        "gold": "I received the updated report yesterday, but I have not reviewed the final section yet. Please don't send it to the client until I confirm that the numbers are correct.",
+        "id": "proof-109",
+        "unchanged": false,
+        "mustPreserve": []
+      },
+      "response": "I received the updated report yesterday, but I have not reviewed the final section yet. Please don't send it to the client until I confirm that the numbers are correct.",
+      "firstTokenMs": 307,
+      "tokensPerSecond": 18.941933,
+      "inputTokens": 93,
+      "outputTokens": 36,
+      "actualBackend": "GPU",
+      "durationMs": 2082,
+      "after": {
+        "availableRamBytes": 2380673024,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1165662,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "peakProcessPssKb": 1165614
+    },
+    {
+      "id": "proof-110",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2379874304,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1166574,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2201
+      },
+      "status": "complete",
+      "case": {
+        "category": "long",
+        "input": "Anjali and I were discussing the release plan. We agreed to keep version 2.0 in internal testing until the migration, offline inference, and keyboard integration checks pass. Please preserve the existing downloads and app approvals.",
+        "gold": "Anjali and I were discussing the release plan. We agreed to keep version 2.0 in internal testing until the migration, offline inference, and keyboard integration checks pass. Please preserve the existing downloads and app approvals.",
+        "id": "proof-110",
+        "unchanged": true,
+        "mustPreserve": [
+          "2.0"
+        ]
+      },
+      "response": "Anjali and I were discussing the release plan. We agreed to keep version 2.0 in internal testing until the migration, offline inference, and keyboard integration checks pass. Please preserve the existing downloads and app approvals.",
+      "firstTokenMs": 301,
+      "tokensPerSecond": 18.950268,
+      "inputTokens": 104,
+      "outputTokens": 45,
+      "actualBackend": "GPU",
+      "durationMs": 2561,
+      "after": {
+        "availableRamBytes": 2378047488,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1171242,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2198
+      },
+      "peakProcessPssKb": 1171198
+    },
+    {
+      "id": "proof-111",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2379845632,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1168630,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2198
+      },
+      "status": "complete",
+      "case": {
+        "category": "long",
+        "input": "The customer have paid invoice INV-2026-1049 for £1,204.50. They do not wants a refund, and they has asked us not to cancel order AB-1049. Please make sure these details is preserved.",
+        "gold": "The customer has paid invoice INV-2026-1049 for £1,204.50. They do not want a refund, and they have asked us not to cancel order AB-1049. Please make sure these details are preserved.",
+        "id": "proof-111",
+        "unchanged": false,
+        "mustPreserve": [
+          "INV-2026-1049",
+          "£1,204.50",
+          "AB-1049"
+        ]
+      },
+      "response": "The customer has paid invoice INV-2026-1049 for £1,204.50. They do not want a refund, and they have asked us not to cancel order AB-1049. Please make sure these details are preserved.",
+      "firstTokenMs": 321,
+      "tokensPerSecond": 18.959766,
+      "inputTokens": 118,
+      "outputTokens": 59,
+      "actualBackend": "GPU",
+      "durationMs": 3319,
+      "after": {
+        "availableRamBytes": 2377535488,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1172978,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2198
+      },
+      "peakProcessPssKb": 1172946
+    },
+    {
+      "id": "proof-112",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2376736768,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1173902,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2198
+      },
+      "status": "complete",
+      "case": {
+        "category": "long",
+        "input": "ഞാൻ നാളെ രാവിലെ ഓഫീസിൽ വരാം. റിപ്പോർട്ട് പരിശോധിച്ച ശേഷം അഞ്ജലിക്ക് അയയ്ക്കാം. അതുവരെ ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+        "gold": "ഞാൻ നാളെ രാവിലെ ഓഫീസിൽ വരാം. റിപ്പോർട്ട് പരിശോധിച്ച ശേഷം അഞ്ജലിക്ക് അയയ്ക്കാം. അതുവരെ ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+        "id": "proof-112",
+        "unchanged": true,
+        "mustPreserve": []
+      },
+      "response": "ഞാൻ നാളെ രാവിലെ ഓഫീസിൽ വരാം. റിപ്പോർട്ട് പരിശോധിച്ച ശേഷം അഞ്ജലിക്ക് അയയ്ക്കാം. അതുവരെ ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+      "firstTokenMs": 363,
+      "tokensPerSecond": 18.804075,
+      "inputTokens": 98,
+      "outputTokens": 39,
+      "actualBackend": "GPU",
+      "durationMs": 2301,
+      "after": {
+        "availableRamBytes": 2374623232,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1182446,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2198
+      },
+      "peakProcessPssKb": 1186066
+    },
+    {
+      "id": "proof-113",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 2374623232,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1183382,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2198
+      },
+      "status": "complete",
+      "case": {
+        "category": "long",
+        "input": "Please review this draft carefully. The API endpoint, user_id field, and SHA-256 checksum must remain unchanged. We are not asking for a summary or a translation; return the corrected draft only.",
+        "gold": "Please review this draft carefully. The API endpoint, user_id field, and SHA-256 checksum must remain unchanged. We are not asking for a summary or a translation; return the corrected draft only.",
+        "id": "proof-113",
+        "unchanged": true,
+        "mustPreserve": [
+          "user_id",
+          "SHA-256"
+        ]
+      },
+      "response": "Please review this draft carefully. The API endpoint, user_id field, and SHA-256 checksum must remain unchanged. We are not asking for a summary or a translation; return the corrected draft only.",
+      "firstTokenMs": 298,
+      "tokensPerSecond": 18.830042,
+      "inputTokens": 103,
+      "outputTokens": 44,
+      "actualBackend": "GPU",
+      "durationMs": 2517,
+      "after": {
+        "availableRamBytes": 2364571648,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 1185549,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 330,
+        "chargeCounterMicroAh": 2198
+      },
+      "peakProcessPssKb": 1186066
+    }
+  ],
+  "before": {
+    "availableRamBytes": 4727500800,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 178498,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 290,
+    "chargeCounterMicroAh": 2233
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 907076,
+    "DMA-BUFKb": 932536
+  },
+  "status": "complete",
+  "declaredBackends": [
+    "CPU",
+    "GPU"
+  ],
+  "declaredMaxContext": 0,
+  "dynamicContext": false,
+  "supportsThinking": false,
+  "speculativeDecodingSupported": true,
+  "initializationMs": 8484,
+  "configuredContext": 2048,
+  "allocationContextEstimate": 2048,
+  "afterInitialization": {
+    "availableRamBytes": 2247532544,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 884277,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 290,
+    "chargeCounterMicroAh": 2234
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 3854308,
+    "DMA-BUFKb": 932536
+  },
+  "after": {
+    "availableRamBytes": 5423112192,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 482659,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 330,
+    "chargeCounterMicroAh": 2198
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 907048,
+    "DMA-BUFKb": 932408
+  },
+  "peakProcessPssKb": 1186066,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "0610cb85498f35366fabda4004deb1c07df772583e5add63e1a42713a7ad5438",
+  "modelSha256": "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0",
+  "modelRevision": "2eee7ac325f20eb8c9ac1d0e972f7c84663062da",
+  "resetAutoCache": false
+}

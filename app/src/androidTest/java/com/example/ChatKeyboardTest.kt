@@ -21,7 +21,6 @@ class ChatKeyboardTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test fun composerMeetsKeyboardAndNavigationReturnsAfterDismissal() {
-        compose.onNodeWithTag("tab_chat").performClick()
         compose.onNodeWithTag("chat_input_field").performClick()
         val decor = compose.activity.window.decorView
         compose.waitUntil(10_000) {
@@ -30,10 +29,10 @@ class ChatKeyboardTest {
         compose.waitForIdle()
         compose.onNodeWithTag("bottom_navigation").assertDoesNotExist()
         assertComposerAboveKeyboard()
-        screenshot("keyboard-gap-fixed.png")
         compose.onNodeWithTag("chat_input_field").performTextInput("First line\nSecond line\nThird line")
         compose.waitForIdle()
         assertComposerAboveKeyboard()
+        screenshot("keyboard-gap-fixed.png")
         compose.runOnUiThread {
             (compose.activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
                 .hideSoftInputFromWindow(decor.windowToken, 0)
@@ -41,17 +40,10 @@ class ChatKeyboardTest {
         compose.waitUntil(10_000) {
             ViewCompat.getRootWindowInsets(decor)?.isVisible(WindowInsetsCompat.Type.ime()) == false
         }
-        // The visibility flag changes before the final IME animation frame.
-        compose.waitUntil(10_000) {
-            runCatching { compose.onNodeWithTag("bottom_navigation").assertIsDisplayed() }.isSuccess
-        }
-        compose.onNodeWithTag("bottom_navigation").assertIsDisplayed()
+        // Chat-first navigation has no permanent bottom bar.
+        compose.onNodeWithTag("bottom_navigation").assertDoesNotExist()
         compose.onNodeWithTag("chat_input_field").assertIsDisplayed()
         screenshot("chat-theme.png")
-        compose.onNodeWithTag("top_bar_theme_toggle").performClick()
-        compose.waitForIdle()
-        screenshot("chat-theme-alternate.png")
-        compose.onNodeWithTag("top_bar_theme_toggle").performClick()
     }
 
     private fun assertComposerAboveKeyboard() {
@@ -64,6 +56,8 @@ class ChatKeyboardTest {
 
     private fun screenshot(name: String) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.waitForIdleSync()
+        android.os.SystemClock.sleep(350)
         val bitmap = instrumentation.uiAutomation.takeScreenshot()
         java.io.File(instrumentation.targetContext.filesDir, name).outputStream().use {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)

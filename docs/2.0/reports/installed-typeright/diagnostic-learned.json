@@ -1,0 +1,12 @@
+{
+  "model": "Gemma 4 E4B Instruct · LiteRT",
+  "syntheticLearnedVocabulary": [
+    "has",
+    "apples"
+  ],
+  "input": "We has 2 apples.",
+  "prompt": "{\"text\":\"We has 2 apples.\"}",
+  "raw": "We have 2 apples.",
+  "output": "We have 2 apples.",
+  "fallback": false
+}

@@ -40,9 +40,38 @@ class ClientAccessTest {
         assertEquals("", log.responsePreview)
         repository.updatePolicy(pending.copy(isWhitelisted = true, isBlocked = true))
         assertEquals("DENIED", repository.clientAccessStatus(pkg))
+        kotlinx.coroutines.withTimeout(10_000) { while (repository.isModelLoading) kotlinx.coroutines.delay(10) }
         val status = LocalAiAccess(context, repository).status()
         assertEquals("MODEL_REQUIRED", status.getString("status"))
         assertFalse(status.getBoolean("model_loaded"))
         assertEquals("", status.getString("active_model"))
+    }
+
+    @Test fun startupLoadingUsesCompatibleBusyStatusRatherThanAskingForAnotherDownload() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).setQueryExecutor { query ->
+            executor.execute {
+                entered.countDown()
+                check(release.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                query.run()
+            }
+        }.build()
+        val repository = AiCoreRepository(context, db, EngineManager(context), SettingsPreferencesRepository(context))
+        try {
+            assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            val loading = LocalAiAccess(context, repository).status()
+            assertEquals(2, loading.getInt("api_version"))
+            assertEquals("BUSY", loading.getString("status"))
+            assertTrue(loading.getBoolean("model_loading"))
+            assertFalse(loading.getBoolean("model_loaded"))
+        } finally { release.countDown() }
+        kotlinx.coroutines.withTimeout(10_000) { while (repository.isModelLoading) kotlinx.coroutines.delay(10) }
+        val settled = LocalAiAccess(context, repository).status()
+        assertEquals("MODEL_REQUIRED", settled.getString("status"))
+        assertFalse(settled.getBoolean("model_loading"))
+        executor.shutdown()
     }
 }

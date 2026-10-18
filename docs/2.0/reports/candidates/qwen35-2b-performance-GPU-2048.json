@@ -1,0 +1,68 @@
+{
+  "model": "Qwen3.5-2B_int8.litertlm",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "GPU",
+  "requestedContext": 2048,
+  "runtime": "LiteRT-LM 0.18.0",
+  "quality": false,
+  "chargingDuringTest": true,
+  "backendPolicy": "litertlm-0.18.0-policy-3",
+  "harnessRevision": "2026-10-18-b",
+  "samples": [],
+  "before": {
+    "availableRamBytes": 5032509440,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 196045,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 330,
+    "chargeCounterMicroAh": 1863
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 768364,
+    "DMA-BUFKb": 988408
+  },
+  "status": "failed",
+  "declaredBackends": [
+    "CPU",
+    "GPU"
+  ],
+  "declaredMaxContext": 4096,
+  "dynamicContext": false,
+  "speculativeDecodingSupported": false,
+  "initializationMs": 198003,
+  "configuredContext": 2048,
+  "afterInitialization": {
+    "availableRamBytes": 0,
+    "totalRamBytes": 11784495104,
+    "lowMemory": true,
+    "processPssKb": 6416705,
+    "thermalStatus": 1,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 1862
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE"
+  },
+  "failure": "java.lang.IllegalStateException: Memory pressure: stop experiment safely",
+  "after": {
+    "availableRamBytes": 5336563712,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 647958,
+    "thermalStatus": 1,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 1860
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 770320,
+    "DMA-BUFKb": 960416
+  },
+  "peakProcessPssKb": 6421095,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "c3e2c5d63fbc6c1d4c0c02a3ee04e0e03089e7cc9f99117be8e5d6d88d1c25e4",
+  "modelSha256": "fa4ac3259404567c7f82533746549eed94e2e1c8222095706c63cce17653c68a",
+  "modelRevision": "a81697205288c632ca83361206af1e4b07133e76"
+}

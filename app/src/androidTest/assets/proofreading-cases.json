@@ -1,0 +1,941 @@
+[
+  {
+    "category": "spelling",
+    "input": "I recieved your message.",
+    "gold": "I received your message.",
+    "id": "proof-001",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "spelling",
+    "input": "Please check the adress.",
+    "gold": "Please check the address.",
+    "id": "proof-002",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "spelling",
+    "input": "The meeting is tommorow.",
+    "gold": "The meeting is tomorrow.",
+    "id": "proof-003",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "spelling",
+    "input": "This is a seperate issue.",
+    "gold": "This is a separate issue.",
+    "id": "proof-004",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "spelling",
+    "input": "We need more accomodation.",
+    "gold": "We need more accommodation.",
+    "id": "proof-005",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "spelling",
+    "input": "I definately agree.",
+    "gold": "I definitely agree.",
+    "id": "proof-006",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "spelling",
+    "input": "The report is availble now.",
+    "gold": "The report is available now.",
+    "id": "proof-007",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "spelling",
+    "input": "Thank you for your patiance.",
+    "gold": "Thank you for your patience.",
+    "id": "proof-008",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "spelling",
+    "input": "Please send the attachement.",
+    "gold": "Please send the attachment.",
+    "id": "proof-009",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "spelling",
+    "input": "This is an important decission.",
+    "gold": "This is an important decision.",
+    "id": "proof-010",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "She don't like coffee.",
+    "gold": "She doesn't like coffee.",
+    "id": "proof-011",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "They was waiting outside.",
+    "gold": "They were waiting outside.",
+    "id": "proof-012",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "He have two tickets.",
+    "gold": "He has two tickets.",
+    "id": "proof-013",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "I has finished the task.",
+    "gold": "I have finished the task.",
+    "id": "proof-014",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "We is ready to leave.",
+    "gold": "We are ready to leave.",
+    "id": "proof-015",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "There is three options.",
+    "gold": "There are three options.",
+    "id": "proof-016",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "The files was uploaded.",
+    "gold": "The files were uploaded.",
+    "id": "proof-017",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "She go to work by bus.",
+    "gold": "She goes to work by bus.",
+    "id": "proof-018",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "He did not went home.",
+    "gold": "He did not go home.",
+    "id": "proof-019",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "grammar",
+    "input": "I am agree with you.",
+    "gold": "I agree with you.",
+    "id": "proof-020",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "Its raining outside.",
+    "gold": "It's raining outside.",
+    "id": "proof-021",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "Lets begin the meeting.",
+    "gold": "Let's begin the meeting.",
+    "id": "proof-022",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "Dont close the window.",
+    "gold": "Don't close the window.",
+    "id": "proof-023",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "Where are you going",
+    "gold": "Where are you going?",
+    "id": "proof-024",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "Can you send the file",
+    "gold": "Can you send the file?",
+    "id": "proof-025",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "I cant attend today.",
+    "gold": "I can't attend today.",
+    "id": "proof-026",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "Youre welcome.",
+    "gold": "You're welcome.",
+    "id": "proof-027",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "Thats a good idea.",
+    "gold": "That's a good idea.",
+    "id": "proof-028",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "Weve already paid.",
+    "gold": "We've already paid.",
+    "id": "proof-029",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "punctuation",
+    "input": "Please bring bread milk and eggs.",
+    "gold": "Please bring bread, milk, and eggs.",
+    "id": "proof-030",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "joined_words",
+    "input": "I willcall you tomorrow.",
+    "gold": "I will call you tomorrow.",
+    "id": "proof-031",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "joined_words",
+    "input": "Please sendme the file.",
+    "gold": "Please send me the file.",
+    "id": "proof-032",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "joined_words",
+    "input": "We aregoing home.",
+    "gold": "We are going home.",
+    "id": "proof-033",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "joined_words",
+    "input": "Thisis my notebook.",
+    "gold": "This is my notebook.",
+    "id": "proof-034",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "joined_words",
+    "input": "Can youhelp me?",
+    "gold": "Can you help me?",
+    "id": "proof-035",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "joined_words",
+    "input": "I donot agree.",
+    "gold": "I do not agree.",
+    "id": "proof-036",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "joined_words",
+    "input": "She willbe here soon.",
+    "gold": "She will be here soon.",
+    "id": "proof-037",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "joined_words",
+    "input": "They arewaiting outside.",
+    "gold": "They are waiting outside.",
+    "id": "proof-038",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "nearby_keys",
+    "input": "I will be therr soon.",
+    "gold": "I will be there soon.",
+    "id": "proof-039",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "nearby_keys",
+    "input": "Please senf the report.",
+    "gold": "Please send the report.",
+    "id": "proof-040",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "nearby_keys",
+    "input": "We need to talj today.",
+    "gold": "We need to talk today.",
+    "id": "proof-041",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "nearby_keys",
+    "input": "The meeting starts at ninr.",
+    "gold": "The meeting starts at nine.",
+    "id": "proof-042",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "nearby_keys",
+    "input": "I csn help you.",
+    "gold": "I can help you.",
+    "id": "proof-043",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "nearby_keys",
+    "input": "Thank yoi for coming.",
+    "gold": "Thank you for coming.",
+    "id": "proof-044",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "nearby_keys",
+    "input": "Please checj this file.",
+    "gold": "Please check this file.",
+    "id": "proof-045",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "nearby_keys",
+    "input": "This is a goof example.",
+    "gold": "This is a good example.",
+    "id": "proof-046",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "proper_names",
+    "input": "Anjali recieved the report.",
+    "gold": "Anjali received the report.",
+    "id": "proof-047",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "proper_names",
+    "input": "Sidharth have the tickets.",
+    "gold": "Sidharth has the tickets.",
+    "id": "proof-048",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "proper_names",
+    "input": "Kochi is a beautiful city.",
+    "gold": "Kochi is a beautiful city.",
+    "id": "proof-049",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "proper_names",
+    "input": "Dr. Nair will arrive at 10:30.",
+    "gold": "Dr. Nair will arrive at 10:30.",
+    "id": "proof-050",
+    "unchanged": true,
+    "mustPreserve": [
+      "10:30"
+    ]
+  },
+  {
+    "category": "technical",
+    "input": "The Kotlin coroutine was cancelled.",
+    "gold": "The Kotlin coroutine was cancelled.",
+    "id": "proof-051",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "technical",
+    "input": "Please dont rename user_id.",
+    "gold": "Please don't rename user_id.",
+    "id": "proof-052",
+    "unchanged": false,
+    "mustPreserve": [
+      "user_id"
+    ]
+  },
+  {
+    "category": "technical",
+    "input": "The API return HTTP 429.",
+    "gold": "The API returns HTTP 429.",
+    "id": "proof-053",
+    "unchanged": false,
+    "mustPreserve": [
+      "HTTP 429"
+    ]
+  },
+  {
+    "category": "technical",
+    "input": "Use Qwen3.5-4B with LiteRT-LM.",
+    "gold": "Use Qwen3.5-4B with LiteRT-LM.",
+    "id": "proof-054",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "technical",
+    "input": "The SHA-256 checksum matches.",
+    "gold": "The SHA-256 checksum matches.",
+    "id": "proof-055",
+    "unchanged": true,
+    "mustPreserve": [
+      "SHA-256"
+    ]
+  },
+  {
+    "category": "technical",
+    "input": "Keep com.example.demo unchanged.",
+    "gold": "Keep com.example.demo unchanged.",
+    "id": "proof-056",
+    "unchanged": true,
+    "mustPreserve": [
+      "com.example.demo"
+    ]
+  },
+  {
+    "category": "numeric_literals",
+    "input": "The invoice total are £1,204.50.",
+    "gold": "The invoice total is £1,204.50.",
+    "id": "proof-057",
+    "unchanged": false,
+    "mustPreserve": [
+      "£1,204.50"
+    ]
+  },
+  {
+    "category": "numeric_literals",
+    "input": "Version 2.0.1 have a fix.",
+    "gold": "Version 2.0.1 has a fix.",
+    "id": "proof-058",
+    "unchanged": false,
+    "mustPreserve": [
+      "2.0.1"
+    ]
+  },
+  {
+    "category": "numeric_literals",
+    "input": "Order AB-1049 was recieved.",
+    "gold": "Order AB-1049 was received.",
+    "id": "proof-059",
+    "unchanged": false,
+    "mustPreserve": [
+      "AB-1049"
+    ]
+  },
+  {
+    "category": "numeric_literals",
+    "input": "The reading is -12.5 °C.",
+    "gold": "The reading is -12.5 °C.",
+    "id": "proof-060",
+    "unchanged": true,
+    "mustPreserve": [
+      "12.5"
+    ]
+  },
+  {
+    "category": "numeric_literals",
+    "input": "I paid 5.25, not 52.50.",
+    "gold": "I paid 5.25, not 52.50.",
+    "id": "proof-061",
+    "unchanged": true,
+    "mustPreserve": [
+      "5.25",
+      "52.50"
+    ]
+  },
+  {
+    "category": "numeric_literals",
+    "input": "Meet on 2026-10-18 at 09:15.",
+    "gold": "Meet on 2026-10-18 at 09:15.",
+    "id": "proof-062",
+    "unchanged": true,
+    "mustPreserve": [
+      "2026-10-18",
+      "09:15"
+    ]
+  },
+  {
+    "category": "negation",
+    "input": "I do not wants a refund.",
+    "gold": "I do not want a refund.",
+    "id": "proof-063",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "negation",
+    "input": "She has not recieved it.",
+    "gold": "She has not received it.",
+    "id": "proof-064",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "negation",
+    "input": "Do not delete the backup.",
+    "gold": "Do not delete the backup.",
+    "id": "proof-065",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "negation",
+    "input": "We never approved this change.",
+    "gold": "We never approved this change.",
+    "id": "proof-066",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "negation",
+    "input": "He did not said yes.",
+    "gold": "He did not say yes.",
+    "id": "proof-067",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "negation",
+    "input": "The service must not use the cloud.",
+    "gold": "The service must not use the cloud.",
+    "id": "proof-068",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "questions",
+    "input": "Does she knows the answer?",
+    "gold": "Does she know the answer?",
+    "id": "proof-069",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "questions",
+    "input": "Where did you went?",
+    "gold": "Where did you go?",
+    "id": "proof-070",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "questions",
+    "input": "Why is the files missing?",
+    "gold": "Why are the files missing?",
+    "id": "proof-071",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "questions",
+    "input": "Can we reschedule the meeting?",
+    "gold": "Can we reschedule the meeting?",
+    "id": "proof-072",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "questions",
+    "input": "Are you sure this is correct?",
+    "gold": "Are you sure this is correct?",
+    "id": "proof-073",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "questions",
+    "input": "Who have the key?",
+    "gold": "Who has the key?",
+    "id": "proof-074",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "already_correct",
+    "input": "Please let me know when you arrive.",
+    "gold": "Please let me know when you arrive.",
+    "id": "proof-075",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "already_correct",
+    "input": "I appreciate your help.",
+    "gold": "I appreciate your help.",
+    "id": "proof-076",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "already_correct",
+    "input": "The train leaves at six.",
+    "gold": "The train leaves at six.",
+    "id": "proof-077",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "already_correct",
+    "input": "Could you clarify the last point?",
+    "gold": "Could you clarify the last point?",
+    "id": "proof-078",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "already_correct",
+    "input": "We should review the results before publishing.",
+    "gold": "We should review the results before publishing.",
+    "id": "proof-079",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "already_correct",
+    "input": "Neither option is suitable.",
+    "gold": "Neither option is suitable.",
+    "id": "proof-080",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "short",
+    "input": "Thanks!",
+    "gold": "Thanks!",
+    "id": "proof-081",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "short",
+    "input": "See you soon.",
+    "gold": "See you soon.",
+    "id": "proof-082",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "short",
+    "input": "Im late.",
+    "gold": "I'm late.",
+    "id": "proof-083",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "short",
+    "input": "Yes, please.",
+    "gold": "Yes, please.",
+    "id": "proof-084",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "ഞാൻ നാളെ വരാം.",
+    "gold": "ഞാൻ നാളെ വരാം.",
+    "id": "proof-085",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "എനിക്ക് ഇന്ന് വരാൻ കഴിയില്ല.",
+    "gold": "എനിക്ക് ഇന്ന് വരാൻ കഴിയില്ല.",
+    "id": "proof-086",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "നിങ്ങൾ എവിടെയാണ്?",
+    "gold": "നിങ്ങൾ എവിടെയാണ്?",
+    "id": "proof-087",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "ദയവായി റിപ്പോർട്ട് അയയ്ക്കുക.",
+    "gold": "ദയവായി റിപ്പോർട്ട് അയയ്ക്കുക.",
+    "id": "proof-088",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "നാളെ രാവിലെ കാണാം.",
+    "gold": "നാളെ രാവിലെ കാണാം.",
+    "id": "proof-089",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "ഞാൻ ഇത് അംഗീകരിച്ചിട്ടില്ല.",
+    "gold": "ഞാൻ ഇത് അംഗീകരിച്ചിട്ടില്ല.",
+    "id": "proof-090",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "അഞ്ജലി ഇന്ന് ഓഫീസിൽ വന്നില്ല.",
+    "gold": "അഞ്ജലി ഇന്ന് ഓഫീസിൽ വന്നില്ല.",
+    "id": "proof-091",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+    "gold": "ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+    "id": "proof-092",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "നിങ്ങളുടെ സഹായത്തിന് നന്ദി.",
+    "gold": "നിങ്ങളുടെ സഹായത്തിന് നന്ദി.",
+    "id": "proof-093",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "malayalam",
+    "input": "വില 250 രൂപയാണ്.",
+    "gold": "വില 250 രൂപയാണ്.",
+    "id": "proof-094",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "manglish",
+    "input": "njan naale varaam.",
+    "gold": "njan naale varaam.",
+    "id": "proof-095",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "manglish",
+    "input": "enikku innu varaan pattilla.",
+    "gold": "enikku innu varaan pattilla.",
+    "id": "proof-096",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "manglish",
+    "input": "nee evide aanu?",
+    "gold": "nee evide aanu?",
+    "id": "proof-097",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "manglish",
+    "input": "namukku naale kaanaam.",
+    "gold": "namukku naale kaanaam.",
+    "id": "proof-098",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "manglish",
+    "input": "Anjali innu office-il varilla.",
+    "gold": "Anjali innu office-il varilla.",
+    "id": "proof-099",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "manglish",
+    "input": "ee file delete cheyyaruthu.",
+    "gold": "ee file delete cheyyaruthu.",
+    "id": "proof-100",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "manglish",
+    "input": "meeting 10:30-nu aanu.",
+    "gold": "meeting 10:30-nu aanu.",
+    "id": "proof-101",
+    "unchanged": true,
+    "mustPreserve": [
+      "10:30"
+    ]
+  },
+  {
+    "category": "manglish",
+    "input": "njan ithu approve cheythittilla.",
+    "gold": "njan ithu approve cheythittilla.",
+    "id": "proof-102",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "mixed_language",
+    "input": "നാളെ meeting ഉണ്ടോ?",
+    "gold": "നാളെ meeting ഉണ്ടോ?",
+    "id": "proof-103",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "mixed_language",
+    "input": "Please send the റിപ്പോർട്ട് today.",
+    "gold": "Please send the റിപ്പോർട്ട് today.",
+    "id": "proof-104",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "mixed_language",
+    "input": "ഇന്ന് office-il വരില്ല.",
+    "gold": "ഇന്ന് office-il വരില്ല.",
+    "id": "proof-105",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "mixed_language",
+    "input": "Anjali, report അയച്ചോ?",
+    "gold": "Anjali, report അയച്ചോ?",
+    "id": "proof-106",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "mixed_language",
+    "input": "The meeting നാളെ രാവിലെ 9-ന് ആണ്.",
+    "gold": "The meeting നാളെ രാവിലെ 9-ന് ആണ്.",
+    "id": "proof-107",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "mixed_language",
+    "input": "ഈ API key share ചെയ്യരുത്.",
+    "gold": "ഈ API key share ചെയ്യരുത്.",
+    "id": "proof-108",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "long",
+    "input": "I recieved the updated report yesterday, but I has not reviewed the final section yet. Please dont send it to the client until I confirm that the numbers are correct.",
+    "gold": "I received the updated report yesterday, but I have not reviewed the final section yet. Please don't send it to the client until I confirm that the numbers are correct.",
+    "id": "proof-109",
+    "unchanged": false,
+    "mustPreserve": []
+  },
+  {
+    "category": "long",
+    "input": "Anjali and I were discussing the release plan. We agreed to keep version 2.0 in internal testing until the migration, offline inference, and keyboard integration checks pass. Please preserve the existing downloads and app approvals.",
+    "gold": "Anjali and I were discussing the release plan. We agreed to keep version 2.0 in internal testing until the migration, offline inference, and keyboard integration checks pass. Please preserve the existing downloads and app approvals.",
+    "id": "proof-110",
+    "unchanged": true,
+    "mustPreserve": [
+      "2.0"
+    ]
+  },
+  {
+    "category": "long",
+    "input": "The customer have paid invoice INV-2026-1049 for £1,204.50. They do not wants a refund, and they has asked us not to cancel order AB-1049. Please make sure these details is preserved.",
+    "gold": "The customer has paid invoice INV-2026-1049 for £1,204.50. They do not want a refund, and they have asked us not to cancel order AB-1049. Please make sure these details are preserved.",
+    "id": "proof-111",
+    "unchanged": false,
+    "mustPreserve": [
+      "INV-2026-1049",
+      "£1,204.50",
+      "AB-1049"
+    ]
+  },
+  {
+    "category": "long",
+    "input": "ഞാൻ നാളെ രാവിലെ ഓഫീസിൽ വരാം. റിപ്പോർട്ട് പരിശോധിച്ച ശേഷം അഞ്ജലിക്ക് അയയ്ക്കാം. അതുവരെ ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+    "gold": "ഞാൻ നാളെ രാവിലെ ഓഫീസിൽ വരാം. റിപ്പോർട്ട് പരിശോധിച്ച ശേഷം അഞ്ജലിക്ക് അയയ്ക്കാം. അതുവരെ ഈ ഫയൽ ഇല്ലാതാക്കരുത്.",
+    "id": "proof-112",
+    "unchanged": true,
+    "mustPreserve": []
+  },
+  {
+    "category": "long",
+    "input": "Please review this draft carefully. The API endpoint, user_id field, and SHA-256 checksum must remain unchanged. We are not asking for a summary or a translation; return the corrected draft only.",
+    "gold": "Please review this draft carefully. The API endpoint, user_id field, and SHA-256 checksum must remain unchanged. We are not asking for a summary or a translation; return the corrected draft only.",
+    "id": "proof-113",
+    "unchanged": true,
+    "mustPreserve": [
+      "user_id",
+      "SHA-256"
+    ]
+  }
+]

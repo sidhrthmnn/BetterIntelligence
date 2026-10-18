@@ -21,7 +21,8 @@ internal object NativeGguf {
     external fun prepare(path: ByteArray, gpuLayers: Int, threads: Int, contextSize: Int): Int
     external fun release()
     external fun generate(prompt: ByteArray, systemPrompt: ByteArray, observer: NativeObserver, maxTokens: Int, threads: Int,
-                          contextSize: Int, temperature: Float, topP: Float, topK: Int, timeoutMs: Int): ByteArray
+                          contextSize: Int, temperature: Float, topP: Float, topK: Int, timeoutMs: Int,
+                          historyRoles: Array<ByteArray>, historyContents: Array<ByteArray>): ByteArray
 }
 
 /** Injectable boundary for testing failure recovery without pretending to execute hardware. */
@@ -42,5 +43,7 @@ internal object JniGgufRuntime : GgufRuntime {
     override fun generate(prompt: String, system: String, observer: NativeObserver, params: GenerationParams, timeoutMs: Int): String =
         NativeGguf.generate(prompt.toByteArray(Charsets.UTF_8), system.toByteArray(Charsets.UTF_8), observer,
             params.maxTokens.coerceIn(1, 1024), params.threads.coerceIn(1, 8), params.contextSize.coerceIn(512, 4096),
-            params.temperature.coerceIn(0f, 2f), params.topP.coerceIn(0.1f, 1f), params.topK.coerceIn(1, 100), timeoutMs).toString(Charsets.UTF_8)
+            params.temperature.coerceIn(0f, 2f), params.topP.coerceIn(0.1f, 1f), params.topK.coerceIn(1, 100), timeoutMs,
+            params.history.map { it.role.toByteArray(Charsets.UTF_8) }.toTypedArray(),
+            params.history.map { it.content.toByteArray(Charsets.UTF_8) }.toTypedArray()).toString(Charsets.UTF_8)
 }

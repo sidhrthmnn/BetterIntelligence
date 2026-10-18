@@ -20,7 +20,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.data.AiCoreRepository
-import com.example.engine.GenerationParams
 import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -89,9 +88,9 @@ private fun PolishSheet(text: String, canReplace: Boolean, onReplace: (String) -
                     output = ""
                     try {
                         output = withContext(Dispatchers.Default) {
-                            val result = repository.engine.generateSync(PolishText.prompt(text), GenerationParams(
-                                systemPrompt = PolishText.SYSTEM_PROMPT, temperature = 0f, maxTokens = 1024))
-                            check(repository.engine.telemetry.value.completionTokens < 1024)
+                            val params = PolishText.parameters(repository.engine.activeContextLength)
+                            val result = repository.engine.generateSync(PolishText.prompt(text), params)
+                            check(repository.engine.telemetry.value.completionTokens < params.maxTokens)
                             PolishText.validateOutput(text, result)
                         }
                     } catch (e: Exception) {

@@ -14,8 +14,13 @@ data class GenerationConfig(
     val threads: Int = 0,
     val gpuLayers: Int = 0,
     val stopSequences: List<String> = listOf("</s>", "<|im_end|>", "<|eot_id|>", "[/INST]"),
-    val contextSize: Int = 4096
+    val contextSize: Int = 4096,
+    val history: List<ChatTurn> = emptyList()
 )
+
+data class ChatTurn(val role: String, val content: String) {
+    init { require(role == "user" || role == "assistant") }
+}
 
 /**
  * Hardware accelerator options for the inference backend.

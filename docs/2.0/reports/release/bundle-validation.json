@@ -1,0 +1,222 @@
+{
+  "package": "com.aistudio.betterintelligence.mobile",
+  "versionCode": "5",
+  "versionName": "2.0",
+  "nativeLibraries": [
+    {
+      "abi": "arm64-v8a",
+      "library": "libandroidx.graphics.path.so",
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "arm64-v8a",
+      "library": "libbetter_gguf.so",
+      "needed": [
+        "libllama.so",
+        "libandroid.so",
+        "liblog.so",
+        "libdl.so",
+        "libggml.so",
+        "libggml-base.so",
+        "libm.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "arm64-v8a",
+      "library": "libdatastore_shared_counter.so",
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "arm64-v8a",
+      "library": "libggml-base.so",
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "arm64-v8a",
+      "library": "libggml-cpu.so",
+      "needed": [
+        "libggml-base.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "arm64-v8a",
+      "library": "libggml-vulkan.so",
+      "needed": [
+        "libggml-base.so",
+        "libvulkan.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "arm64-v8a",
+      "library": "libggml.so",
+      "needed": [
+        "libggml-base.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "arm64-v8a",
+      "library": "liblitertlm_jni.so",
+      "needed": [
+        "libandroid.so",
+        "libz.so",
+        "libGLESv2.so",
+        "libEGL.so",
+        "libGLESv3.so",
+        "liblog.so",
+        "libdl.so",
+        "libm.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "arm64-v8a",
+      "library": "libllama.so",
+      "needed": [
+        "libggml.so",
+        "libggml-base.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "x86_64",
+      "library": "libandroidx.graphics.path.so",
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "x86_64",
+      "library": "libbetter_gguf.so",
+      "needed": [
+        "libllama.so",
+        "libandroid.so",
+        "liblog.so",
+        "libdl.so",
+        "libggml.so",
+        "libggml-base.so",
+        "libm.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "x86_64",
+      "library": "libdatastore_shared_counter.so",
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "x86_64",
+      "library": "libggml-base.so",
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "x86_64",
+      "library": "libggml-cpu.so",
+      "needed": [
+        "libggml-base.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "x86_64",
+      "library": "libggml-vulkan.so",
+      "needed": [
+        "libggml-base.so",
+        "libvulkan.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "x86_64",
+      "library": "libggml.so",
+      "needed": [
+        "libggml-base.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "x86_64",
+      "library": "liblitertlm_jni.so",
+      "needed": [
+        "libandroid.so",
+        "libz.so",
+        "libGLESv2.so",
+        "libEGL.so",
+        "libGLESv3.so",
+        "liblog.so",
+        "libdl.so",
+        "libm.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    },
+    {
+      "abi": "x86_64",
+      "library": "libllama.so",
+      "needed": [
+        "libggml.so",
+        "libggml-base.so",
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "minLoadAlignment": 16384
+    }
+  ],
+  "bundleSha256": "5f71a842bf36e42c0d438989067ea7b90ded95e440140699e0df6975d4630642"
+}

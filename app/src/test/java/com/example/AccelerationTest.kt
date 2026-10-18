@@ -28,7 +28,26 @@ class AccelerationTest {
         assertEquals(cpu, SmartBackendSelector.choose(listOf(cpu, sample(ProcessingMode.GPU, 100f).copy(stable = false))))
     }
 
+    @Test fun aSecondFacadeDoesNotMistakeALiveGpuAttemptForAPreviousProcessCrash() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val preferences = context.getSharedPreferences("backend_decisions", 0)
+        preferences.edit().clear().commit()
+        val first = SmartBackendSelector(context)
+        first.beginGpuAttempt("live")
+        assertFalse(SmartBackendSelector(context).blocked("live"))
+        first.endGpuAttempt()
+        preferences.edit().putString("pending", "interrupted").putString("pending_process", "previous-process").commit()
+        val restarted = SmartBackendSelector(context)
+        assertTrue(restarted.blocked("interrupted"))
+        assertEquals("Previous GPU attempt did not finish", restarted.failureReason("interrupted"))
+        restarted.reset()
+    }
+
     @Test fun resourcePolicyBoundsThreadsAndAccountsForSharedRam() {
+        assertEquals(4096, ModelMemoryPlanner.liteRtAllocationContext(512, 4096, false))
+        assertEquals(512, ModelMemoryPlanner.liteRtAllocationContext(512, 32000, true))
+        assertEquals(1280, ModelMemoryPlanner.liteRtAllocationContext(2048, 1280, true))
+        assertEquals(2048, ModelMemoryPlanner.liteRtAllocationContext(512, 0, false))
         assertEquals(1, ResourcePolicy.threads(1, 0, 8, ResourceState()))
         assertEquals(4, ResourcePolicy.threads(12, 6, 0, ResourceState()))
         assertEquals(2, ResourcePolicy.threads(12, 6, 0, ResourceState(thermal = 3)))
@@ -70,6 +89,7 @@ class AccelerationTest {
         var clock = 1000L
         var selector = SmartBackendSelector(ctx) { clock }
         selector.beginGpuAttempt("crashed")
+        ctx.getSharedPreferences("backend_decisions", 0).edit().putString("pending_process", "previous-process").commit()
         selector = SmartBackendSelector(ctx) { clock }
         assertTrue(selector.blocked("crashed"))
         selector.failed("failed", "Driver rejected the model")
@@ -83,6 +103,26 @@ class AccelerationTest {
         assertEquals(ProcessingMode.AUTO, hw.mode.value)
         assertFalse(hw.capabilities.value.npuAvailable)
         assertTrue(runCatching { hw.setMode(ProcessingMode.NPU) }.isFailure)
+    }
+
+    @Test fun transientGpuMemoryFailuresWaitForActualHeadroomAndResetAfterValidation() {
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        ctx.getSharedPreferences("backend_decisions", 0).edit().clear().commit()
+        var clock = 1000L
+        val selector = SmartBackendSelector(ctx) { clock }
+        val cpu = sample(ProcessingMode.CPU, 20f)
+        selector.failed("memory", "Memory pressure", 5000)
+        selector.save("memory", cpu, listOf(cpu))
+        clock += 6 * 60 * 1000
+        assertTrue(selector.blocked("memory", 4000)); assertFalse(selector.blocked("memory", 6000))
+        assertNotNull(selector.cached("memory", true, 4000))
+        assertNull(selector.cached("memory", true, 6000)) // Retest when measured headroom recovers.
+        val gpu = sample(ProcessingMode.GPU, 40f)
+        selector.save("memory", gpu, listOf(cpu, gpu))
+        assertEquals(0L, selector.minimumAvailableMb("memory")); assertTrue(selector.hasValidatedGpu("memory"))
+        selector.failed("driver", "Driver failed")
+        selector.reset()
+        assertFalse(selector.blocked("driver")); assertNull(selector.cached("memory", true))
     }
 
     @Test fun cpuMappedWeightsAreNotCountedAsAdditionalAvailableRam() {
@@ -105,6 +145,7 @@ class AccelerationTest {
             assertEquals("CPU", engine.telemetry.value.activeBackend)
             assertEquals(0, engine.telemetry.value.activeGpuLayers)
             assertEquals(1, engine.telemetry.value.fallbackCount)
+            assertTrue(engine.telemetry.value.backendDecision.contains("using CPU"))
             assertEquals(1, runtime.maxModels)
         } finally { engine.unloadActiveModel() }
         assertEquals(0, runtime.models)
@@ -136,6 +177,27 @@ class AccelerationTest {
             assertTrue("User-visible TTFT includes initial tuning", engine.telemetry.value.timeToFirstTokenMs >= 40)
             engine.generateSync("Hello again", GenerationParams(maxTokens = 2))
             assertEquals(calls + 1, runtime.generations)
+        } finally { engine.unloadActiveModel() }
+    }
+
+    @Test fun manualGpuModeReusesSuccessfulValidationAfterCpuSwitch() = runBlocking {
+        val runtime = FakeRuntime(gpu = true)
+        val engine = InferenceEngine(null, runtime)
+        try {
+            engine.loadCustomGguf(base).getOrThrow()
+            engine.setProcessingMode(ProcessingMode.GPU, 8)
+            engine.generateSync("First", GenerationParams(maxTokens = 2))
+            assertEquals(5, runtime.generations)
+            assertEquals("GPU", engine.telemetry.value.activeBackend)
+            engine.setProcessingMode(ProcessingMode.CPU)
+            engine.generateSync("Second", GenerationParams(maxTokens = 2))
+            val calls = runtime.generations
+            engine.setProcessingMode(ProcessingMode.GPU)
+            engine.generateSync("Third", GenerationParams(maxTokens = 2))
+            assertEquals(calls + 1, runtime.generations)
+            assertEquals(8, engine.telemetry.value.activeGpuLayers)
+            assertTrue(engine.telemetry.value.backendDecision.contains("cached"))
+            assertEquals(1, runtime.maxModels)
         } finally { engine.unloadActiveModel() }
     }
 

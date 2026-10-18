@@ -1,0 +1,7 @@
+{
+  "model": "Qwen3.5-4B_mixed_int4.litertlm",
+  "status": "not_run",
+  "requestedBackend": "AUTO",
+  "reason": "Publisher reports Qualcomm device hard reboot during GPU initialization; CPU evaluated first. No stable HONOR GPU evidence.",
+  "source": "https://huggingface.co/litert-community/Qwen3.5-4B"
+}

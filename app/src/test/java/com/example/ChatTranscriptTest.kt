@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
@@ -25,6 +26,32 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ChatTranscriptTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test fun accessibilityScrollIsNotPulledBackDuringStreaming() {
+        val text = mutableStateOf("Streaming line\n".repeat(120))
+        lateinit var state: LazyListState
+        compose.setContent {
+            state = rememberLazyListState()
+            MaterialTheme { ChatTranscript(emptyList(), true, text.value, "Test model", {}, Modifier.height(360.dp), state) }
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { assertFalse(state.canScrollForward) }
+        compose.onNodeWithTag("chat_transcript").performSemanticsAction(SemanticsActions.ScrollBy) { action ->
+            assertTrue(action(0f, -500f))
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag("jump_to_latest").assertIsDisplayed()
+        var index = 0; var offset = 0
+        compose.runOnIdle {
+            index = state.firstVisibleItemIndex; offset = state.firstVisibleItemScrollOffset
+            text.value += "Additional streamed line\n".repeat(30)
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { assertEquals(index, state.firstVisibleItemIndex); assertEquals(offset, state.firstVisibleItemScrollOffset) }
+        compose.onNodeWithTag("jump_to_latest").performClick()
+        compose.waitForIdle()
+        compose.runOnIdle { assertFalse(state.canScrollForward) }
+    }
 
     @Test fun longStreamingAnswerFollowsBottomWithoutPullingReaderAwayFromHistory() {
         val text = mutableStateOf("First line\n")

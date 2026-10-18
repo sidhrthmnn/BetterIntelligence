@@ -1,0 +1,13 @@
+{
+  "versionName": "2.0",
+  "versionCode": 5,
+  "track": "internal",
+  "audience": "Testers",
+  "consoleStatus": "Available to internal testers",
+  "consoleReleasedAt": "2026-10-18 21:18 Europe/London",
+  "sourceRevision": "f7980627ee15b44140011d6757eea5e2805f4444",
+  "bundleSha256": "5f71a842bf36e42c0d438989067ea7b90ded95e440140699e0df6975d4630642",
+  "bundleBytes": 89869992,
+  "warning": "No R8 mapping file; obfuscation is disabled",
+  "production": "Locked: app setup and 12 opted-in closed testers for 14 days; currently 0"
+}

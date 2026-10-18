@@ -1,0 +1,1409 @@
+[
+  {
+    "model": "gemma-4-E2B-it.litertlm",
+    "requestedBackend": "GPU",
+    "status": "complete",
+    "completeCases": 113,
+    "expectedCases": 113,
+    "allCasesComplete": true,
+    "referenceEditPrecision": 0.8095238095238095,
+    "referenceEditRecall": 0.9855072463768116,
+    "unchangedCases": 50,
+    "falseCorrectionsOnUnchanged": 14,
+    "falseCorrectionRate": 0.28,
+    "exactReferenceMatches": 98,
+    "formatProxyPasses": 112,
+    "literalInvariantCases": 15,
+    "literalInvariantPasses": 15,
+    "medianFirstTokenMs": 116,
+    "medianTokensPerSecond": 41.02,
+    "medianEndToEndMs": 251,
+    "peakProcessPssKb": 1050153,
+    "categories": {
+      "spelling": 10,
+      "grammar": 10,
+      "punctuation": 10,
+      "joined_words": 8,
+      "nearby_keys": 8,
+      "proper_names": 4,
+      "technical": 6,
+      "numeric_literals": 6,
+      "negation": 6,
+      "questions": 6,
+      "already_correct": 6,
+      "short": 4,
+      "malayalam": 10,
+      "manglish": 8,
+      "mixed_language": 6,
+      "long": 5
+    },
+    "byCategory": {
+      "spelling": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 233.5
+      },
+      "grammar": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 226.0
+      },
+      "punctuation": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 258.5
+      },
+      "joined_words": {
+        "cases": 8,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 8,
+        "medianEndToEndMs": 208.5
+      },
+      "nearby_keys": {
+        "cases": 8,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 8,
+        "medianEndToEndMs": 223.0
+      },
+      "proper_names": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 252.5
+      },
+      "technical": {
+        "cases": 6,
+        "referenceEditPrecision": 0.5,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 4,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 345.5
+      },
+      "numeric_literals": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 398.5
+      },
+      "negation": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 240.0
+      },
+      "questions": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 240.0
+      },
+      "already_correct": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 248.0
+      },
+      "short": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 187.5
+      },
+      "malayalam": {
+        "cases": 10,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 10,
+        "falseCorrectionsOnUnchanged": 2,
+        "exactReferenceMatches": 8,
+        "medianEndToEndMs": 322.5
+      },
+      "manglish": {
+        "cases": 8,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 8,
+        "falseCorrectionsOnUnchanged": 7,
+        "exactReferenceMatches": 1,
+        "medianEndToEndMs": 314.5
+      },
+      "mixed_language": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 4,
+        "exactReferenceMatches": 2,
+        "medianEndToEndMs": 271.5
+      },
+      "long": {
+        "cases": 5,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 1115
+      }
+    },
+    "englishCases": {
+      "cases": 88,
+      "referenceEditPrecision": 0.9855072463768116,
+      "referenceEditRecall": 0.9855072463768116,
+      "unchangedCases": 25,
+      "falseCorrectionsOnUnchanged": 1,
+      "exactReferenceMatches": 86,
+      "medianEndToEndMs": 242.0
+    },
+    "runtime": "LiteRT-LM 0.18.0",
+    "backendPolicy": "litertlm-0.18.0-policy-4",
+    "validationApkSha256": "0610cb85498f35366fabda4004deb1c07df772583e5add63e1a42713a7ad5438",
+    "configuredContext": 2048,
+    "outputTokenLimitOverride": null,
+    "semanticAccuracy": "NOT_AUTOMATICALLY_SCORED; inspect raw outputs and invariants",
+    "caveat": "Reference edits penalize valid alternative wording; do not use this proxy alone to rank models."
+  },
+  {
+    "model": "gemma-4-E4B-it.litertlm",
+    "requestedBackend": "GPU",
+    "status": "complete",
+    "completeCases": 113,
+    "expectedCases": 113,
+    "allCasesComplete": true,
+    "referenceEditPrecision": 0.8717948717948718,
+    "referenceEditRecall": 0.9855072463768116,
+    "unchangedCases": 50,
+    "falseCorrectionsOnUnchanged": 7,
+    "falseCorrectionRate": 0.14,
+    "exactReferenceMatches": 105,
+    "formatProxyPasses": 113,
+    "literalInvariantCases": 15,
+    "literalInvariantPasses": 15,
+    "medianFirstTokenMs": 290,
+    "medianTokensPerSecond": 18.88,
+    "medianEndToEndMs": 580,
+    "peakProcessPssKb": 1186066,
+    "categories": {
+      "spelling": 10,
+      "grammar": 10,
+      "punctuation": 10,
+      "joined_words": 8,
+      "nearby_keys": 8,
+      "proper_names": 4,
+      "technical": 6,
+      "numeric_literals": 6,
+      "negation": 6,
+      "questions": 6,
+      "already_correct": 6,
+      "short": 4,
+      "malayalam": 10,
+      "manglish": 8,
+      "mixed_language": 6,
+      "long": 5
+    },
+    "byCategory": {
+      "spelling": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 540.0
+      },
+      "grammar": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 524.0
+      },
+      "punctuation": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 573.5
+      },
+      "joined_words": {
+        "cases": 8,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 8,
+        "medianEndToEndMs": 502.0
+      },
+      "nearby_keys": {
+        "cases": 8,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 8,
+        "medianEndToEndMs": 527.5
+      },
+      "proper_names": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 597.0
+      },
+      "technical": {
+        "cases": 6,
+        "referenceEditPrecision": 0.2,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 4,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 708.5
+      },
+      "numeric_literals": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 895.5
+      },
+      "negation": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 556.5
+      },
+      "questions": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 533.5
+      },
+      "already_correct": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 572.0
+      },
+      "short": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 445.0
+      },
+      "malayalam": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 10,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 711.5
+      },
+      "manglish": {
+        "cases": 8,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 8,
+        "falseCorrectionsOnUnchanged": 6,
+        "exactReferenceMatches": 2,
+        "medianEndToEndMs": 729.5
+      },
+      "mixed_language": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 653.0
+      },
+      "long": {
+        "cases": 5,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 2517
+      }
+    },
+    "englishCases": {
+      "cases": 88,
+      "referenceEditPrecision": 0.9444444444444444,
+      "referenceEditRecall": 0.9855072463768116,
+      "unchangedCases": 25,
+      "falseCorrectionsOnUnchanged": 1,
+      "exactReferenceMatches": 86,
+      "medianEndToEndMs": 552.0
+    },
+    "runtime": "LiteRT-LM 0.18.0",
+    "backendPolicy": "litertlm-0.18.0-policy-4",
+    "validationApkSha256": "0610cb85498f35366fabda4004deb1c07df772583e5add63e1a42713a7ad5438",
+    "configuredContext": 2048,
+    "outputTokenLimitOverride": null,
+    "semanticAccuracy": "NOT_AUTOMATICALLY_SCORED; inspect raw outputs and invariants",
+    "caveat": "Reference edits penalize valid alternative wording; do not use this proxy alone to rank models."
+  },
+  {
+    "model": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "requestedBackend": "CPU",
+    "status": "complete",
+    "completeCases": 113,
+    "expectedCases": 113,
+    "allCasesComplete": true,
+    "referenceEditPrecision": 0.5454545454545454,
+    "referenceEditRecall": 0.6956521739130435,
+    "unchangedCases": 50,
+    "falseCorrectionsOnUnchanged": 19,
+    "falseCorrectionRate": 0.38,
+    "exactReferenceMatches": 71,
+    "formatProxyPasses": 109,
+    "literalInvariantCases": 15,
+    "literalInvariantPasses": 15,
+    "medianFirstTokenMs": 868,
+    "medianTokensPerSecond": 48.27,
+    "medianEndToEndMs": 1055,
+    "peakProcessPssKb": 828589,
+    "categories": {
+      "spelling": 10,
+      "grammar": 10,
+      "punctuation": 10,
+      "joined_words": 8,
+      "nearby_keys": 8,
+      "proper_names": 4,
+      "technical": 6,
+      "numeric_literals": 6,
+      "negation": 6,
+      "questions": 6,
+      "already_correct": 6,
+      "short": 4,
+      "malayalam": 10,
+      "manglish": 8,
+      "mixed_language": 6,
+      "long": 5
+    },
+    "byCategory": {
+      "spelling": {
+        "cases": 10,
+        "referenceEditPrecision": 0.9,
+        "referenceEditRecall": 0.9,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 8,
+        "medianEndToEndMs": 1033.0
+      },
+      "grammar": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.9,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 9,
+        "medianEndToEndMs": 1012.5
+      },
+      "punctuation": {
+        "cases": 10,
+        "referenceEditPrecision": 0.75,
+        "referenceEditRecall": 0.5454545454545454,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 1003.5
+      },
+      "joined_words": {
+        "cases": 8,
+        "referenceEditPrecision": 0.75,
+        "referenceEditRecall": 0.75,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 1000.0
+      },
+      "nearby_keys": {
+        "cases": 8,
+        "referenceEditPrecision": 0.6666666666666666,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 1024.0
+      },
+      "proper_names": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 3,
+        "medianEndToEndMs": 1087.5
+      },
+      "technical": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 0.0,
+        "unchangedCases": 4,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 1089.0
+      },
+      "numeric_literals": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.6666666666666666,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 1247.0
+      },
+      "negation": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 1038.0
+      },
+      "questions": {
+        "cases": 6,
+        "referenceEditPrecision": 0.5,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 1038.0
+      },
+      "already_correct": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 1067.5
+      },
+      "short": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 3,
+        "medianEndToEndMs": 935.5
+      },
+      "malayalam": {
+        "cases": 10,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 10,
+        "falseCorrectionsOnUnchanged": 9,
+        "exactReferenceMatches": 1,
+        "medianEndToEndMs": 1567.0
+      },
+      "manglish": {
+        "cases": 8,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 8,
+        "falseCorrectionsOnUnchanged": 3,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 1150.0
+      },
+      "mixed_language": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 5,
+        "exactReferenceMatches": 1,
+        "medianEndToEndMs": 1355.0
+      },
+      "long": {
+        "cases": 5,
+        "referenceEditPrecision": 0.6,
+        "referenceEditRecall": 0.8571428571428571,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 2,
+        "medianEndToEndMs": 2365
+      }
+    },
+    "englishCases": {
+      "cases": 88,
+      "referenceEditPrecision": 0.7868852459016393,
+      "referenceEditRecall": 0.6956521739130435,
+      "unchangedCases": 25,
+      "falseCorrectionsOnUnchanged": 1,
+      "exactReferenceMatches": 64,
+      "medianEndToEndMs": 1037.0
+    },
+    "runtime": "llama.cpp 0.7.0",
+    "backendPolicy": "llama-0.7.0-vulkan-policy-4",
+    "validationApkSha256": "92a36270ebfc9f6ebfc2d01e7dee27d785ba733bfab7bf3b40734f7f87cd2459",
+    "configuredContext": 2048,
+    "outputTokenLimitOverride": null,
+    "semanticAccuracy": "NOT_AUTOMATICALLY_SCORED; inspect raw outputs and invariants",
+    "caveat": "Reference edits penalize valid alternative wording; do not use this proxy alone to rank models."
+  },
+  {
+    "model": "Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm",
+    "requestedBackend": "CPU",
+    "status": "complete",
+    "completeCases": 113,
+    "expectedCases": 113,
+    "allCasesComplete": true,
+    "referenceEditPrecision": 0.6372549019607843,
+    "referenceEditRecall": 0.9420289855072463,
+    "unchangedCases": 50,
+    "falseCorrectionsOnUnchanged": 24,
+    "falseCorrectionRate": 0.48,
+    "exactReferenceMatches": 85,
+    "formatProxyPasses": 109,
+    "literalInvariantCases": 15,
+    "literalInvariantPasses": 13,
+    "medianFirstTokenMs": 2940,
+    "medianTokensPerSecond": 5.17,
+    "medianEndToEndMs": 3961,
+    "peakProcessPssKb": 5206387,
+    "categories": {
+      "spelling": 10,
+      "grammar": 10,
+      "punctuation": 10,
+      "joined_words": 8,
+      "nearby_keys": 8,
+      "proper_names": 4,
+      "technical": 6,
+      "numeric_literals": 6,
+      "negation": 6,
+      "questions": 6,
+      "already_correct": 6,
+      "short": 4,
+      "malayalam": 10,
+      "manglish": 8,
+      "mixed_language": 6,
+      "long": 5
+    },
+    "byCategory": {
+      "spelling": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 3590.5
+      },
+      "grammar": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 3165.0
+      },
+      "punctuation": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 2729.0
+      },
+      "joined_words": {
+        "cases": 8,
+        "referenceEditPrecision": 0.875,
+        "referenceEditRecall": 0.875,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 7,
+        "medianEndToEndMs": 2781.5
+      },
+      "nearby_keys": {
+        "cases": 8,
+        "referenceEditPrecision": 0.75,
+        "referenceEditRecall": 0.75,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 3584.5
+      },
+      "proper_names": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 4218.5
+      },
+      "technical": {
+        "cases": 6,
+        "referenceEditPrecision": 0.5,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 4,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 4159.0
+      },
+      "numeric_literals": {
+        "cases": 6,
+        "referenceEditPrecision": 0.42857142857142855,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 2,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 4983.5
+      },
+      "negation": {
+        "cases": 6,
+        "referenceEditPrecision": 0.6,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 4194.5
+      },
+      "questions": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.75,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 3980.0
+      },
+      "already_correct": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 4154.5
+      },
+      "short": {
+        "cases": 4,
+        "referenceEditPrecision": 0.3333333333333333,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 2,
+        "exactReferenceMatches": 2,
+        "medianEndToEndMs": 2715.0
+      },
+      "malayalam": {
+        "cases": 10,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 10,
+        "falseCorrectionsOnUnchanged": 7,
+        "exactReferenceMatches": 3,
+        "medianEndToEndMs": 4466.5
+      },
+      "manglish": {
+        "cases": 8,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 8,
+        "falseCorrectionsOnUnchanged": 3,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 4415.5
+      },
+      "mixed_language": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 5,
+        "exactReferenceMatches": 1,
+        "medianEndToEndMs": 4053.0
+      },
+      "long": {
+        "cases": 5,
+        "referenceEditPrecision": 0.6363636363636364,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 2,
+        "exactReferenceMatches": 3,
+        "medianEndToEndMs": 12383
+      }
+    },
+    "englishCases": {
+      "cases": 88,
+      "referenceEditPrecision": 0.8125,
+      "referenceEditRecall": 0.9420289855072463,
+      "unchangedCases": 25,
+      "falseCorrectionsOnUnchanged": 8,
+      "exactReferenceMatches": 76,
+      "medianEndToEndMs": 3715.5
+    },
+    "runtime": "LiteRT-LM 0.18.0",
+    "backendPolicy": "litertlm-0.18.0-policy-4",
+    "validationApkSha256": "0610cb85498f35366fabda4004deb1c07df772583e5add63e1a42713a7ad5438",
+    "configuredContext": 2048,
+    "outputTokenLimitOverride": null,
+    "semanticAccuracy": "NOT_AUTOMATICALLY_SCORED; inspect raw outputs and invariants",
+    "caveat": "Reference edits penalize valid alternative wording; do not use this proxy alone to rank models."
+  },
+  {
+    "model": "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm",
+    "requestedBackend": "GPU",
+    "status": "complete",
+    "completeCases": 113,
+    "expectedCases": 113,
+    "allCasesComplete": true,
+    "referenceEditPrecision": 0.6931818181818182,
+    "referenceEditRecall": 0.8840579710144928,
+    "unchangedCases": 50,
+    "falseCorrectionsOnUnchanged": 15,
+    "falseCorrectionRate": 0.3,
+    "exactReferenceMatches": 90,
+    "formatProxyPasses": 113,
+    "literalInvariantCases": 15,
+    "literalInvariantPasses": 15,
+    "medianFirstTokenMs": 335,
+    "medianTokensPerSecond": 19.03,
+    "medianEndToEndMs": 549,
+    "peakProcessPssKb": 703456,
+    "categories": {
+      "spelling": 10,
+      "grammar": 10,
+      "punctuation": 10,
+      "joined_words": 8,
+      "nearby_keys": 8,
+      "proper_names": 4,
+      "technical": 6,
+      "numeric_literals": 6,
+      "negation": 6,
+      "questions": 6,
+      "already_correct": 6,
+      "short": 4,
+      "malayalam": 10,
+      "manglish": 8,
+      "mixed_language": 6,
+      "long": 5
+    },
+    "byCategory": {
+      "spelling": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 520.0
+      },
+      "grammar": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 10,
+        "medianEndToEndMs": 517.5
+      },
+      "punctuation": {
+        "cases": 10,
+        "referenceEditPrecision": 0.7272727272727273,
+        "referenceEditRecall": 0.7272727272727273,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 7,
+        "medianEndToEndMs": 523.5
+      },
+      "joined_words": {
+        "cases": 8,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 8,
+        "medianEndToEndMs": 503.5
+      },
+      "nearby_keys": {
+        "cases": 8,
+        "referenceEditPrecision": 0.8571428571428571,
+        "referenceEditRecall": 0.75,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 514.5
+      },
+      "proper_names": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 612.0
+      },
+      "technical": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 4,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 622.0
+      },
+      "numeric_literals": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 807.5
+      },
+      "negation": {
+        "cases": 6,
+        "referenceEditPrecision": 0.6666666666666666,
+        "referenceEditRecall": 0.6666666666666666,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 546.5
+      },
+      "questions": {
+        "cases": 6,
+        "referenceEditPrecision": 0.75,
+        "referenceEditRecall": 0.75,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 549.5
+      },
+      "already_correct": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 560.0
+      },
+      "short": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 467.0
+      },
+      "malayalam": {
+        "cases": 10,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 10,
+        "falseCorrectionsOnUnchanged": 5,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 1357.0
+      },
+      "manglish": {
+        "cases": 8,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 8,
+        "falseCorrectionsOnUnchanged": 3,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 648.5
+      },
+      "mixed_language": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 6,
+        "exactReferenceMatches": 0,
+        "medianEndToEndMs": 644.5
+      },
+      "long": {
+        "cases": 5,
+        "referenceEditPrecision": 0.6,
+        "referenceEditRecall": 0.8571428571428571,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 3,
+        "medianEndToEndMs": 2011
+      }
+    },
+    "englishCases": {
+      "cases": 88,
+      "referenceEditPrecision": 0.8970588235294118,
+      "referenceEditRecall": 0.8840579710144928,
+      "unchangedCases": 25,
+      "falseCorrectionsOnUnchanged": 0,
+      "exactReferenceMatches": 80,
+      "medianEndToEndMs": 539.5
+    },
+    "runtime": "LiteRT-LM 0.18.0",
+    "backendPolicy": "litertlm-0.18.0-policy-4",
+    "validationApkSha256": "0610cb85498f35366fabda4004deb1c07df772583e5add63e1a42713a7ad5438",
+    "configuredContext": 2048,
+    "outputTokenLimitOverride": null,
+    "semanticAccuracy": "NOT_AUTOMATICALLY_SCORED; inspect raw outputs and invariants",
+    "caveat": "Reference edits penalize valid alternative wording; do not use this proxy alone to rank models."
+  },
+  {
+    "model": "qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm",
+    "requestedBackend": "CPU",
+    "status": "complete",
+    "completeCases": 113,
+    "expectedCases": 113,
+    "allCasesComplete": true,
+    "referenceEditPrecision": 0.39285714285714285,
+    "referenceEditRecall": 0.6376811594202898,
+    "unchangedCases": 50,
+    "falseCorrectionsOnUnchanged": 29,
+    "falseCorrectionRate": 0.58,
+    "exactReferenceMatches": 58,
+    "formatProxyPasses": 112,
+    "literalInvariantCases": 15,
+    "literalInvariantPasses": 13,
+    "medianFirstTokenMs": 495,
+    "medianTokensPerSecond": 28.27,
+    "medianEndToEndMs": 629,
+    "peakProcessPssKb": 1011460,
+    "categories": {
+      "spelling": 10,
+      "grammar": 10,
+      "punctuation": 10,
+      "joined_words": 8,
+      "nearby_keys": 8,
+      "proper_names": 4,
+      "technical": 6,
+      "numeric_literals": 6,
+      "negation": 6,
+      "questions": 6,
+      "already_correct": 6,
+      "short": 4,
+      "malayalam": 10,
+      "manglish": 8,
+      "mixed_language": 6,
+      "long": 5
+    },
+    "byCategory": {
+      "spelling": {
+        "cases": 10,
+        "referenceEditPrecision": 0.6923076923076923,
+        "referenceEditRecall": 0.9,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 7,
+        "medianEndToEndMs": 624.0
+      },
+      "grammar": {
+        "cases": 10,
+        "referenceEditPrecision": 0.6666666666666666,
+        "referenceEditRecall": 0.6,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 608.5
+      },
+      "punctuation": {
+        "cases": 10,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.8181818181818182,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 8,
+        "medianEndToEndMs": 619.5
+      },
+      "joined_words": {
+        "cases": 8,
+        "referenceEditPrecision": 0.5,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 600.5
+      },
+      "nearby_keys": {
+        "cases": 8,
+        "referenceEditPrecision": 0.6666666666666666,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 609.5
+      },
+      "proper_names": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 664.0
+      },
+      "technical": {
+        "cases": 6,
+        "referenceEditPrecision": 0.1,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 4,
+        "falseCorrectionsOnUnchanged": 4,
+        "exactReferenceMatches": 1,
+        "medianEndToEndMs": 699.5
+      },
+      "numeric_literals": {
+        "cases": 6,
+        "referenceEditPrecision": 0.2222222222222222,
+        "referenceEditRecall": 0.6666666666666666,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 3,
+        "exactReferenceMatches": 1,
+        "medianEndToEndMs": 809.0
+      },
+      "negation": {
+        "cases": 6,
+        "referenceEditPrecision": 0.5,
+        "referenceEditRecall": 0.6666666666666666,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 650.0
+      },
+      "questions": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 620.0
+      },
+      "already_correct": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 629.0
+      },
+      "short": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 3,
+        "medianEndToEndMs": 561.0
+      },
+      "malayalam": {
+        "cases": 10,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 10,
+        "falseCorrectionsOnUnchanged": 9,
+        "exactReferenceMatches": 1,
+        "medianEndToEndMs": 1134.5
+      },
+      "manglish": {
+        "cases": 8,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 8,
+        "falseCorrectionsOnUnchanged": 3,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 520.5
+      },
+      "mixed_language": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 6,
+        "exactReferenceMatches": 0,
+        "medianEndToEndMs": 686.5
+      },
+      "long": {
+        "cases": 5,
+        "referenceEditPrecision": 0.17647058823529413,
+        "referenceEditRecall": 0.42857142857142855,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 2,
+        "exactReferenceMatches": 1,
+        "medianEndToEndMs": 1922
+      }
+    },
+    "englishCases": {
+      "cases": 88,
+      "referenceEditPrecision": 0.5365853658536586,
+      "referenceEditRecall": 0.6376811594202898,
+      "unchangedCases": 25,
+      "falseCorrectionsOnUnchanged": 10,
+      "exactReferenceMatches": 52,
+      "medianEndToEndMs": 623.0
+    },
+    "runtime": "LiteRT-LM 0.18.0",
+    "backendPolicy": "litertlm-0.18.0-policy-4",
+    "validationApkSha256": "92a36270ebfc9f6ebfc2d01e7dee27d785ba733bfab7bf3b40734f7f87cd2459",
+    "configuredContext": 1280,
+    "outputTokenLimitOverride": null,
+    "semanticAccuracy": "NOT_AUTOMATICALLY_SCORED; inspect raw outputs and invariants",
+    "caveat": "Reference edits penalize valid alternative wording; do not use this proxy alone to rank models."
+  },
+  {
+    "model": "qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm",
+    "requestedBackend": "GPU",
+    "status": "complete",
+    "completeCases": 113,
+    "expectedCases": 113,
+    "allCasesComplete": true,
+    "referenceEditPrecision": 0.4326923076923077,
+    "referenceEditRecall": 0.6521739130434783,
+    "unchangedCases": 50,
+    "falseCorrectionsOnUnchanged": 22,
+    "falseCorrectionRate": 0.44,
+    "exactReferenceMatches": 68,
+    "formatProxyPasses": 113,
+    "literalInvariantCases": 15,
+    "literalInvariantPasses": 14,
+    "medianFirstTokenMs": 202,
+    "medianTokensPerSecond": 34.82,
+    "medianEndToEndMs": 313,
+    "peakProcessPssKb": 850038,
+    "categories": {
+      "spelling": 10,
+      "grammar": 10,
+      "punctuation": 10,
+      "joined_words": 8,
+      "nearby_keys": 8,
+      "proper_names": 4,
+      "technical": 6,
+      "numeric_literals": 6,
+      "negation": 6,
+      "questions": 6,
+      "already_correct": 6,
+      "short": 4,
+      "malayalam": 10,
+      "manglish": 8,
+      "mixed_language": 6,
+      "long": 5
+    },
+    "byCategory": {
+      "spelling": {
+        "cases": 10,
+        "referenceEditPrecision": 0.8181818181818182,
+        "referenceEditRecall": 0.9,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 8,
+        "medianEndToEndMs": 305.0
+      },
+      "grammar": {
+        "cases": 10,
+        "referenceEditPrecision": 0.875,
+        "referenceEditRecall": 0.7,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 7,
+        "medianEndToEndMs": 296.0
+      },
+      "punctuation": {
+        "cases": 10,
+        "referenceEditPrecision": 0.8888888888888888,
+        "referenceEditRecall": 0.7272727272727273,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 7,
+        "medianEndToEndMs": 299.0
+      },
+      "joined_words": {
+        "cases": 8,
+        "referenceEditPrecision": 0.625,
+        "referenceEditRecall": 0.625,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 5,
+        "medianEndToEndMs": 296.0
+      },
+      "nearby_keys": {
+        "cases": 8,
+        "referenceEditPrecision": 0.6666666666666666,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 0,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 298.0
+      },
+      "proper_names": {
+        "cases": 4,
+        "referenceEditPrecision": 0.5,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 3,
+        "medianEndToEndMs": 343.5
+      },
+      "technical": {
+        "cases": 6,
+        "referenceEditPrecision": 0.3333333333333333,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 4,
+        "falseCorrectionsOnUnchanged": 2,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 354.0
+      },
+      "numeric_literals": {
+        "cases": 6,
+        "referenceEditPrecision": 0.3333333333333333,
+        "referenceEditRecall": 0.6666666666666666,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 428.5
+      },
+      "negation": {
+        "cases": 6,
+        "referenceEditPrecision": 0.5,
+        "referenceEditRecall": 0.6666666666666666,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 1,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 327.5
+      },
+      "questions": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.5,
+        "unchangedCases": 2,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 4,
+        "medianEndToEndMs": 299.5
+      },
+      "already_correct": {
+        "cases": 6,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 315.0
+      },
+      "short": {
+        "cases": 4,
+        "referenceEditPrecision": 1.0,
+        "referenceEditRecall": 0.0,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 0,
+        "exactReferenceMatches": 3,
+        "medianEndToEndMs": 260.0
+      },
+      "malayalam": {
+        "cases": 10,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 10,
+        "falseCorrectionsOnUnchanged": 8,
+        "exactReferenceMatches": 2,
+        "medianEndToEndMs": 599.5
+      },
+      "manglish": {
+        "cases": 8,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 8,
+        "falseCorrectionsOnUnchanged": 2,
+        "exactReferenceMatches": 6,
+        "medianEndToEndMs": 375.0
+      },
+      "mixed_language": {
+        "cases": 6,
+        "referenceEditPrecision": 0.0,
+        "referenceEditRecall": 1.0,
+        "unchangedCases": 6,
+        "falseCorrectionsOnUnchanged": 6,
+        "exactReferenceMatches": 0,
+        "medianEndToEndMs": 293.0
+      },
+      "long": {
+        "cases": 5,
+        "referenceEditPrecision": 0.17647058823529413,
+        "referenceEditRecall": 0.42857142857142855,
+        "unchangedCases": 3,
+        "falseCorrectionsOnUnchanged": 2,
+        "exactReferenceMatches": 1,
+        "medianEndToEndMs": 1097
+      }
+    },
+    "englishCases": {
+      "cases": 88,
+      "referenceEditPrecision": 0.6338028169014085,
+      "referenceEditRecall": 0.6521739130434783,
+      "unchangedCases": 25,
+      "falseCorrectionsOnUnchanged": 5,
+      "exactReferenceMatches": 60,
+      "medianEndToEndMs": 305.0
+    },
+    "runtime": "LiteRT-LM 0.18.0",
+    "backendPolicy": "litertlm-0.18.0-policy-4",
+    "validationApkSha256": "0610cb85498f35366fabda4004deb1c07df772583e5add63e1a42713a7ad5438",
+    "configuredContext": 1280,
+    "outputTokenLimitOverride": null,
+    "semanticAccuracy": "NOT_AUTOMATICALLY_SCORED; inspect raw outputs and invariants",
+    "caveat": "Reference edits penalize valid alternative wording; do not use this proxy alone to rank models."
+  }
+]

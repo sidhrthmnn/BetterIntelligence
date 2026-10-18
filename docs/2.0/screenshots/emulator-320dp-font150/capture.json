@@ -1,0 +1,9 @@
+{
+  "device": "Android 16 dedicated emulator",
+  "widthDp": 320,
+  "fontScale": 1.5,
+  "validationApkSha256": "ba7f7b8f0cc357ede28eb12aa25addf1104c947b53970b91d90a5fdb40cfbee6",
+  "capturedAt": "2026-10-18T15:54:22.835482+01:00",
+  "tests": "ChatFirstNavigationTest + ChatKeyboardTest; OK (2 tests), 30.007 seconds",
+  "limitations": "No model weights loaded; hardware GPU not tested on emulator."
+}

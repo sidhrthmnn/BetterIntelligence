@@ -172,13 +172,16 @@
     "repo": "litert-community/gemma-4-E2B-it-litert-lm",
     "revision": "b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1",
     "license": "apache-2.0",
-    "tier": "QUALITY",
+    "tier": "BALANCED",
     "description": "Mobile-optimized mixed-precision Gemma 4. Text chat and polishing through LiteRT-LM CPU or validated OpenCL GPU. Vision/audio are not enabled. Memory estimate includes text weights and embeddings; unused vision/audio are excluded.",
     "quantization": "Mixed 2/4/8-bit",
     "url": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1/gemma-4-E2B-it.litertlm",
     "layers": 35,
     "kvBytesPerToken": 71680,
-    "textWeightsBytes": 1920000000
+    "textWeightsBytes": 1920000000,
+    "dynamicContext": true,
+    "runtimeMaxContext": 32003,
+    "recommendedMode": "BALANCED"
   },
   {
     "name": "Gemma 4 E4B Instruct · LiteRT",
@@ -197,7 +200,10 @@
     "url": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/2eee7ac325f20eb8c9ac1d0e972f7c84663062da/gemma-4-E4B-it.litertlm",
     "layers": 42,
     "kvBytesPerToken": 172032,
-    "textWeightsBytes": 2910000000
+    "textWeightsBytes": 2910000000,
+    "dynamicContext": false,
+    "runtimeMaxContext": 0,
+    "recommendedMode": "ADVANCED"
   },
   {
     "name": "Gemma 4 E2B Instruct · GGUF",
@@ -234,5 +240,27 @@
     "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/bfc15c382204943c3a8fff0c750b94ae2364d7a3/gemma-4-E4B-it-Q4_K_M.gguf",
     "layers": 42,
     "kvBytesPerToken": 172032
+  },
+  {
+    "name": "Qwen 3 0.6B Instruct · LiteRT",
+    "filename": "qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm",
+    "architecture": "qwen3",
+    "parameters": "0.6B",
+    "quantization": "INT4 block32",
+    "context": 1280,
+    "ramMb": 894,
+    "bytes": 347251840,
+    "sha256": "2df6821ec12702dafd33915e7a1a1adc7c4b053f3672fd9555dfaf3a114c4139",
+    "repo": "litert-community/Qwen3-0.6B-int4",
+    "revision": "256f33043931947c173d7f3cc1d84ee7a8538cc2",
+    "license": "apache-2.0",
+    "tier": "LIGHTWEIGHT",
+    "description": "Small mobile package for basic English tasks. CPU/GPU measured on HONOR; AUTO can prefer CPU when deterministic GPU validation differs. Limited proofreading and multilingual quality; use Balanced for important writing.",
+    "url": "https://huggingface.co/litert-community/Qwen3-0.6B-int4/resolve/256f33043931947c173d7f3cc1d84ee7a8538cc2/qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm",
+    "layers": 28,
+    "kvBytesPerToken": 229376,
+    "dynamicContext": false,
+    "runtimeMaxContext": 1280,
+    "recommendedMode": "FAST"
   }
 ]

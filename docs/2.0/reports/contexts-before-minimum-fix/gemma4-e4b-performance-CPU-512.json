@@ -1,0 +1,89 @@
+{
+  "model": "gemma-4-E4B-it.litertlm",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "CPU",
+  "requestedContext": 512,
+  "runtime": "LiteRT-LM 0.18.0",
+  "quality": false,
+  "chatQuality": false,
+  "chargingDuringTest": true,
+  "backendPolicy": "litertlm-0.18.0-policy-4",
+  "harnessRevision": "2026-10-18-c",
+  "samples": [
+    {
+      "id": "math",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 4184457216,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 680628,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 290,
+        "chargeCounterMicroAh": 2120
+      },
+      "status": "running"
+    }
+  ],
+  "before": {
+    "availableRamBytes": 4676812800,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 36388,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 290,
+    "chargeCounterMicroAh": 2121
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 779684,
+    "DMA-BUFKb": 1100680
+  },
+  "status": "failed",
+  "declaredBackends": [
+    "CPU",
+    "GPU"
+  ],
+  "declaredMaxContext": 0,
+  "dynamicContext": false,
+  "supportsThinking": false,
+  "speculativeDecodingSupported": true,
+  "initializationMs": 12831,
+  "configuredContext": 512,
+  "allocationContextEstimate": 2048,
+  "afterInitialization": {
+    "availableRamBytes": 4208164864,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 680179,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 290,
+    "chargeCounterMicroAh": 2120
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 843588,
+    "DMA-BUFKb": 1101048
+  },
+  "failure": "com.google.ai.edge.litertlm.LiteRtLmJniException: Status Code: 13. Message: ERROR: [third_party/odml/litert_lm/runtime/executor/llm_litert_compiled_model_executor.cc:849]\n└ Failed to invoke the compiled model\n└ Failed to allocate tensors",
+  "after": {
+    "availableRamBytes": 4333535232,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 337282,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 290,
+    "chargeCounterMicroAh": 2120
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 843696,
+    "DMA-BUFKb": 1100664
+  },
+  "peakProcessPssKb": 757470,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "f3195c99a6c18955940c26138fb1968ae2527b88376c657438999c784e9e57f6",
+  "modelSha256": "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0",
+  "modelRevision": "2eee7ac325f20eb8c9ac1d0e972f7c84663062da",
+  "resetAutoCache": false
+}

@@ -27,6 +27,7 @@ import com.example.ui.components.HardwarePerformanceComparisonCard
 @Composable
 fun ModelsScreen(viewModel: AiCoreViewModel) {
     val models by viewModel.allModels.collectAsState()
+    val downloadErrors by viewModel.modelDownloadErrors.collectAsState()
     val active by viewModel.activeModel.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
     val hardware by viewModel.hardwareProfile.collectAsState()
@@ -38,6 +39,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val context = LocalContext.current
     var source by rememberSaveable { mutableStateOf("library") }
     var tier by rememberSaveable { mutableStateOf("ALL") }
+    var otherModels by rememberSaveable { mutableStateOf(false) }
     var advanced by rememberSaveable { mutableStateOf(false) }
     var details by remember { mutableStateOf<ModelEntity?>(null) }
     var deleting by remember { mutableStateOf<ModelEntity?>(null) }
@@ -58,7 +60,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                         modifier = Modifier.testTag("model_source_$key"))
                 }
             }
-            TextButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("import_gguf_btn")) { Text("Import a GGUF file") }
+            TextButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("import_gguf_btn")) { Text("Import GGUF or LiteRT-LM") }
         }
         if (source == "find") item {
             val query by viewModel.hfSearchQuery.collectAsState()
@@ -94,14 +96,18 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         if (source == "library") item {
             Text("Mobile-friendly library", style = MaterialTheme.typography.titleLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("ALL" to "All", "LIGHTWEIGHT" to "Lightweight", "BALANCED" to "Balanced", "QUALITY" to "More capable").forEach { (key, label) ->
+                listOf("ALL" to "All", "FAST" to "Fast", "BALANCED" to "Balanced", "ADVANCED" to "Advanced").forEach { (key, label) ->
                     FilterChip(tier == key, { tier = key }, label = { Text(label) })
                 }
+            }
+            TextButton(onClick = { otherModels = !otherModels; tier = "ALL" }) {
+                Text(if (otherModels) "Hide other models" else "Other models and existing downloads")
             }
         }
         val visibleModels = models.filter {
             when (source) {
-                "library" -> !it.isCustom && (tier == "ALL" || it.recommendedTier == tier)
+                "library" -> !it.isCustom && (otherModels || ModelLibrary.category(it) != null || it.isInstalled || it.id == recommended?.id) &&
+                    (tier == "ALL" || ModelLibrary.category(it) == tier)
                 "my_models" -> it.isInstalled || it.isCustom
                 else -> false
             }
@@ -123,14 +129,18 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             val canDownload = hardware?.let { ModelLibrary.canDownload(model, it) } ?: true
             OutlinedCard(Modifier.fillMaxWidth().testTag("model_card_${model.id}")) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(model.name, style = MaterialTheme.typography.titleMedium)
-                    Text("${model.fileSizeMb} MB download · About ${ModelLibrary.memoryEstimate(model).totalMb} MB at 2K context",
+                    ModelLibrary.categoryLabel(model)?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+                    Text(model.name.substringBefore(" · "), style = MaterialTheme.typography.titleMedium)
+                    Text("${model.fileSizeMb} MB download · About ${ModelLibrary.memoryEstimate(model).totalMb} MB RAM",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (ModelLibrary.category(model) == "FAST") Text("Small download for basic English tasks. Choose Balanced for more reliable writing and multilingual chat.", style = MaterialTheme.typography.bodySmall)
+                    if (ModelLibrary.category(model) == "BALANCED") Text("Recommended for everyday chat and English AI Polish.", style = MaterialTheme.typography.bodySmall)
+                    if (ModelLibrary.category(model) == "ADVANCED") Text("Stronger multilingual writing; higher memory use and slower responses.", style = MaterialTheme.typography.bodySmall)
                     if (selected) Text("Selected · available to approved apps", color = MaterialTheme.colorScheme.primary)
                     Text(model.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (!selected && !fits) Text(loadProfile?.let { ModelLibrary.incompatibilityReason(model, it, 512) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
                     if (!installed && !canDownload) Text("Free more storage before downloading this model.", color = MaterialTheme.colorScheme.error)
-                    if (model.downloadState == "ERROR") Text("Download failed. Check your connection and try again.", color = MaterialTheme.colorScheme.error)
+                    if (model.downloadState == "ERROR") Text(downloadErrors[model.id] ?: "Download interrupted. Retry to resume or check the model publisher’s access requirements.", color = MaterialTheme.colorScheme.error)
                     if (downloading) {
                         LinearProgressIndicator(progress = { model.downloadProgress }, modifier = Modifier.fillMaxWidth())
                         Text(if (model.checksumVerificationStatus == "VERIFYING") "Checking download…" else "Downloading ${(model.downloadProgress * 100).toInt()}%",
@@ -138,13 +148,13 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         when {
-                            downloading -> OutlinedButton(onClick = { viewModel.cancelDownload(model.id) }) { Text("Cancel") }
+                            downloading -> OutlinedButton(onClick = { viewModel.cancelDownload(model.id) }) { Text("Pause") }
                             installed -> Button(onClick = { viewModel.switchModel(model) }, enabled = loading == null && deletingId == null && !selected && fits && !telemetry.isRunning,
                                 modifier = Modifier.testTag("load_model_${model.id}")) {
                                 Text(if (loading == model.id) "Loading…" else if (selected) "In use" else "Use model")
                             }
                             else -> Button(onClick = { viewModel.downloadModel(model) }, enabled = canDownload,
-                                modifier = Modifier.testTag("download_model_${model.id}")) { Text(if (model.downloadState == "ERROR") "Retry download" else "Download") }
+                                modifier = Modifier.testTag("download_model_${model.id}")) { Text(if (model.downloadState == "ERROR") "Retry download" else if (model.downloadState == "PAUSED") "Resume download" else "Download") }
                         }
                         TextButton(onClick = { details = model }) { Text("Details") }
                         if (installed || (model.isCustom && !downloading)) {

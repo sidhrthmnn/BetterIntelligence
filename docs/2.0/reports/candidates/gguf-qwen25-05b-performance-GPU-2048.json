@@ -1,0 +1,264 @@
+{
+  "model": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "GPU",
+  "requestedContext": 2048,
+  "runtime": "llama.cpp 0.7.0",
+  "quality": false,
+  "chatQuality": false,
+  "chargingDuringTest": true,
+  "backendPolicy": "llama-0.7.0-vulkan-policy-4",
+  "harnessRevision": "2026-10-18-c",
+  "samples": [
+    {
+      "id": "math",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 5325475840,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 786676,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 4441,
+      "tokensPerSecond": 51.46239,
+      "inputTokens": 23,
+      "outputTokens": 3,
+      "actualBackend": "CPU",
+      "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "backendDecision": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 4549,
+      "after": {
+        "availableRamBytes": 5207199744,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 842738,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 873464
+    },
+    {
+      "id": "polish",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 5207199744,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 842754,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "I will be their in ten minutes, please wait for me.",
+      "firstTokenMs": 420,
+      "tokensPerSecond": 48.589592,
+      "inputTokens": 31,
+      "outputTokens": 13,
+      "actualBackend": "CPU",
+      "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "backendDecision": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 750,
+      "after": {
+        "availableRamBytes": 5224501248,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 824198,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 873464
+    },
+    {
+      "id": "decode",
+      "round": 0,
+      "before": {
+        "availableRamBytes": 5224501248,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 824222,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty.",
+      "firstTokenMs": 243,
+      "tokensPerSecond": 49.34087,
+      "inputTokens": 18,
+      "outputTokens": 69,
+      "actualBackend": "CPU",
+      "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "backendDecision": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 1711,
+      "after": {
+        "availableRamBytes": 4739858432,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 824286,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 873464
+    },
+    {
+      "id": "math",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 4739858432,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 824322,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "102",
+      "firstTokenMs": 319,
+      "tokensPerSecond": 34.985832,
+      "inputTokens": 23,
+      "outputTokens": 3,
+      "actualBackend": "CPU",
+      "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "backendDecision": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 450,
+      "after": {
+        "availableRamBytes": 4731088896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 824418,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 873464
+    },
+    {
+      "id": "polish",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 4731088896,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 824454,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "I will be their in ten minutes, please wait for me.",
+      "firstTokenMs": 421,
+      "tokensPerSecond": 52.866802,
+      "inputTokens": 31,
+      "outputTokens": 13,
+      "actualBackend": "CPU",
+      "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "backendDecision": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 719,
+      "after": {
+        "availableRamBytes": 4723851264,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 824550,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 873464
+    },
+    {
+      "id": "decode",
+      "round": 1,
+      "before": {
+        "availableRamBytes": 4723851264,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 824590,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "status": "complete",
+      "response": "One, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty.",
+      "firstTokenMs": 247,
+      "tokensPerSecond": 49.419746,
+      "inputTokens": 18,
+      "outputTokens": 69,
+      "actualBackend": "CPU",
+      "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "backendDecision": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown",
+      "durationMs": 1708,
+      "after": {
+        "availableRamBytes": 4714074112,
+        "totalRamBytes": 11784495104,
+        "lowMemory": false,
+        "processPssKb": 824714,
+        "thermalStatus": 0,
+        "batteryTemperatureTenthsC": 360,
+        "chargeCounterMicroAh": 2081
+      },
+      "peakProcessPssKb": 873464
+    }
+  ],
+  "before": {
+    "availableRamBytes": 5463740416,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 178776,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 2081
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 926216,
+    "DMA-BUFKb": 958284
+  },
+  "status": "fallback",
+  "initializationMs": 618,
+  "configuredContext": 2048,
+  "allocationContextEstimate": 0,
+  "afterInitialization": {
+    "availableRamBytes": 5337137152,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 785830,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 2081
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 927284,
+    "DMA-BUFKb": 958284
+  },
+  "after": {
+    "availableRamBytes": 4713811968,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 350602,
+    "thermalStatus": 0,
+    "batteryTemperatureTenthsC": 360,
+    "chargeCounterMicroAh": 2081
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 1025864,
+    "DMA-BUFKb": 958284
+  },
+  "peakProcessPssKb": 873464,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "92a36270ebfc9f6ebfc2d01e7dee27d785ba733bfab7bf3b40734f7f87cd2459",
+  "modelSha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+  "modelRevision": "9217f5db79a29953eb74d5343926648285ec7e67",
+  "resetAutoCache": false
+}

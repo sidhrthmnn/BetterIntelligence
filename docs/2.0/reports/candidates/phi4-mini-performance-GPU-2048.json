@@ -1,0 +1,70 @@
+{
+  "model": "Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm",
+  "device": "HONOR/VKP-NX9EEA/HNVKPX:16/HONORVKP-N39/10.0.0.168C431E8:user/release-keys",
+  "requestedBackend": "GPU",
+  "requestedContext": 2048,
+  "runtime": "LiteRT-LM 0.18.0",
+  "quality": false,
+  "chargingDuringTest": true,
+  "backendPolicy": "litertlm-0.18.0-policy-3",
+  "harnessRevision": "2026-10-18-b",
+  "samples": [],
+  "before": {
+    "availableRamBytes": 5975244800,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 207310,
+    "thermalStatus": 2,
+    "batteryTemperatureTenthsC": 400,
+    "chargeCounterMicroAh": 1834
+  },
+  "driverBefore": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 704752,
+    "DMA-BUFKb": 919568
+  },
+  "status": "failed",
+  "declaredBackends": [
+    "CPU",
+    "GPU"
+  ],
+  "declaredMaxContext": 0,
+  "dynamicContext": false,
+  "speculativeDecodingSupported": false,
+  "initializationMs": 19935,
+  "configuredContext": 2048,
+  "afterInitialization": {
+    "availableRamBytes": 0,
+    "totalRamBytes": 11784495104,
+    "lowMemory": true,
+    "processPssKb": 1140656,
+    "thermalStatus": 2,
+    "batteryTemperatureTenthsC": 400,
+    "chargeCounterMicroAh": 1833
+  },
+  "driverAfterInitialization": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 7075912,
+    "DMA-BUFKb": 919568
+  },
+  "failure": "java.lang.IllegalStateException: Memory pressure: stop experiment safely",
+  "after": {
+    "availableRamBytes": 6452805632,
+    "totalRamBytes": 11784495104,
+    "lowMemory": false,
+    "processPssKb": 376863,
+    "thermalStatus": 2,
+    "batteryTemperatureTenthsC": 400,
+    "chargeCounterMicroAh": 1833
+  },
+  "driverAfter": {
+    "scope": "SYSTEM_WIDE_NOT_APP_ATTRIBUTABLE",
+    "GPUKb": 705088,
+    "DMA-BUFKb": 919568
+  },
+  "peakProcessPssKb": 1445163,
+  "modelMappingsRetainedAfterClose": false,
+  "validationApkSha256": "c3e2c5d63fbc6c1d4c0c02a3ee04e0e03089e7cc9f99117be8e5d6d88d1c25e4",
+  "modelSha256": "7764d4deb53800578307be33039476b38a6c370fff71bedb3c0552563e23ab02",
+  "modelRevision": "8cd368be75fdb94d5a6f6f5b40f1ab22a6c2543e"
+}

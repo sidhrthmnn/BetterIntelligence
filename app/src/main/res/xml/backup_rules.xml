@@ -1,1 +1,1 @@
-<full-backup-content><exclude domain="file" path="models/" /></full-backup-content>
+<full-backup-content><exclude domain="file" path="models/" /><exclude domain="sharedpref" path="search_credentials.xml" /></full-backup-content>
