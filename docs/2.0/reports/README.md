@@ -1,6 +1,6 @@
 # BI 2.0 development measurements
 
-Measured on the physical HONOR VKP-NX9, Android 16 / Snapdragon 8 Elite / Adreno 830, 18 October 2026. This is an unfinished release evaluation, not a published 2.0 release. Raw synthetic outputs, actual backend, immutable model identity, APK hash, context, initialization, memory and thermal fields are in `candidates/`.
+Measured on the physical HONOR VKP-NX9, Android 16 / Snapdragon 8 Elite / Adreno 830, 18 October 2026. BI 2.0 is published internally and Play-installed; public production access remains gated. Raw synthetic outputs, actual backend, immutable model identity, APK hash, context, initialization, memory and thermal fields are in `candidates/`. Final production-package client checks are recorded separately in [installed TypeRight validation](INSTALLED_TYPERIGHT.md).
 
 ## Proofreading: 791 completed requests
 
@@ -32,7 +32,7 @@ The library now recommends **Balanced: Gemma 4 E2B**, **Advanced: Gemma 4 E4B**,
 
 All 84 chat outputs were reviewed separately against their 12-case criteria; see `CHAT_REVIEW.md`. E2B/E4B had the strongest practical combination in this cohort. Both can still make unsupported ambiguity assumptions. Small Qwen GGUF invented current weather and a fictional-news URL, and failed arithmetic; it remains available for compatibility, outside the primary recommendations.
 
-The actual built-in service prompt was tightened after a measured digit-to-word failure; five real Binder checks on CPU and GPU now preserve numbers, negation, technical names, URLs and emails. The 113-case generic multilingual experiment uses a different prompt. **Do not infer a TypeRight winner from it:** a reproduction of the installed version 213 prompt returned the incomplete correction `I has 2 apples.` on both E2B CPU and GPU, while E4B returned `I have 2 apples.` on both. The installed keyboard's first E2B review showed no changes; investigation/installed E4B checks are recorded separately. TypeRight 2.0 insertion/undo/selection and latency remain mandatory; own-UID probes do not establish that gate. Every proposed edit needs review; no semantic correctness guarantee is made.
+The actual built-in service prompt was tightened after a measured digit-to-word failure; five real Binder checks on CPU and GPU now preserve numbers, negation, technical names, URLs and emails. The 113-case generic multilingual experiment uses a different prompt. **Do not infer a TypeRight winner from it:** the version-213 prompt returned the incomplete correction `I has 2 apples.` on E2B CPU/GPU, while E4B returned `I have 2 apples.`. The user-authorized TypeRight 215 update now trusts BI output unchanged and uses a JSON selected-span prompt. Eight actual installed E4B UI checks passed, including insertion/undo/selection and offline restart with one manual retry. E4B is verified for that narrow English sample; the new prompt has not been compared end to end across every candidate. UI timings include accessibility overhead and are separate from diagnostic request timings. Every proposed edit needs review; no semantic correctness guarantee is made.
 
 ## Context and automatic-selection follow-up
 

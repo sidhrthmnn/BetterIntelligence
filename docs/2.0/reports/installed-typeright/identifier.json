@@ -1,0 +1,24 @@
+{
+  "phase": "polish",
+  "keyboardPackage": "com.aistudio.typerigh2.jkwpzq",
+  "keyboardVersionCode": "215",
+  "biVersionCode": "5",
+  "status": "unchanged_review_complete",
+  "case": "identifier",
+  "modelVerifiedInHostUi": "Gemma4E4B",
+  "selectionStart": 32,
+  "selectionEnd": 32,
+  "editorPopulated": true,
+  "windowTypes": [
+    3,
+    2,
+    1
+  ],
+  "input": "Keep com.example.demo unchanged.",
+  "imeWindowExposed": true,
+  "writingToolsExposed": true,
+  "reviewReadyMs": 36275,
+  "uiPollIntervalMs": 50,
+  "observedReviewMarker": "Keep com.example.demo unchanged.",
+  "output": "Keep com.example.demo unchanged."
+}

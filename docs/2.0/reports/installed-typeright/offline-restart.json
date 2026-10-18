@@ -1,0 +1,39 @@
+{
+  "phase": "polish",
+  "keyboardPackage": "com.aistudio.typerigh2.jkwpzq",
+  "keyboardVersionCode": "215",
+  "biVersionCode": "5",
+  "status": "polish_insert_complete",
+  "case": "numeric",
+  "modelVerifiedInHostUi": "Gemma4E4B",
+  "selectionStart": 15,
+  "selectionEnd": 15,
+  "editorPopulated": true,
+  "windowTypes": [
+    3,
+    2,
+    1
+  ],
+  "input": "i has 2 apples.",
+  "imeWindowExposed": true,
+  "writingToolsExposed": true,
+  "reviewReadyMs": 146826,
+  "uiPollIntervalMs": 50,
+  "observedReviewMarker": "I have 2 apples.",
+  "output": "I have 2 apples.",
+  "reviewBeforeInsertion": true,
+  "undoRestoredOriginal": true,
+  "lifecycle": {
+    "oldBiPid": "27247",
+    "newBiPid": "22245",
+    "networkDisabledForTest": true,
+    "previousWifi": "1",
+    "previousMobileData": "1",
+    "manualRetry": {
+      "busyObserved": true,
+      "proofreadTappedViaAdbAt": "2026-10-18T23:32:33+01:00",
+      "automaticRecoveryClaimed": false,
+      "latencyIncludesIntentionalWait": true
+    }
+  }
+}

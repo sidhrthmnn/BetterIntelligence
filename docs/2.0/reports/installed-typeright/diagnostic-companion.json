@@ -1,0 +1,59 @@
+{
+  "model": "Gemma 4 E4B Instruct · LiteRT",
+  "cases": [
+    {
+      "input": "i has 2 apples.",
+      "expected": "I have 2 apples.",
+      "context": "plain",
+      "output": "I have 2 apples.",
+      "isCompanionResponse": true,
+      "fallback": false,
+      "durationMs": 3992
+    },
+    {
+      "input": "i has 2 apples.",
+      "expected": "I have 2 apples.",
+      "context": "whole-field",
+      "output": "I have 2 apples.",
+      "isCompanionResponse": true,
+      "fallback": false,
+      "durationMs": 4066
+    },
+    {
+      "input": "i has 2 apples.",
+      "expected": "I have 2 apples.",
+      "context": "whole-selection",
+      "output": "I have 2 apples.",
+      "isCompanionResponse": true,
+      "fallback": false,
+      "durationMs": 4163
+    },
+    {
+      "input": "what cab you do nos",
+      "expected": "What can you do now?",
+      "context": "plain",
+      "output": "What can you do now?",
+      "isCompanionResponse": true,
+      "fallback": false,
+      "durationMs": 4079
+    },
+    {
+      "input": "what cab you do nos",
+      "expected": "What can you do now?",
+      "context": "whole-field",
+      "output": "What can you do now?",
+      "isCompanionResponse": true,
+      "fallback": false,
+      "durationMs": 4064
+    },
+    {
+      "input": "what cab you do nos",
+      "expected": "What can you do now?",
+      "context": "whole-selection",
+      "output": "What can you do now?",
+      "isCompanionResponse": true,
+      "fallback": false,
+      "durationMs": 4055
+    }
+  ]
+}

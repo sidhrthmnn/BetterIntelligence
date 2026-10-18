@@ -1,6 +1,6 @@
 # 2.0 validation record
 
-Version 2.0 / code 5 is available on the internal Play track. Diagnostic APKs use a separate identity; TypeRight 213 has not been updated or uninstalled.
+Version 2.0 / code 5 is available on the internal Play track and installed on the HONOR through Play. The user subsequently authorized the TypeRight compatibility fix: its Play-delivered 215 update preserves the original installation and data. Diagnostic APKs use a separate identity and the temporary diagnostic keyboard is disabled.
 
 ## Completed checks, 18 October 2026
 
@@ -14,18 +14,19 @@ Version 2.0 / code 5 is available on the internal Play track. Diagnostic APKs us
 - Active-model deletion/caller approval: 2 tests passed (0.612 s). Busy deletion rejected, idle deletion retained chats. Simulated Android thermal-status throttling exercised conservative CPU selection; override cleared. This is not sustained physical-heating evidence.
 - Android 16 x86_64 emulator: 2 UI tests passed (30.007 s), 320 dp / 150% font. All themes/settings, recreation and keyboard geometry passed. Captures identify their APK and precede the last curated-category/polish refinements; HONOR captures are the latest product evidence.
 - CPU/optional Vulkan libraries compile for ARM64 and x86_64. Compilation is not GPU execution evidence.
-- Full-ABI signed 2.0/code 5 builds passed (7 min 4 s, then 4 min 4 s with the Binder context correction), including all 74 JVM tests and release lint. Bundletool validation, upload signature verification and native-content checks passed: both ABIs, 16 KB ELF alignment, optional Vulkan linkage, unchanged production authority/permission and no bundled model weights. Final source-commit provenance and release-gate tests are still being completed before upload.
+- Full-ABI signed 2.0/code 5 builds passed (7 min 4 s, then 4 min 4 s with the Binder context correction), including all 74 JVM tests and release lint. Bundletool validation, upload signature verification and native-content checks passed: both ABIs, 16 KB ELF alignment, optional Vulkan linkage, unchanged production authority/permission and no bundled model weights. The published bundle's source is `f7980627ee15b44140011d6757eea5e2805f4444`; publication identity and checksums are recorded below.
 - All six minimum-context regression configurations completed: E2B/E4B CPU, GPU and AUTO with a requested 512 promoted to 1024. The 27 earlier context runs retain four original CPU/AUTO failures. E4B's later AUTO choice favored CPU after a measured thermal-status increase during GPU validation; raw GPU requests passed. See `reports/MINIMUM_CONTEXT_FIXED.md` and the conservative-selection caveat.
 - Foundation CI [39134772071](https://github.com/sidhrthmnn/BetterIntelligence/actions/runs/39134772071), commit `2f2f38f3b7707e6e6261cdffe61cb4beb566528d`, passed JVM/lint/ARM64 CPU+Vulkan. Follow-up changes require new CI.
 - **791 proofreading requests and 84 separate chat responses**: six distinct packages / seven backend cases. See reports and manual review. Edit-reference scores are proxies, not semantic accuracy. Smaller-context/clean-AUTO follow-ups are recorded separately, including failures.
+- Release [CI 39165532465](https://github.com/sidhrthmnn/BetterIntelligence/actions/runs/39165532465) passed at `5c621f3beacfb2541b81903f115d564be73a6390`, including the final source's JVM/lint/native build checks.
+- **Eight installed TypeRight 215 UI checks passed** against Play-installed BI 2.0: correction/review/insertion/exact undo, selected-span boundaries, negation, identifiers, URL/time, cancellation and offline restart/retry. The cold restart required one explicit Proofread retry after BUSY; its 150.567-second test includes intentional waiting and UI overhead. The separate six-request E4B companion probe is supplemental. See [actual installed results and limitations](reports/INSTALLED_TYPERIGHT.md). Neither production app was uninstalled or sideloaded; old chat, settings, downloads and approvals were preserved by Play updates.
 
 ## Open release gates
 
-- Finish the updated real Binder context/GPU-polish regression, final source provenance and internal release upload.
-- Final repository CI, release commit and tag.
-- Internal Play-delivered update; actual installed TypeRight approval/readiness, insertion/undo, boundaries, cancellation, reconnect/restart, consecutive requests, switching and isolation. No TypeRight installation/data replacement.
-- Play-signed upgrade preservation, privacy/Data Safety review and confirmed Console status before production rollout.
+- Main release merge/CI and the `v2.0` tag are tracked in Git; the published runtime source and completed CI are identified above.
+- Production access requires completed app setup and the mandatory closed test described below. The implementation privacy review is complete, but final Console Data Safety/privacy-policy submission is still required before production. Do not treat internal-track acceptance as a completed production declaration.
+- Physical GGUF Vulkan success, attribution of GPU memory to this app and sustained inference energy remain unverified. CPU and LiteRT OpenCL GPU execution have separate measured evidence.
 
 Browser access recovered. On 18 October at **21:18 UK time**, Console confirmed **2.0 (5) - Chat-first local AI: Available to internal testers**. The selected **Testers** list has 25 members; membership is not proof that every member opted in. AAB SHA-256: `5f71a842bf36e42c0d438989067ea7b90ded95e440140699e0df6975d4630642`, 89,869,992 bytes, source revision `f7980627ee15b44140011d6757eea5e2805f4444`. Play reports no loss of supported devices. The only warning is the absence of an R8 mapping file; this release does not enable obfuscation.
 
-The HONOR Play Store offers the update and installation is being checked. Final installed TypeRight 2.0 regression, main merge/tag and production submission are not yet claimed. Console production access is locked until app setup and a closed test with at least 12 opted-in testers for 14 days are complete (currently 0 opted in).
+The HONOR installed this Play update while retaining the existing chat, model downloads, settings and app approvals. TypeRight was then separately fixed and updated through Play at the user's request; all eight final installed-keyboard checks above passed. Console production access remains locked until app setup and a closed test with at least 12 opted-in testers for 14 days are complete (0 opted in at the recorded Console check). No public production rollout is claimed.
