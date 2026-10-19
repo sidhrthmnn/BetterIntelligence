@@ -44,13 +44,25 @@ class ModelLibraryTest {
 
     @Test fun recommendationUsesAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        assertEquals(14, models.size)
+        assertEquals(16, models.size)
         assertTrue(models.all { !it.isInstalled && !it.isActive && !it.isChecksumVerified })
         assertEquals("Qwen 3 0.6B Instruct · LiteRT", ModelLibrary.recommend(models, profile())!!.recommendedModelName)
         assertEquals("SmolLM2 135M Instruct", ModelLibrary.recommend(models, profile(storage = 0.3f))!!.recommendedModelName)
         assertNull(ModelLibrary.recommend(models, profile(ram = 512)))
         assertNull(ModelLibrary.recommend(models, profile(abi = "armeabi-v7a")))
         assertEquals("Gemma 4 E2B Instruct · LiteRT", ModelLibrary.recommend(models, profile(ram = 4096))!!.recommendedModelName)
+    }
+
+    @Test fun experimentalModelsAreDiscoverableButNeverAutoRecommended() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val models = ModelLibrary.read(context)
+        val experimental = models.filter { ModelLibrary.category(it) == "EXPERIMENTAL" }
+        assertEquals(setOf("LFM 2.5 1.2B Instruct · LiteRT (Experimental)", "SmolLM3 3B · LiteRT INT4 (Experimental)"), experimental.map { it.name }.toSet())
+        assertTrue(experimental.all { it.filename.endsWith(".litertlm") && it.description.contains("NOT benchmarked") })
+        assertEquals("Experimental", ModelLibrary.categoryLabel(experimental.first()))
+        assertTrue(experimental.all { ModelLibrary.inferenceModel(context, it.filename)?.filename == it.filename })
+        assertEquals("Gemma 4 E2B Instruct · LiteRT", ModelLibrary.recommend(models, profile(ram = 8192))!!.recommendedModelName)
+        assertNull(ModelLibrary.recommend(experimental, profile(ram = 8192)))
     }
 
     @Test fun downloadDoesNotRequireEnoughRamToRunTheModel() {
@@ -72,7 +84,7 @@ class ModelLibraryTest {
         assertFalse(ModelLibrary.canDownload(sevenB, profile(ram = 8192, storage = 4f)))
         assertEquals("Gemma 4 E2B Instruct · LiteRT", ModelLibrary.recommend(models, profile(ram = 6144))!!.recommendedModelName)
         assertEquals("Gemma 4 E2B Instruct · LiteRT", ModelLibrary.recommend(models, profile(ram = 8192))!!.recommendedModelName)
-        assertEquals(setOf("FAST", "BALANCED", "ADVANCED"), models.mapNotNull(ModelLibrary::category).toSet())
+        assertEquals(setOf("FAST", "BALANCED", "ADVANCED", "EXPERIMENTAL"), models.mapNotNull(ModelLibrary::category).toSet())
     }
 
     @Test fun qwen4BOn12GbPhoneUsesCurrentHeadroomContextAndQuantizedFileSize() {
@@ -92,13 +104,19 @@ class ModelLibraryTest {
         val asset = context.assets.open("model-library.json").bufferedReader().use { it.readText() }
         assertEquals(java.io.File("../models/library.json").readText().trim(), asset.trim())
         val models = ModelLibrary.read(context)
-        assertEquals(14, models.map { it.filename }.distinct().size)
+        assertEquals(16, models.map { it.filename }.distinct().size)
         assertEquals(setOf("LIGHTWEIGHT", "BALANCED", "QUALITY"), models.map { it.recommendedTier }.toSet())
         for (model in models) {
             assertTrue(model.sha256Checksum!!.matches(Regex("[a-f0-9]{64}")))
             assertTrue(model.versionTag.matches(Regex("[a-f0-9]{40}")))
             assertTrue(model.downloadUrl!!.contains("/resolve/${model.versionTag}/"))
-            assertEquals(if (model.architecture == "qwen3" && model.filename.endsWith(".litertlm")) "INT4 block32" else if (model.filename.endsWith(".litertlm")) "Mixed 2/4/8-bit" else "Q4_K_M", model.quantization)
+            assertEquals(when {
+                model.name.startsWith("LFM 2.5 1.2B") -> "INT4 block32 (GPU export)"
+                model.name.startsWith("SmolLM3 3B") -> "INT4 block32 + INT8 embed"
+                model.architecture == "qwen3" && model.filename.endsWith(".litertlm") -> "INT4 block32"
+                model.filename.endsWith(".litertlm") -> "Mixed 2/4/8-bit"
+                else -> "Q4_K_M"
+            }, model.quantization)
             assertEquals(0f, model.speedScoreTokSec)
             assertTrue(model.description.contains("Memory is an estimate"))
         }
