@@ -96,7 +96,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         if (source == "library") item {
             Text("Mobile-friendly library", style = MaterialTheme.typography.titleLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("ALL" to "All", "FAST" to "Fast", "BALANCED" to "Balanced", "ADVANCED" to "Advanced").forEach { (key, label) ->
+                listOf("ALL" to "All", "FAST" to "Fast", "BALANCED" to "Balanced", "ADVANCED" to "Advanced", "EXPERIMENTAL" to "Experimental").forEach { (key, label) ->
                     FilterChip(tier == key, { tier = key }, label = { Text(label) })
                 }
             }
@@ -136,6 +136,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     if (ModelLibrary.category(model) == "FAST") Text("Small download for basic English tasks. Choose Balanced for more reliable writing and multilingual chat.", style = MaterialTheme.typography.bodySmall)
                     if (ModelLibrary.category(model) == "BALANCED") Text("Recommended for everyday chat and English AI Polish.", style = MaterialTheme.typography.bodySmall)
                     if (ModelLibrary.category(model) == "ADVANCED") Text("Stronger multilingual writing; higher memory use and slower responses.", style = MaterialTheme.typography.bodySmall)
+                    if (ModelLibrary.category(model) == "EXPERIMENTAL") Text("Unverified on this phone. Manually test CPU/GPU, memory, chat and TypeRight correctness before relying on it. Not selected automatically.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     if (selected) Text("Selected · available to approved apps", color = MaterialTheme.colorScheme.primary)
                     Text(model.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (!selected && !fits) Text(loadProfile?.let { ModelLibrary.incompatibilityReason(model, it, 512) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
