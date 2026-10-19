@@ -1,6 +1,6 @@
 # Models for mobile
 
-The library offers thirteen downloads: eleven Q4_K_M GGUF models and two mobile-optimized mixed-precision LiteRT-LM models. Gemma 4 E2B and E4B are available in both formats. GGUF uses llama.cpp CPU/Vulkan; `.litertlm` uses LiteRT-LM CPU/OpenCL, with [automatic selection and CPU fallback](HARDWARE_ACCELERATION.md). See the [physical-phone Gemma 4 comparison](LITERT_LLAMA_COMPARISON.md) for measured latency, speed, output checks and limits. No NPU acceleration is implied.
+The library offers sixteen curated downloads: eleven Q4_K_M GGUF models, three established LiteRT-LM models (Qwen 3 0.6B and Gemma 4 E2B/E4B), and two experimental LiteRT-LM models (LFM 2.5 1.2B and SmolLM3 3B). Gemma 4 E2B and E4B are available in both formats. GGUF uses llama.cpp CPU/Vulkan; `.litertlm` uses LiteRT-LM CPU/OpenCL, with [automatic selection and CPU fallback](HARDWARE_ACCELERATION.md). See the [physical-phone Gemma 4 comparison](LITERT_LLAMA_COMPARISON.md) for measured latency, speed, output checks and limits. No NPU acceleration is implied.
 
 | Model | Download, MiB rounded up | Estimated RAM at 2K context | Suggested use |
 | --- | ---: | ---: | --- |
@@ -17,8 +17,13 @@ The library offers thirteen downloads: eleven Q4_K_M GGUF models and two mobile-
 | Gemma 4 E4B LiteRT mixed precision | 3,490 | 3,590 MB | More capable mobile text model; requires more free RAM |
 | Gemma 4 E2B GGUF Q4_K_M | 2,963 | 3,596 MB | Gemma 4 through llama.cpp |
 | Gemma 4 E4B GGUF Q4_K_M | 4,747 | 5,718 MB | Gemma 4 through llama.cpp on high-memory devices |
+| Qwen 3 0.6B LiteRT INT4 | 332 | 894 MB | Fast/basic English tasks; measured quality limits |
+| LFM 2.5 1.2B LiteRT INT4 GPU (experimental) | 703 | ~1.1 GB at 4K (planning estimate) | Experimental local chat, **not HONOR benchmarked** |
+| SmolLM3 3B LiteRT INT4 (experimental) | 1,912 | ~2.8 GB at 4K (planning estimate) | Experimental local chat, **not HONOR benchmarked** |
 
-For AI Polish, start with Qwen 2.5 0.5B on a constrained device and try Qwen 2.5 1.5B or SmolLM2 1.7B when more memory is available. This is a selection heuristic, not a proofreading benchmark. Small general-purpose models can miss errors or change meaning; review results before replacing text. The current shared polish prompt is optimized for English.
+For AI Polish on the measured HONOR phone, prefer the validated Gemma 4 E2B/E4B options before older unbenchmarked models. Smaller models may be appropriate for constrained phones, but the published 2.0 quality and integration tests show important differences. Neither new experimental model is a qualified TypeRight replacement yet. Small general-purpose models can miss errors or change meaning; review results before replacing text. The current shared polish prompt is optimized for English.
+
+For the two experimental models, consult [the test plan and upstream package verification](EXPERIMENTAL_MODELS.md); the **Experimental** filter exposes them without making them automatic defaults.
 
 ## Why these additions
 
@@ -29,7 +34,7 @@ For AI Polish, start with Qwen 2.5 0.5B on a constrained device and try Qwen 2.5
 - [Qwen 3 4B Instruct 2507](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) is a non-thinking model with improved instruction following and writing capabilities. The app uses [Bartowski's single-file Q4_K_M conversion](https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF). Its approximately 3.1 GB CPU estimate at 2K context includes architecture-specific K/V cache and overhead; GPU buffers need extra shared RAM. Actual requirements vary.
 - [Qwen 2.5 7B Instruct](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) offers a larger instruction model. The catalog uses [Bartowski's single-file conversion](https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF) because the official Q4_K_M release is split. Its CPU estimate at 2K context is approximately 5.2 GB, plus the reserve for Android. GPU buffers require extra shared RAM. Total installed RAM alone does not establish compatibility, and CPU answers can be slow.
 
-All thirteen catalog downloads have exact byte sizes, SHA-256 checksums and immutable upstream revisions in [library.json](../models/library.json). Source and license links are available in each model's Details dialog. SmolLM2, Qwen and Gemma 4 use Apache-2.0. Gemma 3 requires its terms and use-policy acceptance before in-app download or activation. LiteRT text-memory estimates exclude audio/vision models that are not loaded; memory-mapped embeddings, context and runtime headroom are included. GPU memory is shared system RAM, and process PSS may omit driver allocations.
+All sixteen catalog downloads have exact byte sizes, SHA-256 checksums and immutable upstream revisions in [library.json](../models/library.json). Source and license links are available in each model's Details dialog. SmolLM2, SmolLM3, Qwen and Gemma 4 use Apache-2.0; LFM 2.5 uses LFM Open License v1.0 (review its commercial-use conditions). Gemma 3 requires its terms and use-policy acceptance before in-app download or activation. LiteRT text-memory estimates exclude audio/vision models that are not loaded; memory-mapped embeddings, context and runtime headroom are included. GPU memory is shared system RAM, and process PSS may omit driver allocations.
 
 ## Choosing any compatible model
 
