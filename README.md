@@ -14,7 +14,7 @@ See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin 
 
 ## Model library
 
-| Model | Download bytes | Estimated RAM at 2K context |
+| Model | Download bytes | Estimated RAM (context noted where different) |
 | --- | ---: | ---: |
 | SmolLM2 135M Instruct Q4_K_M | 105,454,144 | 410 MB |
 | Gemma 3 270M Instruct Q4_K_M | 253,115,424 | 553 MB |
@@ -31,7 +31,7 @@ See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin 
 | Gemma 4 E4B GGUF Q4_K_M | 4,977,171,584 | 5,718 MB |
 | Qwen 3 0.6B LiteRT INT4 | 347,251,840 | 894 MB |
 | LFM 2.5 1.2B LiteRT INT4 GPU **experimental** | 736,220,768 | ~1.1 GB at 4K (planning estimate) |
-| SmolLM3 3B LiteRT INT4 **experimental** | 2,004,633,520 | ~2.8 GB at 4K (planning estimate) |
+| SmolLM3 3B LiteRT INT4 **experimental** | 2,004,633,520 | ~2.9 GB at 4K (planning estimate) |
 
 These examples include compact quantized GGUF and Gemma LiteRT choices. The complete [pinned catalog](models/library.json) also includes newer LiteRT packages. The primary categories are **Fast: Qwen 3 0.6B**, **Balanced: Gemma 4 E2B**, and **Advanced: Gemma 4 E4B**. **Experimental** separately offers pinned LFM 2.5 1.2B and SmolLM3 3B LiteRT builds. These have publisher-side Android support but are not benchmarked on the HONOR and never replace automatic recommendations. Download and test them explicitly before using them for TypeRight; see [the experiment plan](docs/EXPERIMENTAL_MODELS.md).  see [measured tradeoffs](docs/2.0/reports/README.md) and [publisher sources](docs/MOBILE_MODELS.md). **Find models** searches public Hugging Face repositories or accepts an `owner/repository` URL. **Import GGUF or LiteRT-LM** accepts compatible files downloaded elsewhere, including gated models after obtaining access from their publisher. Downloads and imports appear in **My models**. Imports require a supported single-file text GGUF or compatible `.litertlm` package; split GGUF files and multimodal projectors are not supported.
 
