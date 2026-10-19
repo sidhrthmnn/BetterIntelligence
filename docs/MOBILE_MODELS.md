@@ -19,7 +19,7 @@ The library offers sixteen curated downloads: eleven Q4_K_M GGUF models, three e
 | Gemma 4 E4B GGUF Q4_K_M | 4,747 | 5,718 MB | Gemma 4 through llama.cpp on high-memory devices |
 | Qwen 3 0.6B LiteRT INT4 | 332 | 894 MB | Fast/basic English tasks; measured quality limits |
 | LFM 2.5 1.2B LiteRT INT4 GPU (experimental) | 703 | ~1.1 GB at 4K (planning estimate) | Experimental local chat, **not HONOR benchmarked** |
-| SmolLM3 3B LiteRT INT4 (experimental) | 1,912 | ~2.8 GB at 4K (planning estimate) | Experimental local chat, **not HONOR benchmarked** |
+| SmolLM3 3B LiteRT INT4 (experimental) | 1,912 | ~2.9 GB at 4K (planning estimate) | Experimental local chat, **not HONOR benchmarked** |
 
 For AI Polish on the measured HONOR phone, prefer the validated Gemma 4 E2B/E4B options before older unbenchmarked models. Smaller models may be appropriate for constrained phones, but the published 2.0 quality and integration tests show important differences. Neither new experimental model is a qualified TypeRight replacement yet. Small general-purpose models can miss errors or change meaning; review results before replacing text. The current shared polish prompt is optimized for English.
 
