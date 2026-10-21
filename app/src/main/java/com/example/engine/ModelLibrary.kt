@@ -11,6 +11,7 @@ object ModelLibrary {
     private val identityWeights = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val fixedContexts = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private val runtimeContexts = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private val runtimeMemoryFloors = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val categories = java.util.concurrent.ConcurrentHashMap<String, String>()
     fun category(model: ModelEntity): String? = model.sha256Checksum?.let(categories::get)
     fun categoryLabel(model: ModelEntity): String? = when (category(model)) {
@@ -61,6 +62,7 @@ object ModelLibrary {
             identityShapes[item.getString("sha256")] = shapes.getValue(item.getString("filename"))
             if (item.has("textWeightsBytes")) identityWeights[item.getString("sha256")] = item.getLong("textWeightsBytes")
             item.optInt("runtimeMaxContext", 0).takeIf { it > 0 }?.let { runtimeContexts[item.getString("sha256")] = it }
+            item.optLong("runtimeMemoryFloorMb", 0).takeIf { it > 0 }?.let { runtimeMemoryFloors[item.getString("sha256")] = it }
             if (primary) item.optString("recommendedMode").takeIf { it in setOf("FAST", "BALANCED", "ADVANCED", "EXPERIMENTAL") }
                 ?.let { categories[item.getString("sha256")] = it }
             if (item.getString("filename").endsWith(".litertlm") && !item.optBoolean("dynamicContext", false))
@@ -93,8 +95,13 @@ object ModelLibrary {
         val requested = identity?.let(runtimeContexts::get)?.let { minOf(maxOf(context, minimum), it) } ?: maxOf(context, minimum)
         val allocation = maxOf(requested, identity?.let(fixedContexts::get) ?: if (liteRt && shape == null) 2048 else 0)
         // Unknown imports get a conservative KV estimate until their header is parsed on load.
-        return ModelMemoryPlanner.estimate(weights ?: (model.fileSizeMb * 1048576), allocation,
+        val estimate = ModelMemoryPlanner.estimate(weights ?: (model.fileSizeMb * 1048576), allocation,
             shape?.first ?: 524288L, gpuLayers, shape?.second ?: 0)
+        // Some LiteRT CPU exports expand compressed tensors. Keep this explicit
+        // runtime allowance separate from actual download/weight bytes and KV.
+        val floor = identity?.let(runtimeMemoryFloors::get) ?: 0L
+        return estimate.copy(overheadMb = estimate.overheadMb +
+            (floor + estimate.gpuOverheadMb - estimate.totalMb).coerceAtLeast(0))
     }
 
     fun incompatibilityReason(model: ModelEntity, profile: HardwareProfile, context: Int = 2048): String? = when {

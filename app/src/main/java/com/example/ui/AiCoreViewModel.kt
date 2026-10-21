@@ -122,10 +122,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val appearance = repository.preferencesRepository.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, "DARK")
     val webAllowed = repository.preferencesRepository.webAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val defaultWebMode = repository.preferencesRepository.webMode.stateIn(viewModelScope, SharingStarted.Eagerly, "OFF")
-    val webProvider = repository.preferencesRepository.webProvider.stateIn(viewModelScope, SharingStarted.Eagerly, "WIKIPEDIA")
-    val credentials = ProviderCredentials(application)
-    private val grounding = SearchHttp().let { http -> GroundingCoordinator(mapOf(
-        SearchProviderId.WIKIPEDIA to WikipediaSearch(http), SearchProviderId.BRAVE to BraveSearch(http, credentials))) }
+    private val grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch()))
+    init { LegacySearchCleanup.clear(application) }
 
     val allMemories: StateFlow<List<MemorySnippetEntity>> = repository.allMemories
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -310,12 +308,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         viewModelScope.launch { repository.preferencesRepository.saveWebAllowed(value) }
     }
     fun setDefaultWebMode(value: String) { viewModelScope.launch { repository.preferencesRepository.saveWebMode(value) } }
-    fun setWebProvider(value: String) { grounding.clearTemporaryData(); viewModelScope.launch { repository.preferencesRepository.saveWebProvider(value) } }
-    fun saveBraveKey(value: String) {
-        runCatching { credentials.saveBrave(value) }.onSuccess { _userMessage.value = "Brave key saved securely." }
-            .onFailure { _userMessage.value = "Could not securely save the API key." }
-    }
-    fun clearBraveKey() { credentials.clearBrave(); grounding.clearTemporaryData(); _userMessage.value = "Brave key removed." }
     fun clearSearchData() { grounding.clearTemporaryData(); _userMessage.value = "Temporary search data cleared." }
     fun setGroundingMode(mode: GroundingMode) {
         _groundingMode.value = mode
@@ -854,10 +846,9 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 }
                 editingMessageId = null
                 if (_isAutoMemoryCaptureEnabled.value) autoExtractMemory(text, "Chat")
-                val provider = runCatching { SearchProviderId.valueOf(repository.preferencesRepository.webProvider.first()) }.getOrDefault(SearchProviderId.WIKIPEDIA)
                 val allowed = repository.preferencesRepository.webAllowed.first()
-                if (GroundingPolicy.shouldSearch(allowed, mode, text)) _chatStatus.value = "Searching the web"
-                evidence = grounding.retrieve(text, allowed, mode, provider)
+                if (GroundingPolicy.shouldSearch(allowed, mode, text)) _chatStatus.value = "Finding and reading public sources"
+                evidence = grounding.retrieve(text, allowed, mode, SearchProviderId.WEB)
                 _chatStatus.value = if (evidence.sources.isNotEmpty()) "Checking sources" else "Preparing answer"
                 val params = _chatGenerationParams.value
                 val memory = if (_isAutoMemoryCaptureEnabled.value) repository.buildMemoryContextPrompt().take(1000) else ""

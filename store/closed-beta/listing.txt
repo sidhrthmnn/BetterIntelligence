@@ -1,0 +1,26 @@
+Better Intelligence
+
+Short description:
+Local AI chat, downloadable models and cited web research on Android.
+
+Full description:
+Better Intelligence runs compatible downloaded AI models on your Android device. Chat, rewrite and explore ideas while choosing the model and processing settings that fit your phone.
+
+YOUR MODELS, YOUR DEVICE
+Choose from a library of mobile GGUF and LiteRT-LM packages, or import a compatible file. Downloads are separate from the app. See available memory, download progress and storage use, and delete models when you need space.
+
+A CHAT THAT STAYS WITH YOU
+Keep separate conversations and drafts, edit questions, regenerate responses and stop generation. Choose light, dark or AMOLED appearance. Local inference has no automatic cloud fallback.
+
+OPTIONAL WEB RESEARCH
+Enable optional web grounding when you want outside sources. Retrieved information can help your local model answer with source links. Web requests send your current question and ordinary network information to the services used for retrieval. Chat history, saved memories and connected-app requests are not sent for research. You can keep web access switched off for local-only conversations.
+
+CONNECT COMPATIBLE APPS
+Approve local inference access for apps such as TypeRight, allowing them to use the model already loaded in Better Intelligence. Connected-app requests stay local and do not invoke web research. Access and memory-sharing permissions remain under your control.
+
+CPU inference and compatible GPU acceleration are selected using runtime checks. Performance and model availability depend on your device, free RAM and model format. NPU inference is not provided in this build. An internet connection and enough storage are needed to download models.
+
+AI can make mistakes. Review generated text and cited sources before relying on them. Retrieval failures are labelled, and citations do not guarantee that a source is correct or current.
+
+Support: siddharthpazhoor@gmail.com
+Website and privacy policy: https://haveanidea-privacy-policy.ai.studio

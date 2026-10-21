@@ -18,7 +18,7 @@ import kotlin.concurrent.thread
 @Config(sdk = [34])
 class SearchHttpTest {
     @Test fun jsonAndOversizedBodiesAreBounded() = runBlocking {
-        for (payload in listOf("{\"ok\":true}", "x".repeat(512 * 1024 + 64))) {
+        for (payload in listOf("{\"ok\":true}", "x".repeat(1024 * 1024 + 64))) {
             ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
                 val responder = thread(isDaemon = true) {
                     server.accept().use { socket ->
@@ -29,7 +29,7 @@ class SearchHttpTest {
                         runCatching { output.write(payload.toByteArray()); output.flush() }
                     }
                 }
-                val result = runCatching { SearchHttp().json(Request.Builder().url("http://localhost:${server.localPort}/synthetic").build()) }
+                val result = runCatching { SearchHttp(okhttp3.OkHttpClient(), allowTestUrls = true).json(Request.Builder().url("http://localhost:${server.localPort}/synthetic").build()) }
                 if (payload.startsWith("{")) assertTrue(result.getOrThrow().getBoolean("ok"))
                 else assertEquals("Search response is too large", result.exceptionOrNull()?.message)
                 responder.join(3000)
@@ -53,7 +53,7 @@ class SearchHttpTest {
                 }
             }
             val request = launch(Dispatchers.IO) {
-                SearchHttp().json(Request.Builder().url("http://localhost:${server.localPort}/synthetic").build())
+                SearchHttp(okhttp3.OkHttpClient(), allowTestUrls = true).json(Request.Builder().url("http://localhost:${server.localPort}/synthetic").build())
             }
             assertTrue(reading.await(5, TimeUnit.SECONDS))
             withTimeout(3000) { request.cancelAndJoin() }

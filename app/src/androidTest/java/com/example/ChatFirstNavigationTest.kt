@@ -13,6 +13,22 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ChatFirstNavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @Test fun newModelsAndKeylessResearchAreAvailableWithoutChangingTheActiveModel() {
+        require(compose.activity.packageName.endsWith(".validation"))
+        compose.onNodeWithTag("open_settings").performClick()
+        openSetting("Models")
+        compose.onNodeWithTag("models_list").performScrollToNode(hasText("Experimental"))
+        compose.onNodeWithText("Experimental").performClick()
+        compose.onNodeWithTag("models_list").performScrollToNode(hasText("Qwen 3 1.7B"))
+        compose.onNodeWithText("Qwen 3 1.7B").assertIsDisplayed()
+        screenshot("qwen-1.7b-beta.png")
+        compose.onNodeWithTag("navigate_back").performClick()
+        openSetting("Web & grounding")
+        compose.onNodeWithText("Find, read and cite").assertExists()
+        compose.onNodeWithText("Search provider").assertDoesNotExist()
+        compose.onNodeWithText("Brave configuration").assertDoesNotExist()
+        screenshot("web-research-beta.png")
+    }
     @Test fun chatFirstDraftSurvivesNavigationAndThreeThemesCoverSettingsDestinations() {
         require(compose.activity.packageName.endsWith(".validation"))
         compose.onNodeWithTag("chat_input_field").assertIsDisplayed()

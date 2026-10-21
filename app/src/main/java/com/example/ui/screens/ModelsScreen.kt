@@ -49,7 +49,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     }
     val recommended = models.find { it.filename == recommendation?.recommendedFilename }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("models_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Text("Models for your phone", style = MaterialTheme.typography.headlineSmall)
         }

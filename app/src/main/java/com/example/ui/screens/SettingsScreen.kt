@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.BuildConfig
 import com.example.engine.ProcessingMode
@@ -95,9 +94,6 @@ fun AppearanceScreen(viewModel: AiCoreViewModel) {
 fun WebSettingsScreen(viewModel: AiCoreViewModel) {
     val allowed by viewModel.webAllowed.collectAsState()
     val mode by viewModel.defaultWebMode.collectAsState()
-    val provider by viewModel.webProvider.collectAsState()
-    var key by remember { mutableStateOf("") } // Never saved in instance state or logged.
-    var hasKey by remember { mutableStateOf(viewModel.credentials.hasBraveKey) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -105,7 +101,7 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
                 Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Search sends your current question to the selected provider. Your chat history, saved memories and connected-app requests are not sent. Do not include passwords or sensitive information in a web-enabled question.")
+            Text("Search sends your current question to Bing. Visited websites receive ordinary connection information, including your IP address. Your chat history, saved memories and connected-app requests are not sent. Do not include passwords or sensitive information in a web-enabled question.")
         }
         item {
             Text("Default behaviour for new conversations", style = MaterialTheme.typography.titleMedium)
@@ -117,29 +113,12 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
             Text("Automatic searches questions about current facts or verification. You can change this in each conversation.", style = MaterialTheme.typography.bodySmall)
         }
         item {
-            Text("Search provider", style = MaterialTheme.typography.titleMedium)
-            listOf("WIKIPEDIA" to "Wikipedia · No key required", "BRAVE" to "Brave Search · Your API key").forEach { (id, label) ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(provider == id, { viewModel.setWebProvider(id) }); Text(label, Modifier.weight(1f))
-                }
-            }
-            Text("Wikipedia provides encyclopedia summaries, not comprehensive live news or independent fact checking. Brave supplies search excerpts; full pages are not fetched. Sources may be incomplete or outdated. Always check important claims.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
+            Text("The app discovers public pages using Bing search, reads up to three websites and gives the local model their text as evidence. No account or API key is needed. Paste a public HTTPS link to research that page directly.")
+            Text("Search can be blocked or unavailable. Pages requiring sign-in, scripts, CAPTCHA or unsupported file formats are skipped. Sources can be incomplete or wrong; citations show where text came from, not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
         }
         item {
-            Text("Brave configuration", style = MaterialTheme.typography.titleMedium)
-            Text(if (hasKey) "A key is saved securely on this device." else "No key saved. Wikipedia works without one.", style = MaterialTheme.typography.bodySmall)
-            OutlinedTextField(key, { key = it }, label = { Text(if (hasKey) "Replace API key" else "API key") }, singleLine = true,
-                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(autoCorrectEnabled = false,
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Password))
-            FlowRow {
-                TextButton(onClick = { viewModel.saveBraveKey(key); key = ""; hasKey = viewModel.credentials.hasBraveKey }, enabled = key.isNotBlank()) { Text("Save securely") }
-                if (hasKey) TextButton(onClick = { viewModel.clearBraveKey(); key = ""; hasKey = false }) { Text("Remove key") }
-            }
-        }
-        item {
-            Text("Queries and keys are excluded from app logs. Temporary search data is held in memory for up to five minutes. Sources attached to an answer stay with that conversation until you delete it.", style = MaterialTheme.typography.bodySmall)
+            Text("Questions and retrieved page text are excluded from app logs. Temporary search data is held in memory for up to five minutes. Sources attached to an answer stay with that conversation until you delete it.", style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
         }
     }
@@ -179,13 +158,13 @@ fun PrivacyScreen(viewModel: AiCoreViewModel) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { Text("You control your data", style = MaterialTheme.typography.headlineSmall) }
         item { Text("Conversations, drafts, model files and app approvals are stored locally. Android backup may include settings and conversations according to your system backup preferences; model files and provider credentials are excluded.") }
-        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web grounding sends only your current chat question to Wikipedia or Brave. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
+        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research sends your current question to Bing, then reads public websites to provide cited evidence. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
         item { Text("Deleting a model frees its storage and leaves your conversations intact. Revoking app access prevents new requests. Personal memory sharing has separate app permissions.") }
         item { TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Manage model storage") }
             TextButton(onClick = { viewModel.selectTab(AppTab.CONNECT) }) { Text("Manage app access") }
             TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
             TextButton(onClick = { clear = true }) { Text("Delete all conversations") }
-            TextButton(onClick = { runCatching { uri.openUri("https://github.com/sidhrthmnn/BetterIntelligence/blob/main/PRIVACY.md") } }) { Text("Privacy policy") }
+            TextButton(onClick = { runCatching { uri.openUri("https://haveanidea-privacy-policy.ai.studio") } }) { Text("Privacy policy") }
         }
     }
     if (clear) DeleteDialog("Delete all conversations?", "All saved messages and drafts will be removed. Models, app approvals and memories are kept.", { clear = false }) { viewModel.clearChat(); clear = false }

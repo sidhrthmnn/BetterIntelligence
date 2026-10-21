@@ -59,9 +59,9 @@ class LiteRtIntegrationDeviceTest {
                 1024, engine.allocatedLiteRtContext)
             if (offline) {
                 val coordinator = com.example.grounding.GroundingCoordinator(mapOf(
-                    com.example.grounding.SearchProviderId.WIKIPEDIA to com.example.grounding.WikipediaSearch(com.example.grounding.SearchHttp())))
+                    com.example.grounding.SearchProviderId.WEB to com.example.grounding.PublicWebResearch()))
                 val result = coordinator.retrieve("Moon", true, com.example.grounding.GroundingMode.ON,
-                    com.example.grounding.SearchProviderId.WIKIPEDIA)
+                    com.example.grounding.SearchProviderId.WEB)
                 assertEquals("SEARCH_FAILED", result.status)
                 assertTrue(result.sources.isEmpty())
             }

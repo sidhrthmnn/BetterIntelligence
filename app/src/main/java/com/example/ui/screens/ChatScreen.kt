@@ -205,7 +205,7 @@ private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: 
                 TextButton(onClick = { runCatching { uri.openUri(source.url) } }) {
                     Column {
                         Text("[${source.id}] ${source.title}")
-                        Text(if (source.kind == "SEARCH_EXCERPT") "Search excerpt · Page not fetched" else "Wikipedia summary · CC BY-SA 4.0",
+                        Text(when (source.kind) { "WEB_PAGE" -> "Page text retrieved · Check the source"; "SEARCH_EXCERPT" -> "Saved search excerpt · Page not fetched"; else -> "Saved article summary" },
                             style = MaterialTheme.typography.labelSmall)
                         if (source.updatedAt.isNotBlank()) Text(if (source.kind == "SEARCH_EXCERPT") "Search-reported date: ${source.updatedAt.take(40)}" else "Article revised ${source.updatedAt.take(10)}", style = MaterialTheme.typography.labelSmall)
                         Text("Retrieved ${java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(source.retrievedAt))}", style = MaterialTheme.typography.labelSmall)

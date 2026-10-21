@@ -20,8 +20,8 @@ android {
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
     targetSdk = 36
-    versionCode = 5
-    versionName = "2.0"
+    versionCode = 6
+    versionName = "2.1.0-beta1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders["localAiExported"] = "true"
@@ -61,6 +61,7 @@ android {
     }
   }
   compileOptions {
+    isCoreLibraryDesugaringEnabled = true
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
@@ -88,6 +89,8 @@ tasks.withType<Test>().configureEach {
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
+  implementation("org.jsoup:jsoup:1.23.2")
+  coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
   implementation(platform(libs.androidx.compose.bom))
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)

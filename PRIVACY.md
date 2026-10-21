@@ -1,6 +1,8 @@
 # Better Intelligence privacy policy
 
-Updated 18 October 2026 for version 2.0.
+Updated 21 October 2026 for version 2.1 closed beta.
+
+Developer: HaveAnIdea. Contact: siddharthpazhoor@gmail.com. Android package: com.aistudio.betterintelligence.mobile.
 
 Better Intelligence runs downloaded AI models on your Android device. Chat, proofreading and connected-app inference have no automatic cloud fallback. Review AI-generated text before relying on it.
 
@@ -14,11 +16,15 @@ Memory is off by default. Enabling it lets chat save explicit reminders and brie
 
 An internet connection is used when you discover or download models from Hugging Face and its download infrastructure. These services receive the network information needed to handle your request, including your IP address and the requested model. Model terms are linked before use where required.
 
-Web grounding is optional and **off by default**. When you enable it, a web-enabled chat question is sent over HTTPS to the provider you choose: Wikipedia (Wikimedia) or Brave Search. This includes the text of your current question, not your full chat history, saved memories, drafts in other conversations or connected-app text. Automatic mode searches questions that appear to need current facts or verification; On mode requests evidence for the question. You can turn search off globally or for a conversation. Do not include passwords, API keys, confidential material or other sensitive information in a web-enabled question. A local credential-pattern check can block some obvious secrets, but cannot identify every kind of private information.
+Web research is optional and **off by default**. When enabled, the app can send the text of your current question (up to 500 characters) to Bing/Microsoft over HTTPS to discover public web pages. The app then reads up to three public HTTPS pages directly from their operators. If your question contains a public HTTPS link, it can read that page without sending the question to a search engine. Your full conversation history, saved memories, other drafts and connected-app text are not sent for research. Inference and answer generation still run locally.
 
-Wikipedia provides encyclopedia summaries and article links. Brave provides search excerpts and links using an optional API key you supply. The app labels search failures and missing citations; retrieving a page or excerpt does not independently verify every claim. Provider terms and privacy policies apply to the requests they receive: [Wikimedia privacy policy](https://foundation.wikimedia.org/wiki/Policy:Privacy_policy), [Brave Search API privacy information](https://brave.com/search/api/).
+Search services and visited websites receive the information required to serve the request, including your IP address and requested URL. They may infer an approximate location from network information; their own privacy and retention policies apply. Better Intelligence uses no search API key, sign-in, advertising ID, persistent web cookies or developer-operated search proxy. It does not bypass sign-in, paywalls or CAPTCHA. [Microsoft privacy statement](https://privacy.microsoft.com/privacystatement).
 
-Temporary search results and query keys are cached in app memory for up to five minutes and can be cleared in Settings. Source excerpts and links attached to an answer are saved with that conversation until you delete it. A Brave API key is encrypted with a non-exportable Android Keystore key; it is not included in application logs or backups. You can remove it in Web & grounding settings. The app has no HTTP request logging for searches.
+Automatic mode searches questions that appear to need current facts or verification; On mode requests evidence for the question. Search remains subject to the global permission and can be turned off for a conversation. Users upgrading from Wikipedia/Brave must enable the new web research permission; old search permission does not automatically enable different destinations. Old saved source cards remain in existing conversations, but those provider integrations and encrypted Brave credentials are removed.
+
+Do not include passwords, API keys, confidential material or other sensitive information in a web-enabled question. A local credential-pattern check blocks some obvious secrets, but cannot identify every kind of private information. Retrieved pages are untrusted evidence. The app labels retrieval failures and supplies citations only for pages it actually retrieved; citations do not prove that a claim is true or current. Some pages cannot be read without scripts, sign-in or a supported text format.
+
+Temporary evidence and query keys are held only in app memory, bounded to eight requests and five minutes, and can be cleared in Settings. Source excerpts and links attached to an answer are stored with that conversation until you delete it. Questions, source text and search URLs are excluded from application logs. No research data is automatically uploaded to the developer.
 
 ## Connected apps, including TypeRight
 
@@ -26,4 +32,4 @@ Connected-app requests always stay on-device in Better Intelligence and never in
 
 ## Diagnostics and support
 
-Hardware monitoring shows local performance, memory and thermal information. Better Intelligence does not automatically upload chats, keyboard text, local model outputs or hardware benchmark reports to a developer server. If you choose to share diagnostic information, review it first. Questions and requests can be raised through the [project's GitHub issues](https://github.com/sidhrthmnn/BetterIntelligence/issues); do not post secrets or personal text in public issues.
+Hardware monitoring shows local performance, memory and thermal information. Better Intelligence does not automatically upload chats, keyboard text, local model outputs or hardware benchmark reports to a developer server. If you choose to share diagnostic information, review it first. Questions and deletion/support requests can be sent to siddharthpazhoor@gmail.com or raised through the [project's GitHub issues](https://github.com/sidhrthmnn/BetterIntelligence/issues); do not post secrets or personal text in public issues.

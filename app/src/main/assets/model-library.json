@@ -306,5 +306,28 @@
     "runtimeMaxContext": 4096,
     "recommendedMode": "EXPERIMENTAL",
     "url": "https://huggingface.co/litert-community/SmolLM3-3B/resolve/7621a4f099a00b0518e0a6e7c5628af08ab4184e/SmolLM3-3B_q4_block32_ekv4096.litertlm"
+  },
+  {
+    "name": "Qwen 3 1.7B · LiteRT INT4 (Experimental)",
+    "filename": "Qwen3-1.7B_dynamic_wi4b32_afp32.litertlm",
+    "architecture": "qwen3",
+    "parameters": "1.7B",
+    "quantization": "INT4 block32",
+    "context": 4096,
+    "ramMb": 3100,
+    "bytes": 977184032,
+    "sha256": "2a72330b504a6596d53a2c00923c57173b10f1b83e6a541213ffec08d1fc5de8",
+    "repo": "litert-community/Qwen3-1.7B",
+    "revision": "79bf0667b32ae025b972e5fe555fe72ca6e8816c",
+    "license": "apache-2.0",
+    "tier": "QUALITY",
+    "layers": 28,
+    "kvBytesPerToken": 114688,
+    "dynamicContext": false,
+    "runtimeMaxContext": 4096,
+    "recommendedMode": "EXPERIMENTAL",
+    "description": "Android-oriented INT4 Qwen 3 package for local chat and writing. Publisher tested LiteRT-LM 0.18 CPU/OpenCL GPU; NOT benchmarked in Better Intelligence on this phone. Conservative CPU memory planning allows for CPU tensor expansion; GPU shares system RAM. Requires manual testing; not an automatic recommendation.",
+    "url": "https://huggingface.co/litert-community/Qwen3-1.7B/resolve/79bf0667b32ae025b972e5fe555fe72ca6e8816c/Qwen3-1.7B_dynamic_wi4b32_afp32.litertlm",
+    "runtimeMemoryFloorMb": 3100
   }
 ]

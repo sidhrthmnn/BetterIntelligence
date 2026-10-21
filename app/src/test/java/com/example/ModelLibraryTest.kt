@@ -44,7 +44,7 @@ class ModelLibraryTest {
 
     @Test fun recommendationUsesAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        assertEquals(16, models.size)
+        assertEquals(17, models.size)
         assertTrue(models.all { !it.isInstalled && !it.isActive && !it.isChecksumVerified })
         assertEquals("Qwen 3 0.6B Instruct · LiteRT", ModelLibrary.recommend(models, profile())!!.recommendedModelName)
         assertEquals("SmolLM2 135M Instruct", ModelLibrary.recommend(models, profile(storage = 0.3f))!!.recommendedModelName)
@@ -57,12 +57,26 @@ class ModelLibraryTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val models = ModelLibrary.read(context)
         val experimental = models.filter { ModelLibrary.category(it) == "EXPERIMENTAL" }
-        assertEquals(setOf("LFM 2.5 1.2B Instruct · LiteRT (Experimental)", "SmolLM3 3B · LiteRT INT4 (Experimental)"), experimental.map { it.name }.toSet())
+        assertEquals(setOf("LFM 2.5 1.2B Instruct · LiteRT (Experimental)", "SmolLM3 3B · LiteRT INT4 (Experimental)", "Qwen 3 1.7B · LiteRT INT4 (Experimental)"), experimental.map { it.name }.toSet())
         assertTrue(experimental.all { it.filename.endsWith(".litertlm") && it.description.contains("NOT benchmarked") })
         assertEquals("Experimental", ModelLibrary.categoryLabel(experimental.first()))
         assertTrue(experimental.all { ModelLibrary.inferenceModel(context, it.filename)?.filename == it.filename })
         assertEquals("Gemma 4 E2B Instruct · LiteRT", ModelLibrary.recommend(models, profile(ram = 8192))!!.recommendedModelName)
         assertNull(ModelLibrary.recommend(experimental, profile(ram = 8192)))
+    }
+
+    @Test fun qwen17HasFixedAllocationAndAnExplicitRuntimeAllowance() {
+        val model = ModelLibrary.read(ApplicationProvider.getApplicationContext()).single {
+            it.parameterCount == "1.7B" && it.architecture == "qwen3"
+        }
+        assertEquals("2a72330b504a6596d53a2c00923c57173b10f1b83e6a541213ffec08d1fc5de8", model.sha256Checksum)
+        val cpu = ModelLibrary.memoryEstimate(model, 512)
+        assertEquals(3100L, cpu.totalMb)
+        assertEquals(cpu, ModelLibrary.memoryEstimate(model, 4096))
+        assertTrue(cpu.weightsMb < model.ramRequiredMb)
+        assertTrue(ModelLibrary.memoryEstimate(model, 512, 10).totalMb > cpu.totalMb)
+        assertNotNull(ModelLibrary.incompatibilityReason(model, profile(ram = 3500), 512))
+        assertNull(ModelLibrary.incompatibilityReason(model, profile(ram = 4096), 512))
     }
 
     @Test fun downloadDoesNotRequireEnoughRamToRunTheModel() {
@@ -104,7 +118,7 @@ class ModelLibraryTest {
         val asset = context.assets.open("model-library.json").bufferedReader().use { it.readText() }
         assertEquals(java.io.File("../models/library.json").readText().trim(), asset.trim())
         val models = ModelLibrary.read(context)
-        assertEquals(16, models.map { it.filename }.distinct().size)
+        assertEquals(17, models.map { it.filename }.distinct().size)
         assertEquals(setOf("LIGHTWEIGHT", "BALANCED", "QUALITY"), models.map { it.recommendedTier }.toSet())
         for (model in models) {
             assertTrue(model.sha256Checksum!!.matches(Regex("[a-f0-9]{64}")))

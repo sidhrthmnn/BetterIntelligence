@@ -24,7 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 
-/** Real model, real chat coordinator and real Wikipedia; opt-in and synthetic data only. */
+/** Real model, real chat coordinator and public page reading; opt-in synthetic data only. */
 @RunWith(AndroidJUnit4::class)
 class ChatProductDeviceTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
@@ -97,23 +97,21 @@ class ChatProductDeviceTest {
                 GenerationParams(contextSize = 2048, maxTokens = 64, temperature = 0f))
             assertFalse(localClient.contains("MARIGOLD-47"))
             // Real online retrieval AND actual local generation. Merely retrieving pages is insufficient.
-            repository.preferencesRepository.saveWebProvider("WIKIPEDIA")
             repository.preferencesRepository.saveWebAllowed(true)
             newChat()
             compose.runOnUiThread { vm.setGroundingMode(GroundingMode.ON) }
-            val grounded = send("Moon")
-            record("wikipedia-generated-answer", grounded)
+            val grounded = send("Summarize https://www.iana.org/help/example-domains")
+            record("web-researched-answer", grounded)
             assertTrue(grounded.messageState in setOf("COMPLETE", "LENGTH_LIMIT"))
-            assertTrue("No actual Wikipedia source retrieved", GroundingResult.sources(grounded.sourcesJson).isNotEmpty())
+            assertTrue("No actual page text retrieved", GroundingResult.sources(grounded.sourcesJson).isNotEmpty())
             assertTrue(grounded.groundingStatus in setOf("EVIDENCE_CITED", "CITATIONS_MISSING"))
             assertFalse(Regex("https?://").containsMatchIn(grounded.content))
-            screenshot(context, "chat-wikipedia-sources.png")
-            // Missing optional Brave key must be identified as failed retrieval, not a live fact check.
-            if (!vm.credentials.hasBraveKey) {
-                repository.preferencesRepository.saveWebProvider("BRAVE")
+            screenshot(context, "chat-web-sources.png")
+            // A rejected local URL must not be sent to search or called grounded.
+            run {
                 newChat(); compose.runOnUiThread { vm.setGroundingMode(GroundingMode.ON) }
-                val unavailable = send("What is the capital of France?")
-                record("provider-unavailable", unavailable)
+                val unavailable = send("Read https://127.0.0.1/private")
+                record("private-url-rejected", unavailable)
                 assertEquals("SEARCH_FAILED", unavailable.groundingStatus)
                 assertTrue(GroundingResult.sources(unavailable.sourcesJson).isEmpty())
                 screenshot(context, "chat-search-unavailable.png")
@@ -132,7 +130,6 @@ class ChatProductDeviceTest {
             screenshot(context, "history-with-conversations.png")
         } finally {
             repository.preferencesRepository.saveWebAllowed(false)
-            repository.preferencesRepository.saveWebProvider("WIKIPEDIA")
             repository.engine.setProcessingMode(ProcessingMode.AUTO)
             File(context.filesDir, "chat-product-results.json").writeText(results.toString(2))
         }
