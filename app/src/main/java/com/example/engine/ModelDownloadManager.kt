@@ -11,10 +11,14 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
+import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.security.cert.CertificateException
 import java.util.concurrent.ConcurrentHashMap
+import javax.net.ssl.SSLException
 
 data class HuggingFaceModelSearchResult(
     val repoId: String,
@@ -176,39 +180,8 @@ class ModelDownloadManager(private val context: Context,
             check(modelsDirectory.usableSpace > ((model.fileSizeMb + 128) * 1024L * 1024L - resumeOffset).coerceAtLeast(128L * 1024 * 1024)) { "Insufficient storage for the remaining model download" }
             val downloadUrl = model.downloadUrl ?: throw IllegalArgumentException("No download URL provided for model ${model.name}")
 
-            // Follow HTTP redirects (Hugging Face resolve redirects to cloud CDN)
-            var currentUrl = downloadUrl
-            var redirects = 0
-            val maxRedirects = 8
-
-            while (redirects < maxRedirects) {
-                val url = URL(currentUrl)
-                require(url.protocol == "https") { "Model downloads require HTTPS" }
-                val conn = openConnection(url).apply {
-                    connectTimeout = 15000
-                    readTimeout = 30000
-                    instanceFollowRedirects = false
-                    setRequestProperty("User-Agent", "BetterIntelligence-AiCore/1.0 (Android ARM64)")
-                    setRequestProperty("Accept", "*/*")
-                    setRequestProperty("Accept-Encoding", "identity")
-                    if (resumeOffset > 0) setRequestProperty("Range", "bytes=$resumeOffset-")
-                }
-                connection = conn
-                val code = conn.responseCode
-                if (code in listOf(HttpURLConnection.HTTP_MOVED_PERM, HttpURLConnection.HTTP_MOVED_TEMP, HttpURLConnection.HTTP_SEE_OTHER, 307, 308)) {
-                    val location = conn.getHeaderField("Location")
-                    conn.disconnect()
-                    if (!location.isNullOrBlank()) {
-                        currentUrl = URL(url, location).toString()
-                        redirects++
-                        continue
-                    }
-                }
-                connection = conn
-                break
-            }
-
-            val activeConn = connection ?: throw IllegalStateException("Failed to open connection to download source")
+            val activeConn = openHttps(downloadUrl, resumeOffset)
+            connection = activeConn
             if (activeConn.responseCode == 416) {
                 // A complete or stale partial must not trap the user in an endless failed resume.
                 val complete = verifyLocalFile(tempFile, model.sha256Checksum)
@@ -327,7 +300,7 @@ class ModelDownloadManager(private val context: Context,
         } catch (e: Exception) {
             Log.e(TAG, "Download failed for ${model.name}: ${e.message}", e)
             if (e is kotlinx.coroutines.CancellationException) throw e
-            onUpdate(DownloadStateUpdate.Failure(e.message ?: "Unknown download error"))
+            onUpdate(DownloadStateUpdate.Failure(downloadErrorMessage(e)))
             return@withContext false
         } finally {
             connection?.disconnect()
@@ -403,19 +376,55 @@ class ModelDownloadManager(private val context: Context,
         }
     }
 
-    private fun fetchHttpString(urlString: String, maxBytes: Int = 1024 * 1024): String? {
+    /** Shared HTTPS/redirect policy for weights, Hub metadata and checksum pointers.
+     * Platform TLS uses network_security_config; never install a permissive trust manager.
+     * Close even a connection that fails while establishing TLS (before returning it).
+     */
+    internal fun openHttps(urlString: String, resumeOffset: Long = 0): HttpURLConnection {
+        var url = URL(urlString)
+        repeat(9) { hop ->
+            require(url.protocol == "https") { "Model downloads require HTTPS" }
+            val conn = openConnection(url)
+            try {
+                conn.apply {
+                    connectTimeout = 15000
+                    readTimeout = 30000
+                    instanceFollowRedirects = false
+                    setRequestProperty("User-Agent", "BetterIntelligence/2.1 (Android)")
+                    setRequestProperty("Accept", "*/*")
+                    setRequestProperty("Accept-Encoding", "identity")
+                    if (resumeOffset > 0) setRequestProperty("Range", "bytes=$resumeOffset-")
+                }
+                if (conn.responseCode !in setOf(301, 302, 303, 307, 308)) return conn
+                val location = conn.getHeaderField("Location")
+                check(!location.isNullOrBlank()) { "Download provider returned a redirect without a destination" }
+                check(hop < 8) { "Download provider redirected too many times. Retry later." }
+                url = URL(url, location)
+            } catch (e: Exception) {
+                conn.disconnect()
+                throw e
+            }
+            conn.disconnect()
+        }
+        error("Download provider redirected too many times")
+    }
+
+    internal fun fetchHttpString(urlString: String, maxBytes: Int = 1024 * 1024): String? {
         var connection: HttpURLConnection? = null
         return try {
-            val url = URL(urlString)
-            connection = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 10000
-                readTimeout = 15000
-                setRequestProperty("User-Agent", "BetterIntelligence-AiCore/1.0 (Android ARM64)")
-                setRequestProperty("Accept", "application/json, text/plain, */*")
-            }
+            require(maxBytes in 1..(1024 * 1024))
+            connection = openHttps(urlString)
             if (connection.responseCode in 200..299) {
-                connection.inputStream.bufferedReader().use { reader ->
-                    reader.readText()
+                connection.inputStream.use { input ->
+                    val output = ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val count = input.read(buffer, 0, minOf(buffer.size, maxBytes + 1 - output.size()))
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                        if (output.size() > maxBytes) throw IOException("Model metadata response is too large")
+                    }
+                    output.toString("UTF-8")
                 }
             } else {
                 null
@@ -428,4 +437,16 @@ class ModelDownloadManager(private val context: Context,
         }
     }
 
+    companion object {
+        internal fun downloadErrorMessage(error: Throwable): String {
+            var cause: Throwable? = error
+            repeat(12) {
+                if (cause is SSLException || cause is CertificateException) {
+                    return "Could not verify the model server's secure connection. Check automatic date/time and Android system updates, then retry on another network if a VPN or HTTPS filter is active. Your partial download is kept; you can also import a model downloaded in your browser."
+                }
+                cause = cause?.cause
+            }
+            return error.message ?: "Download failed. Check your connection and retry."
+        }
+    }
 }

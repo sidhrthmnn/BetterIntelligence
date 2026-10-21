@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <!-- HF's API and model CDN currently chain to Amazon Root CA 1. Some
+         Android/vendor trust stores lack this root or cannot build its cross-
+         signed path. Supply the verified public root only for these domains.
+         Other providers and web research retain the system trust store. -->
+    <domain-config>
+        <domain includeSubdomains="true">huggingface.co</domain>
+        <domain includeSubdomains="true">hf.co</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/amazon_root_ca_1" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
