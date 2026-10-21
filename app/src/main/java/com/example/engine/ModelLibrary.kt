@@ -17,6 +17,7 @@ object ModelLibrary {
         "FAST" -> "Fast"
         "BALANCED" -> "Balanced"
         "ADVANCED" -> "Advanced"
+        "EXPERIMENTAL" -> "Experimental"
         else -> null
     }
     fun recordMetadata(filename: String, metadata: GgufMetadata) {
@@ -60,7 +61,7 @@ object ModelLibrary {
             identityShapes[item.getString("sha256")] = shapes.getValue(item.getString("filename"))
             if (item.has("textWeightsBytes")) identityWeights[item.getString("sha256")] = item.getLong("textWeightsBytes")
             item.optInt("runtimeMaxContext", 0).takeIf { it > 0 }?.let { runtimeContexts[item.getString("sha256")] = it }
-            if (primary) item.optString("recommendedMode").takeIf { it in setOf("FAST", "BALANCED", "ADVANCED") }
+            if (primary) item.optString("recommendedMode").takeIf { it in setOf("FAST", "BALANCED", "ADVANCED", "EXPERIMENTAL") }
                 ?.let { categories[item.getString("sha256")] = it }
             if (item.getString("filename").endsWith(".litertlm") && !item.optBoolean("dynamicContext", false))
                 fixedContexts[item.getString("sha256")] = item.optInt("runtimeMaxContext", 0).takeIf { it > 0 } ?: 2048
@@ -108,7 +109,7 @@ object ModelLibrary {
     fun fits(model: ModelEntity, profile: HardwareProfile, context: Int = 2048): Boolean = incompatibilityReason(model, profile, context) == null
 
     fun recommend(models: List<ModelEntity>, profile: HardwareProfile): ModelRecommendation? {
-        val selected = models.filter { !it.isCustom && fits(it, profile) }
+        val selected = models.filter { !it.isCustom && category(it) != "EXPERIMENTAL" && fits(it, profile) }
             .minWithOrNull(compareBy<ModelEntity> { when (category(it)) { "BALANCED" -> 0; "FAST" -> 1; "ADVANCED" -> 2; else -> 3 } }
                 .thenBy { it.fileSizeMb }) ?: return null
         return ModelRecommendation(selected.name, selected.filename, selected.quantization, 0f,
