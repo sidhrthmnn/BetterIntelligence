@@ -11,6 +11,7 @@ Web grounding and model library/download usability update. Validation completed 
 - Validation debug APK SHA-256: `d5a9392975bf559a708637655b973961da3e949302498721a4002533fc155928`.
 - Upload certificate SHA-256: `35:8B:05:89:A6:5E:FB:73:C6:85:DC:16:81:DE:D7:2C:C3:8A:76:6F:51:15:FE:08:DD:3C:E4:F0:76:2F:F1:8A`. The self-signed upload signing-chain warning is expected and unrelated to HTTPS server verification.
 - Play Console accepted **8 (2.1.0-beta3)**, API 24+, target 36, two ABIs, native debug symbols attached. Supported device counts did not decrease. The sole validation warning concerns the absent deobfuscation map; release obfuscation is disabled.
+- On **22 October 2026**, **CB3 - Better research and model downloads** was submitted to the existing **Closed testing - Alpha** track at 100% of that track. Publishing overview confirms **Changes in review**. Google's quick checks are still running and will forward the change for review on success. Managed publishing remains off, so an approved release can publish automatically. Approval/publication was not awaited.
 
 ## Live Android acceptance
 
