@@ -32,14 +32,14 @@ class PublicWebResearchTest {
         assertTrue(sources.single().excerpt.contains("fetched page"))
         assertFalse(sources.single().excerpt.contains("secret"))
         assertFalse(sources.single().excerpt.contains("snippet</"))
-        assertEquals(3, requests.size)
+        assertEquals(4, requests.size) // Two search feeds, then the two unique publisher pages.
     }
 
     @Test fun explicitLinkReadsItWithoutSendingQuestionToSearch() = runBlocking {
         val requests = mutableListOf<String>()
         val result = PublicWebResearch(WebFetcher { url ->
             requests += url
-            WebDocument(url, "<title>Document</title><main><p>" + "A verified retrieved paragraph about Android. ".repeat(4) + "</p></main>", "text/html")
+            WebDocument(url, "<title>Document</title><main><p>A retrieved paragraph about Android describes its public platform APIs. A second sentence explains compatible graphics hardware and application development.</p></main>", "text/html")
         }).search("Summarize https://example.com/document.")
         assertEquals(listOf("https://example.com/document"), requests)
         assertEquals(1, result.size)

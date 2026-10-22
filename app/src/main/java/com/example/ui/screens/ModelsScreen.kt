@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -31,6 +32,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val active by viewModel.activeModel.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
     val hardware by viewModel.hardwareProfile.collectAsState()
+    val generationParams by viewModel.chatGenerationParams.collectAsState()
     val recommendation by viewModel.modelRecommendation.collectAsState()
     val loading by viewModel.loadingModelId.collectAsState()
     val terms by viewModel.licenseModel.collectAsState()
@@ -43,15 +45,38 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     var advanced by rememberSaveable { mutableStateOf(false) }
     var details by remember { mutableStateOf<ModelEntity?>(null) }
     var deleting by remember { mutableStateOf<ModelEntity?>(null) }
+    val listState = rememberLazyListState()
+    var pinnedDownloads by rememberSaveable { mutableStateOf(listOf<Long>()) }
+    var previousDownloads by remember { mutableStateOf(setOf<Long>()) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) source = "my_models"
         uris.forEach { viewModel.importGgufFromUri(it, context) }
     }
     val recommended = models.find { it.filename == recommendation?.recommendedFilename }
+    val downloadingIds = models.filter { it.downloadState == "DOWNLOADING" }.map { it.id }.toSet()
+    LaunchedEffect(downloadingIds) {
+        val started = downloadingIds - previousDownloads
+        previousDownloads = downloadingIds
+        if (started.isNotEmpty()) {
+            pinnedDownloads = started.sorted() + pinnedDownloads.filterNot { it in started }
+            source = "my_models"
+            // Focus once per start/resume. Progress and RAM samples never interrupt scrolling.
+            listState.scrollToItem(if (telemetry.isModelLoaded || loading != null) 3 else 2)
+        }
+    }
+    val loadProfile = hardware?.let { profile ->
+        val available = (profile.availableRamMb + viewModel.releasableGpuWeightsMb()).coerceAtMost(profile.totalRamMb)
+        profile.copy(availableRamMb = available, safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
+    }
 
-    LazyColumn(Modifier.fillMaxSize().testTag("models_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("models_list"), state = listState, contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Text("Models for your phone", style = MaterialTheme.typography.headlineSmall)
+            Text(hardware?.let { "${ModelPresentation.size(it.availableRamMb)} RAM available · ${ModelPresentation.size(it.totalRamMb)} total" }
+                ?: "Checking your phone’s memory…", style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.testTag("model_ram_summary"))
+            Text("RAM changes as apps run. Download size uses storage.", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -105,47 +130,48 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             }
         }
         val visibleModels = models.filter {
-            when (source) {
+            if (it.id in pinnedDownloads || it.downloadState == "DOWNLOADING") true else when (source) {
                 "library" -> !it.isCustom && (otherModels || ModelLibrary.category(it) != null || it.isInstalled || it.id == recommended?.id) &&
                     (tier == "ALL" || ModelLibrary.category(it) == tier)
-                "my_models" -> it.isInstalled || it.isCustom
+                "my_models" -> ModelPresentation.hasDownload(it) || it.isCustom
                 else -> false
             }
         }
         if (source == "my_models" && visibleModels.isEmpty()) item {
             Text("Your downloads and imports will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        items(visibleModels.sortedWith(compareByDescending<ModelEntity> { it.id == active?.id }
-            .thenByDescending { it.id == recommended?.id }.thenBy { it.fileSizeMb }), key = { it.id }) { model ->
+        items(ModelPresentation.ordered(visibleModels, pinnedDownloads, active?.id, recommended?.id), key = { it.id }) { model ->
             val installed = model.isInstalled
             val downloading = model.downloadState == "DOWNLOADING"
             val selected = active?.id == model.id && telemetry.isModelLoaded
-            val loadProfile = hardware?.let { profile ->
-                val reclaimable = viewModel.releasableGpuWeightsMb()
-                val available = (profile.availableRamMb + reclaimable).coerceAtMost(profile.totalRamMb)
-                profile.copy(availableRamMb = available, safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
-            }
-            val fits = loadProfile?.let { ModelLibrary.fits(model, it, 512) } ?: true
+            val memoryContext = ModelPresentation.loadContext(model, generationParams.contextSize)
+            val fits = loadProfile?.let { ModelLibrary.fits(model, it, memoryContext) } ?: false
             val canDownload = hardware?.let { ModelLibrary.canDownload(model, it) } ?: true
             OutlinedCard(Modifier.fillMaxWidth().testTag("model_card_${model.id}")) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ModelLibrary.categoryLabel(model)?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
                     Text(model.name.substringBefore(" · "), style = MaterialTheme.typography.titleMedium)
-                    Text("${model.fileSizeMb} MB download · About ${ModelLibrary.memoryEstimate(model).totalMb} MB RAM",
+                    Text(ModelPresentation.status(model), style = MaterialTheme.typography.labelLarge,
+                        color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("model_status_${model.id}"))
+                    Text("${ModelPresentation.size(model.fileSizeMb)} ${if (installed) "on device" else "download"} · About ${ModelPresentation.size(ModelLibrary.memoryEstimate(model, memoryContext).totalMb)} RAM",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(ModelPresentation.memoryLabel(model, loadProfile, selected, memoryContext), style = MaterialTheme.typography.bodyMedium,
+                        color = if (fits || selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("model_memory_${model.id}"))
                     if (ModelLibrary.category(model) == "FAST") Text("Small download for basic English tasks. Choose Balanced for more reliable writing and multilingual chat.", style = MaterialTheme.typography.bodySmall)
                     if (ModelLibrary.category(model) == "BALANCED") Text("Recommended for everyday chat and English AI Polish.", style = MaterialTheme.typography.bodySmall)
                     if (ModelLibrary.category(model) == "ADVANCED") Text("Stronger multilingual writing; higher memory use and slower responses.", style = MaterialTheme.typography.bodySmall)
                     if (ModelLibrary.category(model) == "EXPERIMENTAL") Text("Unverified on this phone. Manually test CPU/GPU, memory, chat and TypeRight correctness before relying on it. Not selected automatically.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     if (selected) Text("Selected · available to approved apps", color = MaterialTheme.colorScheme.primary)
-                    Text(model.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (!selected && !fits) Text(loadProfile?.let { ModelLibrary.incompatibilityReason(model, it, 512) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
                     if (!installed && !canDownload) Text("Free more storage before downloading this model.", color = MaterialTheme.colorScheme.error)
                     if (model.downloadState == "ERROR") Text(downloadErrors[model.id] ?: "Download interrupted. Retry to resume or check the model publisher’s access requirements.", color = MaterialTheme.colorScheme.error)
                     if (downloading) {
-                        LinearProgressIndicator(progress = { model.downloadProgress }, modifier = Modifier.fillMaxWidth())
-                        Text(if (model.checksumVerificationStatus == "VERIFYING") "Checking download…" else "Downloading ${(model.downloadProgress * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodySmall)
+                        if (model.checksumVerificationStatus == "VERIFYING") LinearProgressIndicator(Modifier.fillMaxWidth())
+                        else LinearProgressIndicator(progress = { model.downloadProgress.coerceIn(0f, .99f) }, modifier = Modifier.fillMaxWidth())
+                        Text(if (model.checksumVerificationStatus == "VERIFYING") "Almost ready. Keep the app open while the file is checked."
+                            else "${ModelPresentation.size((model.fileSizeMb * model.downloadProgress.coerceIn(0f, .99f)).toLong())} of ${ModelPresentation.size(model.fileSizeMb)} · You can pause and resume",
+                            style = MaterialTheme.typography.bodySmall, modifier = Modifier.heightIn(min = 36.dp))
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         when {
@@ -208,6 +234,9 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         AlertDialog(onDismissRequest = { details = null }, title = { Text(model.name) }, text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(model.description)
+                val memoryContext = ModelPresentation.loadContext(model, generationParams.contextSize)
+                Text("Estimated RAM to load: ${ModelPresentation.size(ModelLibrary.memoryEstimate(model, memoryContext).totalMb)}. LiteRT uses your context setting; GGUF starts with a small context and adjusts it for each answer. Actual usage depends on context and backend.")
+                loadProfile?.let { profile -> ModelLibrary.incompatibilityReason(model, profile, memoryContext)?.let { Text(it) } }
                 Text("${model.quantization} · ${model.contextLength} token model context")
                 Text("Integrity: ${model.checksumVerificationStatus}")
                 model.huggingFaceRepo?.let { repo ->

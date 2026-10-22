@@ -114,7 +114,7 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
         }
         item {
             Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
-            Text("The app discovers public pages using Bing search, reads up to three websites and gives the local model their text as evidence. No account or API key is needed. Paste a public HTTPS link to research that page directly.")
+            Text("The app finds news and public pages, checks their topic and dates, and gives the local model relevant text with citations. No account or API key is needed. Paste a public HTTPS link to research that page directly.")
             Text("Search can be blocked or unavailable. Pages requiring sign-in, scripts, CAPTCHA or unsupported file formats are skipped. Sources can be incomplete or wrong; citations show where text came from, not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
         }
         item {

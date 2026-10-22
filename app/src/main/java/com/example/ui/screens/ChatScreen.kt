@@ -196,6 +196,7 @@ private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: 
                 "EVIDENCE_CITED" -> "Sources cited · Check the evidence"
                 "CITATIONS_MISSING" -> "Sources retrieved; the answer did not cite them"
                 "SEARCH_FAILED" -> "Live sources unavailable · Model-only answer"
+                "INSUFFICIENT_EVIDENCE" -> "Web answer could not be verified"
                 "PRIVACY_BLOCKED" -> "Search skipped to protect possible credentials · Local-only answer"
                 else -> ""
             }
@@ -207,7 +208,12 @@ private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: 
                         Text("[${source.id}] ${source.title}")
                         Text(when (source.kind) { "WEB_PAGE" -> "Page text retrieved · Check the source"; "SEARCH_EXCERPT" -> "Saved search excerpt · Page not fetched"; else -> "Saved article summary" },
                             style = MaterialTheme.typography.labelSmall)
-                        if (source.updatedAt.isNotBlank()) Text(if (source.kind == "SEARCH_EXCERPT") "Search-reported date: ${source.updatedAt.take(40)}" else "Article revised ${source.updatedAt.take(10)}", style = MaterialTheme.typography.labelSmall)
+                        if (source.updatedAt.isNotBlank()) Text(when (source.dateKind) {
+                            "PUBLISHED" -> "Page-reported publication: ${source.updatedAt.take(10)}"
+                            "MODIFIED" -> "Page-reported update: ${source.updatedAt.take(10)}"
+                            "SEARCH_REPORTED" -> "Search-reported date: ${source.updatedAt.take(40)}"
+                            else -> if (source.kind == "SEARCH_EXCERPT") "Search-reported date: ${source.updatedAt.take(40)}" else "Article revised ${source.updatedAt.take(10)}"
+                        }, style = MaterialTheme.typography.labelSmall)
                         Text("Retrieved ${java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(source.retrievedAt))}", style = MaterialTheme.typography.labelSmall)
                     }
                 }

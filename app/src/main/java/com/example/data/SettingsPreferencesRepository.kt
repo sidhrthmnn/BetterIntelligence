@@ -34,6 +34,7 @@ class SettingsPreferencesRepository(private val context: Context) {
         private val KEY_CONTEXT = stringPreferencesKey("chat_context")
         private val KEY_TEMPERATURE = stringPreferencesKey("chat_temperature")
         private val KEY_OUTPUT = stringPreferencesKey("chat_output_tokens")
+        private val KEY_THREADS = stringPreferencesKey("chat_cpu_threads")
     }
 
     val selectedEngineFlow: Flow<SupportedEngine> = context.dataStore.data
@@ -77,10 +78,12 @@ class SettingsPreferencesRepository(private val context: Context) {
     val generationPreferences = preferences.map { values ->
         val context = (values[KEY_CONTEXT]?.toIntOrNull() ?: 2048).coerceIn(512, 2048)
         GenerationParams(contextSize = context, maxTokens = (values[KEY_OUTPUT]?.toIntOrNull() ?: 256).coerceIn(64, context / 2),
-            temperature = (values[KEY_TEMPERATURE]?.toFloatOrNull() ?: .7f).coerceIn(0f, 1.5f))
+            temperature = (values[KEY_TEMPERATURE]?.toFloatOrNull() ?: .7f).coerceIn(0f, 1.5f),
+            threads = (values[KEY_THREADS]?.toIntOrNull() ?: 0).coerceIn(0, 8))
     }
     suspend fun saveGenerationPreferences(params: GenerationParams) { context.dataStore.edit {
         it[KEY_CONTEXT] = params.contextSize.toString(); it[KEY_OUTPUT] = params.maxTokens.toString(); it[KEY_TEMPERATURE] = params.temperature.toString()
+        it[KEY_THREADS] = params.threads.coerceIn(0, 8).toString()
     } }
     suspend fun saveForegroundEnabled(enabled: Boolean) { context.dataStore.edit { it[KEY_FOREGROUND_SERVICE] = enabled.toString() } }
     suspend fun saveAppearance(value: String) {

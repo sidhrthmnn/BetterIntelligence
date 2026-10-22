@@ -228,7 +228,8 @@ class AiCoreRepository(
                 modelDao.updateModel(
                     model.copy(
                         downloadState = "DOWNLOADING",
-                        downloadProgress = 0.01f,
+                        downloadProgress = (File(downloadManager.modelsDirectory, "${model.filename}.part").length().toFloat() /
+                            (model.fileSizeMb * 1048576).coerceAtLeast(1)).coerceIn(0f, .99f),
                         downloadSpeedMbps = 0f,
                         checksumVerificationStatus = "NOT_VERIFIED"
                     )
@@ -314,6 +315,7 @@ class AiCoreRepository(
         repositoryScope.launch(Dispatchers.IO) {
             job?.join()
             val model = modelDao.getModelById(modelId) ?: return@launch
+            if (model.isInstalled) return@launch // Completion won the race with Pause.
             val partFile = File(downloadManager.modelsDirectory, "${model.filename}.part")
             modelDao.updateModel(
                 model.copy(
