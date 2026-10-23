@@ -20,6 +20,7 @@ internal object NativeGguf {
     external fun runtimeInfo(allowGpuProbe: Boolean): ByteArray
     external fun prepare(path: ByteArray, gpuLayers: Int, threads: Int, contextSize: Int): Int
     external fun release()
+    external fun countTokens(text: ByteArray): Int
     external fun generate(prompt: ByteArray, systemPrompt: ByteArray, observer: NativeObserver, maxTokens: Int, threads: Int,
                           contextSize: Int, temperature: Float, topP: Float, topK: Int, timeoutMs: Int,
                           historyRoles: Array<ByteArray>, historyContents: Array<ByteArray>): ByteArray
@@ -27,6 +28,7 @@ internal object NativeGguf {
 
 /** Injectable boundary for testing failure recovery without pretending to execute hardware. */
 internal interface GgufRuntime {
+    fun countTokens(text: String): Int? = null
     fun info(allowGpuProbe: Boolean): String
     fun prepare(file: java.io.File, layers: Int, threads: Int, context: Int): Int
     fun release()
@@ -34,6 +36,7 @@ internal interface GgufRuntime {
 }
 
 internal object JniGgufRuntime : GgufRuntime {
+    override fun countTokens(text: String): Int = NativeGguf.countTokens(text.toByteArray(Charsets.UTF_8))
     override fun info(allowGpuProbe: Boolean): String { NativeGguf.ensureAvailable(); return NativeGguf.runtimeInfo(allowGpuProbe).toString(Charsets.UTF_8) }
     override fun prepare(file: java.io.File, layers: Int, threads: Int, context: Int): Int {
         NativeGguf.ensureAvailable()

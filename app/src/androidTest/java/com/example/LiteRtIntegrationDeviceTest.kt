@@ -35,7 +35,13 @@ class LiteRtIntegrationDeviceTest {
             context.getSystemService(android.net.ConnectivityManager::class.java).activeNetwork)
         val repository = AiCoreRepository.getInstance(context)
         val expected = ModelLibrary.read(context).map { it.filename }.toSet()
-        val models = withTimeout(300_000) { repository.allModels.first { rows -> rows.map { it.filename }.containsAll(expected) } }
+        // A persisted catalogue can arrive before startup has rechecked staged files.
+        // Wait for both fixtures to be installed instead of retaining that stale snapshot.
+        val models = withTimeout(300_000) { repository.allModels.first { rows ->
+            rows.map { it.filename }.containsAll(expected) &&
+                rows.any { it.filename == "gemma-4-E2B-it.litertlm" && it.isInstalled } &&
+                rows.any { it.name.contains("SmolLM2") && it.isInstalled }
+        } }
         repository.unloadModel()
         val model = models.single { it.filename == "gemma-4-E2B-it.litertlm" }
         assertTrue("Stage the pinned E2B file first", model.isInstalled)

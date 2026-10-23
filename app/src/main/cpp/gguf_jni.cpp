@@ -209,6 +209,16 @@ Java_com_example_engine_NativeGguf_release(JNIEnv *, jobject) {
     model.reset(); path.clear(); loadedLayers = 0;
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_example_engine_NativeGguf_countTokens(JNIEnv *env, jobject, jbyteArray textBytes) {
+    std::lock_guard<std::mutex> lock(guard);
+    if (!model) return -1;
+    const auto text = bytes(env, textBytes);
+    if (text.empty()) return 0;
+    const int count = llama_tokenize(llama_model_get_vocab(model.get()), text.data(), text.size(), nullptr, 0, false, false);
+    return count < 0 ? -count : count;
+}
+
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray promptBytes,
         jbyteArray systemBytes, jobject observer, jint maxTokens, jint threads, jint contextSize,

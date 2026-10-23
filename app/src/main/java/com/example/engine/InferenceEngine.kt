@@ -242,6 +242,13 @@ class InferenceEngine internal constructor(private val context: android.content.
     }
 
     fun cancelGeneration() { activeJob?.cancel() }
+    fun requestContextLimit(requested: Int): Int = liteSession?.configurationContext(requested.coerceIn(512, 4096))
+        ?: minOf(requested, activeContextLength.takeIf { it > 0 } ?: requested)
+    fun contextTokenCount(text: String): Int = synchronized(lifecycleLock) {
+        if (owner === this && !busy.get() && liteSession == null)
+            runtime.countTokens(text)?.takeIf { it >= 0 } ?: ((text.toByteArray(Charsets.UTF_8).size + 1) / 2)
+        else (text.toByteArray(Charsets.UTF_8).size + 1) / 2
+    }
     fun isReady(): Boolean = owner === this && (_activeMetadata.value != null || liteSession?.let { it.isInitialized || busy.get() } == true)
     fun isLiteRtLoaded(): Boolean = isReady() && liteSession != null
 
@@ -465,7 +472,10 @@ class InferenceEngine internal constructor(private val context: android.content.
                 if (resources.lowMemory || resources.availableMb < 512 || resources.thermal >= 5) throw failure
                 session.prepare(ProcessingMode.CPU, effective.threads, effective.contextSize)
                 _telemetry.value = _telemetry.value.copy(activeBackend = "CPU", accelerationMode = "CPU (LiteRT-LM)", activeGpuLayers = 0, activeThreads = effective.threads)
-                if (visibleOutput) throw IllegalStateException("GPU stopped after partial output. Partial text is preserved; retry with CPU.", failure)
+                if (visibleOutput) {
+                    if (failure is InvalidModelOutputException) throw failure
+                    throw IllegalStateException("GPU stopped after partial output. Partial text is preserved; retry with CPU.", failure)
+                }
                 return inferLiteRt(prompt, effective, listener, started)
             }
             throw failure
@@ -635,7 +645,18 @@ class InferenceEngine internal constructor(private val context: android.content.
         _telemetry.value = _telemetry.value.copy(backendStatus = "Ready", backendDecision = decision)
     }
 
-    private suspend fun infer(prompt: String, params: GenerationParams, listener: StreamTokenListener?): String {
+    private suspend fun infer(prompt: String, params: GenerationParams, rawListener: StreamTokenListener?): String {
+        val validation = ModelOutputValidator.Stream(prompt)
+        val listener = object : StreamTokenListener {
+            override fun onToken(token: String, tokenIndex: Int) {
+                validation.append(token).takeIf { it.isNotEmpty() }?.let { rawListener?.onToken(it, tokenIndex) }
+            }
+            override fun onComplete(fullText: String, latencyMs: Long, tokensPerSec: Float, promptTokens: Int, completionTokens: Int) {
+                validation.finish(fullText).takeIf { it.isNotEmpty() }?.let { rawListener?.onToken(it, completionTokens) }
+                rawListener?.onComplete(fullText, latencyMs, tokensPerSec, promptTokens, completionTokens)
+            }
+            override fun onError(errorCode: Int, errorMessage: String) { rawListener?.onError(errorCode, errorMessage) }
+        }
         val requestJob = kotlinx.coroutines.currentCoroutineContext()[Job]
         synchronized(lifecycleLock) {
             check(isReady()) { "Download and select a GGUF model first" }

@@ -4,8 +4,10 @@ import android.content.Context
 import android.os.SystemClock
 import android.os.Debug
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.ActivationDataType
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Contents
+import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.ExperimentalApi
@@ -36,6 +38,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
     val gpuReason: String
     val maximumContext: Int
     val minimumContext = ModelLibrary.liteRtMinimumContext(identity)
+    private val float32Gpu = ModelLibrary.liteRtFloat32Gpu(identity)
     val dynamicContext: Boolean
     val supportsThinking: Boolean
     val needsThoughtBudget: Boolean get() = supportsThinking && !reuseAttentionExecutor
@@ -46,6 +49,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
     var backend = ProcessingMode.CPU; private set
     private var configuration = ""
     private var usedForConversation = false
+    private var resetRequired = false
     var initializationMs = 0L; private set
     var allocatedContext = 0; private set
     var configuredContext = 0; private set
@@ -86,7 +90,11 @@ internal class LiteRtSession(private val context: Context, val file: File,
         val candidate = Engine(EngineConfig(modelPath = file.absolutePath,
             backend = if (mode == ProcessingMode.GPU) Backend.GPU() else Backend.CPU(threads),
             maxNumTokens = graphContext,
-            cacheDir = File(context.cacheDir, "litert-lm").apply { mkdirs() }.absolutePath))
+            // Gemma 4 has upstream FP16 GPU correctness reports (#4001). Use
+            // the public 0.18 FP32 override for these exact verified packages,
+            // with separate compiled cache and additional memory headroom.
+            activationDataType = if (mode == ProcessingMode.GPU && float32Gpu) ActivationDataType.FLOAT32 else null,
+            cacheDir = File(context.cacheDir, if (float32Gpu) "litert-lm-f32" else "litert-lm").apply { mkdirs() }.absolutePath))
         try {
             candidate.initialize()
             engine = candidate; backend = mode; configuration = key
@@ -101,7 +109,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
     suspend fun generate(prompt: String, params: GenerationParams,
         onText: (String, Int) -> Unit = { _, _ -> }): LiteRtResult {
         val started = SystemClock.elapsedRealtime()
-        if (usedForConversation && !reuseAttentionExecutor) {
+        if (resetRequired || (usedForConversation && !reuseAttentionExecutor)) {
             // LiteRT-LM #3165: rewinding a new Conversation does not reliably reset
             // recurrent state. Dispose before creating its replacement, under core admission.
             val mode = backend; val threads = allocatedThreads; val size = configuredContext
@@ -118,18 +126,22 @@ internal class LiteRtSession(private val context: Context, val file: File,
         val completion = CompletableDeferred<Unit>()
         val nativeFinished = CompletableDeferred<Unit>()
         val text = StringBuilder()
+        val validation = ModelOutputValidator.Stream(prompt)
         var first = 0L
         var chunks = 0
         var submitted = false
         try {
             conversation.sendMessageAsync(prompt, object : MessageCallback {
                 override fun onMessage(message: Message) {
-                    val delta = message.toString()
+                    if (completion.isCompleted) return
+                    // v0.18.0 Message.toString joins all content types. Read only
+                    // typed text; thinking channels/tools/multimodal data are not answers.
+                    val delta = message.contents.contents.filterIsInstance<Content.Text>().joinToString("") { it.text }
                     if (delta.isNotEmpty()) {
                         if (first == 0L) first = (SystemClock.elapsedRealtime() - started).coerceAtLeast(1)
                         text.append(delta)
-                        try { onText(delta, chunks++) } // Chunk index, never reported as a token count.
-                        catch (failure: Exception) { completion.completeExceptionally(failure) }
+                        try { validation.append(delta).takeIf { it.isNotEmpty() }?.let { onText(it, chunks++) } }
+                        catch (failure: Exception) { resetRequired = true; completion.completeExceptionally(failure) }
                     }
                 }
                 override fun onDone() { nativeFinished.complete(Unit); completion.complete(Unit) }
@@ -137,10 +149,14 @@ internal class LiteRtSession(private val context: Context, val file: File,
             })
             submitted = true
             withTimeout(180_000) { completion.await() }
+            validation.finish().takeIf { it.isNotEmpty() }?.let { onText(it, chunks++) }
             val metrics = conversation.getBenchmarkInfo()
             return LiteRtResult(text.toString(), metrics.lastPrefillTokenCount, metrics.lastDecodeTokenCount,
                 first, metrics.lastDecodeTokensPerSecond.toFloat(),
                 if (metrics.lastPrefillTokensPerSecond > 0) (1000 * metrics.lastPrefillTokenCount / metrics.lastPrefillTokensPerSecond).toLong() else 0)
+        } catch (failure: Throwable) {
+            resetRequired = true
+            throw failure
         } finally {
             if (submitted && !nativeFinished.isCompleted) {
                 conversation.cancelProcess()
@@ -154,6 +170,6 @@ internal class LiteRtSession(private val context: Context, val file: File,
 
     override fun close() {
         engine?.let { if (it.isInitialized()) it.close() }
-        engine = null; configuration = ""; allocatedContext = 0; configuredContext = 0; allocatedThreads = 0; usedForConversation = false
+        engine = null; configuration = ""; allocatedContext = 0; configuredContext = 0; allocatedThreads = 0; usedForConversation = false; resetRequired = false
     }
 }

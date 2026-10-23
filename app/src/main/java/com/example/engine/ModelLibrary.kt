@@ -44,6 +44,10 @@ object ModelLibrary {
         else -> ""
     }
 
+    fun liteRtFloat32Gpu(sha256: String): Boolean = sha256 in setOf(
+        "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+        "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0")
+
     fun liteRtMinimumContext(sha256: String): Int = when (sha256) {
         // Measured on both standard Gemma 4 exports: CPU tensor allocation fails at
         // 512, while 1024 and 2048 decode successfully. Keep CPU fallback valid
@@ -100,7 +104,8 @@ object ModelLibrary {
         // Some LiteRT CPU exports expand compressed tensors. Keep this explicit
         // runtime allowance separate from actual download/weight bytes and KV.
         val floor = identity?.let(runtimeMemoryFloors::get) ?: 0L
-        return estimate.copy(overheadMb = estimate.overheadMb +
+        val precisionHeadroom = if (liteRt && gpuLayers > 0 && identity?.let(::liteRtFloat32Gpu) == true) estimate.kvMb + 128 else 0
+        return estimate.copy(gpuOverheadMb = estimate.gpuOverheadMb + precisionHeadroom, overheadMb = estimate.overheadMb +
             (floor + estimate.gpuOverheadMb - estimate.totalMb).coerceAtLeast(0))
     }
 

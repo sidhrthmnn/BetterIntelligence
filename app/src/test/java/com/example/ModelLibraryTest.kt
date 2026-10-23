@@ -11,6 +11,15 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ModelLibraryTest {
+    @Test fun float32GpuPolicyIsBoundToVerifiedGemmaPackagesAndReservesSharedRam() {
+        val models = com.example.engine.ModelLibrary.read(androidx.test.core.app.ApplicationProvider.getApplicationContext())
+        val model = models.first { it.filename == "gemma-4-E2B-it.litertlm" }
+        assertTrue(com.example.engine.ModelLibrary.liteRtFloat32Gpu(model.sha256Checksum!!))
+        assertFalse(com.example.engine.ModelLibrary.liteRtFloat32Gpu("unknown import"))
+        val cpu = com.example.engine.ModelLibrary.memoryEstimate(model, 2048)
+        val gpu = com.example.engine.ModelLibrary.memoryEstimate(model, 2048, Int.MAX_VALUE)
+        assertTrue(gpu.totalMb > cpu.totalMb + cpu.kvMb + 128)
+    }
     @Test fun fixedLiteRtExportsDoNotPromiseKvSavingsWhenOnlyTheRequestLimitShrinks() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val fixed = ModelLibrary.inferenceModel(context, "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm")!!
