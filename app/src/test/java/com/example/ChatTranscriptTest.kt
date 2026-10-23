@@ -27,6 +27,33 @@ import org.robolectric.annotation.GraphicsMode
 class ChatTranscriptTest {
     @get:Rule val compose = createComposeRule()
 
+    @Test fun ordinaryGrowthAndSmallScrollNeverShowTheJumpArrow() {
+        val text = mutableStateOf("A short answer")
+        lateinit var state: LazyListState
+        compose.setContent { state = rememberLazyListState(); MaterialTheme {
+            ChatTranscript(emptyList(), true, text.value, "Test", {}, Modifier.height(360.dp), state)
+        } }
+        compose.waitForIdle(); compose.onNodeWithTag("jump_to_latest").assertDoesNotExist()
+        repeat(3) {
+            compose.runOnIdle { text.value += "\nA longer streaming line".repeat(20) }
+            compose.waitForIdle(); compose.onNodeWithTag("jump_to_latest").assertDoesNotExist()
+            compose.runOnIdle { assertFalse(state.canScrollForward) }
+        }
+        compose.onNodeWithTag("chat_transcript").performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, -60f) }
+        compose.waitForIdle(); compose.onNodeWithTag("jump_to_latest").assertDoesNotExist()
+    }
+
+    @Test fun persistedStreamingItemKeepsItsKeyAndNeverDuplicatesTheAnswer() {
+        val messages = mutableStateOf(listOf(ChatMessageEntity(id = 1, role = "assistant", content = "", messageState = "STREAMING")))
+        val generating = mutableStateOf(true)
+        compose.setContent { MaterialTheme { ChatTranscript(messages.value, generating.value, "A complete answer", "Test", {}, Modifier.height(360.dp), pendingReplyId = 1) } }
+        compose.onAllNodesWithText("A complete answer").assertCountEquals(1)
+        compose.runOnIdle { messages.value = listOf(messages.value.single().copy(content = "A complete answer", messageState = "COMPLETE")) }
+        compose.waitForIdle(); compose.onAllNodesWithText("A complete answer").assertCountEquals(1)
+        compose.runOnIdle { generating.value = false }
+        compose.waitForIdle(); compose.onAllNodesWithText("A complete answer").assertCountEquals(1)
+    }
+
     @Test fun accessibilityScrollIsNotPulledBackDuringStreaming() {
         val text = mutableStateOf("Streaming line\n".repeat(120))
         lateinit var state: LazyListState

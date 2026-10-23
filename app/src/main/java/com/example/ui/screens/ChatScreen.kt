@@ -16,6 +16,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clipToBounds
+import kotlinx.coroutines.flow.conflate
+import com.example.ui.components.SourceReferences
 import androidx.compose.ui.input.nestedscroll.*
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
@@ -45,6 +49,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
     val mode by viewModel.groundingMode.collectAsState()
     val ready by viewModel.telemetry.collectAsState()
     val editing by viewModel.isEditingMessage.collectAsState()
+    val pendingReplyId by viewModel.pendingReplyId.collectAsState()
     val clipboard = LocalClipboardManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     var showWebMenu by remember { mutableStateOf(false) }
@@ -69,7 +74,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
         } else key(conversation) {
             ChatTranscript(messages, generating, stream, model?.name ?: "Better Intelligence",
                 { clipboard.setText(AnnotatedString(it)) }, Modifier.weight(1f).fillMaxWidth(),
-                onEdit = { viewModel.editMessage(it) }, onRegenerate = { viewModel.regenerateResponse() }, status = status)
+                onEdit = { viewModel.editMessage(it) }, onRegenerate = { viewModel.regenerateResponse() }, status = status, pendingReplyId = pendingReplyId)
         }
         Surface(Modifier.fillMaxWidth().testTag("chat_composer"), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -119,10 +124,15 @@ internal fun ChatTranscript(
     messages: List<ChatMessageEntity>, isGenerating: Boolean, streamingText: String, modelName: String,
     onCopy: (String) -> Unit, modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
-    onEdit: (ChatMessageEntity) -> Unit = {}, onRegenerate: () -> Unit = {}, status: String = ""
+    onEdit: (ChatMessageEntity) -> Unit = {}, onRegenerate: () -> Unit = {}, status: String = "", pendingReplyId: Long? = null
 ) {
-    val awayFromLatest by remember { derivedStateOf { listState.canScrollForward } }
+    val density = LocalDensity.current
+    val showDistance = with(density) { 160.dp.toPx() }
+    val hideDistance = with(density) { 48.dp.toPx() }
+    var awayFromLatest by remember { mutableStateOf(false) }
     var followLatest by remember { mutableStateOf(true) }
+    var programmatic by remember { mutableStateOf(false) }
+    val contentSignal by rememberUpdatedState(Triple(streamingText.length, messages.lastOrNull(), messages.size))
     val scrollConnection = remember { object : NestedScrollConnection {
         override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
             if (source == NestedScrollSource.UserInput && available.y > 0f) followLatest = false
@@ -130,51 +140,72 @@ internal fun ChatTranscript(
         }
     } }
     LaunchedEffect(messages.lastOrNull { it.role == "user" }?.id) { followLatest = true }
-    LaunchedEffect(listState) { snapshotFlow { !listState.canScrollForward }.collect { if (it) followLatest = true } }
-    LaunchedEffect(listState, followLatest) {
+    LaunchedEffect(listState) {
         var previousIndex = listState.firstVisibleItemIndex
         var previousOffset = listState.firstVisibleItemScrollOffset
-        if (followLatest) snapshotFlow {
+        snapshotFlow {
             val layout = listState.layoutInfo; val last = layout.visibleItemsInfo.lastOrNull()
             listOf(layout.totalItemsCount, layout.viewportEndOffset, last?.index, last?.offset, last?.size,
                 listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset, listState.isScrollInProgress)
         }.collect {
-            val index = listState.layoutInfo.totalItemsCount - 1
             val movedEarlier = listState.firstVisibleItemIndex < previousIndex ||
                 (listState.firstVisibleItemIndex == previousIndex && listState.firstVisibleItemScrollOffset < previousOffset)
-            // TalkBack/keyboard scroll actions can bypass the touch nested-scroll
-            // callback. Respect those readers too, before following another token.
-            if (listState.canScrollForward && (movedEarlier || listState.isScrollInProgress)) followLatest = false
-            // Schedule the next measure instead of synchronously forcing a
-            // remeasure from a layoutInfo snapshot (not safe during recreation).
-            else if (index >= 0 && listState.canScrollForward) listState.requestScrollToItem(index)
+            if (!programmatic && listState.isScrollInProgress && movedEarlier) followLatest = false
+            val layout = listState.layoutInfo
+            val last = layout.visibleItemsInfo.lastOrNull()
+            val distance = if (!listState.canScrollForward) 0f else if (last == null) 0f
+                else if (last.index >= layout.totalItemsCount - 2)
+                    (last.offset + last.size - layout.viewportEndOffset + with(density) { 22.dp.toPx() }).coerceAtLeast(0f)
+                else showDistance + 1
+            if (followLatest) awayFromLatest = false
+            else if (distance >= showDistance) awayFromLatest = true
+            else if (distance <= hideDistance) {
+                awayFromLatest = false
+                if (!listState.isScrollInProgress || !movedEarlier &&
+                    (listState.firstVisibleItemIndex > previousIndex || listState.firstVisibleItemScrollOffset > previousOffset)) followLatest = true
+            }
             previousIndex = listState.firstVisibleItemIndex
             previousOffset = listState.firstVisibleItemScrollOffset
         }
+    }
+    // Content signals, not every layout measurement. Frame-coalesce rapid tokens;
+    // scrollToItem clamps to the actual bottom, including a very tall final answer.
+    LaunchedEffect(listState) {
+        snapshotFlow { listOf(followLatest, contentSignal, listState.layoutInfo.viewportEndOffset) }
+            .conflate().collect {
+                withFrameNanos { }
+                if (followLatest) {
+                    programmatic = true
+                    try { listState.scrollToItem((listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0)) }
+                    finally { programmatic = false }
+                }
+            }
     }
     Box(modifier) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize().nestedScroll(scrollConnection).testTag("chat_transcript"),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             items(messages, key = { "message_${it.id}" }) { message ->
-                MessageItem(message, { onCopy(message.content) }, { onEdit(message) },
+                if (message.messageState == "STREAMING") StreamingAnswer(streamingText.ifEmpty { message.content }, status)
+                else MessageItem(message, { onCopy(message.content) }, { onEdit(message) },
                     onRegenerate.takeIf { message.id == messages.lastOrNull()?.id }, !isGenerating)
             }
-            if (isGenerating) item(key = "streaming") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (streamingText.isNotEmpty()) Text(streamingText, style = MaterialTheme.typography.bodyLarge)
-                    else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        Text(status.ifBlank { "Preparing answer" }, style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
+            if (isGenerating && messages.none { it.messageState == "STREAMING" } &&
+                (pendingReplyId == null || messages.none { it.id == pendingReplyId })) item(key = "streaming") { StreamingAnswer(streamingText, status) }
             item(key = "bottom") { Spacer(Modifier.height(1.dp)) }
         }
-        if (awayFromLatest) FilledTonalButton(onClick = { followLatest = true },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).testTag("jump_to_latest")) {
-            Icon(Icons.Default.KeyboardArrowDown, null); Text("Jump to latest")
+        if (awayFromLatest) FilledTonalIconButton(onClick = { awayFromLatest = false; followLatest = true }, shape = CircleShape,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp).size(48.dp).testTag("jump_to_latest")) {
+            Icon(Icons.Default.KeyboardArrowDown, "Jump to latest response")
         }
+    }
+}
+
+@Composable
+private fun StreamingAnswer(text: String, status: String) {
+    if (text.isNotEmpty()) MarkdownText(text)
+    else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+        Text(status.ifBlank { "Preparing answer" }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -182,15 +213,13 @@ internal fun ChatTranscript(
 private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: () -> Unit,
     onRegenerate: (() -> Unit)?, actionsEnabled: Boolean) {
     val user = message.role == "user"
-    val uri = LocalUriHandler.current
+    val sources = remember(message.sourcesJson) { GroundingResult.sources(message.sourcesJson) }
+    var selectedSource by remember { mutableStateOf<Int?>(null) }
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (user) Alignment.End else Alignment.Start) {
-        Surface(color = if (user) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.background,
-            shape = RoundedCornerShape(18.dp), modifier = if (user) Modifier.padding(start = 32.dp) else Modifier.fillMaxWidth()) {
-            SelectionContainer {
-                if (user) Text(message.content, Modifier.padding(14.dp), style = MaterialTheme.typography.bodyLarge)
-                else MarkdownText(message.content)
-            }
-        }
+        if (user) Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.fillMaxWidth(.92f).clipToBounds()) {
+            SelectionContainer { Text(message.content, Modifier.padding(14.dp).fillMaxWidth(), style = MaterialTheme.typography.bodyLarge) }
+        } else SelectionContainer { MarkdownText(message.content, sources.map { it.id }.toSet()) { selectedSource = it } }
         if (!user) {
             val notice = when (message.groundingStatus) {
                 "EVIDENCE_CITED" -> "Sources cited · Check the evidence"
@@ -202,22 +231,7 @@ private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: 
             }
             if (notice.isNotEmpty()) Text(notice, Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            GroundingResult.sources(message.sourcesJson).forEach { source ->
-                TextButton(onClick = { runCatching { uri.openUri(source.url) } }) {
-                    Column {
-                        Text("[${source.id}] ${source.title}")
-                        Text(when (source.kind) { "WEB_PAGE" -> "Page text retrieved · Check the source"; "SEARCH_EXCERPT" -> "Saved search excerpt · Page not fetched"; else -> "Saved article summary" },
-                            style = MaterialTheme.typography.labelSmall)
-                        if (source.updatedAt.isNotBlank()) Text(when (source.dateKind) {
-                            "PUBLISHED" -> "Page-reported publication: ${source.updatedAt.take(10)}"
-                            "MODIFIED" -> "Page-reported update: ${source.updatedAt.take(10)}"
-                            "SEARCH_REPORTED" -> "Search-reported date: ${source.updatedAt.take(40)}"
-                            else -> if (source.kind == "SEARCH_EXCERPT") "Search-reported date: ${source.updatedAt.take(40)}" else "Article revised ${source.updatedAt.take(10)}"
-                        }, style = MaterialTheme.typography.labelSmall)
-                        Text("Retrieved ${java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(source.retrievedAt))}", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
+            SourceReferences(sources, selectedSource) { selectedSource = null }
             if (message.messageState != "COMPLETE") Text(when (message.messageState) {
                 "STOPPED" -> "Response stopped"
                 "LENGTH_LIMIT" -> "Response length limit reached. Ask it to continue, or increase the response length in Advanced settings."

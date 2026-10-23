@@ -43,9 +43,9 @@ class ConversationAndGroundingTest {
                 override fun onUpgrade(db: androidx.sqlite.db.SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
             }).build())
         helper.use { assertEquals(7, it.writableDatabase.version) }
-        val upgraded = Room.databaseBuilder(context, AppDatabase::class.java, name).addMigrations(AppDatabase.MIGRATION_7_8).build()
+        val upgraded = Room.databaseBuilder(context, AppDatabase::class.java, name).addMigrations(AppDatabase.MIGRATION_7_8, AppDatabase.MIGRATION_8_9).build()
         try {
-            assertEquals(8, upgraded.openHelper.writableDatabase.version)
+            assertEquals(9, upgraded.openHelper.writableDatabase.version)
             assertEquals("Keep my previous chat", upgraded.chatDao().messages(1).first().single().content)
             val policy = upgraded.clientPolicyDao().getPolicyForPackage("com.aistudio.typerigh2.jkwpzq")!!
             assertTrue(policy.isWhitelisted); assertFalse(policy.allowReadMemory); assertEquals(3, policy.totalRequests)

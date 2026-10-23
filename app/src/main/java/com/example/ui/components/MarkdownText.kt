@@ -11,12 +11,16 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.ui.text.style.TextDecoration
 
 sealed interface MarkdownBlock {
     data class Paragraph(val text: String) : MarkdownBlock
     data class Heading(val text: String) : MarkdownBlock
     data class Code(val text: String) : MarkdownBlock
     data class Table(val rows: List<List<String>>) : MarkdownBlock
+    data class Quote(val text: String) : MarkdownBlock
+    data class ListEntry(val marker: String, val text: String) : MarkdownBlock
 }
 
 /** Bounded, text-only Markdown. HTML and model-authored URLs never execute. */
@@ -40,9 +44,16 @@ object ChatMarkdown {
                     result += MarkdownBlock.Table(rows)
                 }
                 line.startsWith("#") -> { result += MarkdownBlock.Heading(line.trimStart('#', ' ')); index++ }
+                line.startsWith("> ") -> { result += MarkdownBlock.Quote(line.removePrefix("> ")); index++ }
+                Regex("^\\s*(?:[-*+] |\\d+[.)] ).+").matches(line) -> {
+                    val entry = Regex("^\\s*([-*+]|\\d+[.)]) (.*)").find(line)!!
+                    result += MarkdownBlock.ListEntry(if (entry.groupValues[1] in listOf("-", "*", "+")) "•" else entry.groupValues[1], entry.groupValues[2]); index++
+                }
+                line.isBlank() -> index++
                 else -> {
                     val paragraph = StringBuilder()
-                    while (index < lines.size && !lines[index].startsWith("```") && !lines[index].startsWith("#") &&
+                    while (index < lines.size && lines[index].isNotBlank() && !lines[index].startsWith("> ") &&
+                        !Regex("^\\s*(?:[-*+] |\\d+[.)] ).+").matches(lines[index]) && !lines[index].startsWith("```") && !lines[index].startsWith("#") &&
                         !(lines[index].trimStart().startsWith("|") && index + 1 < lines.size && Regex("[| :\\-]+").matches(lines[index + 1].trim()))) {
                         paragraph.append(lines[index++]).append('\n')
                     }
@@ -67,16 +78,39 @@ object ChatMarkdown {
 }
 
 @Composable
-fun MarkdownText(text: String) {
+fun MarkdownText(text: String, sourceIds: Set<Int> = emptySet(), onCitation: (Int) -> Unit = {}) {
     val blocks = remember(text) { ChatMarkdown.parse(text) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val linkColor = MaterialTheme.colorScheme.primary
+    @Composable fun prose(value: String, heading: Boolean = false) {
+        val base = remember(value) { ChatMarkdown.inline(value) }
+        val annotated = remember(base, sourceIds, linkColor) { buildAnnotatedString {
+            append(base)
+            Regex("(?<![\\p{L}\\p{N}_])\\[(\\d+)]").findAll(base.text).forEach { match ->
+                val id = match.groupValues[1].toIntOrNull()
+                if (id in sourceIds) {
+                    addStringAnnotation("source", id.toString(), match.range.first, match.range.last + 1)
+                    addStyle(SpanStyle(color = linkColor, fontWeight = FontWeight.Medium, textDecoration = TextDecoration.Underline), match.range.first, match.range.last + 1)
+                }
+            }
+        } }
+        ClickableText(annotated, modifier = Modifier.fillMaxWidth(),
+            style = (if (heading) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge).copy(color = MaterialTheme.colorScheme.onSurface),
+            onClick = { offset -> annotated.getStringAnnotations("source", offset, offset).firstOrNull()?.item?.toIntOrNull()?.let(onCitation) })
+    }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         blocks.forEach { block -> when (block) {
-            is MarkdownBlock.Heading -> Text(ChatMarkdown.inline(block.text), style = MaterialTheme.typography.titleLarge)
-            is MarkdownBlock.Paragraph -> Text(ChatMarkdown.inline(block.text), style = MaterialTheme.typography.bodyLarge)
+            is MarkdownBlock.Heading -> prose(block.text, true)
+            is MarkdownBlock.Paragraph -> prose(block.text)
+            is MarkdownBlock.Quote -> Row(Modifier.fillMaxWidth()) {
+                Text("│", color = MaterialTheme.colorScheme.outline); Spacer(Modifier.width(12.dp)); Box(Modifier.weight(1f)) { prose(block.text) }
+            }
+            is MarkdownBlock.ListEntry -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(block.marker, style = MaterialTheme.typography.bodyLarge); Box(Modifier.weight(1f)) { prose(block.text) }
+            }
             is MarkdownBlock.Code -> Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).horizontalScroll(rememberScrollState()).padding(16.dp)) {
                 Text(block.text, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium)
             }
-            is MarkdownBlock.Table -> Column(Modifier.horizontalScroll(rememberScrollState())) {
+            is MarkdownBlock.Table -> Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                 block.rows.forEachIndexed { index, row ->
                     Row(Modifier.background(if (index == 0) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.background)) {
                         row.forEach { cell -> Text(ChatMarkdown.inline(cell), Modifier.width(168.dp).padding(12.dp),

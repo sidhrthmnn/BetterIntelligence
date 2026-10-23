@@ -4,17 +4,37 @@ package com.example.engine
  * This is an admission estimate; the runtime still enforces its actual token limit.
  */
 object ConversationContext {
-    fun history(turns: List<ChatTurn>, prompt: String, system: String, context: Int, output: Int): List<ChatTurn> {
-        var budget = ((context - output - 96).coerceAtLeast(0) * 2) -
-            prompt.toByteArray(Charsets.UTF_8).size - system.toByteArray(Charsets.UTF_8).size
+    fun history(turns: List<ChatTurn>, prompt: String, system: String, context: Int, output: Int,
+        tokenCount: (String) -> Int = { (it.toByteArray(Charsets.UTF_8).size + 1) / 2 }): List<ChatTurn> {
+        var budget = context - output - 96 - tokenCount(prompt) - tokenCount(system)
         require(budget >= 0) { "This message is too long for the selected context. Increase context in Advanced settings or send a shorter message." }
-        val chosen = mutableListOf<ChatTurn>()
-        val pairs = turns.chunked(2).filter { it.size == 2 && it[0].role == "user" && it[1].role == "assistant" }
-        for (pair in pairs.takeLast(12).asReversed()) {
-            val size = pair.sumOf { it.content.toByteArray(Charsets.UTF_8).size + 24 }
-            if (size > budget) break
-            chosen.addAll(0, pair); budget -= size
+        val pairs = mutableListOf<List<ChatTurn>>()
+        var user: ChatTurn? = null
+        turns.forEach { turn ->
+            if (turn.role == "user") user = turn
+            else if (turn.role == "assistant" && user != null) { pairs += listOf(user!!, turn); user = null }
         }
-        return chosen
+        val chosen = sortedSetOf<Int>()
+        fun include(index: Int): Boolean {
+            val cost = pairs[index].sumOf { tokenCount(it.content) + 12 }
+            if (cost > budget) return false
+            chosen += index; budget -= cost; return true
+        }
+        val recentBudget = budget / 2
+        for (index in pairs.indices.reversed()) {
+            if (!include(index) || budget < recentBudget || chosen.size >= 6) break
+        }
+        val terms = Regex("[\\p{L}\\p{M}\\p{N}]{3,}").findAll(prompt.lowercase()).map { it.value }.toSet() -
+            setOf("the", "and", "what", "how", "could", "would", "this", "that", "with", "from")
+        pairs.indices.filter { it !in chosen }.sortedByDescending { index ->
+            terms.count { word -> pairs[index].any { word in it.content.lowercase() } }
+        }.forEach { index ->
+            if (chosen.size < 12 && terms.any { word -> pairs[index].any { word in it.content.lowercase() } }) include(index)
+        }
+        return chosen.flatMap { pairs[it] }
     }
+
+    fun summaryWithinBudget(summary: String, context: Int): String = summary.lines()
+        .runningFold("") { result, line -> if (result.length + line.length + 1 <= minOf(1200, context / 2)) "$result$line\n" else result }
+        .last().trim()
 }

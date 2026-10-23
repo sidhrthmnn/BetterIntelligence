@@ -100,7 +100,7 @@ class RecentGroundingTest {
             }
         }).search("Android Vulkan graphics")
         assertEquals("https://strong.example/article", sources.single().url)
-        assertTrue(requested.count { "bing.com" !in it } <= 6)
+        assertTrue(requested.count { "bing.com" !in it && !it.endsWith("/robots.txt") } <= 6)
     }
 
     @Test fun compactEvidenceKeepsUsefulTextAndOnlyAdvertisesIncludedSources() {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,16 +59,25 @@ private fun SettingsSection(text: String) { Text(text, Modifier.padding(start = 
 fun HistoryScreen(viewModel: AiCoreViewModel) {
     val conversations by viewModel.conversations.collectAsState()
     var deleting by remember { mutableStateOf<Long?>(null) }
+    var renaming by remember { mutableStateOf<com.example.data.ConversationEntity?>(null) }
+    var name by remember { mutableStateOf("") }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
         item { Text("Your conversations stay on this device.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(conversations, key = { it.id }) { conversation ->
             ListItem(headlineContent = { Text(conversation.title) }, supportingContent = {
                 Text((if (conversation.draft.isNotEmpty()) "Draft · " else "") + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(conversation.updatedAt)))
-            }, trailingContent = { IconButton(onClick = { deleting = conversation.id }) { Icon(Icons.Default.DeleteOutline, "Delete ${conversation.title}") } },
+            }, trailingContent = { Row {
+                IconButton(onClick = { renaming = conversation; name = conversation.title }) { Icon(Icons.Default.Edit, "Rename ${conversation.title}") }
+                IconButton(onClick = { deleting = conversation.id }) { Icon(Icons.Default.DeleteOutline, "Delete ${conversation.title}") }
+            } },
                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
                 modifier = Modifier.clickable { viewModel.openConversation(conversation.id) }.testTag("conversation_${conversation.id}"))
         }
     }
+    renaming?.let { conversation -> AlertDialog(onDismissRequest = { renaming = null }, title = { Text("Rename conversation") },
+        text = { OutlinedTextField(name, { name = it.take(100) }, label = { Text("Conversation name") }, singleLine = true) },
+        confirmButton = { TextButton(onClick = { viewModel.renameConversation(conversation.id, name); renaming = null }, enabled = name.isNotBlank()) { Text("Save") } },
+        dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } }) }
     deleting?.let { id -> DeleteDialog("Delete conversation?", "This removes its messages and draft from this device.", { deleting = null }) {
         viewModel.deleteConversation(id); deleting = null
     } }

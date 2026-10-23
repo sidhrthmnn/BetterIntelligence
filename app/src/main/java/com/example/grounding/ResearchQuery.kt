@@ -11,7 +11,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             "i in into is it me of on or please say should tell than that the their there these they this to " +
             "us was were what when where which who why will with would you your won win winner winners " +
             "latest recent recently current currently today yesterday now new news source sources cite " +
-            "verify check fact summarize summary about answer only read find search " +
+            "verify check fact summarize summary about answer only read find search public topic context " +
             "ഇന്ന് ഇപ്പോൾ എന്താണ് ആരാണ്").split(' ').toSet()
         private val wordPattern = Regex("[\\p{L}\\p{M}\\p{N}]{2,}")
         fun words(text: String) = wordPattern.findAll(text.lowercase()).map { it.value }.toSet()

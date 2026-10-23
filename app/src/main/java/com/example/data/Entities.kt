@@ -97,7 +97,9 @@ data class ConversationEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val draft: String = "",
-    val groundingMode: String = "OFF"
+    val groundingMode: String = "OFF",
+    val contextSummary: String = "",
+    val summaryThroughId: Long = 0
 )
 
 @Entity(tableName = "memory_snippets")

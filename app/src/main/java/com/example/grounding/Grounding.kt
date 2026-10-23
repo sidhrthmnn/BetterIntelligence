@@ -50,7 +50,8 @@ object GroundingPolicy {
         if (!allowed || mode == GroundingMode.OFF) return false
         if (mode == GroundingMode.ON) return true
         val text = question.lowercase()
-        return listOf("latest", "today", "yesterday", "this week", "this month", "current", "recent", "verify", "fact check", "source", "who is", "who won", "when did", "is it true", "ഇന്ന്", "ഇപ്പോൾ", "സത്യമാണോ").any { it in text } ||
+        if (Regex("(?i)^(write|draft|compose|imagine|brainstorm|translate|rewrite|polish)\\b").containsMatchIn(question.trim())) return false
+        return listOf("latest", "today", "yesterday", "this week", "this month", "current", "recent", "weather", "forecast", "verify", "fact check", "source", "who is", "who won", "when did", "is it true", "ഇന്ന്", "ഇപ്പോൾ", "സത്യമാണോ").any { it in text } ||
             Regex("\\b(19|20)\\d{2}\\b|https?://").containsMatchIn(text)
     }
     fun publicHttpsUrl(value: String): Boolean {
@@ -177,12 +178,19 @@ class SearchHttp internal constructor(
 }
 
 /** Chat-only coordinator. Cache contains public evidence and query keys in RAM for five minutes. */
-class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchProvider>) {
+class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchProvider>, private val weather: WeatherResearch = WeatherResearch()) {
     private val cache = LinkedHashMap<String, Pair<Long, List<EvidenceSource>>>()
     @Synchronized fun clearTemporaryData() = cache.clear()
     suspend fun retrieve(question: String, allowed: Boolean, mode: GroundingMode, provider: SearchProviderId): GroundingResult {
         if (!GroundingPolicy.shouldSearch(allowed, mode, question)) return GroundingResult()
         if (GroundingPolicy.containsCredential(question)) return GroundingResult("PRIVACY_BLOCKED", notice = "This question appears to contain credentials. Search was skipped; this answer is local-only.")
+        if (!question.contains("https://") && !question.contains("http://") && ConversationalResearch.isWeather(question) && !Regex("(?i)\\b(tomorrow|week|month|yesterday|history|why|how)\\b").containsMatchIn(question)) {
+            val city = ConversationalResearch.weatherCity(question) ?: return GroundingResult("NEEDS_LOCATION", notice = ConversationalResearch.askCity)
+            return try { withTimeout(15_000) { weather.current(city) } }
+            catch (e: kotlinx.coroutines.TimeoutCancellationException) { GroundingResult("SEARCH_FAILED", notice = "Weather request timed out") }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { GroundingResult("SEARCH_FAILED", notice = "Current weather is unavailable. Try a city and country.") }
+        }
         val key = "$provider:${java.time.LocalDate.now()}:$question"
         val cached = synchronized(this) { cache[key]?.takeIf { System.currentTimeMillis() - it.first < 300_000 }?.second }
         return try {

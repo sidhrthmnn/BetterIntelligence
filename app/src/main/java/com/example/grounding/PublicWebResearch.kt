@@ -44,6 +44,7 @@ fun interface WebFetcher { suspend fun fetch(url: String): WebDocument }
 
 /** A bounded reader, not an autonomous browser: no scripts, cookies, forms or sign-in. */
 class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp()) : SearchProvider {
+    private val robots = ResearchRobots(fetcher)
     private data class Candidate(val url: String, val title: String, val date: String)
     companion object {
         private fun feed(rss: String): List<Candidate> = Jsoup.parse(rss, "", Parser.xmlParser())
@@ -91,7 +92,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp()) : Search
             val doc = Jsoup.parse(page.text, page.url)
             val date = pageDate(doc)
             // Boilerplate, embedded code and hidden UI are never prompt evidence.
-            doc.select("script, style, noscript, iframe, form, nav, footer, header, aside, [hidden], [aria-hidden=true]").remove()
+            doc.select("script, style, noscript, iframe, form, nav, footer, header, aside, [hidden], [aria-hidden=true], [role=banner], [role=navigation], [role=dialog], [class*=cookie], [class*=advert], [id*=cookie], [class*=newsletter], [class*=social-share]").remove()
+            if (doc.select("meta[name=robots]").any { "nosnippet" in it.attr("content").lowercase() }) return null
             val root = doc.selectFirst("article") ?: doc.selectFirst("main") ?: doc.body()
             val query = ResearchQuery(question)
             val paragraphs = root.select("p, h1, h2, h3, li").map { it.text().trim() }.filter { it.length >= 12 }
@@ -133,13 +135,16 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp()) : Search
             val preferred = async { discover(query.useNews) }
             val alternative = async { discover(!query.useNews) }
             (preferred.await() + alternative.await()).distinctBy { it.url }
-                .sortedByDescending { query.score(it.title) }
+                .sortedByDescending { query.score(it.title) * 10 + primaryScore(it.url) }
         }
         links = links.distinctBy { it.url.toHttpUrl().host.removePrefix("www.") }.take(6)
         val reads = Semaphore(3)
         links.map { candidate -> async {
             try { reads.withPermit { withTimeoutOrNull(8_000) {
-                article(fetcher.fetch(candidate.url), 0, question)?.let { source ->
+                if (!robots.allowed(candidate.url)) return@withTimeoutOrNull null
+                val page = fetcher.fetch(candidate.url)
+                if (page.url.toHttpUrl().host != candidate.url.toHttpUrl().host && !robots.allowed(page.url)) return@withTimeoutOrNull null
+                article(page, 0, question)?.let { source ->
                     val dated = if (source.updatedAt.isBlank() && candidate.date.isNotBlank())
                         source.copy(updatedAt = candidate.date, dateKind = "SEARCH_REPORTED") else source
                     if (explicit.isNotEmpty() || (query.relevant(dated.title + " " + dated.excerpt) &&
@@ -149,8 +154,16 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp()) : Search
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { null } // A blocked/unreadable page is never a citation.
         } }.awaitAll().filterNotNull().distinctBy { it.url }
-            .sortedWith(compareByDescending<EvidenceSource> { query.score(it.title + " " + it.excerpt) }
+            .distinctBy { it.excerpt.lowercase().replace(Regex("\\W+"), " ").take(300) }
+            .sortedWith(compareByDescending<EvidenceSource> { query.score(it.title + " " + it.excerpt) * 10 + primaryScore(it.url) }
                 .thenByDescending { ResearchQuery.date(it.updatedAt) ?: java.time.LocalDate.MIN })
             .take(3).mapIndexed { index, source -> source.copy(id = index + 1) }
+    }
+
+    private fun primaryScore(url: String): Int {
+        val host = url.toHttpUrl().host
+        // A modest tie-breaker, never sufficient to outweigh topic relevance or
+        // establish trust. Government/university publishers can also be wrong.
+        return if (host.endsWith(".gov") || host.endsWith(".gov.uk") || host.endsWith(".edu") || host.endsWith(".ac.uk")) 2 else 0
     }
 }

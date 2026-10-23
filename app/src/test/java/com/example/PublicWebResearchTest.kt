@@ -32,7 +32,7 @@ class PublicWebResearchTest {
         assertTrue(sources.single().excerpt.contains("fetched page"))
         assertFalse(sources.single().excerpt.contains("secret"))
         assertFalse(sources.single().excerpt.contains("snippet</"))
-        assertEquals(4, requests.size) // Two search feeds, then the two unique publisher pages.
+        assertEquals(5, requests.size) // Two feeds, two policies, one page; the failed policy prevents a read.
     }
 
     @Test fun explicitLinkReadsItWithoutSendingQuestionToSearch() = runBlocking {
@@ -41,7 +41,7 @@ class PublicWebResearchTest {
             requests += url
             WebDocument(url, "<title>Document</title><main><p>A retrieved paragraph about Android describes its public platform APIs. A second sentence explains compatible graphics hardware and application development.</p></main>", "text/html")
         }).search("Summarize https://example.com/document.")
-        assertEquals(listOf("https://example.com/document"), requests)
+        assertEquals(listOf("https://example.com/robots.txt", "https://example.com/document"), requests)
         assertEquals(1, result.size)
     }
 

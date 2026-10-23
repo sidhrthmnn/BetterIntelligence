@@ -1,6 +1,6 @@
 # Better Intelligence privacy policy
 
-Updated 21 October 2026 for version 2.1 closed beta.
+Updated 23 October 2026 for version 2.1 closed beta.
 
 Developer: HaveAnIdea. Contact: siddharthpazhoor@gmail.com. Android package: com.aistudio.betterintelligence.mobile.
 
@@ -13,6 +13,10 @@ Conversations, drafts, saved memories, model files and connected-app approvals a
 Memory is off by default. Enabling it lets chat save explicit reminders and brief profile statements and use active saved memories when replying. You can pause or delete individual memories. Connected apps have separate, explicit permissions for inference and reading or writing shared memories. Approving inference alone does not share personal memories. Revoke access in Settings → Connected apps.
 
 ## Internet use
+
+Each conversation also keeps an extractive local context summary. It contains quotations from older user messages in that conversation and is separate from optional global memories. Editing or regenerating older messages invalidates that summary. It is removed when the conversation is deleted.
+
+For contextual web follow-ups, a title from an already retrieved public source in the same conversation can be added to the query. Private stored messages and global memories are not copied to the search provider. When you explicitly type a city for current weather with web access enabled, that city is sent to Open-Meteo's geocoding service, and its city-level coordinates are used for a public forecast request. No GPS permission or device location is accessed. Open-Meteo receives the requested city/coordinates and network information, subject to its [privacy and retention policy](https://open-meteo.com/en/terms). The app labels this as modelled conditions, with source attribution and time.
 
 An internet connection is used when you discover or download models from Hugging Face and its download infrastructure. These services receive the network information needed to handle your request, including your IP address and the requested model. Model terms are linked before use where required.
 

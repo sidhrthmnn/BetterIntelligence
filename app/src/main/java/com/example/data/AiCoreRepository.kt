@@ -63,10 +63,31 @@ class AiCoreRepository(
         chatDao.deleteConversationMessages(id)
         conversationDao.delete(id)
     }
-    suspend fun deleteMessagesFrom(conversationId: Long, messageId: Long) = chatDao.deleteFrom(conversationId, messageId)
+    suspend fun renameConversation(id: Long, title: String) = conversationDao.rename(id, title.trim().take(100), System.currentTimeMillis())
+    suspend fun deleteMessagesFrom(conversationId: Long, messageId: Long) = database.withTransaction {
+        chatDao.deleteFrom(conversationId, messageId)
+        conversationDao.saveContext(conversationId, "", 0)
+    }
+    suspend fun refreshConversationContext(id: Long, history: List<ChatMessageEntity>): String {
+        // Extractive quotations, not generated facts; only this chat's current rows.
+        val older = history.filter { it.conversationId == id && it.role == "user" && it.messageState == "COMPLETE" }.dropLast(6)
+        val existing = conversationDao.get(id)
+        val through = older.lastOrNull()?.id ?: 0
+        if (through > 0 && existing?.summaryThroughId == through && existing.contextSummary.isNotBlank()) return existing.contextSummary
+        val important = older.filter { Regex("(?i)\\b(my|i'm|i am|called|named|decided|prefer|remember|must|don't|do not)\\b").containsMatchIn(it.content) }.takeLast(8)
+        val notes = (important + older.takeLast(8)).distinctBy { it.id }.sortedByDescending { it.id }
+        val summary = notes.joinToString("\n") {
+            "User previously said: " + it.content.replace('\n', ' ').take(180)
+        }.take(2400)
+        conversationDao.saveContext(id, summary, through)
+        return summary
+    }
     suspend fun beginChatTurn(message: ChatMessageEntity, replaceFrom: Long?): List<ChatMessageEntity> = database.withTransaction {
         check(conversationDao.get(message.conversationId) != null) { "Conversation is no longer available" }
-        if (replaceFrom != null) chatDao.deleteFrom(message.conversationId, replaceFrom)
+        if (replaceFrom != null) {
+            chatDao.deleteFrom(message.conversationId, replaceFrom)
+            conversationDao.saveContext(message.conversationId, "", 0)
+        }
         val history = chatDao.messageSnapshot(message.conversationId)
         chatDao.insertMessage(message)
         conversationDao.touch(message.conversationId, message.content.replace('\n', ' ').take(70), message.timestamp)
