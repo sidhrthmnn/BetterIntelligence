@@ -16,7 +16,7 @@ SHA-256: `D2999FBB25264F52AA2EC0D6D9C452AB42A0907F50685861158350DA7AC050F1`.
 Device-test APK: `D:\Codex\BetterIntelligence-beta5-device-validation.apk`, **125,108,282 bytes**.
 SHA-256: `9C72E1C1A7A342F67DCE889CEB63881C1ECD9EF6F5A11B5402BE9100166112A5`.
 
-The phone ran the same final production sources in the separately named `.validation` debug variant, with the client service not exported. It was not installed over the Play-signed production app. The signed production bundle was validated separately. Play submission is not part of this validation record.
+The phone ran the same final production sources in the separately named `.validation` debug variant, with the client service not exported. It was not installed over the Play-signed production app. The signed production bundle was validated separately. Subsequent Play submission: [beta5 release record](BETA5_RELEASE.md).
 
 ## Connected HONOR results
 
