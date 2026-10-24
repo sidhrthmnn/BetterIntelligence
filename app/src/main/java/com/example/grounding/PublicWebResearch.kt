@@ -1,21 +1,17 @@
 package com.example.grounding
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import okhttp3.Dns
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import org.jsoup.Jsoup
-import org.jsoup.parser.Parser
 import java.net.InetAddress
 import java.net.UnknownHostException
-import org.json.JSONArray
-import org.json.JSONObject
 
 /** Checked at DNS resolution time, including every manually followed redirect. */
 object PublicWebDns : Dns {
@@ -39,131 +35,92 @@ object PublicWebDns : Dns {
     }
 }
 
-data class WebDocument(val url: String, val text: String, val contentType: String)
-fun interface WebFetcher { suspend fun fetch(url: String): WebDocument }
+data class WebDocument(val url: String, val text: String, val contentType: String, val robotsTag: String = "")
+fun interface WebFetcher {
+    suspend fun fetch(url: String): WebDocument
+    // Production transport invokes the guard BEFORE every redirect target is read.
+    suspend fun fetchPage(url: String, permitted: suspend (String) -> Boolean): WebDocument {
+        check(permitted(url)) { "Publisher does not permit this read" }
+        return fetch(url).also { check(it.url == url || permitted(it.url)) }
+    }
+}
 
-/** A bounded reader, not an autonomous browser: no scripts, cookies, forms or sign-in. */
+/** Bounded public-page research, implemented locally. No search/grounding APIs,
+ * proxy, account, scripts, cookies, forms, sign-in or background crawling.
+ */
 class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp()) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
-    private data class Candidate(val url: String, val title: String, val date: String)
     companion object {
-        private fun feed(rss: String): List<Candidate> = Jsoup.parse(rss, "", Parser.xmlParser())
-            .select("channel > item").mapNotNull { item ->
-                val link = item.selectFirst("link")?.text()?.trim().orEmpty()
-                val parsed = runCatching { link.toHttpUrl() }.getOrNull() ?: return@mapNotNull null
-                // Read the actual publisher, never the HTTP news tracking wrapper.
-                val target = if (parsed.host in setOf("www.bing.com", "bing.com") && parsed.encodedPath == "/news/apiclick.aspx")
-                    parsed.queryParameter("url").orEmpty() else link
-                target.takeIf(GroundingPolicy::publicHttpsUrl)?.let {
-                    Candidate(it, item.selectFirst("title")?.text().orEmpty(), item.selectFirst("pubDate")?.text().orEmpty())
-                }
-            }.distinctBy { it.url }.take(12)
-        fun candidates(rss: String): List<String> = feed(rss).map { it.url }
-
-        private fun pageDate(doc: org.jsoup.nodes.Document): Pair<String, String> {
-            val dates = mutableListOf<Pair<String, String>>()
-            for ((key, kind) in listOf("article:published_time" to "PUBLISHED", "datePublished" to "PUBLISHED",
-                "article:modified_time" to "MODIFIED", "dateModified" to "MODIFIED")) {
-                doc.select("meta[property=$key], meta[name=$key], time[itemprop=$key]").forEach {
-                    dates += (it.attr("content").ifBlank { it.attr("datetime") }) to kind
-                }
-            }
-            fun collect(value: Any?, depth: Int = 0) {
-                if (depth > 5) return
-                when (value) {
-                    is JSONObject -> {
-                        for ((key, kind) in listOf("datePublished" to "PUBLISHED", "dateModified" to "MODIFIED"))
-                            value.optString(key).takeIf { it.isNotBlank() }?.let { dates += it to kind }
-                        collect(value.opt("@graph"), depth + 1)
-                    }
-                    is JSONArray -> (0 until minOf(value.length(), 20)).forEach { collect(value.opt(it), depth + 1) }
-                }
-            }
-            doc.select("script[type=application/ld+json]").take(6).forEach {
-                val json = it.data().take(50_000)
-                runCatching { collect(if (json.trimStart().startsWith("[")) JSONArray(json) else JSONObject(json)) }
-            }
-            return dates.firstOrNull { it.second == "PUBLISHED" && ResearchQuery.date(it.first) != null }
-                ?: dates.firstOrNull { ResearchQuery.date(it.first) != null } ?: ("" to "")
-        }
-
-        fun article(page: WebDocument, id: Int, question: String): EvidenceSource? {
-            if (page.contentType.substringBefore(';').lowercase() !in setOf("text/html", "application/xhtml+xml", "text/plain")) return null
-            val doc = Jsoup.parse(page.text, page.url)
-            val date = pageDate(doc)
-            // Boilerplate, embedded code and hidden UI are never prompt evidence.
-            doc.select("script, style, noscript, iframe, form, nav, footer, header, aside, [hidden], [aria-hidden=true], [role=banner], [role=navigation], [role=dialog], [class*=cookie], [class*=advert], [id*=cookie], [class*=newsletter], [class*=social-share]").remove()
-            if (doc.select("meta[name=robots]").any { "nosnippet" in it.attr("content").lowercase() }) return null
-            val root = doc.selectFirst("article") ?: doc.selectFirst("main") ?: doc.body()
-            val query = ResearchQuery(question)
-            val paragraphs = root.select("p, h1, h2, h3, li").map { it.text().trim() }.filter { it.length >= 12 }
-                .flatMap { it.split(Regex("(?<=[.!?])\\s+(?=[\\p{Lu}\\p{N}])")) }.distinct().take(300)
-            // Highest-relevance sentences first, so a small context retains the answer.
-            val ranked = paragraphs.withIndex().sortedWith(compareByDescending<IndexedValue<String>> {
-                query.score(it.value)
-            }.thenBy { it.index }).take(6).map { it.value }
-            val text = (if (ranked.isEmpty()) root.text() else ranked.joinToString("\n")).trim().take(2200)
-            if (text.length < 80 || text.contains("verify you are human", true) || text.contains("enable javascript and cookies", true)) return null
-            return EvidenceSource(id, doc.title().ifBlank { page.url.toHttpUrl().host }.take(200),
-                page.url, text, System.currentTimeMillis(), updatedAt = date.first, kind = "WEB_PAGE", dateKind = date.second)
-        }
+        fun candidates(html: String): List<String> = HtmlDiscovery.links(WebDocument(
+            "https://html.duckduckgo.com/html/", html, "text/html")).map { it.url }
+        fun article(page: WebDocument, id: Int, question: String): EvidenceSource? = WebPageExtractor.article(page, id, question)
     }
 
     override suspend fun search(question: String): List<EvidenceSource> = withContext(Dispatchers.IO) {
         require(!GroundingPolicy.containsCredential(question)) { "Do not search for credentials" }
         val supplied = Regex("https?://[^\\s<>]+").findAll(question)
-            .map { it.value.trimEnd('.', ',', ')', ']', '?') }.toList()
+            .map { it.value.trimEnd('.', ',', ')', ']') }.toList()
         // Never turn a rejected private/local URL into a public search query.
         require(supplied.all(GroundingPolicy::publicHttpsUrl)) { "Use a public HTTPS link" }
         val explicit = supplied.distinct().take(3)
         val query = ResearchQuery(question)
-        suspend fun discover(news: Boolean): List<Candidate> {
-            // Public search feed, no account/key or proxy server. This interface
-            // may be rate limited or change; failure must remain visibly ungrounded.
-            val search = (if (news) "https://www.bing.com/news/search" else "https://www.bing.com/search").toHttpUrl().newBuilder()
-                .addQueryParameter("format", "rss").addQueryParameter("q", query.searchText).build()
-            return withTimeoutOrNull(6_000) { try {
-                feed(fetcher.fetch(search.toString()).text).filter {
-                    (it.title.isBlank() || query.candidateRelevant(it.title)) && !query.isPrediction(it.title) &&
-                        (!news || query.currentEnough(it.date))
-                }
-            } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyList() } } ?: emptyList()
+        suspend fun discover(broad: Boolean): List<ResearchCandidate>? = withTimeoutOrNull(7_000) {
+            try {
+                val page = fetcher.fetchPage(HtmlDiscovery.searchUrl(query, broad), robots::allowed)
+                if (HtmlDiscovery.blocked(page)) return@withTimeoutOrNull null
+                HtmlDiscovery.links(page)
+                    .filter { query.candidateRelevant(it.title) && !query.isPrediction(it.title) }
+                    .sortedByDescending { query.score(it.title) * 10 + primaryScore(it.url) }
+            } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
         }
-        // A feed can return many weak title matches while ignoring the rest of
-        // the query. Compare both feeds before spending the bounded page budget.
-        var links = if (explicit.isNotEmpty()) explicit.map { Candidate(it, "", "") } else {
-            val preferred = async { discover(query.useNews) }
-            val alternative = async { discover(!query.useNews) }
-            (preferred.await() + alternative.await()).distinctBy { it.url }
-                .sortedByDescending { query.score(it.title) * 10 + primaryScore(it.url) }
+
+        val links = if (explicit.isNotEmpty()) explicit.map { ResearchCandidate(it, "") } else {
+            val narrow = discover(false)
+            // At most one broader retry if the date-filtered public page found
+            // no candidates. Never retry or bypass a CAPTCHA/blocked interface.
+            if (narrow != null && narrow.isEmpty() && query.freshnessFilter != null) discover(true).orEmpty() else narrow.orEmpty()
         }
-        links = links.distinctBy { it.url.toHttpUrl().host.removePrefix("www.") }.take(6)
-        val reads = Semaphore(3)
-        links.map { candidate -> async {
-            try { reads.withPermit { withTimeoutOrNull(8_000) {
-                if (!robots.allowed(candidate.url)) return@withTimeoutOrNull null
-                val page = fetcher.fetch(candidate.url)
-                if (page.url.toHttpUrl().host != candidate.url.toHttpUrl().host && !robots.allowed(page.url)) return@withTimeoutOrNull null
-                article(page, 0, question)?.let { source ->
-                    val dated = if (source.updatedAt.isBlank() && candidate.date.isNotBlank())
-                        source.copy(updatedAt = candidate.date, dateKind = "SEARCH_REPORTED") else source
-                    if (explicit.isNotEmpty() || (query.relevant(dated.title + " " + dated.excerpt) &&
-                        query.currentEnough(dated.updatedAt))) dated else null
+        val seen = mutableSetOf<String>()
+        val domains = mutableMapOf<String, Int>()
+        val ordered = links.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }
+            .sortedWith(compareBy<ResearchCandidate> { candidate ->
+                // Prefer the first result from each publisher before a second.
+                links.indexOfFirst { domain(it.url) == domain(candidate.url) } != links.indexOf(candidate)
+            }.thenByDescending { query.score(it.title) * 10 + primaryScore(it.url) })
+            .filter { domains.merge(domain(it.url), 1, Int::plus)!! <= 2 }.take(8)
+        val reads = Semaphore(2)
+        val sources = mutableListOf<EvidenceSource>()
+        // Read in waves: stop after enough evidence instead of fetching every result.
+        for (wave in ordered.chunked(4)) {
+            val fetched = wave.map { candidate -> async {
+                reads.withPermit {
+                    withTimeoutOrNull(9_000) {
+                        try {
+                            val page = fetcher.fetchPage(candidate.url, robots::allowed)
+                            val source = article(page, 0, question)
+                            fun acceptable(value: EvidenceSource) = (explicit.isNotEmpty() || query.relevant(value.title + " " + value.excerpt)) && query.currentEnough(value.updatedAt)
+                            if (source != null && acceptable(source)) source
+                            else if (explicit.isNotEmpty()) {
+                                // A supplied landing page may link to the actual article.
+                                val child = WebPageExtractor.relevantLinks(page, question).firstOrNull()
+                                child?.let { article(fetcher.fetchPage(it.url, robots::allowed), 0, question)?.takeIf(::acceptable) }
+                            } else null
+                        } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
+                    }
                 }
-            } } }
-            catch (e: CancellationException) { throw e }
-            catch (_: Exception) { null } // A blocked/unreadable page is never a citation.
-        } }.awaitAll().filterNotNull().distinctBy { it.url }
-            .distinctBy { it.excerpt.lowercase().replace(Regex("\\W+"), " ").take(300) }
+            } }.awaitAll().filterNotNull()
+            fetched.forEach { if (seen.add(it.url)) sources += it }
+            if (sources.size >= 3) break
+        }
+        sources.distinctBy { it.excerpt.lowercase().replace(Regex("\\W+"), " ").take(300) }
             .sortedWith(compareByDescending<EvidenceSource> { query.score(it.title + " " + it.excerpt) * 10 + primaryScore(it.url) }
                 .thenByDescending { ResearchQuery.date(it.updatedAt) ?: java.time.LocalDate.MIN })
             .take(3).mapIndexed { index, source -> source.copy(id = index + 1) }
     }
 
+    private fun domain(url: String): String = url.toHttpUrl().topPrivateDomain() ?: url.toHttpUrl().host
     private fun primaryScore(url: String): Int {
         val host = url.toHttpUrl().host
-        // A modest tie-breaker, never sufficient to outweigh topic relevance or
-        // establish trust. Government/university publishers can also be wrong.
         return if (host.endsWith(".gov") || host.endsWith(".gov.uk") || host.endsWith(".edu") || host.endsWith(".ac.uk")) 2 else 0
     }
 }

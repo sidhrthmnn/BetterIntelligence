@@ -29,6 +29,8 @@ import kotlinx.coroutines.withContext
 import com.example.engine.ModelLibrary
 import com.example.engine.ModelMemoryPlanner
 import com.example.engine.GenerationParams
+import com.example.engine.ConversationContext
+import com.example.engine.ChatTurn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -73,12 +75,9 @@ class AiCoreRepository(
         val older = history.filter { it.conversationId == id && it.role == "user" && it.messageState == "COMPLETE" }.dropLast(6)
         val existing = conversationDao.get(id)
         val through = older.lastOrNull()?.id ?: 0
-        if (through > 0 && existing?.summaryThroughId == through && existing.contextSummary.isNotBlank()) return existing.contextSummary
-        val important = older.filter { Regex("(?i)\\b(my|i'm|i am|called|named|decided|prefer|remember|must|don't|do not)\\b").containsMatchIn(it.content) }.takeLast(8)
-        val notes = (important + older.takeLast(8)).distinctBy { it.id }.sortedByDescending { it.id }
-        val summary = notes.joinToString("\n") {
-            "User previously said: " + it.content.replace('\n', ' ').take(180)
-        }.take(2400)
+        if (through > 0 && existing?.summaryThroughId == through && existing.contextSummary.startsWith(ConversationContext.summaryHeader)) return existing.contextSummary
+        val summary = ConversationContext.summarize(history.filter { it.conversationId == id && it.role in setOf("user", "assistant") &&
+            it.messageState in setOf("COMPLETE", "STOPPED", "LENGTH_LIMIT") }.map { ChatTurn(it.role, it.content) })
         conversationDao.saveContext(id, summary, through)
         return summary
     }

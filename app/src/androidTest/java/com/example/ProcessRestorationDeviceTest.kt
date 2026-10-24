@@ -46,6 +46,17 @@ class ProcessRestorationDeviceTest {
                 .put("previousConversation", preferences.activeConversation.first())
                 .put("previousAppearance", preferences.appearance.first())
             checkpoint.writeText(state.toString(2))
+            val contextId = repository.createConversation()
+            state.put("contextConversationId", contextId)
+            checkpoint.writeText(state.toString(2))
+            for (turn in 1..9) {
+                repository.insertChatMessage(ChatMessageEntity(conversationId = contextId, role = "user",
+                    content = if (turn == 1) "My game is Colour Circle" else "Synthetic session detail $turn"))
+                repository.insertChatMessage(ChatMessageEntity(conversationId = contextId, role = "assistant", content = "Synthetic reply $turn"))
+            }
+            val summary = repository.refreshConversationContext(contextId, repository.messages(contextId).first())
+            assertTrue(summary.contains("Colour Circle"))
+            state.put("expectedContext", summary)
             repository.insertChatMessage(ChatMessageEntity(conversationId = id, role = "user", content = "Synthetic restart marker 73."))
             repository.insertChatMessage(ChatMessageEntity(conversationId = id, role = "assistant", content = "Synthetic preserved partial 73", messageState = "STREAMING"))
             repository.saveDraft(id, "Synthetic draft after process restart 73")
@@ -62,6 +73,10 @@ class ProcessRestorationDeviceTest {
         assertNotEquals("Host must actually restart the process", state.getInt("preparedPid"), Process.myPid())
         val id = state.getLong("conversationId")
         try {
+            val session = repository.conversation(state.getLong("contextConversationId"))!!
+            assertEquals(state.getString("expectedContext"), session.contextSummary)
+            assertTrue(session.contextSummary.contains("Colour Circle"))
+            assertFalse(repository.conversation(id)!!.contextSummary.contains("Colour Circle"))
             ActivityScenario.launch(MainActivity::class.java).use {
                 val messages = withTimeout(30_000) { repository.messages(id).first { rows -> rows.any { it.messageState == "STOPPED" } } }
                 assertEquals("Synthetic preserved partial 73", messages.single { it.role == "assistant" }.content)
@@ -82,6 +97,7 @@ class ProcessRestorationDeviceTest {
             preferences.saveAppearance(state.getString("previousAppearance"))
             repository.engine.setProcessingMode(ProcessingMode.AUTO)
             repository.deleteConversation(id)
+            repository.deleteConversation(state.getLong("contextConversationId"))
             repository.deletePolicy(client)
             checkpoint.delete()
         }

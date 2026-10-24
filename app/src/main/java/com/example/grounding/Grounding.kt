@@ -71,6 +71,11 @@ object GroundingPolicy {
         var cited = false
         // Source links are supplied by the app. Model-authored Markdown links never establish citations.
         var clean = Regex("\\[([^]\\n]+)]\\([^)]*\\)").replace(masked, "$1")
+        // Small models sometimes spell out the supplied source ID. Normalize
+        // that explicit attribution, never guess a citation for uncited prose.
+        clean = Regex("(?i)\\bsource\\s+(?:id\\s*|#\\s*)?(\\d{1,3})\\b").replace(clean) { match ->
+            match.groupValues[1].takeIf { it in ids }?.let { "[$it]" } ?: match.value
+        }
         clean = Regex("(?<![\\w])\\[(\\d{1,9}(?:\\s*,\\s*\\d{1,9})*)]").replace(clean) { match ->
             val verified = match.groupValues[1].split(',').map(String::trim).filter { it in ids }.distinct()
             if (verified.isNotEmpty()) { cited = true; verified.joinToString(", ", "[", "]") } else ""
@@ -81,6 +86,7 @@ object GroundingPolicy {
         // Marker-only output is not an answer. Do not turn it into a cited response.
         if (cited && !Regex("\\[\\d+(?:,\\s*\\d+)*]").replace(clean, "").any { it.isLetterOrDigit() })
             return unavailableAnswer to false
+        if (cited && !CitationSupport.supportsNumbers(clean, sources)) return unavailableAnswer to false
         return clean to cited
     }
     const val unavailableAnswer = "I couldn't verify an answer from relevant web sources. Try a more specific question or provide a public HTTPS source."
@@ -101,7 +107,7 @@ object GroundingPolicy {
         // source down to a few words. The returned sources are exactly those in the prompt.
         val plans = listOf(3 to 900, 3 to 600, 2 to 900, 2 to 600, 1 to 1200, 1 to 900, 1 to 600, 1 to 350, 1 to 200)
         for ((count, excerptBudget) in plans) {
-            val included = sources.take(count)
+            val included = sources.take(count).map { it.copy(title = bounded(it.title, 120), excerpt = bounded(it.excerpt, excerptBudget)) }
             val evidence = JSONArray().apply { included.forEach { source -> put(JSONObject()
                 .put("id", source.id).put("title", bounded(source.title, 120)).put("sourceDate", source.updatedAt.take(40))
                 .put("dateKind", source.dateKind.ifBlank { if (source.kind == "ARTICLE_SUMMARY") "revision" else "unknown" })
@@ -125,13 +131,16 @@ class SearchHttp internal constructor(
     private val allowTestUrls: Boolean = false
 ) : WebFetcher {
     private data class Reply(val code: Int, val location: String?, val page: WebDocument)
-    override suspend fun fetch(url: String): WebDocument {
+    override suspend fun fetch(url: String): WebDocument = fetchChecked(url, null)
+    override suspend fun fetchPage(url: String, permitted: suspend (String) -> Boolean): WebDocument = fetchChecked(url, permitted)
+    private suspend fun fetchChecked(url: String, permitted: (suspend (String) -> Boolean)?): WebDocument {
         var current = url
         repeat(4) { hop ->
             require(allowTestUrls || GroundingPolicy.publicHttpsUrl(current)) { "A public HTTPS website is required" }
+            check(permitted?.invoke(current) != false) { "Publisher does not permit this read" }
             val reply = request(Request.Builder().url(current).header("User-Agent",
                 "BetterIntelligence/2.1 (+https://github.com/sidhrthmnn/BetterIntelligence)")
-                .header("Accept", "text/html, application/xhtml+xml, application/rss+xml, application/xml, text/plain;q=0.8").build())
+                .header("Accept", "text/html, application/xhtml+xml, text/plain;q=0.8").build())
             if (reply.code in setOf(301, 302, 303, 307, 308)) {
                 check(hop < 3) { "Too many website redirects" }
                 current = current.toHttpUrl().resolve(checkNotNull(reply.location))?.toString()
@@ -168,7 +177,7 @@ class SearchHttp internal constructor(
                         check(output.size() <= 1024 * 1024) { "Search response is too large" }
                         val charset = body.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
                         Reply(it.code, it.header("Location"), WebDocument(it.request.url.toString(),
-                            String(output.toByteArray(), charset), body.contentType()?.toString().orEmpty()))
+                            String(output.toByteArray(), charset), body.contentType()?.toString().orEmpty(), it.headers.values("X-Robots-Tag").joinToString(",")))
                     } }
                     if (continuation.isActive) result.fold(continuation::resume, continuation::resumeWithException)
                 }
@@ -178,18 +187,17 @@ class SearchHttp internal constructor(
 }
 
 /** Chat-only coordinator. Cache contains public evidence and query keys in RAM for five minutes. */
-class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchProvider>, private val weather: WeatherResearch = WeatherResearch()) {
+class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchProvider>) {
     private val cache = LinkedHashMap<String, Pair<Long, List<EvidenceSource>>>()
     @Synchronized fun clearTemporaryData() = cache.clear()
     suspend fun retrieve(question: String, allowed: Boolean, mode: GroundingMode, provider: SearchProviderId): GroundingResult {
         if (!GroundingPolicy.shouldSearch(allowed, mode, question)) return GroundingResult()
         if (GroundingPolicy.containsCredential(question)) return GroundingResult("PRIVACY_BLOCKED", notice = "This question appears to contain credentials. Search was skipped; this answer is local-only.")
         if (!question.contains("https://") && !question.contains("http://") && ConversationalResearch.isWeather(question) && !Regex("(?i)\\b(tomorrow|week|month|yesterday|history|why|how)\\b").containsMatchIn(question)) {
-            val city = ConversationalResearch.weatherCity(question) ?: return GroundingResult("NEEDS_LOCATION", notice = ConversationalResearch.askCity)
-            return try { withTimeout(15_000) { weather.current(city) } }
-            catch (e: kotlinx.coroutines.TimeoutCancellationException) { GroundingResult("SEARCH_FAILED", notice = "Weather request timed out") }
-            catch (e: CancellationException) { throw e }
-            catch (_: Exception) { GroundingResult("SEARCH_FAILED", notice = "Current weather is unavailable. Try a city and country.") }
+            if (ConversationalResearch.weatherCity(question) == null)
+                return GroundingResult("NEEDS_LOCATION", notice = ConversationalResearch.askCity)
+            // Weather follows the same public-page reader. Never invoke a weather
+            // API or synthesize numeric conditions from the model's memory.
         }
         val key = "$provider:${java.time.LocalDate.now()}:$question"
         val cached = synchronized(this) { cache[key]?.takeIf { System.currentTimeMillis() - it.first < 300_000 }?.second }

@@ -15,6 +15,27 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ChatContextMemoryTest {
+    @Test fun longSessionKeepsItsOriginalSubjectAndNewerCorrectionsWithAttribution() {
+        val pairs = listOf(ChatTurn("user", "My game is Colour Circle"), ChatTurn("assistant", "Try colour matching or a timed mode."),
+            ChatTurn("user", "Use the second option"), ChatTurn("assistant", "Then use timed levels.")) +
+            (1..15).flatMap { listOf(ChatTurn("user", "Unrelated task $it"), ChatTurn("assistant", "A proposed answer $it")) } +
+            listOf(ChatTurn("user", "My game is now called Prism"), ChatTurn("assistant", "Use Prism")) +
+            (1..6).flatMap { listOf(ChatTurn("user", "Recent detail $it"), ChatTurn("assistant", "Detail reply $it")) }
+        val summary = ConversationContext.summarize(pairs)
+        assertTrue(summary.contains("Colour Circle")); assertTrue(summary.contains("now called Prism"))
+        assertTrue(summary.contains("Assistant proposed (unverified)"))
+        val selected = ConversationContext.summaryWithinBudget(summary, 2048, "What is my game called?")
+        assertTrue(selected.contains("Colour Circle")); assertTrue(selected.contains("Prism"))
+        assertTrue(selected.indexOf("Colour Circle") < selected.indexOf("Prism"))
+        assertFalse(ConversationContext.summarize(listOf(ChatTurn("user", "Other session"), ChatTurn("assistant", "Other answer"))).contains("Prism"))
+    }
+    @Test fun sessionSummaryNeverNeedsGlobalMemoryOrRemoteSummarization() {
+        val turns = (1..10).flatMap { listOf(ChatTurn("user", "Remember my local marker $it"), ChatTurn("assistant", "A suggestion")) }
+        val summary = ConversationContext.summarize(turns)
+        assertTrue(summary.startsWith(ConversationContext.summaryHeader))
+        assertFalse(summary.contains("marker 10")) // Recent messages are carried separately in full.
+        assertTrue(ConversationContext.summaryWithinBudget(summary, 512, "marker 4").length <= 256)
+    }
     @Test fun summariesAndHistorySurviveReopenAndRemainIsolated() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val name = "context-restart.db"; context.deleteDatabase(name)

@@ -47,23 +47,22 @@ class RecentGroundingTest {
         assertFalse(source.excerpt.contains("UPLOAD SECRETS"))
     }
 
-    @Test fun newsTrackingLinksAreDecodedOnlyToPublicHttpsPublishers() {
-        val rss = """<rss><channel>
-            <item><link>http://www.bing.com/news/apiclick.aspx?url=https%3A%2F%2Fpublisher.example%2Fnews</link></item>
-            <item><link>http://www.bing.com/news/apiclick.aspx?url=http%3A%2F%2Fpublisher.example%2Finsecure</link></item>
-            <item><link>http://www.bing.com/news/apiclick.aspx?url=https%3A%2F%2F127.0.0.1%2Fprivate</link></item>
-            <item><link>http://attacker.example/news/apiclick.aspx?url=https%3A%2F%2Fpublisher.example%2Ffake</link></item>
-            </channel></rss>"""
-        assertEquals(listOf("https://publisher.example/news"), PublicWebResearch.candidates(rss))
+    private fun result(url: String, title: String) = """<div class="result"><a class="result__a" href="$url">$title</a></div>"""
+    @Test fun searchTrackingLinksAreDecodedOnlyToPublicHttpsPublishers() {
+        val html = result("https://duckduckgo.com/l/?uddg=https%3A%2F%2Fpublisher.example%2Fnews", "News") +
+            result("https://duckduckgo.com/l/?uddg=http%3A%2F%2Fpublisher.example%2Finsecure", "Insecure") +
+            result("https://duckduckgo.com/l/?uddg=https%3A%2F%2F127.0.0.1%2Fprivate", "Private")
+        assertEquals(listOf("https://publisher.example/news"), PublicWebResearch.candidates(html))
     }
 
     @Test fun fetchesBeyondBlockedTopThreeAndFiltersWrongYearAndTopic() = runBlocking {
         val requested = java.util.Collections.synchronizedList(mutableListOf<String>())
         val sources = PublicWebResearch(WebFetcher { url ->
             requested += url
-            if ("bing.com" in url) WebDocument(url, "<rss><channel>" + (1..6).joinToString("") {
-                "<item><title>Physics Nobel Prize 2026</title><link>https://p$it.example/news</link><pubDate>Tue, 06 Oct 2026 10:00:00 GMT</pubDate></item>"
-            } + "</channel></rss>", "application/rss+xml")
+            if (url.endsWith("/robots.txt")) WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
+            else if ("duckduckgo.com" in url) WebDocument(url, (1..6).joinToString("") {
+                result("https://p$it.example/news", "Physics Nobel Prize 2026")
+            }, "text/html")
             else when {
                 (1..3).any { "p$it.example" in url } -> error("Publisher blocked")
                 "p4.example" in url -> page(url, "The Nobel Prize in Physics for 2026 was awarded to Example Person after extensive research in science.")
@@ -74,33 +73,34 @@ class RecentGroundingTest {
         assertEquals(1, sources.size)
         assertEquals("https://p4.example/news", sources.single().url)
         assertTrue(requested.any { "p6.example" in it })
-        assertEquals("SEARCH_REPORTED", sources.single().dateKind)
+        assertEquals("", sources.single().dateKind) // Search snippets/dates are never promoted to publisher metadata.
     }
 
     @Test fun irrelevantSearchResultsAreNotFedToTheModel() = runBlocking {
         var pages = 0
         val result = PublicWebResearch(WebFetcher { url ->
-            if ("bing.com" !in url) { pages++; error("Do not read irrelevant result") }
-            WebDocument(url, "<rss><channel><item><title>WON dictionary</title><link>https://dictionary.example/won</link></item></channel></rss>", "application/rss+xml")
+            if (url.endsWith("/robots.txt")) return@WebFetcher WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
+            if ("duckduckgo.com" !in url) { pages++; error("Do not read irrelevant result") }
+            WebDocument(url, result("https://dictionary.example/won", "WON dictionary"), "text/html")
         }).search(question)
         assertTrue(result.isEmpty()); assertEquals(0, pages)
     }
 
-    @Test fun manyWeakWebHitsCannotSuppressStrongerNewsMatches() = runBlocking {
+    @Test fun manyWeakWebHitsCannotSuppressStrongerPageMatches() = runBlocking {
         val requested = java.util.Collections.synchronizedList(mutableListOf<String>())
         val sources = PublicWebResearch(WebFetcher { url ->
             requested += url
             when {
-                "bing.com/news/" in url -> WebDocument(url, "<rss><channel><item><title>Android Vulkan graphics explained</title><link>https://strong.example/article</link></item></channel></rss>", "application/rss+xml")
-                "bing.com/search" in url -> WebDocument(url, "<rss><channel>" + (1..10).joinToString("") {
-                    "<item><title>Android phone</title><link>https://weak$it.example/article</link></item>"
-                } + "</channel></rss>", "application/rss+xml")
+                url.endsWith("/robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
+                "duckduckgo.com" in url -> WebDocument(url, (1..10).joinToString("") {
+                    result("https://weak$it.example/article", "Android phone")
+                } + result("https://strong.example/article", "Android Vulkan graphics explained"), "text/html")
                 "strong.example" in url -> WebDocument(url, "<title>Android Vulkan graphics</title><article><p>Android uses Vulkan graphics to provide explicit access to a GPU and its compute and rendering capabilities.</p></article>", "text/html")
                 else -> error("Unrelated page")
             }
         }).search("Android Vulkan graphics")
         assertEquals("https://strong.example/article", sources.single().url)
-        assertTrue(requested.count { "bing.com" !in it && !it.endsWith("/robots.txt") } <= 6)
+        assertTrue(requested.count { "duckduckgo.com" !in it && !it.endsWith("/robots.txt") } <= 8)
     }
 
     @Test fun compactEvidenceKeepsUsefulTextAndOnlyAdvertisesIncludedSources() {
@@ -129,6 +129,6 @@ class RecentGroundingTest {
         val checked = GroundingPolicy.validateCitations("[1] [1]", listOf(source))
         assertEquals(GroundingPolicy.unavailableAnswer, checked.first)
         assertFalse(checked.second)
-        assertTrue(GroundingPolicy.validateCitations("42 [1]", listOf(source)).second)
+        assertTrue(GroundingPolicy.validateCitations("42 [1]", listOf(source.copy(excerpt = "The measured result was 42."))).second)
     }
 }

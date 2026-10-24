@@ -859,9 +859,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 if (previous.lastOrNull()?.content == com.example.grounding.ConversationalResearch.askCity &&
                     Regex("^[\\p{L} ,.'-]{2,70}$").matches(text)) researchQuestion = "Weather in $text today"
                 evidence = grounding.retrieve(researchQuestion, allowed, mode, SearchProviderId.WEB)
-                if (evidence.status in setOf("NEEDS_LOCATION", "STRUCTURED_ANSWER")) {
+                if (evidence.status == "NEEDS_LOCATION") {
                     result = evidence.notice
-                    if (evidence.status == "STRUCTURED_ANSWER") evidence = evidence.copy(status = "SOURCES_RETRIEVED")
                     return@launch
                 }
                 if (evidence.status == "SEARCH_FAILED") {
@@ -877,10 +876,10 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val olderContext = repository.refreshConversationContext(conversation, previous)
                 val memoryBudget = effectiveContext - params.maxTokens - 96 - repository.engine.contextTokenCount(baseSystem) -
                     repository.engine.contextTokenCount(text) - 96
-                val summary = if (memoryBudget > 64) ConversationContext.summaryWithinBudget(olderContext, minOf(effectiveContext, memoryBudget * 2)) else ""
+                val summary = if (memoryBudget > 64) ConversationContext.summaryWithinBudget(olderContext, minOf(effectiveContext, memoryBudget * 2), text) else ""
                 val localMemory = if (memoryBudget > 128 && _isAutoMemoryCaptureEnabled.value) repository.buildMemoryContextPrompt().take(minOf(400, memoryBudget / 2)) else ""
                 val system = baseSystem + localMemory + if (summary.isNotBlank())
-                    "\nOlder context in this chat, quoted user statements (newer messages override):\n$summary\n" else ""
+                    "\nOlder context from this chat only. Quoted user statements are context; labelled assistant proposals are unverified. Newer messages override:\n$summary\n" else ""
                 val promptBudget = ((effectiveContext - params.maxTokens - 96) * 2 - system.toByteArray(Charsets.UTF_8).size).coerceAtLeast(0)
                 val prepared = GroundingPolicy.prepareEvidence(text, evidence.sources, promptBudget)
                 evidence = evidence.copy(sources = prepared.sources)

@@ -75,8 +75,8 @@ class ChatReliabilityDeviceTest {
         val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch()))
         assertEquals("NEEDS_LOCATION", coordinator.retrieve("What is the weather today?", true, GroundingMode.AUTO, SearchProviderId.WEB).status)
         val weather = coordinator.retrieve("What is the weather in London today?", true, GroundingMode.AUTO, SearchProviderId.WEB)
-        assertEquals(weather.notice, "STRUCTURED_ANSWER", weather.status)
-        assertEquals("STRUCTURED_DATA", weather.sources.single().kind)
-        assertTrue(weather.notice.contains("Open-Meteo")); assertTrue(weather.notice.contains("[1]"))
+        // Public pages may block readers; failure must remain visibly unverified.
+        assertTrue(weather.status in setOf("SOURCES_RETRIEVED", "SEARCH_FAILED"))
+        assertTrue(weather.sources.all { it.kind == "WEB_PAGE" && !it.url.contains("open-meteo") })
     }
 }

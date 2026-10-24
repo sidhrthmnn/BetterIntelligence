@@ -34,8 +34,10 @@ class ChatProductDeviceTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         check(context.packageName.endsWith(".validation"))
         val repository = AiCoreRepository.getInstance(context)
-        val models = withTimeout(300_000) { repository.allModels.first { list -> list.any { it.filename == "gemma-4-E2B-it.litertlm" && it.isInstalled } } }
-        repository.switchActiveModel(models.single { it.filename == "gemma-4-E2B-it.litertlm" })
+        val filename = InstrumentationRegistry.getArguments().getString("chatProductModel") ?: "gemma-4-E2B-it.litertlm"
+        require(filename in setOf("gemma-4-E2B-it.litertlm", "Qwen_Qwen3-1.7B-Q4_K_M.gguf", "SmolLM3-Q4_K_M.gguf"))
+        val models = withTimeout(300_000) { repository.allModels.first { list -> list.any { it.filename == filename && it.isInstalled } } }
+        repository.switchActiveModel(models.single { it.filename == filename })
         repository.engine.setProcessingMode(ProcessingMode.CPU)
         val vm = ViewModelProvider(compose.activity)[AiCoreViewModel::class.java]
         val results = JSONArray()
@@ -138,8 +140,18 @@ class ChatProductDeviceTest {
     private fun screenshot(context: Context, name: String) {
         compose.waitForIdle()
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        instrumentation.waitForIdleSync(); android.os.SystemClock.sleep(1_000) // Let the real IME/window transition reach its final frame.
-        val bitmap = instrumentation.uiAutomation.takeScreenshot()
+        instrumentation.waitForIdleSync()
+        if (android.os.Build.VERSION.SDK_INT < 26) return
+        // Capture only our app window, never another app's notifications or overlays.
+        val decor = compose.activity.window.decorView
+        val bitmap = Bitmap.createBitmap(decor.width, decor.height, Bitmap.Config.ARGB_8888)
+        val copied = java.util.concurrent.CountDownLatch(1)
+        var status = -1
+        compose.runOnUiThread { android.view.PixelCopy.request(compose.activity.window, bitmap, { result ->
+            status = result; copied.countDown()
+        }, android.os.Handler(android.os.Looper.getMainLooper())) }
+        assertTrue(copied.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        assertEquals(android.view.PixelCopy.SUCCESS, status)
         val directory = File(context.filesDir, "ui-2.0").apply { mkdirs() }
         File(directory, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()

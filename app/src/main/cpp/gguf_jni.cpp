@@ -288,6 +288,19 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
             formatted.resize(size + 1);
             size = llama_chat_apply_template(chatTemplate, messages.data(), messages.size(), true, formatted.data(), formatted.size());
             if (size <= 0 || size > static_cast<int>(formatted.size())) throw std::runtime_error("Cannot format prompt");
+            // The legacy ChatML formatter cannot evaluate enable_thinking=false.
+            // Match the model publisher's documented non-thinking generation
+            // prefix, only when this model's own template declares that switch.
+            // https://huggingface.co/Qwen/Qwen3-1.7B#switching-between-thinking-and-non-thinking-mode
+            // SmolLM3's embedded template uses the same empty thought prefix.
+            const std::string arch(architecture), tmpl(chatTemplate);
+            const std::string prompt(formatted.data(), size);
+            const std::string suffix = "<|im_start|>assistant\n";
+            if ((arch == "qwen3" || arch == "smollm3") && tmpl.find("enable_thinking") != std::string::npos &&
+                prompt.size() >= suffix.size() && prompt.compare(prompt.size() - suffix.size(), suffix.size(), suffix) == 0) {
+                const std::string text = prompt + "<think>\n\n</think>\n\n";
+                formatted.assign(text.begin(), text.end()); size = static_cast<int>(formatted.size());
+            }
         }
         const auto *vocab = llama_model_get_vocab(model.get());
         int count = -llama_tokenize(vocab, formatted.data(), size, nullptr, 0, true, true);

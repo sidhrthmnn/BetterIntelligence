@@ -2,19 +2,30 @@ package com.example.grounding
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.HttpUrl.Companion.toHttpUrl
 
-/** Small robots policy cache, scoped to public HTML reads. A failed policy fetch
- * is not permission to crawl. Search feeds use their public query interface.
+/** Small robots policy cache, scoped to all public HTML reads including discovery.
+ * A failed policy fetch is not permission to crawl.
  */
 class ResearchRobots(private val fetcher: WebFetcher) {
     private val cache = LinkedHashMap<String, Pair<Long, String?>>()
+    private val locks = LinkedHashMap<String, Mutex>()
     suspend fun allowed(url: String): Boolean {
         val parsed = url.toHttpUrl()
         val origin = "https://${parsed.host}"
-        val entry = synchronized(cache) { cache[origin]?.takeIf { System.currentTimeMillis() - it.first < 3_600_000 } }
-        val policy = if (entry != null) entry.second else {
-            val text = withTimeoutOrNull(3_000) { try { fetcher.fetch("$origin/robots.txt").text.take(64_000) }
+        val lock = synchronized(locks) {
+            locks.getOrPut(origin) { if (locks.size >= 24) locks.remove(locks.keys.first()); Mutex() }
+        }
+        val policy = lock.withLock {
+            val entry = synchronized(cache) { cache[origin]?.takeIf { System.currentTimeMillis() - it.first < if (it.second == null) 60_000 else 3_600_000 } }
+            if (entry != null) return@withLock entry.second
+            val text = withTimeoutOrNull(3_000) { try {
+                val page = fetcher.fetch("$origin/robots.txt")
+                // A CAPTCHA/HTML error page is not an empty robots policy.
+                if (page.text.trimStart().startsWith('<')) null else page.text.take(64_000)
+            }
                 catch (e: CancellationException) { throw e }
                 catch (e: Exception) { if ("HTTP 404" in e.message.orEmpty() || "HTTP 410" in e.message.orEmpty()) "" else null } }
             synchronized(cache) { if (cache.size >= 24) cache.remove(cache.keys.first()); cache[origin] = System.currentTimeMillis() to text }

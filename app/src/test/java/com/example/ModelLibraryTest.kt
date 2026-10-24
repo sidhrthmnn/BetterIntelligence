@@ -11,6 +11,16 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ModelLibraryTest {
+    @Test fun newGgufOptionsArePinnedAndAccountForDifferentKvGeometry() {
+        val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
+        val qwen = models.single { it.filename == "Qwen_Qwen3-1.7B-Q4_K_M.gguf" }
+        val smol = models.single { it.filename == "SmolLM3-Q4_K_M.gguf" }
+        assertEquals("qwen3", qwen.architecture); assertEquals("smollm3", smol.architecture)
+        assertEquals(1801L, ModelLibrary.memoryEstimate(qwen, 2048).totalMb)
+        assertEquals(2373L, ModelLibrary.memoryEstimate(smol, 2048).totalMb)
+        assertTrue(listOf(qwen, smol).all { it.downloadUrl.orEmpty().contains(it.versionTag) && it.sha256Checksum!!.length == 64 })
+        assertEquals("Advanced", ModelLibrary.categoryLabel(smol))
+    }
     @Test fun float32GpuPolicyIsBoundToVerifiedGemmaPackagesAndReservesSharedRam() {
         val models = com.example.engine.ModelLibrary.read(androidx.test.core.app.ApplicationProvider.getApplicationContext())
         val model = models.first { it.filename == "gemma-4-E2B-it.litertlm" }
@@ -53,7 +63,7 @@ class ModelLibraryTest {
 
     @Test fun recommendationUsesAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        assertEquals(17, models.size)
+        assertEquals(19, models.size)
         assertTrue(models.all { !it.isInstalled && !it.isActive && !it.isChecksumVerified })
         assertEquals("Qwen 3 0.6B Instruct · LiteRT", ModelLibrary.recommend(models, profile())!!.recommendedModelName)
         assertEquals("SmolLM2 135M Instruct", ModelLibrary.recommend(models, profile(storage = 0.3f))!!.recommendedModelName)
@@ -76,7 +86,7 @@ class ModelLibraryTest {
 
     @Test fun qwen17HasFixedAllocationAndAnExplicitRuntimeAllowance() {
         val model = ModelLibrary.read(ApplicationProvider.getApplicationContext()).single {
-            it.parameterCount == "1.7B" && it.architecture == "qwen3"
+            it.parameterCount == "1.7B" && it.architecture == "qwen3" && it.filename.endsWith(".litertlm")
         }
         assertEquals("2a72330b504a6596d53a2c00923c57173b10f1b83e6a541213ffec08d1fc5de8", model.sha256Checksum)
         val cpu = ModelLibrary.memoryEstimate(model, 512)
@@ -127,7 +137,7 @@ class ModelLibraryTest {
         val asset = context.assets.open("model-library.json").bufferedReader().use { it.readText() }
         assertEquals(java.io.File("../models/library.json").readText().trim(), asset.trim())
         val models = ModelLibrary.read(context)
-        assertEquals(17, models.map { it.filename }.distinct().size)
+        assertEquals(19, models.map { it.filename }.distinct().size)
         assertEquals(setOf("LIGHTWEIGHT", "BALANCED", "QUALITY"), models.map { it.recommendedTier }.toSet())
         for (model in models) {
             assertTrue(model.sha256Checksum!!.matches(Regex("[a-f0-9]{64}")))
@@ -135,7 +145,7 @@ class ModelLibraryTest {
             assertTrue(model.downloadUrl!!.contains("/resolve/${model.versionTag}/"))
             assertEquals(when {
                 model.name.startsWith("LFM 2.5 1.2B") -> "INT4 block32 (GPU export)"
-                model.name.startsWith("SmolLM3 3B") -> "INT4 block32 + INT8 embed"
+                model.name.startsWith("SmolLM3 3B") && model.filename.endsWith(".litertlm") -> "INT4 block32 + INT8 embed"
                 model.architecture == "qwen3" && model.filename.endsWith(".litertlm") -> "INT4 block32"
                 model.filename.endsWith(".litertlm") -> "Mixed 2/4/8-bit"
                 else -> "Q4_K_M"

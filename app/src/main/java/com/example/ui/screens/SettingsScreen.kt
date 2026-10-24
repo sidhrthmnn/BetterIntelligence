@@ -111,7 +111,7 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
                 Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Search sends your current question to Bing. Visited websites receive ordinary connection information, including your IP address. Your chat history, saved memories and connected-app requests are not sent. Do not include passwords or sensitive information in a web-enabled question.")
+            Text("Search sends terms from your current question to DuckDuckGo's public HTML page, then reads public websites directly. Those sites receive ordinary connection information, including your IP address. Chat history, saved memories and connected-app requests are not sent. Do not include passwords or sensitive information in a web-enabled question.")
         }
         item {
             Text("Default behaviour for new conversations", style = MaterialTheme.typography.titleMedium)
@@ -124,7 +124,7 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
         }
         item {
             Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
-            Text("The app finds news and public pages, checks their topic and dates, and gives the local model relevant text with citations. No account or API key is needed. Paste a public HTTPS link to research that page directly.")
+            Text("BI extracts and ranks page passages on this device, checks publisher restrictions and reported dates, and supplies cited evidence to your local model. It uses no search, weather or grounding API. Public sites can block automated access; then BI cannot verify an answer. Paste a public HTTPS link to read it directly.")
             Text("Search can be blocked or unavailable. Pages requiring sign-in, scripts, CAPTCHA or unsupported file formats are skipped. Sources can be incomplete or wrong; citations show where text came from, not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
         }
         item {
@@ -141,8 +141,13 @@ fun MemoryScreen(viewModel: AiCoreViewModel) {
     var clear by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
+            Text("Context for each chat", style = MaterialTheme.typography.titleMedium)
+            Text("Each conversation automatically keeps its own local history and compact context notes, including after restarting or changing models. Other chats and connected apps do not receive that context. Delete a conversation to remove it.")
+            HorizontalDivider()
+        }
+        item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Use and remember facts from chat", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                Text("Memory shared across chats", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                 Switch(enabled, { viewModel.toggleAutoMemoryCapture(it) })
             }
             Text("Off by default. When enabled, explicit reminders and brief profile statements can be saved and used in chat. Connected apps need a separate memory permission. Web search never receives saved memories.", style = MaterialTheme.typography.bodyMedium)
@@ -168,7 +173,7 @@ fun PrivacyScreen(viewModel: AiCoreViewModel) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { Text("You control your data", style = MaterialTheme.typography.headlineSmall) }
         item { Text("Conversations, drafts, model files and app approvals are stored locally. Android backup may include settings and conversations according to your system backup preferences; model files and provider credentials are excluded.") }
-        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research sends your current question to Bing, then reads public websites to provide cited evidence. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
+        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses DuckDuckGo's public HTML page and reads publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
         item { Text("Deleting a model frees its storage and leaves your conversations intact. Revoking app access prevents new requests. Personal memory sharing has separate app permissions.") }
         item { TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Manage model storage") }
             TextButton(onClick = { viewModel.selectTab(AppTab.CONNECT) }) { Text("Manage app access") }

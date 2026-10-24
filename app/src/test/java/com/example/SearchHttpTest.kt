@@ -17,6 +17,24 @@ import kotlin.concurrent.thread
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SearchHttpTest {
+    @Test fun redirectPolicyIsCheckedBeforeTheTargetReceivesAnyRequest() = runBlocking {
+        ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
+            val responder = thread(isDaemon = true) {
+                server.accept().use { socket ->
+                    val input = socket.getInputStream().bufferedReader()
+                    while (!input.readLine().isNullOrEmpty()) { }
+                    socket.getOutputStream().write("HTTP/1.1 302 Found\r\nLocation: /private\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray())
+                }
+            }
+            val visited = mutableListOf<String>()
+            val result = runCatching { SearchHttp(okhttp3.OkHttpClient.Builder().followRedirects(false).build(), true)
+                .fetchPage("http://localhost:${server.localPort}/start") { url -> visited += url; !url.endsWith("/private") } }
+            assertTrue(result.isFailure); assertEquals(2, visited.size)
+            server.soTimeout = 200
+            assertTrue("Denied redirect target received a request", runCatching { server.accept().close() }.isFailure)
+            responder.join(3000)
+        }
+    }
     @Test fun jsonAndOversizedBodiesAreBounded() = runBlocking {
         for (payload in listOf("{\"ok\":true}", "x".repeat(1024 * 1024 + 64))) {
             ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->

@@ -33,15 +33,18 @@ class FocusedResearchTest {
         assertEquals("NEEDS_LOCATION", result.status); assertEquals(ConversationalResearch.askCity, result.notice); assertEquals(0, calls)
         assertEquals("LOCAL", coordinator.retrieve("Weather today", false, GroundingMode.ON, SearchProviderId.WEB).status)
     }
-    @Test fun structuredWeatherUsesOnlyFetchedNumbersAndCannotAcceptStaleData() = runBlocking {
-        var stale = false
-        val service = WeatherResearch(WebFetcher { url -> WebDocument(url,
-            if (url.contains("geocoding")) """{"results":[{"name":"London","country":"United Kingdom","latitude":51.5,"longitude":-0.1}]}"""
-            else """{"current":{"time":${if (stale) 1 else System.currentTimeMillis()/1000},"temperature_2m":12.3,"apparent_temperature":11.2,"precipitation":0.1,"wind_speed_10m":9.2},"current_units":{"temperature_2m":"°C","apparent_temperature":"°C","precipitation":"mm","wind_speed_10m":"km/h"}}""", "application/json") })
-        val result = service.current("London")
-        assertEquals("STRUCTURED_ANSWER", result.status); assertTrue(result.notice.contains("12.3 °C")); assertTrue(result.notice.contains("[1]"))
-        assertEquals("STRUCTURED_DATA", result.sources.single().kind)
-        stale = true; assertTrue(runCatching { service.current("London") }.isFailure)
+    @Test fun weatherUsesOnlyTheSamePageProviderAndNeverAnExternalApi() = runBlocking {
+        val questions = mutableListOf<String>()
+        val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to object : SearchProvider {
+            override suspend fun search(question: String): List<EvidenceSource> {
+                questions += question
+                return listOf(EvidenceSource(1, "London weather", "https://weather.example/london", "Current weather", 1))
+            }
+        }))
+        assertEquals("SOURCES_RETRIEVED", coordinator.retrieve("Weather in London today", true, GroundingMode.ON, SearchProviderId.WEB).status)
+        assertEquals(listOf("Weather in London today"), questions)
+        assertEquals("LOCAL", coordinator.retrieve("Weather in London today", false, GroundingMode.ON, SearchProviderId.WEB).status)
+        assertEquals(1, questions.size)
     }
     @Test fun robotsHonoursSpecificGroupsWildcardsAndAllowPrecedence() {
         val policy = "User-agent: *\nDisallow: /private\nAllow: /private/public\nDisallow: /*?secret=\n"
