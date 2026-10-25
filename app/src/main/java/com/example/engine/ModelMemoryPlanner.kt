@@ -1,10 +1,22 @@
 package com.example.engine
 
+import com.example.data.ModelEntity
 import kotlin.math.ceil
 
 data class ModelMemoryEstimate(val weightsMb: Long, val kvMb: Long, val overheadMb: Long, val gpuOverheadMb: Long) {
     val totalMb get() = weightsMb + kvMb + overheadMb + gpuOverheadMb
 }
+
+enum class ModelTierRole { PRIMARY, PRIMARY_STEPPED_DOWN, SECONDARY_FALLBACK, NONE }
+
+data class ModelTierDecision(
+    val role: ModelTierRole,
+    val model: ModelEntity?,
+    val effectiveContext: Int,
+    val estimatedRamMb: Long,
+    val safeBudgetMb: Long,
+    val reason: String = ""
+)
 
 /** Estimates, not allocation guarantees. Quantisation is already reflected in
  * GGUF byte size. F16 K/V sizing uses the model's actual attention dimensions.
@@ -36,4 +48,74 @@ object ModelMemoryPlanner {
         estimate(meta.totalSizeBytes, context, kvBytesPerToken(meta), gpuLayers, meta.blockCount)
     fun budget(totalMb: Long, availableMb: Long): Long =
         minOf((totalMb - maxOf(512, (totalMb * 0.12).toLong())).coerceAtLeast(0), (availableMb - 512).coerceAtLeast(0))
+
+    /** Picks the smallest installed non-experimental model as a secondary fallback candidate. */
+    fun pickDefaultSecondary(models: List<ModelEntity>, primary: ModelEntity?): ModelEntity? {
+        val primaryRam = primary?.let { ModelLibrary.memoryEstimate(it, 512).totalMb } ?: Long.MAX_VALUE
+        return models.filter {
+            it.isInstalled && it.id != primary?.id && ModelLibrary.category(it) != "EXPERIMENTAL" &&
+                ModelLibrary.memoryEstimate(it, 512).totalMb < primaryRam
+        }.minWithOrNull(
+            compareBy<ModelEntity> {
+                when (ModelLibrary.category(it)) {
+                    "FAST" -> 0
+                    "BALANCED" -> 1
+                    else -> 2
+                }
+            }.thenBy { ModelLibrary.memoryEstimate(it, 512).totalMb }.thenBy { it.fileSizeMb }
+        )
+    }
+
+    /** Resolves whether to run the Primary model at full context, step down its context, or fail over to the Secondary model. */
+    fun resolveTier(
+        primary: ModelEntity?,
+        secondary: ModelEntity?,
+        profile: HardwareProfile,
+        requestedContext: Int = 2048,
+        autoFallback: Boolean = true
+    ): ModelTierDecision {
+        val targetContext = requestedContext.coerceIn(512, 4096)
+        if (primary != null && primary.isInstalled) {
+            if (ModelLibrary.fits(primary, profile, targetContext)) {
+                val est = ModelLibrary.memoryEstimate(primary, targetContext).totalMb
+                return ModelTierDecision(ModelTierRole.PRIMARY, primary, targetContext, est, profile.safeModelRamLimitMb)
+            }
+            val steppedContexts = listOf(1024, 512).filter { it < targetContext }.distinct()
+            for (stepped in steppedContexts) {
+                if (ModelLibrary.fits(primary, profile, stepped)) {
+                    val est = ModelLibrary.memoryEstimate(primary, stepped).totalMb
+                    return ModelTierDecision(
+                        ModelTierRole.PRIMARY_STEPPED_DOWN,
+                        primary,
+                        stepped,
+                        est,
+                        profile.safeModelRamLimitMb,
+                        "Context stepped down to $stepped tokens to fit ${profile.safeModelRamLimitMb} MB available RAM budget."
+                    )
+                }
+            }
+        }
+        if (autoFallback && secondary != null && secondary.isInstalled && secondary.id != primary?.id) {
+            val candidateContexts = listOf(targetContext, 1024, 512).distinct().sortedDescending()
+            for (ctx in candidateContexts) {
+                if (ModelLibrary.fits(secondary, profile, ctx)) {
+                    val est = ModelLibrary.memoryEstimate(secondary, ctx).totalMb
+                    val shortName = secondary.name.substringBefore(" · ")
+                    return ModelTierDecision(
+                        ModelTierRole.SECONDARY_FALLBACK,
+                        secondary,
+                        ctx,
+                        est,
+                        profile.safeModelRamLimitMb,
+                        "Switched to secondary model ($shortName) for current RAM (${profile.availableRamMb} MB free)."
+                    )
+                }
+            }
+        }
+        val fallbackTarget = primary ?: secondary
+        val reason = fallbackTarget?.let { ModelLibrary.incompatibilityReason(it, profile, 512).orEmpty() }
+            ?: "Select a downloaded model in Models first."
+        val est = fallbackTarget?.let { ModelLibrary.memoryEstimate(it, 512).totalMb } ?: 0L
+        return ModelTierDecision(ModelTierRole.NONE, fallbackTarget, 512, est, profile.safeModelRamLimitMb, reason)
+    }
 }

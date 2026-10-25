@@ -5,9 +5,10 @@ package com.example.grounding
  */
 object CitationSupport {
     private val marker = Regex("\\[(\\d+(?:,\\s*\\d+)*)]")
+    private val listPrefix = Regex("(?m)^\\s*\\d{1,2}[.)]\\s+")
     private val number = Regex("(?<![\\p{L}\\p{N}])[-−]?\\d+(?:[,.]\\d+)*(?:%|°)?(?![\\p{L}\\p{N}])")
     private val date = Regex("(?i)\\b(?:\\d{4}-\\d{2}-\\d{2}|[A-Za-z]{3,9}\\s+\\d{1,2},?\\s+\\d{4}|\\d{1,2}\\s+[A-Za-z]{3,9}\\s+\\d{4})\\b")
-    private fun values(text: String): Set<String> = number.findAll(date.replace(text) { match ->
+    private fun values(text: String): Set<String> = number.findAll(date.replace(listPrefix.replace(text, "")) { match ->
         ResearchQuery.date(match.value)?.let { "${it.year} ${it.monthValue} ${it.dayOfMonth}" } ?: match.value
     }).map {
         val normalized = it.value.replace("−", "-").replace(Regex(",(?=\\d{3}(?:\\D|$))"), "").trimEnd('%', '°')

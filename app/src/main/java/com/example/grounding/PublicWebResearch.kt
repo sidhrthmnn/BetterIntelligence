@@ -82,7 +82,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
                 discoveryFailed = true; blocked = true; return null
             }
-            return result.candidates.filter { query.candidateRelevant(it.title) && !query.isPrediction(it.title) }
+            return result.candidates.filter { query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) }
         }
 
         val links = if (explicit.isNotEmpty()) explicit.map { ResearchCandidate(it, "") } else {
@@ -110,7 +110,10 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             .sortedWith(compareBy<ResearchCandidate> { candidate ->
                 // Prefer the first result from each publisher before a second.
                 unique.indexOfFirst { domain(it.url) == domain(candidate.url) } != unique.indexOf(candidate)
-            }.thenByDescending { plan.coverage(it.title).size * 15 + query.score(it.title) })
+            }.thenByDescending {
+                val combined = "${it.title} ${it.routingHint}".trim()
+                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined)
+            })
             .filter { domains.merge(domain(it.url), 1, Int::plus)!! <= 2 }.take(8)
         val reads = Semaphore(2)
         val childReads = java.util.concurrent.atomic.AtomicInteger(1)
@@ -127,8 +130,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                             val source = article(page, 0, question)
                             fun acceptable(value: EvidenceSource) = EvidenceRanking.acceptable(value, plan)
                             if (source != null && acceptable(source)) source
-                            else if ((explicit.isNotEmpty() || source == null) && childReads.getAndDecrement() > 0) {
-                                // A supplied landing page may link to the actual article.
+                            else if (childReads.getAndDecrement() > 0) {
+                                // A landing/hub page may link to the actual article or benchmark sub-page.
                                 val child = WebPageExtractor.relevantLinks(page, question).firstOrNull()
                                 child?.let { article(transport.fetchPage(it.url, permitted), 0, question)?.takeIf(::acceptable) }
                             } else null

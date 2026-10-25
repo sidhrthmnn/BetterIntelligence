@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import com.example.engine.ModelLibrary
 import com.example.engine.ModelMemoryPlanner
+import com.example.engine.ModelTierDecision
+import com.example.engine.ModelTierRole
 import com.example.engine.GenerationParams
 import com.example.engine.ConversationContext
 import com.example.engine.ChatTurn
@@ -142,8 +144,25 @@ class AiCoreRepository(
                 analyzeHardware(appContext)
                 val previous = modelDao.getActiveModel().first()
                 if (previous != null) {
+                    if (preferencesRepository.primaryModelId.first() == null) {
+                        preferencesRepository.savePrimaryModelId(previous.id)
+                    }
                     try { activateModel(previous, restoring = true) }
-                    catch (e: Exception) { if (!explicitModelSelection && !engine.isReady()) modelDao.clearActiveModel() }
+                    catch (e: Exception) {
+                        val fallbackSuccess = runCatching {
+                            if (!explicitModelSelection && preferencesRepository.autoRamFallback.first()) {
+                                val models = modelDao.getAllModels().first()
+                                val secId = preferencesRepository.secondaryModelId.first()
+                                val secondary = models.find { it.id == secId && it.isInstalled && it.id != previous.id }
+                                    ?: ModelMemoryPlanner.pickDefaultSecondary(models, previous)
+                                if (secondary != null) {
+                                    activateModel(secondary, restoring = true)
+                                    true
+                                } else false
+                            } else false
+                        }.getOrDefault(false)
+                        if (!fallbackSuccess && !explicitModelSelection && !engine.isReady()) modelDao.clearActiveModel()
+                    }
                 }
             } finally { modelOperations.decrementAndGet() }
         }
@@ -203,7 +222,47 @@ class AiCoreRepository(
 
     suspend fun switchActiveModel(model: ModelEntity) {
         explicitModelSelection = true
+        preferencesRepository.savePrimaryModelId(model.id)
         activateModel(model)
+    }
+
+    suspend fun setSecondaryModel(model: ModelEntity?) {
+        preferencesRepository.saveSecondaryModelId(model?.id)
+    }
+
+    /** Evaluates current available RAM against Primary and Secondary models and hot-swaps if required. */
+    suspend fun resolveAndActivateForRam(requestedContext: Int): ModelTierDecision = withContext(Dispatchers.IO) {
+        val models = modelDao.getAllModels().first()
+        val currentActive = modelDao.getActiveModel().first()
+        val primaryId = preferencesRepository.primaryModelId.first()
+        val secondaryId = preferencesRepository.secondaryModelId.first()
+        val autoFallback = preferencesRepository.autoRamFallback.first()
+        val primary = models.find { it.id == primaryId && it.isInstalled } ?: currentActive
+        val secondary = models.find { it.id == secondaryId && it.isInstalled && it.id != primary?.id }
+            ?: ModelMemoryPlanner.pickDefaultSecondary(models, primary)
+        val rawProfile = HardwareAnalyzer.analyze(appContext)
+        val reclaimable = engine.releasableGpuWeightsMb()
+        val available = (rawProfile.availableRamMb + reclaimable).coerceAtMost(rawProfile.totalRamMb)
+        val profile = rawProfile.copy(
+            availableRamMb = available,
+            safeModelRamLimitMb = ModelMemoryPlanner.budget(rawProfile.totalRamMb, available)
+        )
+        _hardwareProfile.value = rawProfile
+        val decision = ModelMemoryPlanner.resolveTier(primary, secondary, profile, requestedContext, autoFallback)
+        val target = decision.model
+        if (target != null && target.isInstalled) {
+            when {
+                decision.role == ModelTierRole.SECONDARY_FALLBACK && currentActive?.id != target.id -> {
+                    runCatching { activateModel(target) }
+                }
+                decision.role in setOf(ModelTierRole.PRIMARY, ModelTierRole.PRIMARY_STEPPED_DOWN) &&
+                    currentActive?.id != target.id &&
+                    profile.safeModelRamLimitMb >= decision.estimatedRamMb + 192 -> {
+                    runCatching { activateModel(target) }
+                }
+            }
+        }
+        decision
     }
 
     private suspend fun activateModel(model: ModelEntity, restoring: Boolean = false) = withContext(Dispatchers.IO) {
@@ -427,6 +486,12 @@ class AiCoreRepository(
                 // The engine refuses to unload while chat or a connected app is generating.
                 engine.unloadActiveModel()
                 modelDao.clearActiveModel()
+            }
+            if (preferencesRepository.primaryModelId.first() == current.id) {
+                preferencesRepository.savePrimaryModelId(null)
+            }
+            if (preferencesRepository.secondaryModelId.first() == current.id) {
+                preferencesRepository.saveSecondaryModelId(null)
             }
             for (file in listOf(modelFile, partialFile)) {
                 check(!file.exists() || (file.isFile && file.delete())) { "Could not delete ${file.name}. Try again." }

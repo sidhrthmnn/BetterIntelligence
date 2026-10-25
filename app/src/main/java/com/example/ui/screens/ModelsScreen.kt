@@ -4,14 +4,20 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -30,6 +36,8 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val models by viewModel.allModels.collectAsState()
     val downloadErrors by viewModel.modelDownloadErrors.collectAsState()
     val active by viewModel.activeModel.collectAsState()
+    val secondary by viewModel.secondaryModel.collectAsState()
+    val autoFallback by viewModel.autoRamFallback.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
     val hardware by viewModel.hardwareProfile.collectAsState()
     val generationParams by viewModel.chatGenerationParams.collectAsState()
@@ -71,12 +79,52 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
 
     LazyColumn(Modifier.fillMaxSize().testTag("models_list"), state = listState, contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            Text("Models for your phone", style = MaterialTheme.typography.headlineSmall)
-            Text(hardware?.let { "${ModelPresentation.size(it.availableRamMb)} RAM available · ${ModelPresentation.size(it.totalRamMb)} total" }
-                ?: "Checking your phone’s memory…", style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag("model_ram_summary"))
-            Text("RAM changes as apps run. Download size uses storage.", style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Models for your phone", style = MaterialTheme.typography.headlineSmall)
+                Text(hardware?.let { "${ModelPresentation.size(it.availableRamMb)} RAM available · ${ModelPresentation.size(it.totalRamMb)} total" }
+                    ?: "Checking your phone’s memory…", style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.testTag("model_ram_summary"))
+                hardware?.takeIf { it.totalRamMb > 0 }?.let { hw ->
+                    val usedFraction = ((hw.totalRamMb - hw.availableRamMb).coerceAtLeast(0).toFloat() / hw.totalRamMb.toFloat()).coerceIn(0f, 1f)
+                    val animatedRam by animateFloatAsState(usedFraction, tween(300, easing = FastOutSlowInEasing), label = "ram_bar")
+                    LinearProgressIndicator(
+                        progress = { animatedRam },
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
+                    )
+                }
+                Text("RAM changes as apps run. Download size uses storage.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (models.count { it.isInstalled } >= 2 || secondary != null) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    "RAM-aware secondary fallback",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                                Text(
+                                    secondary?.let { "Standby: ${it.name.substringBefore(" · ")} · switches automatically if available RAM drops" }
+                                        ?: "Choose a smaller installed model below as your low-RAM standby",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = autoFallback,
+                                onCheckedChange = { viewModel.setAutoRamFallback(it) }
+                            )
+                        }
+                    }
+                }
+            }
         }
         item {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -105,6 +153,13 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     Text(if (telemetry.isModelLoaded) "Ready on this device" else if (loading != null) "Loading model…" else "Choose your AI model",
                         style = MaterialTheme.typography.titleLarge, modifier = Modifier.testTag("model_readiness"))
                     Text(if (telemetry.isModelLoaded) active?.name ?: "Local model" else "Download a model below, then tap Use model. Downloads use storage and an internet connection.")
+                    if (telemetry.isModelLoaded && secondary != null && secondary?.id != active?.id) {
+                        Text(
+                            "Secondary fallback: ${secondary?.name?.substringBefore(" · ")}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                     if (telemetry.isModelLoaded) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { viewModel.selectTab(AppTab.CHAT) }) { Text("Open chat") }
@@ -144,12 +199,20 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             val installed = model.isInstalled
             val downloading = model.downloadState == "DOWNLOADING"
             val selected = active?.id == model.id && telemetry.isModelLoaded
+            val isSecondary = secondary?.id == model.id && !selected
             val memoryContext = ModelPresentation.loadContext(model, generationParams.contextSize)
             val fits = loadProfile?.let { ModelLibrary.fits(model, it, memoryContext) } ?: false
             val canDownload = hardware?.let { ModelLibrary.canDownload(model, it) } ?: true
             OutlinedCard(Modifier.fillMaxWidth().testTag("model_card_${model.id}")) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ModelLibrary.categoryLabel(model)?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ModelLibrary.categoryLabel(model)?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+                        if (isSecondary) {
+                            Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
+                                Text("Secondary fallback", Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                            }
+                        }
+                    }
                     Text(model.name.substringBefore(" · "), style = MaterialTheme.typography.titleMedium)
                     Text(ModelPresentation.status(model), style = MaterialTheme.typography.labelLarge,
                         color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -167,8 +230,13 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     if (!installed && !canDownload) Text("Free more storage before downloading this model.", color = MaterialTheme.colorScheme.error)
                     if (model.downloadState == "ERROR") Text(downloadErrors[model.id] ?: "Download interrupted. Retry to resume or check the model publisher’s access requirements.", color = MaterialTheme.colorScheme.error)
                     if (downloading) {
+                        val animatedProgress by animateFloatAsState(
+                            targetValue = model.downloadProgress.coerceIn(0f, .99f),
+                            animationSpec = tween(220, easing = FastOutSlowInEasing),
+                            label = "download_progress"
+                        )
                         if (model.checksumVerificationStatus == "VERIFYING") LinearProgressIndicator(Modifier.fillMaxWidth())
-                        else LinearProgressIndicator(progress = { model.downloadProgress.coerceIn(0f, .99f) }, modifier = Modifier.fillMaxWidth())
+                        else LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth())
                         Text(if (model.checksumVerificationStatus == "VERIFYING") "Almost ready. Keep the app open while the file is checked."
                             else "${ModelPresentation.size((model.fileSizeMb * model.downloadProgress.coerceIn(0f, .99f)).toLong())} of ${ModelPresentation.size(model.fileSizeMb)} · You can pause and resume",
                             style = MaterialTheme.typography.bodySmall, modifier = Modifier.heightIn(min = 36.dp))
@@ -182,6 +250,13 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                             }
                             else -> Button(onClick = { viewModel.downloadModel(model) }, enabled = canDownload,
                                 modifier = Modifier.testTag("download_model_${model.id}")) { Text(if (model.downloadState == "ERROR") "Retry download" else if (model.downloadState == "PAUSED") "Resume download" else "Download") }
+                        }
+                        if (installed && !selected && ModelLibrary.category(model) != "EXPERIMENTAL") {
+                            OutlinedButton(
+                                onClick = { viewModel.setSecondaryModel(if (isSecondary) null else model) }
+                            ) {
+                                Text(if (isSecondary) "Clear standby" else "Use as fallback")
+                            }
                         }
                         TextButton(onClick = { details = model }) { Text("Details") }
                         if (installed || (model.isCustom && !downloading)) {

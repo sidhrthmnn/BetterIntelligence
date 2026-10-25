@@ -4,14 +4,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -25,29 +25,40 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-private fun SettingsRow(title: String, subtitle: String, onClick: () -> Unit) {
-    ListItem(headlineContent = { Text(title) }, supportingContent = { Text(subtitle) },
+private fun SettingsRow(title: String, subtitle: String, icon: ImageVector? = null, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = { Text(subtitle) },
+        leadingContent = icon?.let { { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } },
         trailingContent = { Icon(Icons.Default.ChevronRight, null) },
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("setting_$title"))
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("setting_$title")
+    )
 }
 
 @Composable
 fun SettingsScreen(viewModel: AiCoreViewModel) {
     val active by viewModel.activeModel.collectAsState()
+    val secondary by viewModel.secondaryModel.collectAsState()
     val allowed by viewModel.webAllowed.collectAsState()
     val appearance by viewModel.appearance.collectAsState()
+    val modelSubtitle = buildString {
+        append(active?.name?.substringBefore(" · ") ?: "Choose, download and manage storage")
+        secondary?.takeIf { it.id != active?.id }?.let {
+            append(" · Fallback: ${it.name.substringBefore(" · ")}")
+        }
+    }
     LazyColumn(Modifier.fillMaxSize().testTag("settings_list"), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)) {
         item { SettingsSection("AI & models") }
-        item { SettingsRow("Models", active?.name?.substringBefore(" · ") ?: "Choose, download and manage storage") { viewModel.selectTab(AppTab.MODELS) } }
-        item { SettingsRow("Connected apps", "Manage access to local AI") { viewModel.selectTab(AppTab.CONNECT) } }
-        item { SettingsRow("Web & grounding", if (allowed) "Enabled for chat · Connected apps stay local" else "Off · Fully local answers") { viewModel.selectTab(AppTab.WEB) } }
+        item { SettingsRow("Models", modelSubtitle, Icons.Default.Memory) { viewModel.selectTab(AppTab.MODELS) } }
+        item { SettingsRow("Connected apps", "Manage access to local AI", Icons.Default.Apps) { viewModel.selectTab(AppTab.CONNECT) } }
+        item { SettingsRow("Web & grounding", if (allowed) "Enabled for chat · Connected apps stay local" else "Off · Fully local answers", Icons.Default.Language) { viewModel.selectTab(AppTab.WEB) } }
         item { SettingsSection("Personalisation") }
-        item { SettingsRow("Appearance", appearance.lowercase().replaceFirstChar { it.uppercase() }) { viewModel.selectTab(AppTab.APPEARANCE) } }
-        item { SettingsRow("Memory", "Choose what your chat remembers") { viewModel.selectTab(AppTab.MEMORY) } }
+        item { SettingsRow("Appearance", appearance.lowercase().replaceFirstChar { it.uppercase() }, Icons.Default.Palette) { viewModel.selectTab(AppTab.APPEARANCE) } }
+        item { SettingsRow("Memory", "Choose what your chat remembers", Icons.Default.Psychology) { viewModel.selectTab(AppTab.MEMORY) } }
         item { SettingsSection("Privacy & about") }
-        item { SettingsRow("Privacy & data", "Conversations, network and local storage") { viewModel.selectTab(AppTab.PRIVACY) } }
-        item { SettingsRow("Advanced & about", "Response settings, processing, diagnostics and licences") { viewModel.selectTab(AppTab.ADVANCED) } }
+        item { SettingsRow("Privacy & data", "Conversations, network and local storage", Icons.Default.Lock) { viewModel.selectTab(AppTab.PRIVACY) } }
+        item { SettingsRow("Advanced & about", "Response settings, processing, diagnostics and licences", Icons.Default.Tune) { viewModel.selectTab(AppTab.ADVANCED) } }
     }
 }
 
@@ -90,9 +101,15 @@ fun AppearanceScreen(viewModel: AiCoreViewModel) {
         Text("Make yourself at home", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(20.dp))
         listOf("LIGHT" to "Light", "DARK" to "Dark", "AMOLED" to "AMOLED black").forEach { (value, label) ->
-            Row(Modifier.fillMaxWidth().clickable { viewModel.setAppearance(value) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(appearance == value, { viewModel.setAppearance(value) }, modifier = Modifier.testTag("appearance_$value"))
-                Text(label)
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = if (appearance == value) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.background,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { viewModel.setAppearance(value) }
+            ) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(appearance == value, { viewModel.setAppearance(value) }, modifier = Modifier.testTag("appearance_$value"))
+                    Text(label, style = MaterialTheme.typography.bodyLarge)
+                }
             }
         }
         Text("Text follows your Android font and display size settings.", Modifier.padding(top = 24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -201,6 +218,8 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
     val hardware by viewModel.hardwareProfile.collectAsState()
     val params by viewModel.chatGenerationParams.collectAsState()
     val models by viewModel.allModels.collectAsState()
+    val secondary by viewModel.secondaryModel.collectAsState()
+    val autoFallback by viewModel.autoRamFallback.collectAsState()
     val logs by viewModel.performanceLogs.collectAsState()
     val quantization by viewModel.selectedQuantizationFilter.collectAsState()
     val sort by viewModel.selectedSortMetric.collectAsState()
@@ -237,6 +256,15 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
             Slider(params.maxTokens.toFloat(), { viewModel.updateGenerationParams(params.copy(maxTokens = it.toInt())) }, valueRange = 64f..minOf(768, params.contextSize / 2).toFloat())
             Text("Creativity: ${"%.1f".format(params.temperature)}")
             Slider(params.temperature, { viewModel.updateGenerationParams(params.copy(temperature = it)) }, valueRange = 0f..1.5f)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Automatic secondary model fallback", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                Switch(autoFallback, { viewModel.setAutoRamFallback(it) })
+            }
+            Text(
+                secondary?.let { "Standby secondary model: ${it.name.substringBefore(" · ")}. Automatically steps down context or switches when RAM is tight." }
+                    ?: "Automatically steps down context or switches to a smaller installed model when available RAM is constrained.",
+                style = MaterialTheme.typography.bodySmall
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Continue chat in the background", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                 Switch(background, { viewModel.toggleForegroundService(it) })

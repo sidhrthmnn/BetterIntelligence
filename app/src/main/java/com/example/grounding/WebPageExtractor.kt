@@ -13,7 +13,7 @@ import org.jsoup.nodes.Element
 object WebPageExtractor {
     private val visibleDate = Regex("(?i)(published|updated|last updated|posted)(?:\\s+on)?\\s*[:|]?\\s*((?:[A-Za-z]{3,9}\\s+\\d{1,2},?\\s+\\d{4})|(?:\\d{1,2}\\s+[A-Za-z]{3,9}\\s+\\d{4})|(?:\\d{4}-\\d{2}-\\d{2}))")
     private val blocked = Regex("(?i)verify (?:that )?you are human|enable javascript and cookies|just a moment|access denied|sign in to continue|subscribe to (?:continue|read)|captcha")
-    private val boilerplate = "script, style, noscript, iframe, form, nav, footer, aside, [hidden], [inert], [aria-hidden=true], [role=banner], [role=navigation], [role=dialog], [class*=cookie], [class*=advert], [id*=cookie], [class*=newsletter], [class*=social-share], [style*=display:none], [style*='display: none'], [style*=visibility:hidden]"
+    private val boilerplate = "script, style, noscript, iframe, form, nav, footer, aside:not(.infobox), [hidden], [inert], [aria-hidden=true], [role=banner], [role=navigation], [role=dialog], [class*=cookie], [class*=advert], [id*=cookie], [class*=newsletter], [class*=social-share], [style*=display:none], [style*='display: none'], [style*=visibility:hidden]"
 
     fun article(page: WebDocument, id: Int, question: String): EvidenceSource? {
         if (!GroundingPolicy.publicHttpsUrl(page.url)) return null
@@ -50,13 +50,35 @@ object WebPageExtractor {
             ?: doc.title()).ifBlank { root.selectFirst("h1")?.text() ?: page.url.toHttpUrl().host }.take(200)
         val body = if (type == "text/plain") page.text else root.text()
         if (blocked.containsMatchIn(title) || (body.length < 1500 && blocked.containsMatchIn(body))) return null
-        var heading = ""
+        val headingStack = sortedMapOf<Int, String>()
+        fun currentHeading(): String {
+            val section = headingStack.filterKeys { it >= 2 }.values.filter { it.isNotBlank() }.distinct()
+            return if (section.isNotEmpty()) section.joinToString(" › ") else headingStack[1].orEmpty()
+        }
+        var pendingTerm = ""
         val blocks = if (type == "text/plain") page.text.split(Regex("\\n\\s*\\n|\\n")) else root.select("p, h1, h2, h3, h4, li, pre, table, dd, dt")
             .filter { node -> node.parents().takeWhile { it != root }.none { it.tagName() in setOf("li", "pre", "table", "p") } }
             .flatMap { node ->
                 when {
-                    node.tagName().matches(Regex("h[1-4]")) -> { heading = node.text(); emptyList() }
+                    node.tagName().matches(Regex("h[1-4]")) -> {
+                        val level = node.tagName().drop(1).toIntOrNull() ?: 2
+                        headingStack.keys.filter { it >= level }.toList().forEach { headingStack.remove(it) }
+                        headingStack[level] = node.text().trim()
+                        pendingTerm = ""
+                        emptyList()
+                    }
+                    node.tagName() == "dt" -> {
+                        pendingTerm = node.text().trim()
+                        emptyList()
+                    }
+                    node.tagName() == "dd" -> {
+                        val heading = currentHeading()
+                        val combined = if (pendingTerm.isNotBlank()) "$pendingTerm: ${node.text().trim()}" else node.text().trim()
+                        pendingTerm = ""
+                        listOf(listOf(heading, combined).filter { it.isNotBlank() }.distinct().joinToString("\n"))
+                    }
                     node.tagName() == "table" -> {
+                        val heading = currentHeading()
                         val header = node.select("tr").firstOrNull { it.select("th").isNotEmpty() }?.select("th, td")?.joinToString(" | ") { it.text() }.orEmpty()
                         val caption = node.selectFirst("caption")?.text().orEmpty()
                         node.select("tr").filter { it.select("td").isNotEmpty() }.take(80).map { row ->
@@ -64,7 +86,10 @@ object WebPageExtractor {
                                 .filter { it.isNotBlank() }.distinct().joinToString("\n")
                         }
                     }
-                    else -> listOf(listOf(heading, node.text()).filter { it.isNotBlank() }.distinct().joinToString("\n"))
+                    else -> {
+                        val heading = currentHeading()
+                        listOf(listOf(heading, node.text()).filter { it.isNotBlank() }.distinct().joinToString("\n"))
+                    }
                 }
             }
         val clean = blocks.map { it.replace(Regex("[\\t ]+"), " ").trim().take(1800) }
@@ -85,22 +110,35 @@ object WebPageExtractor {
         val plan = ResearchPlanner.plan(question)
         val query = ResearchQuery(question)
         val candidates = blocks.filter { it.isNotBlank() }.distinct().take(350)
+        if (candidates.isEmpty()) return dates.joinToString("\n").take(budget)
+        val docFreqs = mutableMapOf<String, Int>()
+        var totalWords = 0
+        val candidateWords = candidates.map { block ->
+            val w = ResearchQuery.words(block)
+            totalWords += w.size
+            w.forEach { token -> docFreqs[token] = (docFreqs[token] ?: 0) + 1 }
+            w
+        }
+        val avgWords = (totalWords.toDouble() / candidates.size).coerceAtLeast(1.0)
         val selected = sortedSetOf<Int>()
         val covered = mutableSetOf<Int>()
         val subjects = mutableSetOf<Int>()
-        fun mentioned(text: String): Set<Int> {
-            val words = ResearchQuery.words(text)
-            return plan.entities.indices.filter { index -> ResearchQuery.words(plan.entities[index]).all { it in words } }.toSet()
+        fun mentioned(index: Int): Set<Int> {
+            val words = candidateWords[index]
+            return plan.entities.indices.filter { eIdx -> ResearchQuery.words(plan.entities[eIdx]).all { it in words } }.toSet()
         }
         var size = dates.joinToString("\n").length
         val remaining = candidates.indices.toMutableSet()
         while (remaining.isNotEmpty() && selected.size < 7) {
-            val index = remaining.maxBy { i -> query.score(candidates[i]) + (plan.coverage(candidates[i]) - covered).size * 15 +
-                mentioned(candidates[i]).size * 6 + (mentioned(candidates[i]) - subjects).size * 20 }
+            val index = remaining.maxBy { i ->
+                query.bm25Score(candidates[i], docFreqs, candidates.size, avgWords) +
+                    (plan.coverage(candidates[i]) - covered).size * 15 +
+                    mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20
+            }
             remaining.remove(index)
             val block = candidates[index]
             if (size + block.length + 2 > budget && selected.isNotEmpty()) continue
-            selected += index; covered += plan.coverage(block); subjects += mentioned(block); size += block.length + 2
+            selected += index; covered += plan.coverage(block); subjects += mentioned(index); size += block.length + 2
             // Nearby blocks preserve subject/pronoun qualifications. Only add
             // a neighbour after covering the requested facets where possible.
             if (covered.size == plan.focuses.size && selected.size >= 3 && subjects.size == plan.entities.size) break
@@ -110,21 +148,28 @@ object WebPageExtractor {
 
     /** At most one useful same-origin child may be followed by the caller. */
     fun relevantLinks(page: WebDocument, question: String): List<ResearchCandidate> {
+        val plan = ResearchPlanner.plan(question)
         val query = ResearchQuery(question)
         val base = page.url.toHttpUrl()
         val doc = Jsoup.parse(page.text, page.url)
+        val pageTitle = doc.title()
         doc.select(boilerplate).remove()
         return doc.select("main a[href], article a[href], [role=main] a[href]").mapNotNull { link ->
             val url = base.resolve(link.attr("href")) ?: return@mapNotNull null
             if (url.host != base.host || !GroundingPolicy.publicHttpsUrl(url.toString()) || url.encodedPath == base.encodedPath ||
                 Regex("(?i)\\.(?:pdf|zip|png|jpg|mp4|xml)$").containsMatchIn(url.encodedPath)) return@mapNotNull null
             val title = link.text().trim()
-            if (!query.relevant(title) || title.length < 12) return@mapNotNull null
-            ResearchCandidate(HtmlDiscovery.canonicalUrl(url.toString()), title)
-        }.distinctBy { it.url }.sortedByDescending { query.score(it.title) }.take(2)
+            if (title.length < 8) return@mapNotNull null
+            val pathText = url.pathSegments.joinToString(" ") { it.replace('-', ' ').replace('_', ' ') }
+            val combined = "$title $pathText"
+            val coversFacet = plan.coverage(combined).isNotEmpty() &&
+                (plan.entities.isEmpty() || plan.entities.any { entity -> ResearchQuery.words(entity).all { it in ResearchQuery.words("$combined $pageTitle") } })
+            if ((!query.relevant(title) || title.length < 12) && !coversFacet) return@mapNotNull null
+            ResearchCandidate(HtmlDiscovery.canonicalUrl(url.toString()), title, pathText)
+        }.distinctBy { it.url }.sortedByDescending { plan.coverage("${it.title} ${it.routingHint}").size * 15 + query.score("${it.title} ${it.routingHint}") }.take(2)
     }
 
-    private fun contentScore(node: Element): Int = node.select("p, pre, tr").sumOf { it.text().length } - node.select("a").sumOf { it.text().length / 2 }
+    private fun contentScore(node: Element): Int = node.select("p, pre, tr, dd").sumOf { it.text().length } - node.select("a").sumOf { it.text().length / 2 }
     private fun snippetDenied(value: String): Boolean = Regex("(?i)(?:^|[,;\\s])(?:nosnippet|none|max-snippet\\s*:\\s*0)(?:$|[,;\\s])").containsMatchIn(value)
 
     private fun reportedDate(doc: Document, query: ResearchQuery): Pair<String, String> {

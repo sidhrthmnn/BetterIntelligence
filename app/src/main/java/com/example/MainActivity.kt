@@ -7,6 +7,14 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -53,6 +61,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppContent(viewModel: AiCoreViewModel) {
     val destination by viewModel.currentTab.collectAsState()
+    val navDepth by viewModel.navigationDepth.collectAsState()
     val message by viewModel.userMessage.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); viewModel.clearUserMessage() } }
@@ -86,7 +95,27 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
             Column(Modifier.widthIn(max = 840.dp).fillMaxSize()) {
                 // A content-sized notice must not cover Send/Stop or the IME.
                 SnackbarHost(snackbar)
-                Box(Modifier.weight(1f).fillMaxWidth()) { TabContent(destination, viewModel) }
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    AnimatedContent(
+                        targetState = destination to navDepth,
+                        transitionSpec = {
+                            val forward = targetState.second > initialState.second ||
+                                (targetState.second == initialState.second && targetState.first.ordinal > initialState.first.ordinal)
+                            val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(durationMillis = 180, easing = FastOutSlowInEasing)
+                            val fadeSpec = tween<Float>(durationMillis = 150, easing = FastOutSlowInEasing)
+                            if (forward) {
+                                (slideInHorizontally(slideSpec) { it / 10 } + fadeIn(fadeSpec))
+                                    .togetherWith(slideOutHorizontally(slideSpec) { -it / 14 } + fadeOut(fadeSpec))
+                            } else {
+                                (slideInHorizontally(slideSpec) { -it / 14 } + fadeIn(fadeSpec))
+                                    .togetherWith(slideOutHorizontally(slideSpec) { it / 10 } + fadeOut(fadeSpec))
+                            }
+                        },
+                        label = "screen_transition"
+                    ) { (tab, _) ->
+                        TabContent(tab, viewModel)
+                    }
+                }
             }
         }
     }

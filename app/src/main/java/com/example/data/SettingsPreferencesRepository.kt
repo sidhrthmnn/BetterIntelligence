@@ -35,6 +35,9 @@ class SettingsPreferencesRepository(private val context: Context) {
         private val KEY_TEMPERATURE = stringPreferencesKey("chat_temperature")
         private val KEY_OUTPUT = stringPreferencesKey("chat_output_tokens")
         private val KEY_THREADS = stringPreferencesKey("chat_cpu_threads")
+        private val KEY_PRIMARY_MODEL_ID = stringPreferencesKey("primary_model_id")
+        private val KEY_SECONDARY_MODEL_ID = stringPreferencesKey("secondary_model_id")
+        private val KEY_AUTO_RAM_FALLBACK = stringPreferencesKey("auto_ram_fallback")
     }
 
     val selectedEngineFlow: Flow<SupportedEngine> = context.dataStore.data
@@ -77,6 +80,9 @@ class SettingsPreferencesRepository(private val context: Context) {
     val activeConversation = preferences.map { it[KEY_CONVERSATION]?.toLongOrNull() ?: 0L }
     val memoryEnabled = preferences.map { it[KEY_MEMORY] == "true" }
     val foregroundEnabled = preferences.map { it[KEY_FOREGROUND_SERVICE]?.toBooleanStrictOrNull() ?: true }
+    val primaryModelId: Flow<Long?> = preferences.map { it[KEY_PRIMARY_MODEL_ID]?.toLongOrNull() }
+    val secondaryModelId: Flow<Long?> = preferences.map { it[KEY_SECONDARY_MODEL_ID]?.toLongOrNull() }
+    val autoRamFallback: Flow<Boolean> = preferences.map { it[KEY_AUTO_RAM_FALLBACK]?.toBooleanStrictOrNull() ?: true }
     val generationPreferences = preferences.map { values ->
         val context = (values[KEY_CONTEXT]?.toIntOrNull() ?: 2048).coerceIn(512, 2048)
         GenerationParams(contextSize = context, maxTokens = (values[KEY_OUTPUT]?.toIntOrNull() ?: 256).coerceIn(64, context / 2),
@@ -96,4 +102,17 @@ class SettingsPreferencesRepository(private val context: Context) {
     suspend fun saveWebMode(value: String) { require(value in setOf("OFF", "AUTO", "ON")); context.dataStore.edit { it[KEY_WEB_MODE] = value } }
     suspend fun saveActiveConversation(id: Long) { context.dataStore.edit { it[KEY_CONVERSATION] = id.toString() } }
     suspend fun saveMemoryEnabled(enabled: Boolean) { context.dataStore.edit { it[KEY_MEMORY] = enabled.toString() } }
+    suspend fun savePrimaryModelId(id: Long?) {
+        context.dataStore.edit {
+            if (id == null) it.remove(KEY_PRIMARY_MODEL_ID) else it[KEY_PRIMARY_MODEL_ID] = id.toString()
+        }
+    }
+    suspend fun saveSecondaryModelId(id: Long?) {
+        context.dataStore.edit {
+            if (id == null) it.remove(KEY_SECONDARY_MODEL_ID) else it[KEY_SECONDARY_MODEL_ID] = id.toString()
+        }
+    }
+    suspend fun saveAutoRamFallback(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_AUTO_RAM_FALLBACK] = enabled.toString() }
+    }
 }

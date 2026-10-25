@@ -1,6 +1,12 @@
 package com.example
 
+import androidx.test.core.app.ApplicationProvider
 import com.example.data.ChatMessageEntity
+import com.example.engine.DeviceTier
+import com.example.engine.HardwareProfile
+import com.example.engine.ModelLibrary
+import com.example.engine.ModelMemoryPlanner
+import com.example.engine.ModelTierRole
 import com.example.grounding.*
 import kotlinx.coroutines.*
 import org.junit.Assert.*
@@ -120,5 +126,79 @@ class Research22Test {
         val job = async { coordinator.retrieve("Latest Orion", true, GroundingMode.ON, SearchProviderId.WEB) { stages += it } }
         started.await(); job.cancelAndJoin(); assertTrue(job.isCancelled)
         assertTrue(stages.contains(ResearchStage.UNDERSTANDING)); assertTrue(stages.contains(ResearchStage.SEARCHING))
+    }
+    @Test fun hierarchicalBreadcrumbsDefinitionListsAndOrderedListCitationsAreVerified() {
+        val html = """
+            <title>Orion Runtime Reference</title>
+            <main>
+                <h2>Orion 2 Architecture</h2>
+                <h3>Memory Specifications</h3>
+                <dl>
+                    <dt>Minimum RAM</dt>
+                    <dd>Requires 4.5 GB available RAM for Q4_K_M quantization on Android.</dd>
+                </dl>
+            </main>
+        """.trimIndent()
+        val source = WebPageExtractor.article(WebDocument("https://docs.example/orion-spec", html, "text/html"), 1, "What minimum RAM does Orion 2 require?")!!
+        assertTrue(source.excerpt.contains("Orion 2 Architecture › Memory Specifications"))
+        assertTrue(source.excerpt.contains("Minimum RAM: Requires 4.5 GB available RAM"))
+        // Numbered markdown list prefixes (1., 2.) must not be rejected as fabricated numbers
+        val numberedAnswer = "1. Orion 2 requires 4.5 GB available RAM for Q4_K_M quantization [1]."
+        assertTrue(GroundingPolicy.validateCitations(numberedAnswer, listOf(source)).second)
+    }
+    @Test fun routingHintsAndHubPageLinksFollowToDetailedChildPages() = runBlocking {
+        val discoveryHtml = """
+            <div class="result">
+                <a class="result__a" href="https://docs.example/orion">Orion Documentation Index</a>
+                <a class="result__snippet">Complete documentation index for Orion 2 memory requirements and benchmarks.</a>
+            </div>
+        """.trimIndent()
+        val candidates = HtmlDiscovery.links(WebDocument("https://html.duckduckgo.com/html/", discoveryHtml, "text/html"))
+        assertEquals(1, candidates.size)
+        assertTrue(candidates.single().routingHint.contains("memory requirements"))
+
+        val hubHtml = "<title>Orion Hub</title><main><p>Welcome to the Orion index.</p><a href=\"/orion/memory-benchmarks\">Orion 2 Memory and Benchmark Report</a></main>"
+        val childHtml = "<title>Orion 2 Memory Report</title><main><p>Orion 2 requires 4 GB RAM for Q4_K_M quantization and achieves 28 tokens per second on mobile Android CPUs during benchmark evaluation.</p></main>"
+        val engine = PublicWebResearch(
+            WebFetcher { url ->
+                when {
+                    url.endsWith("robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
+                    url.endsWith("/orion") -> WebDocument(url, hubHtml, "text/html")
+                    else -> WebDocument(url, childHtml, "text/html")
+                }
+            },
+            DiscoveryProvider { _, _ -> DiscoveryResult(candidates, DiscoveryState.FOUND) }
+        )
+        val outcome = engine.research("How much RAM does Orion 2 require and how fast is it?") {}
+        assertTrue(outcome.sources.isNotEmpty())
+        assertTrue(outcome.sources.any { it.excerpt.contains("4 GB RAM") && it.excerpt.contains("28 tokens per second") })
+    }
+    private fun profile(ram: Long, totalRam: Long = 8192L) = HardwareProfile(
+        "Test", "Test", "14", totalRam, ram, 50, false, ModelMemoryPlanner.budget(totalRam, ram), 2048,
+        8, "arm64-v8a", true, 16f, 64f, 80, 25f, false, "Normal", 0, false, 70, DeviceTier.ULTRA_LIGHT
+    )
+    @Test fun ramAwareDualModelPlannerStepsDownContextBeforeSwitchingToSecondary() {
+        val catalog = ModelLibrary.read(ApplicationProvider.getApplicationContext())
+        val primary = catalog.single { it.parameterCount == "4B" }.copy(id = 1L, isInstalled = true)
+        val secondary = catalog.first { ModelLibrary.category(it) == "FAST" }.copy(id = 2L, isInstalled = true)
+        val picked = ModelMemoryPlanner.pickDefaultSecondary(listOf(primary, secondary), primary)
+        assertEquals(secondary.id, picked?.id)
+
+        // Plenty of RAM -> Primary at full requested context
+        val decisionHigh = ModelMemoryPlanner.resolveTier(primary, secondary, profile(ram = 6000L, totalRam = 12288L), 2048, autoFallback = true)
+        assertEquals(ModelTierRole.PRIMARY, decisionHigh.role)
+        assertEquals(primary.id, decisionHigh.model?.id)
+        assertEquals(2048, decisionHigh.effectiveContext)
+
+        // Constrained RAM where 4B cannot fit at 2048 but fits at 512 -> Stepped down primary
+        val decisionStepped = ModelMemoryPlanner.resolveTier(primary, secondary, profile(ram = 3500L, totalRam = 8192L), 4096, autoFallback = true)
+        assertEquals(ModelTierRole.PRIMARY_STEPPED_DOWN, decisionStepped.role)
+        assertEquals(primary.id, decisionStepped.model?.id)
+        assertTrue(decisionStepped.effectiveContext < 4096)
+
+        // Constrained RAM where 4B cannot fit even at 512 but Fast secondary fits -> Secondary fallback
+        val decisionLow = ModelMemoryPlanner.resolveTier(primary, secondary, profile(ram = 2000L, totalRam = 6144L), 2048, autoFallback = true)
+        assertEquals(ModelTierRole.SECONDARY_FALLBACK, decisionLow.role)
+        assertEquals(secondary.id, decisionLow.model?.id)
     }
 }

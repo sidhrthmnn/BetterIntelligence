@@ -1,5 +1,14 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
@@ -35,11 +44,16 @@ import com.example.ui.AiCoreViewModel
 import com.example.ui.AppTab
 import com.example.ui.components.MarkdownText
 import com.example.engine.ModelLibrary
+import com.example.engine.ModelTierRole
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChatScreen(viewModel: AiCoreViewModel) {
     val messages by viewModel.chatMessages.collectAsState()
     val model by viewModel.activeModel.collectAsState()
+    val secondary by viewModel.secondaryModel.collectAsState()
+    val tierDecision by viewModel.activeTierDecision.collectAsState()
+    val hardware by viewModel.hardwareProfile.collectAsState()
     val generating by viewModel.isChatGenerating.collectAsState()
     val stream by viewModel.streamingChatText.collectAsState()
     val draft by viewModel.draft.collectAsState()
@@ -55,10 +69,57 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
     var showWebMenu by remember { mutableStateOf(false) }
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize()) {
-        TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }, modifier = Modifier.padding(horizontal = 12.dp)) {
-            Text(model?.let { selected -> listOfNotNull(ModelLibrary.categoryLabel(selected), selected.name.substringBefore(" · ")).joinToString(" · ") } ?: "Choose a model",
-                style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Icon(Icons.Default.KeyboardArrowDown, null, Modifier.size(18.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) {
+                Text(
+                    model?.let { selected ->
+                        listOfNotNull(ModelLibrary.categoryLabel(selected), selected.name.substringBefore(" · ")).joinToString(" · ")
+                    } ?: "Choose a model",
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Icon(Icons.Default.KeyboardArrowDown, null, Modifier.size(18.dp))
+            }
+            if (tierDecision?.role == ModelTierRole.SECONDARY_FALLBACK) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Text(
+                        "Secondary · Low RAM",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            } else if (secondary != null && model != null && secondary?.id != model?.id) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Text(
+                        "Fallback: ${secondary?.name?.substringBefore(" · ")?.take(18) ?: "Ready"}",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            hardware?.takeIf { it.availableRamMb > 0 }?.let { hw ->
+                Text(
+                    "${ModelPresentation.size(hw.availableRamMb)} free",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         if (messages.isEmpty() && !generating) {
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(28.dp), verticalArrangement = Arrangement.Center) {
@@ -69,6 +130,20 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                     Spacer(Modifier.height(20.dp))
                     Text("Download a model to get started. Your AI runs on this device.", style = MaterialTheme.typography.bodyMedium)
                     TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Choose a model") }
+                } else if (ready.isModelLoaded && !keyboardVisible) {
+                    Spacer(Modifier.height(20.dp))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            "Summarize key ideas",
+                            "Draft a clear reply",
+                            "Explain a technical concept"
+                        ).forEach { suggestion ->
+                            SuggestionChip(
+                                onClick = { viewModel.updateDraft(suggestion) },
+                                label = { Text(suggestion, style = MaterialTheme.typography.labelMedium) }
+                            )
+                        }
+                    }
                 }
             }
         } else key(conversation) {
@@ -80,11 +155,19 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Surface(shape = RoundedCornerShape(26.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                     Column(Modifier.padding(8.dp)) {
-                        if (editing) Row(Modifier.fillMaxWidth().padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("Editing a message", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
-                            TextButton(onClick = { viewModel.cancelEditingMessage() }) { Text("Cancel edit") }
+                        AnimatedVisibility(
+                            visible = editing,
+                            enter = expandVertically(tween(160, easing = FastOutSlowInEasing)) + fadeIn(tween(140)),
+                            exit = shrinkVertically(tween(140, easing = FastOutSlowInEasing)) + fadeOut(tween(100))
+                        ) {
+                            Column {
+                                Row(Modifier.fillMaxWidth().padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Editing a message", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                                    TextButton(onClick = { viewModel.cancelEditingMessage() }) { Text("Cancel edit") }
+                                }
+                                Text("Sending replaces later replies in this conversation.", Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodySmall)
+                            }
                         }
-                        if (editing) Text("Sending replaces later replies in this conversation.", Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodySmall)
                         TextField(value = draft, onValueChange = { viewModel.updateDraft(it) },
                             placeholder = { Text("Message Better Intelligence…") },
                             modifier = Modifier.fillMaxWidth().testTag("chat_input_field"), maxLines = 5,
@@ -203,9 +286,24 @@ internal fun ChatTranscript(
 @Composable
 private fun StreamingAnswer(text: String, status: String) {
     if (text.isNotEmpty()) MarkdownText(text)
-    else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-        Text(status.ifBlank { "Preparing answer" }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    else Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+            AnimatedContent(
+                targetState = status.ifBlank { "Preparing answer" },
+                transitionSpec = { fadeIn(tween(150)).togetherWith(fadeOut(tween(120))) },
+                label = "research_stage"
+            ) { stageText ->
+                Text(stageText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 
