@@ -211,65 +211,74 @@ private fun DeleteDialog(title: String, body: String, dismiss: () -> Unit, confi
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
-    val mode by viewModel.processingMode.collectAsState()
-    val caps by viewModel.accelerationCapabilities.collectAsState()
-    val limit by viewModel.gpuLayerLimit.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
     val hardware by viewModel.hardwareProfile.collectAsState()
-    val params by viewModel.chatGenerationParams.collectAsState()
     val models by viewModel.allModels.collectAsState()
     val secondary by viewModel.secondaryModel.collectAsState()
-    val autoFallback by viewModel.autoRamFallback.collectAsState()
     val logs by viewModel.performanceLogs.collectAsState()
     val quantization by viewModel.selectedQuantizationFilter.collectAsState()
     val sort by viewModel.selectedSortMetric.collectAsState()
     val benchmarking by viewModel.isBenchmarking.collectAsState()
-    val background by viewModel.isForegroundServiceEnabled.collectAsState()
     val uri = LocalUriHandler.current
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item {
             Text("AI Processing Mode", style = MaterialTheme.typography.titleLarge)
-            ProcessingMode.entries.forEach { option ->
-                val enabled = when(option) { ProcessingMode.GPU -> caps.gpuAvailable; ProcessingMode.NPU -> caps.npuAvailable; else -> true }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(mode == option, { viewModel.setProcessingMode(option) }, enabled = enabled, modifier = Modifier.testTag("processing_${option.name}"))
+            Spacer(Modifier.height(8.dp))
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth().testTag("processing_AUTO")
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.AutoMode, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column(Modifier.weight(1f)) {
-                        Text(option.title)
-                        if (!enabled) Text(if (option == ProcessingMode.NPU) caps.npuReason else caps.gpuReason, style = MaterialTheme.typography.bodySmall)
+                        Text("Automatic", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Automatically benchmarks and selects the optimal CPU or GPU backend, thread count, and layer offload based on live RAM and thermal headroom.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
-            Text("Automatic measures compatible backends and caches a stable choice. Initial tuning can delay the first answer. CPU and GPU share your phone’s RAM.", style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = { viewModel.resetBackendDecisions() }, enabled = !telemetry.isRunning) { Text("Reset backend measurements and retry GPU") }
-            if (caps.gpuAvailable && !caps.gpuName.startsWith("LiteRT")) {
-                Text("GPU layer limit")
-                FlowRow { listOf(-1, 8, 16, 32).forEach { value -> FilterChip(limit == value, { viewModel.setProcessingMode(mode, value) }, label = { Text(if (value < 0) "Auto" else "$value") }) } }
+            TextButton(onClick = { viewModel.resetBackendDecisions() }, enabled = !telemetry.isRunning) {
+                Text("Reset backend measurements and retry GPU")
             }
         }
         item {
             Text("Response preferences", style = MaterialTheme.typography.titleLarge)
-            Text("Conversation context")
-            FlowRow { listOf(512, 1024, 2048).forEach { size -> FilterChip(params.contextSize == size,
-                { viewModel.updateGenerationParams(params.copy(contextSize = size, maxTokens = minOf(params.maxTokens, size / 4))) }, label = { Text("$size") }) } }
-            Text("A smaller context reduces memory only when the model supports resizing. Fixed-context LiteRT packages keep their exported allocation; models with a larger working minimum are raised to that size for safe CPU fallback.", style = MaterialTheme.typography.bodySmall)
-            Text("Response length: up to ${params.maxTokens} tokens")
-            Slider(params.maxTokens.toFloat(), { viewModel.updateGenerationParams(params.copy(maxTokens = it.toInt())) }, valueRange = 64f..minOf(768, params.contextSize / 2).toFloat())
-            Text("Creativity: ${"%.1f".format(params.temperature)}")
-            Slider(params.temperature, { viewModel.updateGenerationParams(params.copy(temperature = it)) }, valueRange = 0f..1.5f)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Automatic secondary model fallback", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                Switch(autoFallback, { viewModel.setAutoRamFallback(it) })
+            Spacer(Modifier.height(8.dp))
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth().testTag("response_preferences_AUTO")
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Automatic", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Context window (up to 2048 tokens), response length, and factual vs. creative temperature are tuned automatically for each question and available RAM.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            secondary?.let { "Standby secondary model: ${it.name.substringBefore(" · ")} · Background generation active." }
+                                ?: "Automatic RAM context step-down and background generation are active.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
-            Text(
-                secondary?.let { "Standby secondary model: ${it.name.substringBefore(" · ")}. Automatically steps down context or switches when RAM is tight." }
-                    ?: "Automatically steps down context or switches to a smaller installed model when available RAM is constrained.",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Continue chat in the background", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                Switch(background, { viewModel.toggleForegroundService(it) })
-            }
-            Text("Uses a foreground service and a bounded wake lock while an answer is running.", style = MaterialTheme.typography.bodySmall)
         }
         item {
             Text("Hardware monitoring", style = MaterialTheme.typography.titleLarge)

@@ -35,11 +35,17 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             value.endsWith("s") && !value.endsWith("ss") -> value.dropLast(1)
             else -> value
         } else value
+        private val weatherIndicators = setOf(
+            "temperature", "celsiu", "fahrenheit", "forecast", "sunny", "cloudy", "overcast", "humidity", "precipitation", "drizzle", "thunderstorm"
+        )
         fun words(text: String): Set<String> {
             val base = wordPattern.findAll(text.lowercase()).map { stem(it.value) }.toMutableSet()
             for ((abbr, expanded) in phraseAbbreviations) {
                 if (abbr in base) base.addAll(expanded)
                 else if (expanded.all { it in base }) base.add(abbr)
+            }
+            if (base.any { it in weatherIndicators } || Regex("\\b\\d{1,2}\\s*°\\s*[cf]?\\b", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
+                base.add("weather")
             }
             return base
         }
@@ -57,6 +63,9 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
                 } else if (minExpanded > 0) {
                     counts[abbr] = minExpanded
                 }
+            }
+            if ((counts["weather"] ?: 0) == 0 && (counts.keys.any { it in weatherIndicators } || Regex("\\b\\d{1,2}\\s*°\\s*[cf]?\\b", RegexOption.IGNORE_CASE).containsMatchIn(text))) {
+                counts["weather"] = 1
             }
             return counts
         }

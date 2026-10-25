@@ -83,7 +83,7 @@ data class HardwareTelemetry(
     val modelLoadTimeMs: Long = 0,
     val fallbackCount: Int = 0,
     val lastFallback: String = "",
-    val backendDecision: String = "",
+    val backendDecision: String = "Automatic · Selects optimal CPU/GPU backend",
     val backendStatus: String = "Idle"
 ) {
     fun toJson(): String {

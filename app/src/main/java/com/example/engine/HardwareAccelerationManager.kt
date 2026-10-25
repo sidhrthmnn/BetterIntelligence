@@ -34,13 +34,16 @@ data class ResourceState(
  */
 class HardwareAccelerationManager(private val context: Context? = null) {
     private val preferences = context?.getSharedPreferences("hardware_acceleration", Context.MODE_PRIVATE)
-    private val _mode = MutableStateFlow(runCatching { ProcessingMode.valueOf(preferences?.getString("mode", null) ?: "AUTO") }.getOrDefault(ProcessingMode.AUTO))
+    private val _mode = MutableStateFlow(ProcessingMode.AUTO)
     val mode = _mode.asStateFlow()
-    private val _layerLimit = MutableStateFlow(preferences?.getInt("gpu_layers", -1) ?: -1)
+    private val _layerLimit = MutableStateFlow(-1)
     val layerLimit = _layerLimit.asStateFlow()
     private val _capabilities = MutableStateFlow(AccelerationCapabilities())
     val capabilities = _capabilities.asStateFlow()
     private val performanceCores: Int = detectPerformanceCores()
+    init {
+        preferences?.edit()?.putString("mode", ProcessingMode.AUTO.name)?.putInt("gpu_layers", -1)?.apply()
+    }
     internal fun setMode(mode: ProcessingMode, layers: Int = layerLimit.value) {
         require(mode != ProcessingMode.NPU) { capabilities.value.npuReason }
         require(mode != ProcessingMode.GPU || capabilities.value.gpuAvailable) { capabilities.value.gpuReason }

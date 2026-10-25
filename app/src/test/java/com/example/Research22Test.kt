@@ -238,4 +238,46 @@ class Research22Test {
         assertTrue(query.years.isEmpty())
         assertTrue(query.relevant("Pinarayi Vijayan is the current Chief Minister of Kerala."))
     }
+    @Test fun weatherDashboardAndCookieOverlayPagesExtractCurrentWeatherInsteadOfFutureCards() {
+        val question = "What is the weather in london"
+        val plan = ResearchPlanner.plan(question)
+        assertTrue(plan.entities.any { it.equals("london", ignoreCase = true) })
+        val html = """
+            <html>
+            <head><title>London (Greater London) weather - Met Office</title></head>
+            <body class="has-cookie-banner">
+                <div id="onetrust-consent-sdk" class="cookie-modal">
+                    <p>We use cookies to improve your experience. Accept all cookies or manage cookie preferences.</p>
+                </div>
+                <main>
+                    <h1>London (Greater London) weather</h1>
+                    <h2>Find a forecast</h2>
+                    <div class="snapshot-data">
+                        <img alt="Clear sky" src="/icon.png"/>
+                        <span class="visually-hidden">11 degrees Celsius</span>
+                        <span aria-hidden="true">11°C</span>
+                        <span>Feels like 9°C · Today Tonight</span>
+                    </div>
+                    <section id="fiveDayText">
+                        <h2>London 5 day weather forecast</h2>
+                        <p>Today: Sunny intervals and a gentle breeze with a maximum temperature of 15°C in London. Tonight: Clear skies with a minimum temperature of 8°C.</p>
+                    </section>
+                    <article>
+                        <h3>Sunday 1 November</h3>
+                        <p>Long range forecast for next week in November.</p>
+                    </article>
+                    <article>
+                        <h3>Monday 2 November</h3>
+                        <p>Long range forecast for Monday 2 November.</p>
+                    </article>
+                </main>
+            </body>
+            </html>
+        """.trimIndent()
+        val source = WebPageExtractor.article(WebDocument("https://weather.example/london", html, "text/html"), 1, question)!!
+        assertFalse(source.excerpt.contains("We use cookies"))
+        assertTrue(source.excerpt.contains("11°C") || source.excerpt.contains("15°C"))
+        assertTrue(source.excerpt.contains("Clear sky") || source.excerpt.contains("Sunny intervals"))
+        assertTrue(EvidenceRanking.acceptable(source, plan))
+    }
 }

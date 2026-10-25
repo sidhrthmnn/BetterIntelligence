@@ -13,7 +13,10 @@ import org.jsoup.nodes.Element
 object WebPageExtractor {
     private val visibleDate = Regex("(?i)(published|updated|last updated|posted)(?:\\s+on)?\\s*[:|]?\\s*((?:[A-Za-z]{3,9}\\s+\\d{1,2},?\\s+\\d{4})|(?:\\d{1,2}\\s+[A-Za-z]{3,9}\\s+\\d{4})|(?:\\d{4}-\\d{2}-\\d{2}))")
     private val blocked = Regex("(?i)verify (?:that )?you are human|enable javascript and cookies|just a moment|access denied|sign in to continue|subscribe to (?:continue|read)|captcha")
-    private val boilerplate = "script, style, noscript, iframe, form, nav, footer, aside:not(.infobox), [hidden], [inert], [aria-hidden=true], [role=banner], [role=navigation], [role=dialog], [class*=cookie], [class*=advert], [id*=cookie], [class*=newsletter], [class*=social-share], [style*=display:none], [style*='display: none'], [style*=visibility:hidden]"
+    private val boilerplate = "script, style, noscript, iframe, svg, canvas, form, nav, footer, aside:not(.infobox), [hidden], [inert], [role=banner], [role=navigation], [role=dialog], [class*=advert], [class*=newsletter], [class*=social-share], [style*=display:none], [style*='display: none'], [style*=visibility:hidden]"
+    private val cookieOverlaySelector = "[class*=cookie], [id*=cookie], [class*=consent], [id*=consent], [class*=gdpr], [id*=gdpr], [class*=onetrust], [id*=onetrust], [class*=cmp-], [id*=cmp-], [class*=sp_message], [id*=sp_message], [class*=cybot], [id*=cybot], .fc-consent-root, #usercentrics-root"
+    private val cookieTextPattern = Regex("(?i)\\b(we use cookies|accept(?: all)? cookies|manage cookies|cookie preferences|cookie settings|consent to cookies|reject non-essential|privacy and cookie policy|cookies on the bbc|take control of your data)\\b")
+    private val utilityHeading = Regex("(?i)^(search(\\s+for\\s+a\\s+location)?|find\\s+a\\s+forecast|navigation|menu|accessibility(\\s+links)?|skip\\s+to.*|share|more|related|cookie.*)$")
 
     fun article(page: WebDocument, id: Int, question: String): EvidenceSource? {
         if (!GroundingPolicy.publicHttpsUrl(page.url)) return null
@@ -27,12 +30,32 @@ object WebPageExtractor {
         val query = ResearchQuery(question)
         val metadataDate = reportedDate(doc, query)
         doc.select(boilerplate).remove()
+        doc.select(cookieOverlaySelector).filter { el ->
+            el.tagName() !in setOf("html", "body", "main", "article") &&
+                el.selectFirst("main, [role=main], article, h1") == null
+        }.forEach { it.remove() }
         doc.select("[class*=devsite-banner], [class*=site-banner]").remove()
         // Keep article headers: their subject/date often disambiguates the answer.
         doc.select("body > header").remove()
-        val articles = doc.select("article, #mw-content-text, .markdown-body").filter { it.text().length >= 200 }
-        val root = articles.maxByOrNull { contentScore(it) }
-            ?: doc.select("main, [role=main]").maxByOrNull { contentScore(it) } ?: doc.body()
+        val explicitContent = doc.selectFirst("#mw-content-text, .markdown-body")?.takeIf { it.text().length >= 200 }
+        val articles = doc.select("article").filter { it.text().length >= 200 }
+        val bestArticle = articles.maxByOrNull { contentScore(it) }
+        val bestMain = doc.select("main, [role=main], #main-content, #content").filter { it.text().length >= 200 }.maxByOrNull { contentScore(it) }
+        val root = explicitContent ?: when {
+            bestArticle != null && bestMain != null ->
+                if (articles.size == 1 && contentScore(bestArticle) >= contentScore(bestMain) * 0.55) bestArticle else bestMain
+            bestMain != null -> bestMain
+            bestArticle != null -> bestArticle
+            else -> doc.body()
+        }
+        if (type != "text/plain") {
+            root.select("img[alt]").forEach { img ->
+                val alt = img.attr("alt").trim()
+                if (alt.length in 3..60 && !Regex("(?i)^(icon|image|logo|photo|avatar|placeholder|banner|arrow|close)\\b").containsMatchIn(alt)) {
+                    img.appendText(" $alt ")
+                }
+            }
+        }
         // Some publishers put bylines in a bare <em>/<time> after malformed <p>
         // markup. Keep these visible dates, rather than substituting URL dates
         // or global site banners for the article's publication/update line.
@@ -51,19 +74,32 @@ object WebPageExtractor {
         val body = if (type == "text/plain") page.text else root.text()
         if (blocked.containsMatchIn(title) || (body.length < 1500 && blocked.containsMatchIn(body))) return null
         val headingStack = sortedMapOf<Int, String>()
-        fun currentHeading(): String {
-            val section = headingStack.filterKeys { it >= 2 }.values.filter { it.isNotBlank() }.distinct()
-            return if (section.isNotEmpty()) section.joinToString(" › ") else headingStack[1].orEmpty()
-        }
+        root.selectFirst("h1")?.text()?.trim()?.takeIf { it.isNotBlank() && !utilityHeading.matches(it) }?.let { headingStack[1] = it }
+        fun currentHeading(): String = headingStack.values.filter { it.isNotBlank() }.distinct().joinToString(" › ")
         var pendingTerm = ""
-        val blocks = if (type == "text/plain") page.text.split(Regex("\\n\\s*\\n|\\n")) else root.select("p, h1, h2, h3, h4, li, pre, table, dd, dt")
-            .filter { node -> node.parents().takeWhile { it != root }.none { it.tagName() in setOf("li", "pre", "table", "p") } }
+        val blockTags = setOf("p", "h1", "h2", "h3", "h4", "ul", "ol", "pre", "table", "dd", "dt")
+        val blocks = if (type == "text/plain") page.text.split(Regex("\\n\\s*\\n|\\n")) else root.select("p, h1, h2, h3, h4, ul, ol, pre, table, dd, dt, div, section")
+            .filter { node ->
+                val tag = node.tagName()
+                if (tag in setOf("div", "section")) {
+                    val ownLen = node.text().trim().length
+                    ownLen in 15..360 &&
+                        node.parents().takeWhile { it != root }.none { it.tagName() in setOf("ul", "ol", "pre", "table", "p", "dd", "dt") } &&
+                        node.selectFirst("p, h1, h2, h3, h4, ul, ol, pre, table, dd, dt") == null &&
+                        node.children().none { child -> child.tagName() in setOf("div", "section") && child.text().trim().length >= 25 }
+                } else {
+                    node.parents().takeWhile { it != root }.none { it.tagName() in setOf("ul", "ol", "pre", "table", "p") }
+                }
+            }
             .flatMap { node ->
                 when {
                     node.tagName().matches(Regex("h[1-4]")) -> {
                         val level = node.tagName().drop(1).toIntOrNull() ?: 2
-                        headingStack.keys.filter { it >= level }.toList().forEach { headingStack.remove(it) }
-                        headingStack[level] = node.text().trim()
+                        val hText = node.text().trim()
+                        if (!utilityHeading.matches(hText)) {
+                            headingStack.keys.filter { it >= level }.toList().forEach { headingStack.remove(it) }
+                            headingStack[level] = hText
+                        }
                         pendingTerm = ""
                         emptyList()
                     }
@@ -76,6 +112,31 @@ object WebPageExtractor {
                         val combined = if (pendingTerm.isNotBlank()) "$pendingTerm: ${node.text().trim()}" else node.text().trim()
                         pendingTerm = ""
                         listOf(listOf(heading, combined).filter { it.isNotBlank() }.distinct().joinToString("\n"))
+                    }
+                    node.tagName() in setOf("ul", "ol") -> {
+                        val heading = currentHeading()
+                        val items = node.select("> li").ifEmpty { node.select("li") }
+                            .map { it.text().replace(Regex("[\\t ]+"), " ").trim() }
+                            .filter { it.length >= 4 }
+                        if (items.isEmpty()) emptyList()
+                        else {
+                            val grouped = mutableListOf<String>()
+                            var current = StringBuilder()
+                            for (item in items) {
+                                if (current.isEmpty()) {
+                                    current.append(item)
+                                } else if (current.length + item.length + 3 <= 360 && item.length < 140) {
+                                    current.append(" · ").append(item)
+                                } else {
+                                    grouped += listOf(heading, current.toString()).filter { it.isNotBlank() }.distinct().joinToString("\n")
+                                    current = StringBuilder(item)
+                                }
+                            }
+                            if (current.isNotEmpty()) {
+                                grouped += listOf(heading, current.toString()).filter { it.isNotBlank() }.distinct().joinToString("\n")
+                            }
+                            grouped
+                        }
                     }
                     node.tagName() == "table" -> {
                         val heading = currentHeading()
@@ -99,7 +160,8 @@ object WebPageExtractor {
                 }
             }
         val clean = blocks.map { it.replace(Regex("[\\t ]+"), " ").trim().take(1800) }
-            .filter { it.length >= 12 }.distinct().take(350)
+            .filter { it.length >= 12 && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) }
+            .distinct().take(350)
         val usable = clean.ifEmpty { listOf(body.trim().take(2200)) }
         val text = focused(usable, dateLines, question, minOf(2200, snippetLimit)).trim()
         if (text.length < 80) return null
@@ -135,6 +197,9 @@ object WebPageExtractor {
         }
         var size = dates.joinToString("\n").length
         val isIncumbentQuery = ResearchQuery.isCurrentIncumbentQuery(question)
+        val isWeatherQuery = Regex("(?i)\\b(weather|temperature|forecast|rain|wind|humidity|celsius|fahrenheit|sunny|cloudy|storm)\\b").containsMatchIn(question)
+        val weatherDataPattern = Regex("(?i)(?:\\b\\d{1,2}\\s*°\\s*[CF]?\\b|\\b\\d{1,2}\\s+degrees?\\s+(?:celsius|fahrenheit)\\b|\\b(?:feels\\s+like|humidity|wind\\s+speed|precipitation|uv\\s+index|visibility|air\\s+quality|pressure|sunny|cloudy|overcast|clear|scattered\\s+clouds|light\\s+rain|heavy\\s+rain|showers|thunderstorm|drizzle|mist|fog)\\b)")
+        val currentWeatherTimingPattern = Regex("(?i)\\b(today|tonight|now|current|currently|this\\s+morning|this\\s+afternoon|this\\s+evening|next\\s+hour|observed\\s+at|right\\s+now|minimum\\s+temperature|maximum\\s+temperature|daytime|nighttime)\\b")
         val presentPattern = Regex("(?i)\\b(incumbent|present(?!\\s*-\\s*day)|till\\s+date|to\\s+date|current(?!\\s+(?:affairs|gk|general\\s+knowledge))|currently|assumed\\s+office|serving\\s+since|in\\s+office|is\\s+the\\s+(?:current\\s+|present\\s+|\\d+(?:st|nd|rd|th)\\s+and\\s+current\\s+)?(?:chief\\s+minister|prime\\s+minister|president|governor|mayor|ceo|cm|pm))\\b")
         val pastObituaryPattern = Regex("(?i)\\b(passed\\s+away|died|former|was\\s+the\\s+\\d+(?:st|nd|rd|th)?|served\\s+a\\s+total\\s+of|\\b(?:19\\d{2}|20[0-2]\\d)\\s*[-–—]\\s*(?:19\\d{2}|20[01]\\d|202[0-5])\\b)\\b")
         val hasIncumbentCandidate = isIncumbentQuery && candidates.any { presentPattern.containsMatchIn(it) }
@@ -153,10 +218,13 @@ object WebPageExtractor {
                         else -> 0
                     }
                 } else 0
+                val weatherScore = if (isWeatherQuery && weatherDataPattern.containsMatchIn(blockText)) {
+                    if (currentWeatherTimingPattern.containsMatchIn(blockText)) 36 else 20
+                } else 0
                 query.bm25Score(blockText, docFreqs, candidates.size, avgWords) +
                     (plan.coverage(blockText) - covered).size * 15 +
                     mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20 +
-                    incumbentScore
+                    incumbentScore + weatherScore
             }
             remaining.remove(index)
             val block = candidates[index]
@@ -164,11 +232,15 @@ object WebPageExtractor {
             selected += index; covered += plan.coverage(block); subjects += mentioned(index); size += block.length + 2
             // Nearby blocks preserve subject/pronoun qualifications. Only add
             // a neighbour after covering the requested facets where possible.
-            if (covered.size == plan.focuses.size && selected.size >= 3 && subjects.size == plan.entities.size) break
+            if (covered.size == plan.focuses.size && selected.size >= 3 && subjects.size == plan.entities.size && size >= minOf(650, budget / 2)) break
         }
-        val orderedSelected = if (hasIncumbentCandidate) {
-            selected.sortedWith(compareByDescending<Int> { presentPattern.containsMatchIn(candidates[it]) }.thenBy { it })
-        } else selected.toList()
+        val orderedSelected = when {
+            hasIncumbentCandidate -> selected.sortedWith(compareByDescending<Int> { presentPattern.containsMatchIn(candidates[it]) }.thenBy { it })
+            isWeatherQuery -> selected.sortedWith(compareByDescending<Int> {
+                weatherDataPattern.containsMatchIn(candidates[it]) && currentWeatherTimingPattern.containsMatchIn(candidates[it])
+            }.thenBy { it })
+            else -> selected.toList()
+        }
         return (dates + orderedSelected.map { candidates[it] }).distinct().joinToString("\n\n").take(budget)
     }
 
