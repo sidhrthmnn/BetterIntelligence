@@ -1,0 +1,272 @@
+{
+  "device": "HONOR VKP-NX9",
+  "soc": "SM8750",
+  "sdk": 36,
+  "note": "Short synthetic probes, not sustained throughput, battery or general quality measurements",
+  "measurements": [
+    {
+      "model": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
+      "requestedBackend": "GPU",
+      "requestedContext": 2048,
+      "status": "fallback",
+      "runtime": "llama.cpp 0.7.0",
+      "initializationMs": 1426,
+      "peakAppPssMb": 2509.1904296875,
+      "modelMappingsRetainedAfterClose": false,
+      "samples": [
+        {
+          "id": "math",
+          "round": 0,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 15.424244,
+          "firstTokenMs": 7372,
+          "durationMs": 7681,
+          "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown"
+        },
+        {
+          "id": "polish",
+          "round": 0,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 14.526243,
+          "firstTokenMs": 1439,
+          "durationMs": 2462,
+          "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown"
+        },
+        {
+          "id": "decode",
+          "round": 0,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 18.251034,
+          "firstTokenMs": 965,
+          "durationMs": 2772,
+          "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown"
+        },
+        {
+          "id": "math",
+          "round": 1,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 18.962738,
+          "firstTokenMs": 1100,
+          "durationMs": 1351,
+          "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown"
+        },
+        {
+          "id": "polish",
+          "round": 1,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 17.836048,
+          "firstTokenMs": 1424,
+          "durationMs": 2255,
+          "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown"
+        },
+        {
+          "id": "decode",
+          "round": 1,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 18.768656,
+          "firstTokenMs": 898,
+          "durationMs": 2652,
+          "fallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown"
+        }
+      ]
+    },
+    {
+      "model": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
+      "requestedBackend": "CPU",
+      "requestedContext": 2048,
+      "status": "complete",
+      "runtime": "llama.cpp 0.7.0",
+      "initializationMs": 634,
+      "peakAppPssMb": 1747.0068359375,
+      "modelMappingsRetainedAfterClose": false,
+      "samples": [
+        {
+          "id": "math",
+          "round": 0,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 20.271776,
+          "firstTokenMs": 1076,
+          "durationMs": 1346,
+          "fallback": ""
+        },
+        {
+          "id": "polish",
+          "round": 0,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 18.803381,
+          "firstTokenMs": 1398,
+          "durationMs": 2207,
+          "fallback": ""
+        },
+        {
+          "id": "decode",
+          "round": 0,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 17.603165,
+          "firstTokenMs": 925,
+          "durationMs": 2811,
+          "fallback": ""
+        },
+        {
+          "id": "math",
+          "round": 1,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 18.686466,
+          "firstTokenMs": 1089,
+          "durationMs": 1368,
+          "fallback": ""
+        },
+        {
+          "id": "polish",
+          "round": 1,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 18.548985,
+          "firstTokenMs": 1390,
+          "durationMs": 2198,
+          "fallback": ""
+        },
+        {
+          "id": "decode",
+          "round": 1,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 18.719412,
+          "firstTokenMs": 913,
+          "durationMs": 2686,
+          "fallback": ""
+        }
+      ]
+    },
+    {
+      "model": "qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm",
+      "requestedBackend": "GPU",
+      "requestedContext": 1280,
+      "status": "complete",
+      "runtime": "LiteRT-LM 0.18.0",
+      "initializationMs": 8456,
+      "peakAppPssMb": 851.9853515625,
+      "modelMappingsRetainedAfterClose": false,
+      "samples": [
+        {
+          "id": "math",
+          "round": 0,
+          "actualBackend": "GPU",
+          "tokensPerSecond": 25.500916,
+          "firstTokenMs": 624,
+          "durationMs": 1103,
+          "fallback": null
+        },
+        {
+          "id": "polish",
+          "round": 0,
+          "actualBackend": "GPU",
+          "tokensPerSecond": 36.312393,
+          "firstTokenMs": 207,
+          "durationMs": 421,
+          "fallback": null
+        },
+        {
+          "id": "decode",
+          "round": 0,
+          "actualBackend": "GPU",
+          "tokensPerSecond": 42.95629,
+          "firstTokenMs": 182,
+          "durationMs": 825,
+          "fallback": null
+        },
+        {
+          "id": "math",
+          "round": 1,
+          "actualBackend": "GPU",
+          "tokensPerSecond": 41.96657,
+          "firstTokenMs": 219,
+          "durationMs": 680,
+          "fallback": null
+        },
+        {
+          "id": "polish",
+          "round": 1,
+          "actualBackend": "GPU",
+          "tokensPerSecond": 38.635735,
+          "firstTokenMs": 195,
+          "durationMs": 411,
+          "fallback": null
+        },
+        {
+          "id": "decode",
+          "round": 1,
+          "actualBackend": "GPU",
+          "tokensPerSecond": 41.44729,
+          "firstTokenMs": 183,
+          "durationMs": 852,
+          "fallback": null
+        }
+      ]
+    },
+    {
+      "model": "qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm",
+      "requestedBackend": "CPU",
+      "requestedContext": 1280,
+      "status": "complete",
+      "runtime": "LiteRT-LM 0.18.0",
+      "initializationMs": 1342,
+      "peakAppPssMb": 1116.126953125,
+      "modelMappingsRetainedAfterClose": false,
+      "samples": [
+        {
+          "id": "math",
+          "round": 0,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 30.137466,
+          "firstTokenMs": 477,
+          "durationMs": 846,
+          "fallback": null
+        },
+        {
+          "id": "polish",
+          "round": 0,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 37.19758,
+          "firstTokenMs": 263,
+          "durationMs": 546,
+          "fallback": null
+        },
+        {
+          "id": "decode",
+          "round": 0,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 35.246567,
+          "firstTokenMs": 266,
+          "durationMs": 1060,
+          "fallback": null
+        },
+        {
+          "id": "math",
+          "round": 1,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 38.573475,
+          "firstTokenMs": 273,
+          "durationMs": 640,
+          "fallback": null
+        },
+        {
+          "id": "polish",
+          "round": 1,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 44.332287,
+          "firstTokenMs": 286,
+          "durationMs": 511,
+          "fallback": null
+        },
+        {
+          "id": "decode",
+          "round": 1,
+          "actualBackend": "CPU",
+          "tokensPerSecond": 45.372974,
+          "firstTokenMs": 190,
+          "durationMs": 815,
+          "fallback": null
+        }
+      ]
+    }
+  ]
+}

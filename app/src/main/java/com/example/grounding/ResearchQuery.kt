@@ -7,15 +7,15 @@ import java.time.format.DateTimeFormatterBuilder
 import java.util.Locale
 
 /** Small deterministic query plan: no second model, private history or credentials. */
-class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()) {
+class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now(), searchOverride: String? = null) {
     companion object {
         private val stop = ("a an and are as at be been by can could did do does for from give has have how " +
             "i in into is it me of on or please say should tell than that the their there these they this to " +
             "us was were what when where which who why will with would you your won win winner winners " +
             "latest recent recently current currently today yesterday now new news source sources cite " +
-            "verify check fact summarize summary about answer only read find search public topic context " +
+            "verify check fact summarize summary about answer only read find search public topic context require requires required requirement requirements " +
             "ഇന്ന് ഇപ്പോൾ എന്താണ് ആരാണ്").split(' ').toSet()
-        private val wordPattern = Regex("[\\p{L}\\p{M}\\p{N}]{2,}")
+        private val wordPattern = Regex("[\\p{L}\\p{M}][\\p{L}\\p{M}\\p{N}]*|\\p{N}+(?:\\.\\p{N}+)*")
         private val englishWord = Regex("[a-z]{5,}")
         // Mild English inflection matching, without damaging non-Latin words.
         private fun stem(value: String) = if (value.matches(englishWord)) when {
@@ -43,7 +43,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
     private fun has(phrase: String) = Regex("(?<![\\p{L}\\p{M}])${Regex.escape(phrase)}(?![\\p{L}\\p{M}])").containsMatchIn(lower)
     val relative = listOf("latest", "recent", "recently", "current", "currently", "today", "yesterday", "this week", "this month", "now", "who won", "ഇന്ന്", "ഇപ്പോൾ").any(::has)
     val useNews = relative || years.any { it.toInt() >= today.year - 1 }
-    val searchText = (rawTerms + years + if (relative && years.isEmpty()) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
+    val searchText = searchOverride ?: (rawTerms + years + if (relative && years.isEmpty()) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
     val earliest: LocalDate? = when {
         has("today") || has("ഇന്ന്") -> today
         has("yesterday") -> today.minusDays(1)

@@ -1,6 +1,8 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,7 +41,7 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
     selected?.let { source ->
         val uri = LocalUriHandler.current
         AlertDialog(onDismissRequest = { selected = null; onDismiss() }, title = { Text("[${source.id}] ${source.title}") }, text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(source.url.toHttpUrl().host)
                 if (source.updatedAt.isNotBlank()) Text(when (source.dateKind) {
                     "PUBLISHED" -> "Page-reported publication: ${source.updatedAt.take(10)}"
@@ -49,6 +51,7 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
                 })
                 Text("Retrieved ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(source.retrievedAt))}")
                 Text("${if (source.kind == "STRUCTURED_DATA") "Public data response" else "Page text retrieved"}. Check the original source.", style = MaterialTheme.typography.bodySmall)
+                if (source.excerpt.isNotBlank()) Text(source.excerpt, style = MaterialTheme.typography.bodySmall)
             }
         }, confirmButton = { TextButton(onClick = { runCatching { uri.openUri(source.url) } }) { Text("Open source") } },
             dismissButton = { TextButton(onClick = { selected = null; onDismiss() }) { Text("Close") } })

@@ -126,10 +126,10 @@ class ConversationAndGroundingTest {
         repeat(2) { assertEquals("SOURCES_RETRIEVED", coordinator.retrieve("Moon?", true, GroundingMode.ON, SearchProviderId.WEB).status) }
         assertEquals(1, calls); coordinator.clearTemporaryData(); coordinator.retrieve("Moon?", true, GroundingMode.ON, SearchProviderId.WEB); assertEquals(2, calls)
         val (text, cited) = GroundingPolicy.validateCitations("Fact [1] made up [999] [fake](https://bad.invalid) https://bad.invalid", listOf(source))
-        assertTrue(cited); assertFalse(text.contains("999")); assertFalse(text.contains("https://"))
+        assertFalse(cited); assertEquals(GroundingPolicy.unavailableAnswer, text)
         assertFalse(GroundingPolicy.validateCitations("No sources", listOf(source)).second)
         assertFalse(GroundingPolicy.validateCitations("[1](https://invented.invalid)", listOf(source)).second)
-        assertEquals("Fact [1] other ", GroundingPolicy.validateCitations("Fact [1, 99] other [99, 88]", listOf(source)).first)
+        assertFalse(GroundingPolicy.validateCitations("Fact [1, 99] other [99, 88]", listOf(source)).second)
         assertFalse(GroundingPolicy.validateCitations("Made up [99999999, 88]", listOf(source)).second)
         assertEquals("`array[999]` and array[512]", GroundingPolicy.validateCitations("`array[999]` and array[512]", listOf(source)).first)
         val prompt = GroundingPolicy.evidencePrompt("Question", listOf(source), 2000)

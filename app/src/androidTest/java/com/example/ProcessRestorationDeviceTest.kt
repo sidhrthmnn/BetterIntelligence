@@ -35,7 +35,12 @@ class ProcessRestorationDeviceTest {
         check(context.packageName.endsWith(".validation"))
         val repository = AiCoreRepository.getInstance(context)
         val preferences = repository.preferencesRepository
-        val models = withTimeout(300_000) { repository.allModels.first { it.size >= ModelLibrary.read(context).size } }
+        // Persisted catalogue rows can arrive before startup verifies a model
+        // newly staged by the host. Wait for the actual file's installed state.
+        val models = withTimeout(300_000) { repository.allModels.first { rows ->
+            rows.size >= ModelLibrary.read(context).size && (phase == "restore" ||
+                rows.any { it.filename == "smollm2-135m-instruct-q4_k_m.gguf" && it.isInstalled })
+        } }
         val checkpoint = File(context.filesDir, "process-restoration-checkpoint.json")
         val client = "com.example.synthetic.restart"
         if (phase == "prepare") {

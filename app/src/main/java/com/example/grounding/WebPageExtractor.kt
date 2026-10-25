@@ -50,30 +50,62 @@ object WebPageExtractor {
             ?: doc.title()).ifBlank { root.selectFirst("h1")?.text() ?: page.url.toHttpUrl().host }.take(200)
         val body = if (type == "text/plain") page.text else root.text()
         if (blocked.containsMatchIn(title) || (body.length < 1500 && blocked.containsMatchIn(body))) return null
-        val blocks = if (type == "text/plain") page.text.split(Regex("\\n\\s*\\n|\\n")) else root.select("p, h1, h2, h3, h4, li, pre, tr, dd, dt")
-            .filter { node -> node.parents().takeWhile { it != root }.none { it.tagName() in setOf("li", "pre", "tr") } }
-            .map { it.text() }
+        var heading = ""
+        val blocks = if (type == "text/plain") page.text.split(Regex("\\n\\s*\\n|\\n")) else root.select("p, h1, h2, h3, h4, li, pre, table, dd, dt")
+            .filter { node -> node.parents().takeWhile { it != root }.none { it.tagName() in setOf("li", "pre", "table", "p") } }
+            .flatMap { node ->
+                when {
+                    node.tagName().matches(Regex("h[1-4]")) -> { heading = node.text(); emptyList() }
+                    node.tagName() == "table" -> {
+                        val header = node.select("tr").firstOrNull { it.select("th").isNotEmpty() }?.select("th, td")?.joinToString(" | ") { it.text() }.orEmpty()
+                        val caption = node.selectFirst("caption")?.text().orEmpty()
+                        node.select("tr").filter { it.select("td").isNotEmpty() }.take(80).map { row ->
+                            listOf(heading, caption, header, row.select("th, td").joinToString(" | ") { it.text() })
+                                .filter { it.isNotBlank() }.distinct().joinToString("\n")
+                        }
+                    }
+                    else -> listOf(listOf(heading, node.text()).filter { it.isNotBlank() }.distinct().joinToString("\n"))
+                }
+            }
         val clean = blocks.map { it.replace(Regex("[\\t ]+"), " ").trim().take(1800) }
             .filter { it.length >= 12 }.distinct().take(350)
         val usable = clean.ifEmpty { listOf(body.trim().take(2200)) }
-        // Score windows, not isolated sentences; preserve nearby names, negatives,
-        // units and table headers in the same order as the publisher wrote them.
-        val windows = usable.indices.map { start ->
-            val end = minOf(start + 3, usable.size)
-            start until end to query.score(usable.subList(start, end).joinToString(" "))
-        }.sortedWith(compareByDescending<Pair<IntRange, Int>> { it.second }.thenBy { it.first.first })
-        val selected = sortedSetOf<Int>()
-        var size = 0
-        for ((window, _) in windows) {
-            val extra = window.filter { it !in selected }
-            val bytes = extra.sumOf { usable[it].length + 1 }
-            if (selected.isNotEmpty() && (size + bytes > 2200 || selected.size + extra.size > 8)) continue
-            selected.addAll(extra); size += bytes
-            if (selected.size >= 7 || size >= 1800) break
-        }
-        val text = (dateLines + selected.map { usable[it] }).distinct().joinToString("\n").take(minOf(2200, snippetLimit)).trim()
+        val text = focused(usable, dateLines, question, minOf(2200, snippetLimit)).trim()
         if (text.length < 80) return null
         return EvidenceSource(id, title, HtmlDiscovery.canonicalUrl(page.url), text, System.currentTimeMillis(), date.first, "WEB_PAGE", date.second)
+    }
+
+    /** Re-focus a cached excerpt when shrinking it for a small model context.
+     * Never add inferred facts or silently drop a table's header/unit. */
+    fun focusExcerpt(text: String, question: String, budget: Int): String = focused(
+        text.split(Regex("\\n\\s*\\n")).let { blocks -> if (blocks.size > 1) blocks else text.lines().chunked(2).map { it.joinToString("\n") } },
+        text.lines().filter { it.length <= 220 && visibleDate.containsMatchIn(it) }.take(2), question, budget)
+
+    private fun focused(blocks: List<String>, dates: List<String>, question: String, budget: Int): String {
+        val plan = ResearchPlanner.plan(question)
+        val query = ResearchQuery(question)
+        val candidates = blocks.filter { it.isNotBlank() }.distinct().take(350)
+        val selected = sortedSetOf<Int>()
+        val covered = mutableSetOf<Int>()
+        val subjects = mutableSetOf<Int>()
+        fun mentioned(text: String): Set<Int> {
+            val words = ResearchQuery.words(text)
+            return plan.entities.indices.filter { index -> ResearchQuery.words(plan.entities[index]).all { it in words } }.toSet()
+        }
+        var size = dates.joinToString("\n").length
+        val remaining = candidates.indices.toMutableSet()
+        while (remaining.isNotEmpty() && selected.size < 7) {
+            val index = remaining.maxBy { i -> query.score(candidates[i]) + (plan.coverage(candidates[i]) - covered).size * 15 +
+                mentioned(candidates[i]).size * 6 + (mentioned(candidates[i]) - subjects).size * 20 }
+            remaining.remove(index)
+            val block = candidates[index]
+            if (size + block.length + 2 > budget && selected.isNotEmpty()) continue
+            selected += index; covered += plan.coverage(block); subjects += mentioned(block); size += block.length + 2
+            // Nearby blocks preserve subject/pronoun qualifications. Only add
+            // a neighbour after covering the requested facets where possible.
+            if (covered.size == plan.focuses.size && selected.size >= 3 && subjects.size == plan.entities.size) break
+        }
+        return (dates + selected.map { candidates[it] }).distinct().joinToString("\n\n").take(budget)
     }
 
     /** At most one useful same-origin child may be followed by the caller. */

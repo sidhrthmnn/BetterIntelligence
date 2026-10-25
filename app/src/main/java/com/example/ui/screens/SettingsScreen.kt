@@ -111,7 +111,7 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
                 Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Search sends terms from your current question to DuckDuckGo's public HTML page, then reads public websites directly. Those sites receive ordinary connection information, including your IP address. Chat history, saved memories and connected-app requests are not sent. Do not include passwords or sensitive information in a web-enabled question.")
+            Text("Research may send up to three focused searches derived from your current question to DuckDuckGo's public HTML page, then reads public websites directly. A follow-up can include an already retrieved public source title. Those sites receive ordinary connection information, including your IP address. Private chat history, saved memories and connected-app requests are not sent. Do not include passwords or sensitive information in a web-enabled question.")
         }
         item {
             Text("Default behaviour for new conversations", style = MaterialTheme.typography.titleMedium)

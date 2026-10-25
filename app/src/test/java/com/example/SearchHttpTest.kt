@@ -17,6 +17,25 @@ import kotlin.concurrent.thread
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SearchHttpTest {
+    @Test fun sessionBudgetIncludesRedirectRequestsAndFailsBeforeSendingTheNextOne() = runBlocking {
+        ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
+            val responder = thread(isDaemon = true) {
+                server.accept().use { socket ->
+                    val input = socket.getInputStream().bufferedReader()
+                    while (!input.readLine().isNullOrEmpty()) { }
+                    socket.getOutputStream().write("HTTP/1.1 302 Found\r\nLocation: /second\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray())
+                }
+            }
+            var calls = 0
+            val transport = SearchHttp(okhttp3.OkHttpClient.Builder().followRedirects(false).build(), true, onRequest = { calls++ }).session(1)
+            val result = runCatching { transport.fetch("http://localhost:${server.localPort}/first") }
+            assertEquals("Research request budget exhausted", result.exceptionOrNull()?.message)
+            assertEquals(1, calls)
+            server.soTimeout = 200
+            assertTrue(runCatching { server.accept().close() }.isFailure)
+            responder.join(3000)
+        }
+    }
     @Test fun redirectPolicyIsCheckedBeforeTheTargetReceivesAnyRequest() = runBlocking {
         ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
             val responder = thread(isDaemon = true) {

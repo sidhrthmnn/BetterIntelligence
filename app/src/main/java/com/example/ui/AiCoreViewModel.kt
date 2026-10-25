@@ -858,14 +858,14 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 var researchQuestion = com.example.grounding.ConversationalResearch.question(text, previous)
                 if (previous.lastOrNull()?.content == com.example.grounding.ConversationalResearch.askCity &&
                     Regex("^[\\p{L} ,.'-]{2,70}$").matches(text)) researchQuestion = "Weather in $text today"
-                evidence = grounding.retrieve(researchQuestion, allowed, mode, SearchProviderId.WEB)
+                evidence = grounding.retrieve(researchQuestion, allowed, mode, SearchProviderId.WEB) { stage -> _chatStatus.value = stage.label }
                 if (evidence.status == "NEEDS_LOCATION") {
                     result = evidence.notice
                     return@launch
                 }
                 if (evidence.status == "SEARCH_FAILED") {
                     evidence = evidence.copy(status = "INSUFFICIENT_EVIDENCE")
-                    result = GroundingPolicy.unavailableAnswer
+                    result = evidence.notice.ifBlank { GroundingPolicy.unavailableAnswer }
                     return@launch // finally persists an honest response; never ask the model to guess live facts.
                 }
                 _chatStatus.value = if (evidence.sources.isNotEmpty()) "Checking sources" else "Preparing answer"
@@ -881,7 +881,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val system = baseSystem + localMemory + if (summary.isNotBlank())
                     "\nOlder context from this chat only. Quoted user statements are context; labelled assistant proposals are unverified. Newer messages override:\n$summary\n" else ""
                 val promptBudget = ((effectiveContext - params.maxTokens - 96) * 2 - system.toByteArray(Charsets.UTF_8).size).coerceAtLeast(0)
-                val prepared = GroundingPolicy.prepareEvidence(text, evidence.sources, promptBudget)
+                val prepared = GroundingPolicy.prepareEvidence(text, evidence.sources, promptBudget,
+                    effectiveContext - params.maxTokens - 96 - repository.engine.contextTokenCount(system), repository.engine::contextTokenCount)
                 evidence = evidence.copy(sources = prepared.sources)
                 val prompt = prepared.prompt
                 val history = ConversationContext.history(previous.map { ChatTurn(it.role, it.content) }, prompt, system, effectiveContext, params.maxTokens,
