@@ -1,0 +1,189 @@
+{
+  "phase": "corrected-passage-and-clock-validation",
+  "device": "VKP-NX9",
+  "sdk": 36,
+  "model": "Qwen 3 1.7B Q4_K_M",
+  "contextTokens": 2048,
+  "cpuThreads": 4,
+  "maxOutputTokens": 180,
+  "temperature": 0,
+  "nativeReleased": true,
+  "results": [
+    {
+      "case": 1,
+      "pipeline": "beta5",
+      "retrievalMs": 1660,
+      "inferenceMs": 20779,
+      "httpRequests": 2,
+      "sourceCount": 1,
+      "sourceUrls": [
+        "https://source.android.com/docs/security/bulletin/2026/2026-10-01?hl=en"
+      ],
+      "citationsAccepted": true,
+      "exactReferenceMatch": true,
+      "answer": "The October 2026 Android Security Bulletin was published on October 5, 2026, and updated on October 8, 2026. [1]",
+      "ttftMs": 18105,
+      "tokensPerSecond": 15.371784210205078,
+      "peakAppPssMb": 1620.185546875
+    },
+    {
+      "case": 1,
+      "pipeline": "research22",
+      "retrievalMs": 1898,
+      "inferenceMs": 17337,
+      "httpRequests": 2,
+      "sourceCount": 1,
+      "sourceUrls": [
+        "https://source.android.com/docs/security/bulletin/2026/2026-10-01?hl=en"
+      ],
+      "citationsAccepted": true,
+      "exactReferenceMatch": true,
+      "answer": "The Android Security Bulletin for October 2026 was published on October 5, 2026, and updated on October 8, 2026. [1]",
+      "ttftMs": 14629,
+      "tokensPerSecond": 15.534469604492188,
+      "peakAppPssMb": 1598.0927734375
+    },
+    {
+      "case": 2,
+      "pipeline": "beta5",
+      "retrievalMs": 274,
+      "inferenceMs": 15597,
+      "httpRequests": 2,
+      "sourceCount": 1,
+      "sourceUrls": [
+        "https://www.iana.org/help/example-domains"
+      ],
+      "citationsAccepted": true,
+      "exactReferenceMatch": true,
+      "answer": "The IANA example domains such as example.com and example.org are not available for registration or transfer [1].",
+      "ttftMs": 13987,
+      "tokensPerSecond": 14.864161491394043,
+      "peakAppPssMb": 1612.5029296875
+    },
+    {
+      "case": 2,
+      "pipeline": "research22",
+      "retrievalMs": 361,
+      "inferenceMs": 16288,
+      "httpRequests": 2,
+      "sourceCount": 1,
+      "sourceUrls": [
+        "https://www.iana.org/help/example-domains"
+      ],
+      "citationsAccepted": true,
+      "exactReferenceMatch": true,
+      "answer": "The IANA example domains such as example.com and example.org are not available for registration or transfer [1].",
+      "ttftMs": 14727,
+      "tokensPerSecond": 15.318777084350586,
+      "peakAppPssMb": 1575.328125
+    },
+    {
+      "case": 3,
+      "pipeline": "beta5",
+      "retrievalMs": 1606,
+      "inferenceMs": 19953,
+      "httpRequests": 2,
+      "sourceCount": 1,
+      "sourceUrls": [
+        "https://developer.android.com/ndk/guides/graphics/getting-started"
+      ],
+      "citationsAccepted": true,
+      "exactReferenceMatch": true,
+      "answer": "The Vulkan guide requires Android 7.0 (API level 24) or higher [1].",
+      "ttftMs": 18477,
+      "tokensPerSecond": 15.587793350219727,
+      "peakAppPssMb": 1603.5849609375
+    },
+    {
+      "case": 3,
+      "pipeline": "research22",
+      "retrievalMs": 1520,
+      "inferenceMs": 19055,
+      "httpRequests": 2,
+      "sourceCount": 1,
+      "sourceUrls": [
+        "https://developer.android.com/ndk/guides/graphics/getting-started"
+      ],
+      "citationsAccepted": true,
+      "exactReferenceMatch": true,
+      "answer": "The Vulkan guide requires Android 7.0 (Nougat), API level 24 or higher [1].",
+      "ttftMs": 17388,
+      "tokensPerSecond": 15.60105037689209,
+      "peakAppPssMb": 1607.0361328125
+    },
+    {
+      "case": 4,
+      "pipeline": "beta5",
+      "retrievalMs": 3284,
+      "inferenceMs": 26388,
+      "httpRequests": 10,
+      "sourceCount": 2,
+      "sourceUrls": [
+        "https://developer.android.com/games/develop/vulkan/overview",
+        "https://docs.vulkan.org/tutorial/latest/14_Android.html"
+      ],
+      "citationsAccepted": true,
+      "exactReferenceMatch": null,
+      "answer": null,
+      "ttftMs": 20959,
+      "tokensPerSecond": 14.18913459777832,
+      "peakAppPssMb": 1606.5966796875
+    },
+    {
+      "case": 4,
+      "pipeline": "research22",
+      "retrievalMs": 6412,
+      "inferenceMs": 24406,
+      "httpRequests": 14,
+      "sourceCount": 2,
+      "sourceUrls": [
+        "https://android.googlesource.com/platform/frameworks/native/+/main/vulkan/",
+        "https://docs.vulkan.org/tutorial/latest/14_Android.html"
+      ],
+      "citationsAccepted": true,
+      "exactReferenceMatch": null,
+      "answer": null,
+      "ttftMs": 20038,
+      "tokensPerSecond": 15.471479415893555,
+      "peakAppPssMb": 1608.5859375
+    },
+    {
+      "case": 5,
+      "pipeline": "beta5",
+      "retrievalMs": 5064,
+      "inferenceMs": 36867,
+      "httpRequests": 18,
+      "sourceCount": 3,
+      "sourceUrls": [
+        "https://edgeaistack.ai/blog/edge-llm-runtime-stack-2026/",
+        "https://llamadart.leehack.com/docs/guides/backend-selection",
+        "https://aiindigo.com/compare/litert-lm-vs-llama-cpp"
+      ],
+      "citationsAccepted": false,
+      "exactReferenceMatch": null,
+      "answer": null,
+      "ttftMs": 26086,
+      "tokensPerSecond": 14.649080276489258,
+      "peakAppPssMb": 1606.4609375
+    },
+    {
+      "case": 5,
+      "pipeline": "research22",
+      "retrievalMs": 12630,
+      "inferenceMs": 40835,
+      "httpRequests": 12,
+      "sourceCount": 3,
+      "sourceUrls": [
+        "https://llamadart.leehack.com/docs/guides/backend-selection",
+        "https://developer.android.com/agents/skills/device-ai/litert/litert-lm/skill",
+        "https://www.skills.sh/android/skills/litert-runtime"
+      ],
+      "citationsAccepted": false,
+      "exactReferenceMatch": null,
+      "answer": null,
+      "ttftMs": 27039,
+      "tokensPerSecond": 13.43156909942627,
+      "peakAppPssMb": 1606.0595703125
+    }
+  ]
+}

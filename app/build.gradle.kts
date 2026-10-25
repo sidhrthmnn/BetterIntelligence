@@ -20,8 +20,8 @@ android {
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
     targetSdk = 36
-    versionCode = 10
-    versionName = "2.1.0-beta5"
+    versionCode = 11
+    versionName = "2.2.0-beta1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders["localAiExported"] = "true"
@@ -72,6 +72,9 @@ android {
     resValues = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
+  // One frozen, test-only beta5 retrieval snapshot supports both JVM corpus
+  // comparisons and opt-in real-device before/after probes; never ships in app.
+  sourceSets.getByName("androidTest").kotlin.directories += "src/test/java/com/example/researchbaseline"
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true

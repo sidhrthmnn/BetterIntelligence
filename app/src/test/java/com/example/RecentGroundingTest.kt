@@ -111,7 +111,7 @@ class RecentGroundingTest {
         assertTrue(prepared.prompt.contains("Example Person"))
         assertTrue(prepared.sources.size < 3)
         assertTrue(prepared.prompt.contains("do not guess"))
-        assertTrue(prepared.prompt.contains("As of"))
+        assertFalse(prepared.prompt.contains("As of")) // Static requested year isn't the current date.
         val unicode = GroundingPolicy.evidencePrompt("ചന്ദ്രൻ?", listOf(sources.first().copy(excerpt = "ചന്ദ്രൻ ".repeat(100))), 1400)
         assertFalse(unicode.contains('\uFFFD'))
     }

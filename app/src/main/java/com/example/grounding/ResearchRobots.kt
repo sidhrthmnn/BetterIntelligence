@@ -12,7 +12,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 class ResearchRobots(private val fetcher: WebFetcher) {
     private val cache = LinkedHashMap<String, Pair<Long, String?>>()
     private val locks = LinkedHashMap<String, Mutex>()
-    suspend fun allowed(url: String): Boolean {
+    suspend fun allowed(url: String): Boolean = allowed(url, fetcher)
+    suspend fun allowed(url: String, transport: WebFetcher): Boolean {
         val parsed = url.toHttpUrl()
         val origin = "https://${parsed.host}"
         val lock = synchronized(locks) {
@@ -22,7 +23,7 @@ class ResearchRobots(private val fetcher: WebFetcher) {
             val entry = synchronized(cache) { cache[origin]?.takeIf { System.currentTimeMillis() - it.first < if (it.second == null) 60_000 else 3_600_000 } }
             if (entry != null) return@withLock entry.second
             val text = withTimeoutOrNull(3_000) { try {
-                val page = fetcher.fetch("$origin/robots.txt")
+                val page = transport.fetch("$origin/robots.txt")
                 // A CAPTCHA/HTML error page is not an empty robots policy.
                 if (page.text.trimStart().startsWith('<')) null else page.text.take(64_000)
             }

@@ -1,6 +1,6 @@
 # Better Intelligence privacy policy
 
-Updated 24 October 2026 for version 2.1 closed beta.
+Updated 25 October 2026 for version 2.2 closed beta.
 
 Developer: HaveAnIdea. Contact: siddharthpazhoor@gmail.com. Android package: com.aistudio.betterintelligence.mobile.
 
@@ -20,7 +20,7 @@ For contextual web follow-ups, a title from an already retrieved public source i
 
 An internet connection is used when you discover or download models from Hugging Face and its download infrastructure. These services receive the network information needed to handle your request, including your IP address and the requested model. Model terms are linked before use where required.
 
-Web research is optional and **off by default**. When enabled, the app can send search terms derived from your current question (up to 400 characters, including a year for relative-date questions) to DuckDuckGo's public HTML search page over HTTPS. It may make one broader date-filter retry if no relevant links are found. BI parses links itself and reads up to eight publisher pages directly, retaining up to three relevant sources. A supplied public HTTPS page is read without sending the question to a search engine; BI may follow one relevant same-origin article link from each supplied landing page. Your full conversation history, saved memories, other drafts and connected-app text are not sent for research. Inference, passage extraction, relevance ranking and answer generation run locally.
+Web research is optional and **off by default**. When enabled, the app can make up to three focused searches derived from your current question (up to 400 characters per query, including a year for relative-date questions) to DuckDuckGo's public HTML search page over HTTPS. This total includes any broader date-filter retry for empty results. BI parses links itself and reads up to eight publisher pages directly, retaining up to three relevant sources. It may follow one relevant same-origin article link per research request. A supplied public HTTPS page is read without sending the question to a search engine. All production HTTP calls, including policy reads and redirects, share a limit of 24 requests per research operation, and the chat coordinator applies a 30-second deadline. Your full conversation history, saved memories, other drafts and connected-app text are not sent for research. Inference, passage extraction, relevance ranking and answer generation run locally.
 
 Search services and visited websites receive the information required to serve the request, including your IP address and requested URL. They may infer an approximate location from network information; their own privacy and retention policies apply. Better Intelligence uses no search/grounding/weather API, API key, sign-in, advertising ID, persistent web cookies or developer-operated search proxy. It checks robots policies, including before redirect targets are read, and does not bypass sign-in, paywalls or CAPTCHA. [DuckDuckGo privacy policy](https://duckduckgo.com/privacy).
 

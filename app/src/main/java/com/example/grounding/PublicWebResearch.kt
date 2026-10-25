@@ -38,6 +38,7 @@ object PublicWebDns : Dns {
 data class WebDocument(val url: String, val text: String, val contentType: String, val robotsTag: String = "")
 fun interface WebFetcher {
     suspend fun fetch(url: String): WebDocument
+    fun session(maxRequests: Int): WebFetcher = this
     // Production transport invokes the guard BEFORE every redirect target is read.
     suspend fun fetchPage(url: String, permitted: suspend (String) -> Boolean): WebDocument {
         check(permitted(url)) { "Publisher does not permit this read" }
@@ -48,7 +49,7 @@ fun interface WebFetcher {
 /** Bounded public-page research, implemented locally. No search/grounding APIs,
  * proxy, account, scripts, cookies, forms, sign-in or background crawling.
  */
-class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp()) : SearchProvider {
+class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private val discoveryOverride: DiscoveryProvider? = null) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
     companion object {
         fun candidates(html: String): List<String> = HtmlDiscovery.links(WebDocument(
@@ -56,71 +57,103 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp()) : Search
         fun article(page: WebDocument, id: Int, question: String): EvidenceSource? = WebPageExtractor.article(page, id, question)
     }
 
-    override suspend fun search(question: String): List<EvidenceSource> = withContext(Dispatchers.IO) {
+    override suspend fun search(question: String): List<EvidenceSource> = research(question) {}.sources
+
+    override suspend fun research(question: String, progress: (ResearchStage) -> Unit): ResearchOutcome = withContext(Dispatchers.IO) {
+        progress(ResearchStage.UNDERSTANDING)
         require(!GroundingPolicy.containsCredential(question)) { "Do not search for credentials" }
-        val supplied = Regex("https?://[^\\s<>]+").findAll(question)
-            .map { it.value.trimEnd('.', ',', ')', ']') }.toList()
-        // Never turn a rejected private/local URL into a public search query.
-        require(supplied.all(GroundingPolicy::publicHttpsUrl)) { "Use a public HTTPS link" }
-        val explicit = supplied.distinct().take(3)
+        val plan = ResearchPlanner.plan(question)
+        val transport = fetcher.session(24)
+        val permitted: suspend (String) -> Boolean = { robots.allowed(it, transport) }
+        val explicit = plan.explicitUrls
         val query = ResearchQuery(question)
-        suspend fun discover(broad: Boolean): List<ResearchCandidate>? = withTimeoutOrNull(7_000) {
-            try {
-                val page = fetcher.fetchPage(HtmlDiscovery.searchUrl(query, broad), robots::allowed)
-                if (HtmlDiscovery.blocked(page)) return@withTimeoutOrNull null
-                HtmlDiscovery.links(page)
-                    .filter { query.candidateRelevant(it.title) && !query.isPrediction(it.title) }
-                    .sortedByDescending { query.score(it.title) * 10 + primaryScore(it.url) }
-            } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
+        val discovery = discoveryOverride ?: HtmlSearchDiscovery(transport, permitted)
+        var discoveryFailed = false
+        var blocked = false
+        var discoveryTimedOut = false
+        val readTimeouts = java.util.concurrent.atomic.AtomicInteger()
+        val failedReads = java.util.concurrent.atomic.AtomicInteger()
+        suspend fun discover(search: String, broad: Boolean): List<ResearchCandidate>? {
+            val result = withTimeoutOrNull(5_000) {
+                try { discovery.discover(ResearchQuery(question, searchOverride = search), broad) }
+                catch (e: CancellationException) { throw e }
+                catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
+            } ?: run { discoveryTimedOut = true; return null }
+            if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
+                discoveryFailed = true; blocked = true; return null
+            }
+            return result.candidates.filter { query.candidateRelevant(it.title) && !query.isPrediction(it.title) }
         }
 
         val links = if (explicit.isNotEmpty()) explicit.map { ResearchCandidate(it, "") } else {
-            val narrow = discover(false)
-            // At most one broader retry if the date-filtered public page found
-            // no candidates. Never retry or bypass a CAPTCHA/blocked interface.
-            if (narrow != null && narrow.isEmpty() && query.freshnessFilter != null) discover(true).orEmpty() else narrow.orEmpty()
+            progress(ResearchStage.SEARCHING)
+            val candidates = mutableListOf<ResearchCandidate>()
+            // At most three discovery pages in total, including reformulation.
+            // Sequential discovery stops immediately on a challenge/denial.
+            var searches = 0
+            for (search in plan.searches) {
+                val result = discover(search, false); searches++
+                candidates += result.orEmpty()
+                if (result == null || blocked) break
+            }
+            if (candidates.isEmpty() && !blocked && !discoveryFailed && searches < 3) {
+                val reformulated = if (query.freshnessFilter != null) plan.searches.first()
+                    else "${plan.searches.first()} documentation"
+                candidates += discover(reformulated, query.freshnessFilter != null).orEmpty()
+            }
+            candidates
         }
         val seen = mutableSetOf<String>()
         val domains = mutableMapOf<String, Int>()
-        val ordered = links.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }
+        val unique = links.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }
+        val ordered = unique
             .sortedWith(compareBy<ResearchCandidate> { candidate ->
                 // Prefer the first result from each publisher before a second.
-                links.indexOfFirst { domain(it.url) == domain(candidate.url) } != links.indexOf(candidate)
-            }.thenByDescending { query.score(it.title) * 10 + primaryScore(it.url) })
+                unique.indexOfFirst { domain(it.url) == domain(candidate.url) } != unique.indexOf(candidate)
+            }.thenByDescending { plan.coverage(it.title).size * 15 + query.score(it.title) })
             .filter { domains.merge(domain(it.url), 1, Int::plus)!! <= 2 }.take(8)
         val reads = Semaphore(2)
+        val childReads = java.util.concurrent.atomic.AtomicInteger(1)
         val sources = mutableListOf<EvidenceSource>()
+        if (ordered.isNotEmpty()) progress(ResearchStage.READING)
         // Read in waves: stop after enough evidence instead of fetching every result.
         for (wave in ordered.chunked(4)) {
             val fetched = wave.map { candidate -> async {
                 reads.withPermit {
-                    withTimeoutOrNull(9_000) {
+                    var finished = false
+                    val result = withTimeoutOrNull(7_000) {
                         try {
-                            val page = fetcher.fetchPage(candidate.url, robots::allowed)
+                            val page = transport.fetchPage(candidate.url, permitted)
                             val source = article(page, 0, question)
-                            fun acceptable(value: EvidenceSource) = (explicit.isNotEmpty() || query.relevant(value.title + " " + value.excerpt)) && query.currentEnough(value.updatedAt)
+                            fun acceptable(value: EvidenceSource) = EvidenceRanking.acceptable(value, plan)
                             if (source != null && acceptable(source)) source
-                            else if (explicit.isNotEmpty()) {
+                            else if ((explicit.isNotEmpty() || source == null) && childReads.getAndDecrement() > 0) {
                                 // A supplied landing page may link to the actual article.
                                 val child = WebPageExtractor.relevantLinks(page, question).firstOrNull()
-                                child?.let { article(fetcher.fetchPage(it.url, robots::allowed), 0, question)?.takeIf(::acceptable) }
+                                child?.let { article(transport.fetchPage(it.url, permitted), 0, question)?.takeIf(::acceptable) }
                             } else null
-                        } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
+                        } catch (e: CancellationException) { throw e } catch (_: Exception) { failedReads.incrementAndGet(); null }
+                        .also { finished = true }
                     }
+                    if (!finished) readTimeouts.incrementAndGet()
+                    result
                 }
             } }.awaitAll().filterNotNull()
             fetched.forEach { if (seen.add(it.url)) sources += it }
-            if (sources.size >= 3) break
+            val selected = EvidenceRanking.select(sources, plan)
+            val covered = selected.flatMap { plan.coverage(it.excerpt) }.toSet()
+            if (selected.size >= 3 && covered.size == plan.focuses.size) break
         }
-        sources.distinctBy { it.excerpt.lowercase().replace(Regex("\\W+"), " ").take(300) }
-            .sortedWith(compareByDescending<EvidenceSource> { query.score(it.title + " " + it.excerpt) * 10 + primaryScore(it.url) }
-                .thenByDescending { ResearchQuery.date(it.updatedAt) ?: java.time.LocalDate.MIN })
-            .take(3).mapIndexed { index, source -> source.copy(id = index + 1) }
+        progress(ResearchStage.COMPARING)
+        val selected = EvidenceRanking.select(sources, plan)
+        ResearchOutcome(selected, when {
+            selected.isNotEmpty() -> null
+            discoveryTimedOut || readTimeouts.get() > 0 -> ResearchFailure.TIMEOUT
+            ordered.isEmpty() && discoveryFailed -> ResearchFailure.DISCOVERY_UNAVAILABLE
+            ordered.isNotEmpty() && failedReads.get() >= ordered.size -> ResearchFailure.INACCESSIBLE
+            else -> ResearchFailure.INSUFFICIENT
+        }, EvidenceRanking.conflicts(selected))
     }
 
     private fun domain(url: String): String = url.toHttpUrl().topPrivateDomain() ?: url.toHttpUrl().host
-    private fun primaryScore(url: String): Int {
-        val host = url.toHttpUrl().host
-        return if (host.endsWith(".gov") || host.endsWith(".gov.uk") || host.endsWith(".edu") || host.endsWith(".ac.uk")) 2 else 0
-    }
 }
