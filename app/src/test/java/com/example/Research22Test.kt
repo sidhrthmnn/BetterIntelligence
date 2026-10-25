@@ -201,4 +201,41 @@ class Research22Test {
         assertEquals(ModelTierRole.SECONDARY_FALLBACK, decisionLow.role)
         assertEquals(secondary.id, decisionLow.model?.id)
     }
+    @Test fun incumbentOfficeholderQueriesExpandAbbreviationsAndPrioritizeCurrentOverDeceased() {
+        val question = "Who is the CM OF kerala"
+        val query = ResearchQuery(question)
+        assertTrue(query.searchText.contains("chief minister"))
+        assertTrue(ResearchQuery.isCurrentIncumbentQuery(question))
+        val html = """
+            <title>List of all Chief Ministers of Kerala (1957-2026)</title>
+            <article>
+                <h1>Chief Ministers of Kerala (1957-2026)</h1>
+                <p>3- Oommen Chandy, who served a total of 6 years and 253 days as the 10th Chief Minister of Kerala passed away on 18 July, 2023. Apart from being the CM of Kerala twice, Oommen Chandy served as Leader of the Opposition.</p>
+                <table>
+                    <tr><td>S.No.</td><td>Chief Minister</td><td>Tenure</td><td>Party</td></tr>
+                    <tr><td>10</td><td>Oommen Chandy</td><td>2011 - 2016</td><td>INC</td></tr>
+                    <tr><td>12</td><td>Pinarayi Vijayan</td><td>25 May 2016 - Incumbent (Present)</td><td>CPI(M)</td></tr>
+                </table>
+                <p>Pinarayi Vijayan is the current Chief Minister of Kerala, serving in office since May 2016.</p>
+            </article>
+        """.trimIndent()
+        val source = WebPageExtractor.article(WebDocument("https://publisher.example/kerala-cm", html, "text/html"), 1, question)!!
+        assertTrue(source.excerpt.contains("Pinarayi Vijayan"))
+        assertTrue(source.excerpt.indexOf("Pinarayi Vijayan") < (source.excerpt.indexOf("Oommen Chandy").takeIf { it >= 0 } ?: Int.MAX_VALUE))
+        assertTrue(EvidenceRanking.acceptable(source, ResearchPlanner.plan(question)))
+    }
+    @Test fun recheckFollowUpUsesCleanedPublicSourceTopicAndTriggersAutoSearch() {
+        val source = EvidenceSource(1, "List of all Chief Ministers of Kerala (1957-2026)", "https://publisher.example/kerala-cm", "Pinarayi Vijayan is the current Chief Minister of Kerala.", 1)
+        val history = listOf(
+            ChatMessageEntity(role = "user", content = "Who is the CM OF kerala"),
+            ChatMessageEntity(role = "assistant", content = "Earlier reply", sourcesJson = GroundingResult(sources = listOf(source)).json())
+        )
+        val resolved = ConversationalResearch.question("check again", history)
+        assertTrue(resolved.contains("Chief Ministers of Kerala"))
+        assertFalse(resolved.contains("1957-2026"))
+        assertTrue(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, resolved))
+        val query = ResearchQuery(resolved)
+        assertTrue(query.years.isEmpty())
+        assertTrue(query.relevant("Pinarayi Vijayan is the current Chief Minister of Kerala."))
+    }
 }

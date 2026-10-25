@@ -15,7 +15,12 @@ object EvidenceRanking {
             Regex("(?i)\\b(documentation|reference|release notes|security bulletin|research paper|abstract|doi|authors?)\\b").containsMatchIn(text) -> 3
             else -> 0
         }
-        return q.score(text) + entityCoverage * 8 + plan.coverage(text).size * 5 + provenance +
+        val incumbentBonus = if (ResearchQuery.isCurrentIncumbentQuery(plan.question)) {
+            val hasPresent = Regex("(?i)\\b(incumbent|present(?!\\s*-\\s*day)|till\\s+date|to\\s+date|current(?!\\s+(?:affairs|gk|general\\s+knowledge))|currently|assumed\\s+office|serving\\s+since|in\\s+office|is\\s+the\\s+(?:current\\s+|present\\s+|\\d+(?:st|nd|rd|th)\\s+and\\s+current\\s+)?(?:chief\\s+minister|prime\\s+minister|president|governor|mayor|ceo|cm|pm))\\b").containsMatchIn(text)
+            val hasPastOnly = !hasPresent && Regex("(?i)\\b(passed\\s+away|died|former|was\\s+the\\s+\\d+(?:st|nd|rd|th)?)\\b").containsMatchIn(text)
+            if (hasPresent) 15 else if (hasPastOnly) -10 else 0
+        } else 0
+        return q.score(text) + entityCoverage * 8 + plan.coverage(text).size * 5 + provenance + incumbentBonus +
             minOf(4, source.excerpt.length / 300)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {

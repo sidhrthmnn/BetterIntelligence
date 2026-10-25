@@ -71,13 +71,23 @@ object ResearchPlanner {
             .findAll(text).flatMap { sequenceOf(it.groupValues[1], it.groupValues[2]) }
         val versions = Regex("\\b[\\p{L}][\\p{L}\\p{N}-]{1,25}\\s+\\d+(?:\\.\\d+)*(?:\\s+[A-Z]\\d+[A-Z]?)?\\b").findAll(text).map { it.value }
         val names = Regex("\\b[A-Z][\\p{L}\\p{N}-]+(?:\\s+[A-Z][\\p{L}\\p{N}-]+){0,3}\\b").findAll(text).map { it.value }
-            .map { it.replace(Regex("^(?:Compare|Explain|What|When|Which|Is|Does|How|Why|Tell|Read)\\s+"), "") }
-            .filter { it.lowercase() !in setOf("is", "are", "when", "what", "who", "where", "how", "why", "compare", "explain", "does", "can", "tell", "read", "which") }
-        val locations = Regex("\\b(?:in|near|for)\\s+([A-Z][\\p{L}]+(?:[, ]+[A-Z][\\p{L}]+){0,2})").findAll(text).map { it.groupValues[1] }
+            .map { it.replace(Regex("(?i)^(?:Compare|Explain|What|When|Which|Who|Where|Is|Are|Does|Do|How|Why|Tell|Read|Current|Check|Verify)\\s+"), "") }
+            .map { candidate ->
+                candidate.split(Regex("\\s+"))
+                    .filter { token -> token.lowercase() !in setOf("of", "the", "in", "for", "to", "on", "at", "by", "with", "from", "is", "are", "who", "what", "where", "when", "why", "how", "cm", "pm", "ceo", "current", "incumbent", "list", "all") }
+                    .joinToString(" ")
+            }
+            .filter { it.length >= 2 && it.lowercase() !in setOf("is", "are", "when", "what", "who", "where", "how", "why", "compare", "explain", "does", "can", "tell", "read", "which", "public", "source", "topic") }
+        val locations = Regex("\\b(?:in|near|for|of)\\s+([A-Z][\\p{L}]+(?:[, ]+[A-Z][\\p{L}]+){0,2})").findAll(text).map { it.groupValues[1] }
+        val officeLocations = if (ResearchQuery.isCurrentIncumbentQuery(text)) {
+            Regex("(?i)\\b(?:of|in|for)\\s+([\\p{L}][\\p{L}\\p{N}-]{2,}(?:\\s+[\\p{L}][\\p{L}\\p{N}-]{2,}){0,2})").findAll(text.substringBefore("(Public source topic:"))
+                .map { it.groupValues[1].trim() }
+                .filter { it.lowercase() !in setOf("the", "india", "this", "that") || text.lowercase().endsWith(it.lowercase()) }
+        } else emptySequence()
         val pairs = (compared + andCompared).toList()
         // With explicit comparison subjects, generic platform names such as
         // "Android AI" must not qualify an unrelated third runtime's section.
-        val extras = if (pairs.size >= 2) emptySequence() else names + locations
+        val extras = if (pairs.size >= 2) emptySequence() else names + locations + officeLocations
         val all = (quoted + pairs.asSequence() + versions + extras).distinct().toList()
         return all.filter { candidate -> all.none { it != candidate && it.contains(candidate) } }.take(6)
     }

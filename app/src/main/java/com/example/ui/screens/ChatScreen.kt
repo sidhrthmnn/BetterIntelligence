@@ -70,20 +70,25 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).heightIn(max = 36.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) {
+            TextButton(
+                onClick = { viewModel.selectTab(AppTab.MODELS) },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                modifier = Modifier.weight(1f, fill = false).heightIn(max = 34.dp)
+            ) {
                 Text(
                     model?.let { selected ->
                         listOfNotNull(ModelLibrary.categoryLabel(selected), selected.name.substringBefore(" · ")).joinToString(" · ")
                     } ?: "Choose a model",
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1,
+                    softWrap = false,
                     overflow = TextOverflow.Ellipsis
                 )
-                Icon(Icons.Default.KeyboardArrowDown, null, Modifier.size(18.dp))
+                Icon(Icons.Default.KeyboardArrowDown, null, Modifier.size(16.dp))
             }
             if (tierDecision?.role == ModelTierRole.SECONDARY_FALLBACK) {
                 Surface(
@@ -92,33 +97,13 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                 ) {
                     Text(
                         "Secondary · Low RAM",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-            } else if (secondary != null && model != null && secondary?.id != model?.id) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Text(
-                        "Fallback: ${secondary?.name?.substringBefore(" · ")?.take(18) ?: "Ready"}",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        softWrap = false
                     )
                 }
-            }
-            Spacer(Modifier.weight(1f))
-            hardware?.takeIf { it.availableRamMb > 0 }?.let { hw ->
-                Text(
-                    "${ModelPresentation.size(hw.availableRamMb)} free",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
         if (messages.isEmpty() && !generating) {
@@ -134,9 +119,9 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                     Spacer(Modifier.height(20.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(
-                            "Summarize key ideas",
-                            "Draft a clear reply",
-                            "Explain a technical concept"
+                            "Explain how on-device AI works",
+                            "Give me 5 daily productivity tips",
+                            "Write a polite follow-up email"
                         ).forEach { suggestion ->
                             SuggestionChip(
                                 onClick = { viewModel.updateDraft(suggestion) },

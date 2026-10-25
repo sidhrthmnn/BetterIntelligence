@@ -15,7 +15,16 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             "us was were what when where which who why will with would you your won win winner winners " +
             "latest recent recently current currently today yesterday now new news source sources cite " +
             "verify check fact summarize summary about answer only read find search public topic context require requires required requirement requirements " +
+            "again all also sure really wrong correct right still incumbent present " +
             "ഇന്ന് ഇപ്പോൾ എന്താണ് ആരാണ്").split(' ').toSet()
+        private val phraseAbbreviations = listOf(
+            "cm" to listOf("chief", "minister"),
+            "pm" to listOf("prime", "minister"),
+            "ceo" to listOf("chief", "executive", "officer"),
+            "uk" to listOf("united", "kingdom"),
+            "usa" to listOf("united", "states"),
+            "uae" to listOf("united", "arab", "emirates")
+        )
         private val wordPattern = Regex("[\\p{L}\\p{M}][\\p{L}\\p{M}\\p{N}]*|\\p{N}+(?:\\.\\p{N}+)*")
         private val englishWord = Regex("[a-z]{5,}")
         // Mild English inflection matching, without damaging non-Latin words.
@@ -26,14 +35,36 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             value.endsWith("s") && !value.endsWith("ss") -> value.dropLast(1)
             else -> value
         } else value
-        fun words(text: String) = wordPattern.findAll(text.lowercase()).map { stem(it.value) }.toSet()
+        fun words(text: String): Set<String> {
+            val base = wordPattern.findAll(text.lowercase()).map { stem(it.value) }.toMutableSet()
+            for ((abbr, expanded) in phraseAbbreviations) {
+                if (abbr in base) base.addAll(expanded)
+                else if (expanded.all { it in base }) base.add(abbr)
+            }
+            return base
+        }
         fun wordFrequencies(text: String): Map<String, Int> {
             val counts = mutableMapOf<String, Int>()
             wordPattern.findAll(text.lowercase()).forEach { match ->
                 val token = stem(match.value)
                 counts[token] = (counts[token] ?: 0) + 1
             }
+            for ((abbr, expanded) in phraseAbbreviations) {
+                val abbrCount = counts[abbr] ?: 0
+                val minExpanded = expanded.minOf { counts[it] ?: 0 }
+                if (abbrCount > 0) {
+                    for (part in expanded) counts[part] = (counts[part] ?: 0) + abbrCount
+                } else if (minExpanded > 0) {
+                    counts[abbr] = minExpanded
+                }
+            }
             return counts
+        }
+        fun isCurrentIncumbentQuery(question: String): Boolean {
+            val q = question.lowercase()
+            if (Regex("\\b(who\\s+was|former|previous|first|second|third|\\d+(?:st|nd|rd|th)|19\\d{2}|20[01]\\d)\\b").containsMatchIn(q)) return false
+            return Regex("\\b(?:who\\s+is|what\\s+is|current|incumbent|present)\\b").containsMatchIn(q) &&
+                Regex("\\b(cm|pm|ceo|chief\\s+minister|prime\\s+minister|president|governor|mayor|leader|chancellor|king|queen|monarch|head|minister|secretary|director|chair(?:man|person)?)\\b").containsMatchIn(q)
         }
         private val normalizedStop = words(stop.joinToString(" "))
         private val writtenDates = listOf("MMMM d, uuuu", "MMM d, uuuu", "d MMMM uuuu", "d MMM uuuu").map {
@@ -46,15 +77,19 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         }
     }
     private val plain = question.replace(Regex("https?://\\S+"), " ")
-    val years = Regex("\\b(?:19|20)\\d{2}\\b").findAll(plain).map { it.value }.toSet()
+    private val userPlain = plain.substringBefore("(Public source topic:")
+    val years = Regex("\\b(?:19|20)\\d{2}\\b").findAll(userPlain).map { it.value }.toSet()
     private val rawTerms = wordPattern.findAll(plain.lowercase()).map { it.value }
         .filter { stem(it) !in normalizedStop && it !in years }.take(14).toList()
+    private val expandedSearchTerms = rawTerms.flatMap { token ->
+        phraseAbbreviations.firstOrNull { it.first == token }?.second ?: listOf(token)
+    }
     val terms = rawTerms.map(::stem).toSet()
     private val lower = plain.lowercase()
     private fun has(phrase: String) = Regex("(?<![\\p{L}\\p{M}])${Regex.escape(phrase)}(?![\\p{L}\\p{M}])").containsMatchIn(lower)
     val relative = listOf("latest", "recent", "recently", "current", "currently", "today", "yesterday", "this week", "this month", "now", "who won", "ഇന്ന്", "ഇപ്പോൾ").any(::has)
     val useNews = relative || years.any { it.toInt() >= today.year - 1 }
-    val searchText = searchOverride ?: (rawTerms + years + if (relative && years.isEmpty()) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
+    val searchText = searchOverride ?: (expandedSearchTerms + years + if (relative && years.isEmpty()) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
     val earliest: LocalDate? = when {
         has("today") || has("ഇന്ന്") -> today
         has("yesterday") -> today.minusDays(1)

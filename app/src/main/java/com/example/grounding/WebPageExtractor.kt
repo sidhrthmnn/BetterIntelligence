@@ -79,10 +79,16 @@ object WebPageExtractor {
                     }
                     node.tagName() == "table" -> {
                         val heading = currentHeading()
-                        val header = node.select("tr").firstOrNull { it.select("th").isNotEmpty() }?.select("th, td")?.joinToString(" | ") { it.text() }.orEmpty()
+                        val rows = node.select("tr")
+                        val firstRow = rows.firstOrNull()
+                        val firstRowText = firstRow?.select("th, td")?.joinToString(" | ") { it.text().trim() }.orEmpty()
+                        val hasImplicitHeader = firstRow != null && firstRow.select("th").isEmpty() &&
+                            Regex("(?i)\\b(s\\.?\\s*no|sr\\.?\\s*no|name|minister|prime\\s+minister|chief\\s+minister|office|tenure|term|party|portrait|from|to|took\\s+office|left\\s+office|model|ram|gpu|price|version)\\b").containsMatchIn(firstRowText)
+                        val headerRow = rows.firstOrNull { it.select("th").isNotEmpty() } ?: if (hasImplicitHeader) firstRow else null
+                        val header = headerRow?.select("th, td")?.joinToString(" | ") { it.text().trim() }.orEmpty()
                         val caption = node.selectFirst("caption")?.text().orEmpty()
-                        node.select("tr").filter { it.select("td").isNotEmpty() }.take(80).map { row ->
-                            listOf(heading, caption, header, row.select("th, td").joinToString(" | ") { it.text() })
+                        rows.filter { it != headerRow && it.select("td").isNotEmpty() }.take(80).map { row ->
+                            listOf(heading, caption, header, row.select("th, td").joinToString(" | ") { it.text().trim() })
                                 .filter { it.isNotBlank() }.distinct().joinToString("\n")
                         }
                     }
@@ -128,12 +134,29 @@ object WebPageExtractor {
             return plan.entities.indices.filter { eIdx -> ResearchQuery.words(plan.entities[eIdx]).all { it in words } }.toSet()
         }
         var size = dates.joinToString("\n").length
-        val remaining = candidates.indices.toMutableSet()
+        val isIncumbentQuery = ResearchQuery.isCurrentIncumbentQuery(question)
+        val presentPattern = Regex("(?i)\\b(incumbent|present(?!\\s*-\\s*day)|till\\s+date|to\\s+date|current(?!\\s+(?:affairs|gk|general\\s+knowledge))|currently|assumed\\s+office|serving\\s+since|in\\s+office|is\\s+the\\s+(?:current\\s+|present\\s+|\\d+(?:st|nd|rd|th)\\s+and\\s+current\\s+)?(?:chief\\s+minister|prime\\s+minister|president|governor|mayor|ceo|cm|pm))\\b")
+        val pastObituaryPattern = Regex("(?i)\\b(passed\\s+away|died|former|was\\s+the\\s+\\d+(?:st|nd|rd|th)?|served\\s+a\\s+total\\s+of|\\b(?:19\\d{2}|20[0-2]\\d)\\s*[-–—]\\s*(?:19\\d{2}|20[01]\\d|202[0-5])\\b)\\b")
+        val hasIncumbentCandidate = isIncumbentQuery && candidates.any { presentPattern.containsMatchIn(it) }
+        val remaining = candidates.indices.filterNot { idx ->
+            hasIncumbentCandidate && pastObituaryPattern.containsMatchIn(candidates[idx]) && !presentPattern.containsMatchIn(candidates[idx])
+        }.toMutableSet()
         while (remaining.isNotEmpty() && selected.size < 7) {
             val index = remaining.maxBy { i ->
-                query.bm25Score(candidates[i], docFreqs, candidates.size, avgWords) +
-                    (plan.coverage(candidates[i]) - covered).size * 15 +
-                    mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20
+                val blockText = candidates[i]
+                val incumbentScore = if (isIncumbentQuery) {
+                    val hasPresent = presentPattern.containsMatchIn(blockText)
+                    val hasPast = pastObituaryPattern.containsMatchIn(blockText)
+                    when {
+                        hasPresent -> 28
+                        hasPast -> -18
+                        else -> 0
+                    }
+                } else 0
+                query.bm25Score(blockText, docFreqs, candidates.size, avgWords) +
+                    (plan.coverage(blockText) - covered).size * 15 +
+                    mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20 +
+                    incumbentScore
             }
             remaining.remove(index)
             val block = candidates[index]
@@ -143,7 +166,10 @@ object WebPageExtractor {
             // a neighbour after covering the requested facets where possible.
             if (covered.size == plan.focuses.size && selected.size >= 3 && subjects.size == plan.entities.size) break
         }
-        return (dates + selected.map { candidates[it] }).distinct().joinToString("\n\n").take(budget)
+        val orderedSelected = if (hasIncumbentCandidate) {
+            selected.sortedWith(compareByDescending<Int> { presentPattern.containsMatchIn(candidates[it]) }.thenBy { it })
+        } else selected.toList()
+        return (dates + orderedSelected.map { candidates[it] }).distinct().joinToString("\n\n").take(budget)
     }
 
     /** At most one useful same-origin child may be followed by the caller. */
