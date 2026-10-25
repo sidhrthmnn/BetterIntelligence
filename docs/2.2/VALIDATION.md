@@ -1,5 +1,7 @@
 # 2.2 research validation
 
+Release status and signed artifact identities: [closed-beta submission](RELEASE.md).
+
 ## What is measured
 
 The offline comparison uses 40 explicit synthetic questions/documents in `ResearchQualityEvaluationTest`, covering factual/current questions, comparisons, multipart requests, Android documentation, numbers/dates, tables, Malayalam/Chinese/Spanish, public-context follow-ups, ambiguity, conflicting reports, inaccessible pages, challenges, changed markup, hidden instructions and missing answers. Expected values are test assertions; no evaluation answer lookup is shipped in production.
