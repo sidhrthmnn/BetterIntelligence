@@ -110,7 +110,7 @@ object ClaimVerification {
             val universal = !Regex("(?i)\\b(?:always|every|all devices|any device|guaranteed)\\b").containsMatchIn(claim) ||
                 Regex("(?i)\\b(?:always|every|all devices|any device|guaranteed)\\b").containsMatchIn(passage)
             val incumbent = !currentOffice || !Regex("(?i)\\b(?:former|deceased|died|passed away|was the)\\b").containsMatchIn(passage)
-            val execution = Regex("(?i)\\b(?:on|using|with)\\s+(CPU|GPU)\\b|\\b(CPU|GPU)\\s+(?:backend|inference|prefill|decode|mode)\\b").find(claim)
+            val execution = Regex("(?i)\\b(?:on|using|with)\\s+(CPU|GPU)\\b|\\b(CPU|GPU)\\s+(?:backend|inference|prefill|decode|mode)\\b|\\b(CPU|GPU)\\s*—").find(claim)
                 ?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }
             val statedBackend = Regex("(?i)\\bBackend:\\s*(CPU|GPU)\\b").find(passage)?.groupValues?.get(1)
             val backendMatches = execution == null || statedBackend == null || execution.equals(statedBackend, ignoreCase = true)

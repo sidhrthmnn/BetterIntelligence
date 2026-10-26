@@ -104,6 +104,8 @@ class AnswerQualityTest {
         assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("**Unknown model:**\nRequires 4 GB RAM [1].", sources, "Compare Orion vs Vega").support)
         val steps = source(text = "Orion requires the following native libraries inside the application tag.")
         assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("Orion requires the following native libraries inside the application tag [1].", listOf(steps)).support)
+        val gpu = source(text = "Backend: GPU | Peak CPU Memory: 676 MB.")
+        assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("**CPU:**\nUses 676 MB Peak CPU Memory [1].", listOf(gpu), "Compare CPU vs GPU").support)
     }
 
     @Test fun numericalValuesAreNotEnoughAndDatesCannotComeFromMetadata() {
