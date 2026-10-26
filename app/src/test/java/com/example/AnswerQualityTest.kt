@@ -96,6 +96,16 @@ class AnswerQualityTest {
         assertEquals(AnswerSupport.CITED, GroundingPolicy.checkAnswer("Orion requires 4 GB RAM. [1]", listOf(source())).support)
     }
 
+    @Test fun comparisonHeadingsPreserveSubjectAndOrphanInstructionsCannotSurviveOmission() {
+        val sources = listOf(source(), source(2, "Vega requires 6 GB RAM."))
+        val checked = GroundingPolicy.checkAnswer("**Orion:**\nRequires 4 GB RAM [1].\n\n**Vega:**\nRequires 6 GB RAM [2].", sources, "Compare Orion vs Vega")
+        assertEquals(AnswerSupport.CITED, checked.support)
+        assertTrue(checked.text.contains("Orion — Requires 4 GB")); assertTrue(checked.text.contains("Vega — Requires 6 GB"))
+        assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("**Unknown model:**\nRequires 4 GB RAM [1].", sources, "Compare Orion vs Vega").support)
+        val steps = source(text = "Orion requires the following native libraries inside the application tag.")
+        assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("Orion requires the following native libraries inside the application tag [1].", listOf(steps)).support)
+    }
+
     @Test fun numericalValuesAreNotEnoughAndDatesCannotComeFromMetadata() {
         val s = source(text = "Orion requires 4 GB RAM. Vega reaches 40 tokens/s.").copy(updatedAt = "2026-10-26")
         assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("Orion reaches 40 tokens/s [1].", listOf(s), "Orion performance?").support)

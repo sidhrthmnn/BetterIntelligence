@@ -27,21 +27,36 @@ object ClaimVerification {
         val entities = ResearchPlanner.entities(question)
         val plan = ResearchPlanner.plan(question)
         val contextOnly = sources.filter { EvidenceRanking.contextOnly(it, plan) }.map { it.id }.toSet()
+        val comparison = ResearchIntent.COMPARISON in plan.intents && entities.size >= 2
+        var sectionSubject: String? = null
         val claims = sentences(text.replace("\u0000", "")).map { line ->
             val ids = marker.findAll(line).flatMap { it.groupValues[1].split(',').asSequence().map(String::trim).mapNotNull(String::toIntOrNull) }.toSet()
-            val body = prose(marker.replace(line, ""))
+            val plain = prose(marker.replace(line, ""))
+            val isHeading = line.startsWith('#') || plain.endsWith(':') || Regex("^\\*\\*[^*\\n]{1,120}:\\*\\*$").matches(plain)
+            if (isHeading) {
+                val headingWords = ResearchQuery.words(plain)
+                // Inherit only an exact requested subject, never a model's
+                // extra qualifier, assertion or ambiguous multi-product label.
+                sectionSubject = if (comparison) entities.singleOrNull { ResearchQuery.words(it) == headingWords } else null
+            }
+            val missingSubject = comparison && entities.none { entity -> ResearchQuery.words(entity).all { it in ResearchQuery.words(plain) } }
+            val inherited = !isHeading && missingSubject && sectionSubject != null
+            val body = if (inherited) "$sectionSubject — $plain" else plain
+            val rendered = if (inherited) "$sectionSubject — ${prose(line)}" else line
             val reason = when {
                 body.none { it.isLetterOrDigit() } -> "Empty claim"
-                line.startsWith('#') || body.endsWith(':') -> "Heading"
+                isHeading -> "Heading"
                 uncertainty.containsMatchIn(body) -> "Explicit uncertainty"
                 ids.isEmpty() -> "Missing citation"
                 ids.any { it !in byId } -> "Unknown citation"
+                comparison && missingSubject && !inherited -> "Comparison subject missing"
+                Regex("(?i)\\b(?:the following|as follows|listed below|two parts)\\b").containsMatchIn(body) && !body.substringAfter(':', "").any { it.isLetterOrDigit() } -> "Incomplete referential claim"
                 Regex("(?i)\\bI (?:have |just )?(?:accessed|opened|downloaded|sent|installed|contacted|browsed)\\b").containsMatchIn(body) -> "Unperformed tool action"
                 url.findAll(line).any { match -> sources.none { it.id in ids && it.url == match.value.trimEnd('.', ',') } } -> "Unprovided URL"
                 ids.mapNotNull(byId::get).none { supports(body, it, entities, ResearchQuery.isCurrentIncumbentQuery(question), it.id in contextOnly) } -> "Passage does not substantiate subject, wording, polarity or values"
                 else -> "Passage checks passed"
             }
-            ClaimCheck(line, ids, reason in setOf("Passage checks passed", "Explicit uncertainty", "Heading"), reason)
+            ClaimCheck(rendered, ids, reason in setOf("Passage checks passed", "Explicit uncertainty", "Heading"), reason)
         }
         val factual = claims.filter { it.reason !in setOf("Heading", "Explicit uncertainty") }
         val accepted = factual.filter { it.supported }
