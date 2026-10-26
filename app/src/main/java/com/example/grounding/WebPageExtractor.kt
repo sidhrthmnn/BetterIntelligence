@@ -159,7 +159,10 @@ object WebPageExtractor {
                     }
                 }
             }
-        val clean = blocks.map { it.replace(Regex("[\\t ]+"), " ").trim().take(1800) }
+        val clean = blocks.flatMap { block ->
+            val normalized = block.replace(Regex("[\\t ]+"), " ").trim()
+            if (normalized.length <= 1800) listOf(normalized) else ClaimVerification.sentences(normalized)
+        }
             .filter { it.length >= 12 && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) }
             .distinct().take(350)
         val usable = clean.ifEmpty { listOf(body.trim().take(2200)) }
@@ -241,7 +244,7 @@ object WebPageExtractor {
             }.thenBy { it })
             else -> selected.toList()
         }
-        return (dates + orderedSelected.map { candidates[it] }).distinct().joinToString("\n\n").take(budget)
+        return EvidencePacket.completeExcerpt((dates + orderedSelected.map { candidates[it] }).distinct().joinToString("\n\n"), budget)
     }
 
     /** At most one useful same-origin child may be followed by the caller. */

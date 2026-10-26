@@ -44,7 +44,7 @@ class Research22Test {
         assertEquals(3, plan.searches.size)
         assertTrue(plan.searches.all { "Gemma 4" in it && "Qwen 3.5" in it })
         assertTrue(plan.searches.any { "memory" in it }); assertTrue(plan.searches.any { "benchmark" in it })
-        assertEquals(3, plan.focuses.size)
+        assertEquals(5, plan.focuses.size)
     }
     @Test fun nonEnglishQuestionsRetainTheirScriptAndMultipartQuestionsAreFocused() {
         for (question in listOf("Gemma 4 Qwen 3.5 മോഡലുകൾ തമ്മിൽ താരതമ്യം ചെയ്യുക", "കേരളത്തിൽ ഇന്ന് എന്താണ് വാർത്ത?", "Android Vulkan 支持哪些设备？", "¿Qué versión de Android es compatible?")) {

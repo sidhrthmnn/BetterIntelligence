@@ -3,7 +3,7 @@ package com.example.grounding
 import java.time.LocalDate
 import java.text.Normalizer
 
-enum class ResearchIntent { FACT, RECENT, COMPARISON, EXPLANATION, DIRECT_URL, MULTI_PART }
+enum class ResearchIntent { FACT, RECENT, COMPARISON, EXPLANATION, DIRECT_URL, MULTI_PART, NUMERICAL, HISTORICAL, LOCATION, VERIFICATION, TECHNICAL, FOLLOW_UP }
 data class ResearchFocus(val question: String, val terms: Set<String>)
 data class ResearchPlan(val question: String, val intents: Set<ResearchIntent>, val entities: List<String>,
     val focuses: List<ResearchFocus>, val searches: List<String>, val explicitUrls: List<String>) {
@@ -37,14 +37,16 @@ object ResearchPlanner {
             technicalComparison -> listOf(
                 ResearchFocus("Android runtime and model compatibility", ResearchQuery.words("Android runtime compatibility format support")),
                 ResearchFocus("Memory requirements and quantization", ResearchQuery.words("memory RAM quantization size GB")),
-                ResearchFocus("Measured performance and benchmark conditions", ResearchQuery.words("benchmark performance latency speed tokens device")))
+                ResearchFocus("GPU acceleration compatibility and limitations", ResearchQuery.words("GPU Vulkan OpenCL delegate acceleration")),
+                ResearchFocus("Measured inference performance", ResearchQuery.words("benchmark performance latency speed tokens")),
+                ResearchFocus("Benchmark device and test conditions", ResearchQuery.words("device hardware context threads quantization measured conditions")))
             parts.size > 1 -> parts.map { ResearchFocus(it, ResearchQuery(it, today).terms) }
             else -> listOf(ResearchFocus(plain, (query.terms - entityWords).ifEmpty { query.terms }))
         }
         val subject = if (plain.any { it.code > 127 }) query.searchText else entities.joinToString(" ").ifBlank { query.searchText }
         val searches = when {
             urls.isNotEmpty() -> emptyList()
-            technicalComparison -> listOf("$subject Android runtime compatibility", "$subject memory RAM quantization", "$subject Android benchmark tokens latency")
+            technicalComparison -> listOf("$subject Android runtime GPU compatibility", "$subject memory RAM quantization", "$subject Android benchmark device context tokens latency")
             parts.size > 1 -> parts.map { part ->
                 val q = ResearchQuery(part, today).searchText
                 if (entities.isNotEmpty() && entities.none { q.contains(it, true) }) "$subject $q" else q
@@ -59,6 +61,12 @@ object ResearchPlanner {
             if (explanation) add(ResearchIntent.EXPLANATION)
             if (urls.isNotEmpty()) add(ResearchIntent.DIRECT_URL)
             if (focuses.size > 1) add(ResearchIntent.MULTI_PART)
+            if (Regex("(?i)\\b(how (?:many|much)|population|percentage|price|statistics?|GB|MB|latency)\\b").containsMatchIn(plain)) add(ResearchIntent.NUMERICAL)
+            if (Regex("(?i)\\b(history|historical|who was)\\b").containsMatchIn(plain) || query.years.any { it.toInt() < today.year - 1 }) add(ResearchIntent.HISTORICAL)
+            if (ConversationalResearch.isWeather(plain) || Regex("(?i)\\b(?:near|location|city)\\b").containsMatchIn(plain)) add(ResearchIntent.LOCATION)
+            if (Regex("(?i)\\b(verify|prove|sources?|official|evidence)\\b").containsMatchIn(plain)) add(ResearchIntent.VERIFICATION)
+            if (Regex("(?i)\\b(Android|API|runtime|GPU|NPU|documentation)\\b").containsMatchIn(plain)) add(ResearchIntent.TECHNICAL)
+            if ("(Public source topic:" in plain) add(ResearchIntent.FOLLOW_UP)
         }
         return ResearchPlan(question, intents, entities, focuses, searches, urls.take(3))
     }

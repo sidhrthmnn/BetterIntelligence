@@ -1,0 +1,41 @@
+# Research and local answer changes
+
+## Pipeline
+
+Current question + minimal public follow-up topic → deterministic routing/planning → bounded HTML discovery and page reads → focused evidence packets → the already loaded local model → per-claim checks → complete, partial or insufficient answer.
+
+`ResearchRouting` separates changing empirical questions, explicit verification and runtime/product comparisons from static explanations, historical background, transformations and arithmetic. OFF/denied consent returns before a provider is called. ON attempts research; an explicitly offline transformation remains local. Rules return a reason and have a fixed routing regression suite. They are not a confidence estimator, and unfamiliar phrasing/languages can still route incorrectly.
+
+`ResearchPlanner` preserves versions and comparison subjects. Technical comparisons cover runtime/model compatibility, memory/quantisation, GPU limitations, measured speed and measurement conditions, using at most three focused searches. `EvidenceRanking` gives modest, question-specific priority to recognised primary Android/runtime documentation, without suffix-based authority. Exact and very similar syndicated text cannot masquerade as independent corroboration; differing numbers/subjects are retained. Conflicting numbers include reported dates and stated conditions; differing conditions are not declared equivalent measurements or resolved by choosing the newer report.
+
+`EvidencePacket` is a derived view containing the original source ID/URL/title/publisher, reported date, exact excerpt, covered objectives and numerical passages. Compression removes whole sentences/rows rather than cutting a qualification in half. Extremely small publisher snippets or unbroken oversized sentences may yield no usable evidence. Dates remain publisher-reported; the retrieval clock never substitutes for publication. The model gets only selected passages and concise instructions, not duplicate historical sourced answers or repeated generated summaries.
+
+## What the claim checks establish
+
+`ClaimVerification` checks independently cited sentences/clauses. It rejects unknown citation IDs, fabricated URLs, unsupported numerical values/units, values pooled across different passages, missing named subjects, simple polarity reversals, reversed explicit comparisons, dropped recognised qualifications and unperformed first-person tool actions. Explicit source-ID spelling is normalised; a missing citation is never guessed. A scoped `but/whereas` clause cannot donate its negation to a different predicate.
+
+Supported standalone sentences survive omission of failed claims. Pronoun-only survivors whose antecedent was removed are omitted. The answer and persisted UI status explicitly label partial support. If no useful factual sentence survives, the user gets insufficient evidence. Headings and generic uncertainty do not count as confirmed factual answers.
+
+These are **conservative deterministic passage checks, not general semantic entailment or proof of truth**. Lexical overlap can still miss novel implications, complex logical scope, subtle unit conversions, translated paraphrases and arbitrary contradictions. Equivalent paraphrases may be rejected. Complex code/tables and sentences spanning several sources can require narrower wording. Publisher text can itself be wrong or stale. The UI says "passage checks" and invites source inspection; it never labels all answers "verified".
+
+`EvidenceRepair` permits one optional correction with the same loaded model only for an insufficient comparison on a cool device with headroom, at least 2048 context and observed speed predicting completion within eight seconds. It has an eight-second deadline, 96 output tokens, no history/model switch and an actual-token fit check. It does not retry an already useful partial answer or every simple answer. The corrected result must pass the same checks; timeout/failure keeps the original safe outcome. Native cancellation remains joined by the shared inference lifecycle. This pass is deliberately disabled in the primary ON/OFF experiment to avoid a second inference variable.
+
+## Offline usefulness and context
+
+`ChatAnswerPolicy` supplies compact chat-only instructions for evidence, uncertainty, formatting and language. It requests exact JSON keys/types, Markdown tables, Malayalam or Manglish when requested. When current information has not been researched, it distinguishes unknown live facts from useful general background rather than refusing all difficult questions. Native model chat templates remain responsible for each model's formatting; no second model is loaded.
+
+`LocalCalculation` evaluates only bounded explicit decimal arithmetic or percentage-of expressions, with precedence, parentheses, unary signs and divide-by-zero rejection. It supplies a real computed value to the model, not a benchmark answer lookup. It rejects prose, identifiers, ISO dates, long expressions and executable text. It does not solve arbitrary maths or guarantee that a model follows its result.
+
+A physical pilot exposed a stale current-officeholder assertion despite the uncertainty prompt. Chat therefore also applies a narrow deterministic live-fact safeguard: current officeholders, weather/population/prices, latest stable versions and recent named event results cannot be presented as current from an unresearched local generation. Their draft is held and replaced with an explicit live-data limitation (also in Malayalam when requested). Static/historical answers, reasoning and general technical background are preserved. This is a visible-answer safety rule, not an improvement to the model's stored knowledge. The primary paired harness still measures the same model's raw generation and records the post-processed visible answer separately.
+
+Existing Room sessions, user notes, drafts and local history remain. Research follow-ups can use up to two short public titles from this conversation, including "What about memory usage?"; private chat text and saved memories are never copied to search. The current subject must be named when an ownership question cannot be resolved. Grounded generations avoid repeating previous sourced answers/old conclusions as facts. Offline generations retain the existing bounded conversation history and session notes. These extractive notes are not perfect or unlimited memory.
+
+## Resource, privacy and compatibility boundaries
+
+No dependency, inference runtime, native backend or Binder/AIDL change. TypeRight continues to use shared local inference without chat web research. CPU/GPU selection, shared-RAM accounting, admission, failed-backend cooldown and resource cleanup remain inside BI. NPU stays unavailable without the required compatible compiled model/vendor runtime; these research changes make no new GPU/NPU performance claim.
+
+The existing 24-wire-request budget includes robots/redirects; page reads remain two at a time with bounded bodies, HTTPS/public-DNS guards and timeouts. No CAPTCHA, authentication or paywall bypass. No external search/grounding/weather API, cloud LLM, proxy or API key. Public HTML search remains replaceable and can be blocked/unavailable. Consent/OFF checks precede research. Clearing temporary data increments a cache epoch so an in-flight read cannot repopulate the cleared cache; source cards already saved with a chat follow normal conversation deletion controls.
+
+Evidence preparation and final checks run off the UI thread. Loading/model ownership is reused; correction never unloads a generating context. Per-answer source dialogs display title, host, full URL, exact supplied excerpt, retrieval time and reported publication/update date when known. Streaming text remains an AI draft until final checks complete.
+
+See [baseline audit](BASELINE.md), the evaluation report and JSON records for measured results and unexecuted checks; architectural intent alone is not a benchmark.

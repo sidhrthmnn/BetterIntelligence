@@ -112,7 +112,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 unique.indexOfFirst { domain(it.url) == domain(candidate.url) } != unique.indexOf(candidate)
             }.thenByDescending {
                 val combined = "${it.title} ${it.routingHint}".trim()
-                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined)
+                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question)
             })
             .filter { domains.merge(domain(it.url), 1, Int::plus)!! <= 2 }.take(8)
         val reads = Semaphore(2)
@@ -145,7 +145,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             fetched.forEach { if (seen.add(it.url)) sources += it }
             val selected = EvidenceRanking.select(sources, plan)
             val covered = selected.flatMap { plan.coverage(it.excerpt) }.toSet()
-            if (selected.size >= 3 && covered.size == plan.focuses.size) break
+            val simple = plan.focuses.size == 1 && ResearchIntent.COMPARISON !in plan.intents
+            if ((selected.size >= 3 || simple && selected.size >= 1 && explicit.isNotEmpty()) && covered.size == plan.focuses.size) break
         }
         progress(ResearchStage.COMPARING)
         val selected = EvidenceRanking.select(sources, plan)
