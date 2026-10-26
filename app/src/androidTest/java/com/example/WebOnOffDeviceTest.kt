@@ -39,14 +39,16 @@ class WebOnOffDeviceTest {
         require(file.isFile)
         val identity = arguments.getString("pairedSha256").orEmpty()
         val contextSize = 2048; val outputTokens = 160
+        val repairEnabled = arguments.getString("pairedRepair") == "true"
         val engine = InferenceEngine(context)
         val report = JSONObject().put("device", Build.MODEL).put("sdk", Build.VERSION.SDK_INT)
             .put("fingerprint", Build.FINGERPRINT).put("model", name).put("sha256", identity)
             .put("requestedBackend", "CPU").put("context", contextSize).put("maxOutputTokens", outputTokens)
-            .put("temperature", 0).put("threads", 4).put("repeats", 1).put("startedAt", System.currentTimeMillis())
-            .put("limitations", "One alternating run; network uncontrolled; charging; semantic quality independently reviewed. Direct public URLs are identical in OFF/ON questions. No correction pass in this primary comparison.")
+            .put("temperature", 0).put("threads", 4).put("repeats", 1).put("startedAt", System.currentTimeMillis()).put("repairEnabled", repairEnabled)
+            .put("limitations", "One alternating run; network uncontrolled; charging; semantic quality independently reviewed. Direct public URLs are identical in OFF/ON questions. " +
+                if (repairEnabled) "Supplemental correction experiment: up to 96 additional output tokens and eight seconds; not the controlled primary ON/OFF comparison." else "No correction pass in this primary comparison.")
         val rows = JSONArray(); report.put("results", rows)
-        val output = File(context.filesDir, "web-on-off-$name.json")
+        val output = File(context.filesDir, "web-on-off-${if (repairEnabled) "repair-" else ""}$name.json")
         fun save() = output.writeText(report.toString(2))
         val tests = JSONArray(instrumentation.context.assets.open("web-on-off-cases.json").bufferedReader().use { it.readText() })
         val first = arguments.getString("pairedStart")?.toIntOrNull() ?: 1
@@ -83,6 +85,7 @@ class WebOnOffDeviceTest {
                     var raw = ""; var answer = ""; var support = evidence.status
                     var sources = emptyList<EvidenceSource>(); var inferenceMs = 0L; var failure = ""; var input = 0; var outputCount = 0
                     var telemetry = JSONObject(); var claimChecks = JSONArray(); var peakPss = Debug.getPss().toLong()
+                    var repairMs = 0L; var repairAttempted = false; var repairRaw = ""; var repairOutcome = "NOT_NEEDED_OR_ELIGIBLE"
                     val monitor = AtomicBoolean(false); var sampler: Thread? = null
                     try {
                         if (evidence.status in setOf("SEARCH_FAILED", "NEEDS_LOCATION", "NEEDS_SUBJECT")) answer = evidence.notice
@@ -101,7 +104,30 @@ class WebOnOffDeviceTest {
                             telemetry = JSONObject(engine.telemetry.value.toJson()); input = engine.telemetry.value.promptTokens; outputCount = engine.telemetry.value.completionTokens
                             peakPss = peak.get()
                             if (sources.isNotEmpty()) {
-                                val checked = GroundingPolicy.checkAnswer(raw, sources, researchQuestion)
+                                var checked = GroundingPolicy.checkAnswer(raw, sources, researchQuestion)
+                                if (repairEnabled) {
+                                    val resources = engine.hardware.resources()
+                                    val repair = EvidenceRepair.prompt(researchQuestion, raw, prepared, checked, contextSize,
+                                        resources.availableMb, resources.lowMemory, resources.thermal,
+                                        engine.telemetry.value.timeToFirstTokenMs, engine.telemetry.value.tokensPerSecond) {
+                                        engine.contextTokenCount(it) + engine.contextTokenCount(system) + EvidenceRepair.maxTokens + 96 <= contextSize
+                                    }
+                                    if (repair != null) {
+                                        repairAttempted = true; val repairStart = SystemClock.elapsedRealtime()
+                                        val corrected = withTimeoutOrNull(EvidenceRepair.deadlineMs) {
+                                            engine.generateSync(repair, GenerationParams(temperature = 0f, topK = 1, topP = 1f, maxTokens = EvidenceRepair.maxTokens,
+                                                contextSize = contextSize, threads = 4, systemPrompt = system))
+                                        }
+                                        repairMs = SystemClock.elapsedRealtime() - repairStart
+                                        repairOutcome = "TIMEOUT"
+                                        if (corrected != null) {
+                                            repairRaw = corrected
+                                            val verified = GroundingPolicy.checkAnswer(corrected, sources, researchQuestion)
+                                            repairOutcome = verified.support.name
+                                            if (verified.support != AnswerSupport.INSUFFICIENT) checked = verified
+                                        }
+                                    }
+                                }
                                 answer = checked.text; support = checked.support.name
                                 checked.claims.forEach { claimChecks.put(JSONObject().put("text", it.text).put("accepted", it.supported).put("reason", it.reason)) }
                             } else {
@@ -119,6 +145,7 @@ class WebOnOffDeviceTest {
                         .put("sources", JSONArray(GroundingResult(sources = sources).json())).put("claimChecks", claimChecks)
                         .put("inputTokens", input).put("outputTokens", outputCount).put("peakProcessPssKb", peakPss).put("telemetry", telemetry)
                         .put("beforeThermal", state.thermal).put("afterThermal", engine.hardware.resources().thermal)
+                        .put("repairMs", repairMs).put("repairAttempted", repairAttempted).put("repairRaw", repairRaw).put("repairOutcome", repairOutcome)
                         .put("manualReview", "PENDING_INDEPENDENT_REFERENCE_REVIEW")
                     rows.put(row); save(); coordinator.clearTemporaryData()
                     assertTrue("Bounded HTTP budget", calls.size <= 24)

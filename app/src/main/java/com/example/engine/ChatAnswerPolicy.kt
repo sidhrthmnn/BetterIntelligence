@@ -13,7 +13,17 @@ object ChatAnswerPolicy {
             Regex("(?i)\\b(?:who won|winner|prize|award)\\b").containsMatchIn(question) &&
                 Regex("\\b20\\d{2}\\b").findAll(question).any { it.value.toInt() >= java.time.LocalDate.now().year - 1 }
     }
-    fun finishLocal(question: String, text: String): String = if (!requiresLiveData(question)) text else
+    fun finishLocal(question: String, text: String): String = if (!requiresLiveData(question)) {
+        if (!Regex("(?i)\\bJSON[- ]only|\\bJSON only\\b").containsMatchIn(question)) text else {
+            val candidate = Regex("(?is)^\\s*```(?:json)?\\s*([\\s\\S]*?)\\s*```\\s*$").matchEntire(text)?.groupValues?.get(1) ?: text
+            runCatching {
+                val parser = org.json.JSONTokener(candidate)
+                val value = parser.nextValue()
+                require((value is org.json.JSONObject || value is org.json.JSONArray) && parser.nextClean() == '\u0000')
+                candidate.trim()
+            }.getOrDefault(text)
+        }
+    } else
         if (Regex("[\\u0D00-\\u0D7F]").containsMatchIn(question))
             "തത്സമയ സ്രോതസ്സുകൾ പരിശോധിച്ചിട്ടില്ല; അതിനാൽ നിലവിലെ പേര്, ഫലം, സംഖ്യ എന്നിവ ഉറപ്പിക്കാൻ കഴിയില്ല. പൊതുസ്രോതസ്സുകൾ പരിശോധിക്കാൻ വെബ് ഗവേഷണം അനുവദിച്ച് Web Automatic അല്ലെങ്കിൽ On തിരഞ്ഞെടുക്കുക."
         else liveUnavailable

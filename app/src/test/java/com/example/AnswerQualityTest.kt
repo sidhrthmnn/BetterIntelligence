@@ -60,6 +60,7 @@ class AnswerQualityTest {
         assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "Translate the source text: the current weather is sunny"))
         assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.ON, "Work offline without search. Extract this as JSON: identifier 001."))
         assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.ON, "Do not search. Who is the current prime minister?"))
+        assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.ON, "What is 15% of 240? Return the result briefly."))
         val output = File(System.getProperty("bi.routing.report", "build/reports/research-routing.json"))
         output.parentFile.mkdirs(); output.writeText(JSONObject().put("baselineRef", "b90955b").put("legacyPass", oldPass).put("newPass", cases.size).put("cases", rows).toString(2))
     }
@@ -67,6 +68,8 @@ class AnswerQualityTest {
     @Test fun checksPolarityUnitsSubjectsRelationshipsAndInventedLinksPerClaim() {
         val a = source()
         assertEquals(AnswerSupport.CITED, GroundingPolicy.checkAnswer("Orion requires 4 GB RAM [1].", listOf(a), "Orion RAM?").support)
+        assertEquals(AnswerSupport.CITED, GroundingPolicy.checkAnswer("Orion requires 4 GB RAM [ID:1].", listOf(a), "Orion RAM?").support)
+        assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("Orion requires 4 GB RAM [ID:99].", listOf(a), "Orion RAM?").support)
         assertEquals(AnswerSupport.CITED, GroundingPolicy.checkAnswer("Orion does not support Vulkan [1].", listOf(a)).support)
         val bad = listOf("Orion supports Vulkan [1].", "Orion requires 4 MB RAM [1].", "Orion requires 6 GB RAM [1].",
             "Orion requires 4 GB RAM [99].", "Orion requires 4 GB RAM https://fabricated.example/proof [1].",

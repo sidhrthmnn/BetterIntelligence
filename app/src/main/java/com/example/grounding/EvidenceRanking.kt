@@ -14,6 +14,7 @@ object EvidenceRanking {
             "litert" in q && parsed.host == "github.com" && parsed.encodedPath.startsWith("/google-ai-edge/LiteRT", true) -> true
             "llama.cpp" in q && parsed.host == "github.com" && Regex("(?i)^/(?:ggml-org|ggerganov)/llama\\.cpp(?:/|$)").containsMatchIn(parsed.encodedPath) -> true
             "android" in q && parsed.host in setOf("developer.android.com", "source.android.com") -> true
+            "android" in q && parsed.host in setOf("ai.google.dev", "developers.google.com") && parsed.encodedPath.startsWith("/edge/litert") -> true
             else -> false
         }
         return if (primary) 8 else 0
@@ -41,7 +42,7 @@ object EvidenceRanking {
             Regex("(?i)\\b(?:current role holder|current (?:prime minister|ceo)|incumbent|is (?:the )?(?:chairman and )?chief executive officer)\\b").containsMatchIn(source.excerpt)
         // An undated, explicitly requested role page may identify its current
         // holder. Keep the date unknown; never invent a fresh publication date.
-        if ((!q.currentEnough(source.updatedAt) && !explicitIncumbent) || q.isPrediction(source.title)) return false
+        if ((!q.currentEnough(source.updatedAt) && !explicitIncumbent && !contextOnly(source, plan)) || q.isPrediction(source.title)) return false
         if (plan.explicitUrls.isNotEmpty()) return true
         val found = ResearchQuery.words(source.title + " " + source.excerpt)
         if (q.years.isNotEmpty() && !found.containsAll(q.years)) return false
@@ -52,6 +53,16 @@ object EvidenceRanking {
             words.isNotEmpty() && words.count { it in found } >= minOf(2, words.size)
         } else q.terms.count { it in found } >= minOf(2, q.terms.size)
         return subjectMatch && plan.coverage(source.title + " " + source.excerpt).isNotEmpty()
+    }
+    /** A maintained reference can supply background even if its update is older
+     * than a relative news window. It must not establish a recent release/event. */
+    fun contextOnly(source: EvidenceSource, plan: ResearchPlan): Boolean {
+        val query = ResearchQuery(plan.question)
+        if (query.earliest == null || query.currentEnough(source.updatedAt)) return false
+        if (ResearchQuery.date(source.updatedAt)?.isAfter(query.today.plusDays(1)) == true) return false
+        if (ResearchIntent.TECHNICAL !in plan.intents || primaryRelevance(source.url, plan.question) == 0) return false
+        if (Regex("(?i)\\b(today|yesterday|this (?:week|month)|last (?:week|month)|since|published|released|announced|news)\\b").containsMatchIn(plan.question)) return false
+        return Regex("(?i)\\b(documentation|reference|overview|guide|get started|API)\\b").containsMatchIn(source.title)
     }
     fun select(sources: List<EvidenceSource>, plan: ResearchPlan, limit: Int = 3): List<EvidenceSource> {
         val unique = sources.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }.distinctBy {

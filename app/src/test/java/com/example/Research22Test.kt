@@ -35,7 +35,8 @@ class Research22Test {
         val source = WebPageExtractor.article(WebDocument("https://docs.example/runtimes", html, "text/html"), 1, question)!!
         val prepared = GroundingPolicy.prepareEvidence(question, listOf(source), 2200)
         assertTrue(prepared.sources.single().excerpt.contains("OakRT")); assertTrue(prepared.sources.single().excerpt.contains("pine.cpp"))
-        assertTrue(prepared.sources.single().excerpt.contains("Engine | Compatibility"))
+        assertTrue(prepared.sources.single().excerpt.contains("Engine: pine.cpp"))
+        assertTrue(prepared.sources.single().excerpt.contains("Compatibility and memory tradeoffs:"))
         assertTrue(source.excerpt.indexOf("pine.cpp") < source.excerpt.indexOf("OakRT")) // retain publisher row order
     }
     @Test fun comparisonPlansBoundedDistinctFacetsAndRetainsVersions() {

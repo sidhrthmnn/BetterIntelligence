@@ -25,6 +25,8 @@ object ClaimVerification {
     fun check(text: String, sources: List<EvidenceSource>, question: String = ""): CheckedAnswer {
         val byId = sources.associateBy { it.id }
         val entities = ResearchPlanner.entities(question)
+        val plan = ResearchPlanner.plan(question)
+        val contextOnly = sources.filter { EvidenceRanking.contextOnly(it, plan) }.map { it.id }.toSet()
         val claims = sentences(text.replace("\u0000", "")).map { line ->
             val ids = marker.findAll(line).flatMap { it.groupValues[1].split(',').asSequence().map(String::trim).mapNotNull(String::toIntOrNull) }.toSet()
             val body = prose(marker.replace(line, ""))
@@ -36,7 +38,7 @@ object ClaimVerification {
                 ids.any { it !in byId } -> "Unknown citation"
                 Regex("(?i)\\bI (?:have |just )?(?:accessed|opened|downloaded|sent|installed|contacted|browsed)\\b").containsMatchIn(body) -> "Unperformed tool action"
                 url.findAll(line).any { match -> sources.none { it.id in ids && it.url == match.value.trimEnd('.', ',') } } -> "Unprovided URL"
-                ids.mapNotNull(byId::get).none { supports(body, it, entities, ResearchQuery.isCurrentIncumbentQuery(question)) } -> "Passage does not substantiate subject, wording, polarity or values"
+                ids.mapNotNull(byId::get).none { supports(body, it, entities, ResearchQuery.isCurrentIncumbentQuery(question), it.id in contextOnly) } -> "Passage does not substantiate subject, wording, polarity or values"
                 else -> "Passage checks passed"
             }
             ClaimCheck(line, ids, reason in setOf("Passage checks passed", "Explicit uncertainty", "Heading"), reason)
@@ -56,7 +58,7 @@ object ClaimVerification {
             if (rejected) AnswerSupport.PARTIAL else AnswerSupport.CITED, claims)
     }
 
-    private fun supports(claim: String, source: EvidenceSource, entities: List<String>, currentOffice: Boolean): Boolean {
+    private fun supports(claim: String, source: EvidenceSource, entities: List<String>, currentOffice: Boolean, contextOnly: Boolean): Boolean {
         if (!CitationSupport.supportsNumbers("$claim [${source.id}]", listOf(source))) return false
         val claimWords = ResearchQuery.words(claim)
         val candidates = entities.ifEmpty { ResearchPlanner.entities(claim) }
@@ -93,19 +95,29 @@ object ClaimVerification {
             val universal = !Regex("(?i)\\b(?:always|every|all devices|any device|guaranteed)\\b").containsMatchIn(claim) ||
                 Regex("(?i)\\b(?:always|every|all devices|any device|guaranteed)\\b").containsMatchIn(passage)
             val incumbent = !currentOffice || !Regex("(?i)\\b(?:former|deceased|died|passed away|was the)\\b").containsMatchIn(passage)
+            val execution = Regex("(?i)\\b(?:on|using|with)\\s+(CPU|GPU)\\b|\\b(CPU|GPU)\\s+(?:backend|inference|prefill|decode|mode)\\b").find(claim)
+                ?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }
+            val statedBackend = Regex("(?i)\\bBackend:\\s*(CPU|GPU)\\b").find(passage)?.groupValues?.get(1)
+            val backendMatches = execution == null || statedBackend == null || execution.equals(statedBackend, ignoreCase = true)
+            val recency = !contextOnly || !Regex("(?i)\\b(?:recent(?:ly)?|latest|newly|current|today|this (?:week|month))\\b").containsMatchIn(claim)
+            val datedAction = if (!Regex("\\d{4}|\\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\\b", RegexOption.IGNORE_CASE).containsMatchIn(claim)) true else
+                listOf("publish|publication", "updat|modif", "releas|launch", "announc", "sign", "became|appoint|sworn").all { group ->
+                    val predicate = Regex("(?i)\\b(?:$group)\\w*")
+                    !predicate.containsMatchIn(claim) || predicate.containsMatchIn(passage)
+                }
             val comparison = comparator.find(claim)?.let { relation ->
                 val normalized = relation.value.lowercase()
                 val sameRelation = passage.lowercase().contains(normalized)
                 val order = subjects.size < 2 || subjects.map { passage.indexOf(it, ignoreCase = true) }.let { it == it.sorted() }
                 sameRelation && order
             } ?: true
-            lexical && named && namesPresent && polarity && quantitiesMatch && numbersMatch && comparison && qualifications && universal && incumbent
+            lexical && named && namesPresent && polarity && quantitiesMatch && numbersMatch && comparison && qualifications && universal && incumbent && recency && datedAction && backendMatches
         }
     }
-    private fun quantities(text: String): Set<String> = Regex("(?i)(-?\\d+(?:\\.\\d+)?)\\s*(GB|GiB|MB|MiB|KB|ms|milliseconds?|seconds?|tokens/(?:s|second)|%|°\\s*[CF])(?!\\p{L})")
+    private fun quantities(text: String): Set<String> = Regex("(?i)(-?\\d+(?:\\.\\d+)?)\\s*(GB|GiB|MB|MiB|KB|ms|milliseconds?|seconds?|tk/s|tokens/(?:s|second)|%|°\\s*[CF])(?!\\p{L})")
         .findAll(text).map { match ->
             val value = runCatching { java.math.BigDecimal(match.groupValues[1]).stripTrailingZeros().toPlainString() }.getOrDefault(match.groupValues[1])
-            val unit = match.groupValues[2].lowercase().replace("milliseconds", "ms").replace("millisecond", "ms").replace("seconds", "seconds").replace(" ", "")
+            val unit = match.groupValues[2].lowercase().replace("milliseconds", "ms").replace("millisecond", "ms").replace("tk/s", "tokens/s").replace(" ", "")
             "$value:$unit"
         }.toSet()
 }

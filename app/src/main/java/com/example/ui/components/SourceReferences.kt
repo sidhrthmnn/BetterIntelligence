@@ -82,6 +82,7 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
                         "PUBLISHED" -> "Page-reported publication: ${source.updatedAt.take(10)}"
                         "MODIFIED" -> "Page-reported update: ${source.updatedAt.take(10)}"
                         "SEARCH_REPORTED" -> "Search-reported date: ${source.updatedAt.take(40)}"
+                        "DOCUMENT_REPORTED" -> "Document-reported date: ${source.updatedAt.take(10)} (publication date unknown)"
                         else -> "Reported date: ${source.updatedAt.take(40)}"
                     })
                     Text("Retrieved ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(source.retrievedAt))}")
