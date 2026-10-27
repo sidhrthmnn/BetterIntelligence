@@ -194,6 +194,7 @@ class AiBrainContentProvider : ContentProvider() {
         val access = LocalAiAccess(requireNotNull(context), repo)
         access.callerPackage()
         if (method == "status") return access.status()
+        if (method == "prepare_polish") return access.prepareModel()
         if (method == "polish") return access.polish(arg ?: extras?.getString("text"))
         return try { legacyCall(method, arg, extras) }
         catch (e: Exception) { Bundle().apply {

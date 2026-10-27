@@ -1,0 +1,9 @@
+{
+  "primary": "Gemma 4 E4B Instruct · LiteRT",
+  "secondary": "Qwen 3 1.7B · GGUF",
+  "availableRamMb": 3156,
+  "safeBudgetMb": 2644,
+  "primaryRequiredMb": 3590,
+  "secondaryRequiredMb": 1801,
+  "pressureSimulated": false
+}

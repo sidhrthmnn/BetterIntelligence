@@ -20,8 +20,8 @@ android {
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
     targetSdk = 36
-    versionCode = 15
-    versionName = "2.3.0-beta1"
+    versionCode = 16
+    versionName = "2.3.0-beta2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders["localAiExported"] = "true"
@@ -56,7 +56,9 @@ android {
       if (providers.gradleProperty("biValidationPackage").orNull == "true") {
         applicationIdSuffix = ".validation"
         resValue("string", "app_name", "BI Validation")
-        manifestPlaceholders["localAiExported"] = "false"
+        // Opt-in isolated cross-process tests use a separate permission/package;
+        // the ordinary validation app remains private.
+        manifestPlaceholders["localAiExported"] = if (providers.gradleProperty("biIpcValidation").orNull == "true") "true" else "false"
       }
     }
   }

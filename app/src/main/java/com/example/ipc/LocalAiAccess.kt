@@ -25,19 +25,45 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
     fun status(): Bundle {
         val caller = callerPackage()
         val access = runBlocking(Dispatchers.IO) { repository.clientAccessStatus(caller) }
+        val preparation = repository.clientPreparation.state.value
+        val preparing = repository.clientPreparation.isPreparing
+        val telemetry = repository.engine.telemetry.value
+        val phase = when {
+            preparing -> preparation.phase
+            repository.isModelLoading -> "LOADING_MODEL"
+            telemetry.isRunning -> "OTHER_REQUEST"
+            preparation.failed -> preparation.phase
+            repository.engine.isReady() -> "READY"
+            else -> "MODEL_REQUIRED"
+        }
         return Bundle().apply {
             putInt("api_version", 2)
             putBoolean("supports_polish", true)
             putString("polish_language", "en")
             putBoolean("model_loaded", repository.engine.isReady())
-            putBoolean("model_loading", repository.isModelLoading)
+            putBoolean("model_loading", repository.isModelLoading || preparing)
+            putBoolean("supports_model_preparation", true)
+            putString("activity", phase)
+            putString("target_model", if (preparing) preparation.model else "")
+            putString("model_role", preparation.role)
+            putInt("effective_context", preparation.context)
+            if (preparation.failed) putString("error", preparation.error)
             putString("active_model", if (repository.engine.isReady()) repository.engine.activeModelName else "")
-            putString("status", if (access != "READY") access else if (repository.isModelLoading) "BUSY"
+            putString("status", if (access != "READY") access else if (repository.isModelLoading || preparing) "BUSY"
+                else if (telemetry.isRunning) "BUSY"
+                else if (preparation.failed) if (phase == "MODEL_REQUIRED") "MODEL_REQUIRED" else "ERROR"
                 else if (!repository.engine.isReady()) "MODEL_REQUIRED"
-                else if (repository.engine.telemetry.value.isRunning) "BUSY" else "READY")
+                else "READY")
             putString("settings_package", context.packageName)
             putInt("max_polish_characters", PolishText.MAX_CHARACTERS)
         }
+    }
+
+    fun prepareModel(): Bundle {
+        val caller = callerPackage()
+        val access = runBlocking(Dispatchers.IO) { repository.clientAccessStatus(caller) }
+        if (access == "READY") repository.clientPreparation.request()
+        return status()
     }
 
     fun polish(text: String?): Bundle {
