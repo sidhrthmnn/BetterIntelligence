@@ -2,7 +2,7 @@
 
 Better Intelligence owns the downloaded GGUF or LiteRT-LM model and runs inference locally. A keyboard such as Typeright can submit text for proofreading and receive a replacement without carrying model weights or native inference code. The consumer needs an integration; installing Better Intelligence does not redirect existing AI buttons automatically. BI selects the runtime from the model format and manages CPU/GPU processing internally. Existing AIDL transaction IDs, permission names and response fields remain compatible.
 
-API v2 Binder generation has no context-size argument. BI uses the context selected in Advanced settings (2048 by default), bounded by the model's real limits and any measured minimum needed for CPU fallback. It does not create a separate unrequested 4096-token graph for a connected app. Clients should still bound input/output, handle BUSY/readiness and review proposed edits. TypeRight 213 supplies its own English proofreading prompt over the existing streaming Binder method; the built-in `polish` prompt is a separate path.
+API v2 Binder generation has no context-size argument. BI uses the context selected in Advanced settings (2048 by default), or the safe context admitted by explicit model preparation, bounded by the model's real limits. A short external polish reuses a fitting loaded fallback instead of promoting back to the larger Primary. Clients should still bound input/output, handle readiness and review proposed edits. TypeRight supplies its own English proofreading prompt over the existing streaming Binder method; the built-in `polish` prompt is a separate path.
 
 ## Setup
 
@@ -52,6 +52,23 @@ withContext(Dispatchers.IO) {
 `status` returns a Bundle with `api_version=2`, `supports_polish=true`, `polish_language=en`, `model_loaded`, `active_model`, `max_polish_characters=4000`, `settings_package`, and `status`. It registers the caller but does not consume the inference rate limit. Readiness reflects the actual runtime; an installed but unloaded model is not ready.
 
 Version 2.0 adds the optional `model_loading` boolean. Startup restoration and model replacement return the existing `BUSY` status while work is in progress, so older clients can show their normal wait/retry message. `MODEL_REQUIRED` means initialization has settled without a ready selected model. Approval/denial still takes priority over either state. No AIDL method or transaction ordering changes.
+
+### Explicit RAM-aware preparation (2.3.0-beta2)
+
+New status Bundles advertise `supports_model_preparation=true`. Only after a user requests Polish, an approved client can call `ContentResolver.call(uri, "prepare_polish", null, null)`. This sends no editor text. BI checks current RAM, uses the configured Primary/Secondary policy and shares one preparation job across clients. It does not download weights. A load failure is surfaced rather than silently claiming that the fallback was activated. A fitting already-loaded fallback is reused. The admitted `effective_context` is passed to actual Binder generation.
+
+Poll `status` with a bounded deadline while `model_loading=true` / `status=BUSY`. Additional fields are:
+
+| Field | Meaning |
+| --- | --- |
+| `activity` | `CHECKING_MEMORY`, `LOADING_MODEL`, `READY`, `OTHER_REQUEST`, `LOW_MEMORY`, `PREPARATION_FAILED` or `MODEL_REQUIRED` |
+| `target_model` | Model being loaded, when known; no client text |
+| `model_role` | Selected Primary, stepped Primary or `SECONDARY_FALLBACK` |
+| `effective_context` | Context admitted for the prepared model |
+
+Status reads alone never load a model or invoke an LLM. When `OTHER_REQUEST` is active, explain that another request is running and let the user retry; do not queue stale editor text. Approval still takes precedence. A loading deadline must leave editor text unchanged and discard any later result from a cancelled editor session. Consumers without the optional capability continue using the existing v2 fields and AIDL methods.
+
+TypeRight 222 waits up to 60 seconds for preparation and labels connecting, RAM checks, fallback loading, input processing, actual token generation and completion separately. It sends the selection only after readiness, does not replay inference, and retains its existing cancellation and editor-session protection. Model quality still depends on the selected fallback; a successful load does not guarantee a good correction.
 
 `polish` accepts text in the `arg` parameter (or `extras["text"]`). It returns `status` and `latency_ms`. Only `SUCCESS` includes `text`. Some failures also contain an `error` for display. Keys unrelated to caller identity are optional; `calling_package` is ignored.
 

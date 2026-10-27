@@ -39,7 +39,7 @@ class ClientFallbackSetupTest {
         val secondary = rows.single { it.filename == secondaryFile }
         repository.preferencesRepository.savePrimaryModelId(primary.id)
         repository.preferencesRepository.saveSecondaryModelId(secondary.id)
-        repository.preferencesRepository.saveAutoRamFallback(true)
+        repository.preferencesRepository.saveAutoRamFallback(arguments.getString("disableFallback") != "true")
         repository.engine.setProcessingMode(ProcessingMode.CPU)
         repository.updatePolicy(ClientAppPolicyEntity("com.aistudio.typerigh2.jkwpzq.validation", "TypeRight Validation",
             isWhitelisted = true, rateLimitPerMin = 60))

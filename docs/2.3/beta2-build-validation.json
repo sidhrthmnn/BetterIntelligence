@@ -1,0 +1,42 @@
+[
+  {
+    "app": "BI",
+    "sourceCommit": "dc643c3d9876834bcee97c03aa1eeb77b7a92c4a",
+    "versionCode": 16,
+    "unitTests": {
+      "failures": 0,
+      "tests": 170,
+      "skipped": 0,
+      "errors": 0
+    },
+    "lintErrors": 0,
+    "lintWarnings": 90,
+    "ci": "https://github.com/sidhrthmnn/BetterIntelligence/actions/runs/40517431040",
+    "ciResult": "success",
+    "bundleBytes": 90398053,
+    "sha256": "9269ddf5d449623ba81c872a00138a6f6e496d129ab5ad33978f766898937d5c",
+    "bundletool": "passed",
+    "signature": "jar verified",
+    "physicalPolish": "Pending: phone disconnected before final cross-app/UI test"
+  },
+  {
+    "app": "TypeRight",
+    "sourceCommit": "131635c9feb9821fbb52d0841bd3a8bc88fa1809",
+    "versionCode": 222,
+    "unitTests": {
+      "failures": 0,
+      "tests": 377,
+      "skipped": 0,
+      "errors": 0
+    },
+    "lintErrors": 0,
+    "lintWarnings": 142,
+    "ci": "https://github.com/sidhrthmnn/TYPERIGHT/actions/runs/40516693816",
+    "ciResult": "success",
+    "bundleBytes": 19820013,
+    "sha256": "93c66800e85a31b9ada2b19f914d4291d0ae7cee3a7a7d9b082f1467c30c9689",
+    "bundletool": "passed",
+    "signature": "jar verified",
+    "physicalPolish": "Pending: phone disconnected before final cross-app/UI test"
+  }
+]
