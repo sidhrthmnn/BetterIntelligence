@@ -1,0 +1,23 @@
+{
+  "checkedOnUtc": "2026-10-26",
+  "method": "Agent reads of independently maintained primary reference pages, separate from the Android model. Expectations and reviews are outside Android assets and are never supplied as model answers. This is not independent human grading.",
+  "references": [
+    {"cases": [1], "url": "https://developer.mozilla.org/en-US/docs/Glossary/Recursion", "expectation": "Self-call, a stopping/base case and a smaller subproblem; the question also requests a short example."},
+    {"cases": [2], "method": "Independent decimal calculation: 15 * 240 / 100", "expectation": "36"},
+    {"cases": [3], "url": "https://www.crucial.com/articles/about-memory/what-is-the-difference-between-memory-and-storage", "access": "Reference request rejected; not treated as a verified page", "expectation": "Basic computing review only: RAM is volatile working memory; storage persists. No source-backed full-credit claim is made from the rejected reference."},
+    {"cases": [4], "url": "https://developer.android.com/guide/components/activities/activity-lifecycle", "expectation": "onCreate, onStart, onResume, onPause, onStop and onDestroy; process death does not guarantee onDestroy."},
+    {"cases": [5, 20], "url": "https://www.gov.uk/government/ministers/prime-minister", "expectation": "Page identifies Andy Burnham as current role holder, with 20 July 2026 appointment. Case 20 additionally needs a correct Malayalam response or honest uncertainty."},
+    {"cases": [6], "url": "https://www.microsoft.com/investor/reports/ar26/", "expectation": "Satya Nadella, Chairman and Chief Executive Officer. Letter signature is dated 14 October 2026; this is not proof of a publication date."},
+    {"cases": [7], "url": "https://developer.android.com/blog/posts/android-17-is-here?hl=en", "expectation": "Android 17 release article says 16 June 2026. An older release article alone cannot establish latest stable today; require fresh authoritative confirmation or qualify uncertainty."},
+    {"cases": [8], "url": "https://www.kva.se/en/prizes/nobel-prizes/", "expectation": "Francis Halzen, 2026 Physics prize, as stated by the awarding academy at audit time."},
+    {"cases": [9, 10, 12, 14, 19], "url": "https://developers.google.com/edge/litert-lm/android", "expectation": "Kotlin Android/JVM integration, GPU/NPU options subject to actual supported drivers, libraries and model. LiteRT-LM packages use .litertlm. Last-updated date observed in HTML: 2026-09-04; maintained background cannot establish a feature was added recently."},
+    {"cases": [9, 14, 15], "url": "https://github.com/ggml-org/llama.cpp", "expectation": "C/C++ inference using GGUF, quantisation and device-specific CPU/GPU backends. Desktop CUDA support is not evidence that an Android app can use CUDA. Upstream support does not prove BI packages every backend."},
+    {"cases": [11, 15], "url": "https://developers.google.com/edge/litert-lm/overview", "expectation": "Gemma 4 E2B CPU on S26 Ultra: 557 tokens/s prefill, 47 decode, 1.8 seconds TTFT, 1733 MB peak CPU memory. GPU row has 3808 prefill and 52 decode. A throughput value is not a memory value; measurements on different devices/models are not a matched comparison or a universal winner."},
+    {"cases": [11], "url": "https://github.com/QwenLM/Qwen3", "expectation": "Model family and size variants include 0.6B and 1.7B; this page does not itself provide a matched HONOR Gemma-versus-Qwen memory/speed measurement."},
+    {"cases": [13], "url": "https://support.google.com/pixelphone/answer/7158570?hl=en", "expectation": "Pixel 10: 12 GB RAM; Pixel 10 Pro: 16 GB RAM; both Tensor G5. Page independently readable in reference browser but rejected/unavailable within the app's bounded reader; keep that failure visible."},
+    {"cases": [16, 17], "url": "https://www.iana.org/help/example-domains", "expectation": "example.com is a documentation domain, unavailable for registration/transfer. No evidence of the fictional transfer or a current sale price; do not invent either."},
+    {"cases": [18], "method": "Question lacks a subject and has no prior topic", "expectation": "Ask which product, organisation or item is meant."},
+    {"cases": [21], "method": "JSON parser and literal input requirements", "expectation": "A JSON object only, id string 001, enabled boolean false; preserve types and omit code fences."},
+    {"cases": [22], "method": "Literal negation and script-preservation review", "expectation": "Preserve varilla and Latin-script Manglish; no web requests. Njan innu varilla, nale varam. is acceptable."}
+  ]
+}

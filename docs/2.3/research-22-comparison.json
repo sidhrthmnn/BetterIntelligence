@@ -1,0 +1,966 @@
+{
+  "kind": "synthetic offline retrieval; no model-generated answer accuracy measured",
+  "baselineCommit": "842b46e",
+  "cases": [
+    {
+      "case": 1,
+      "category": "factual",
+      "question": "What does Orion documentation say about Vulkan support?",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 50.8526,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 6.9304,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 2,
+      "category": "android",
+      "question": "How does Android Vulkan graphics initialization work?",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 4.8782,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 7.4751,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 3,
+      "category": "explanation",
+      "question": "Why does context size affect memory?",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 10.3841,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 7.5008,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 4,
+      "category": "factual",
+      "question": "Where are Example domains documented?",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.2299,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 6.5418,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 5,
+      "category": "comparison",
+      "question": "Compare Orion 2 vs Vega 3 for local Android inference",
+      "expectedFacts": 3,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": false,
+        "requests": 8,
+        "latencyMs": 17.6269,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 3,
+        "coveredFacts": 3,
+        "pass": true,
+        "requests": 10,
+        "latencyMs": 89.3193,
+        "publishers": 3,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 6,
+      "category": "comparison",
+      "question": "Is Gemma 4 better than Qwen 3.5 for local Android AI?",
+      "expectedFacts": 3,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": false,
+        "requests": 8,
+        "latencyMs": 9.054,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 3,
+        "coveredFacts": 3,
+        "pass": true,
+        "requests": 10,
+        "latencyMs": 36.6555,
+        "publishers": 3,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 7,
+      "category": "comparison",
+      "question": "Compare LiteRT vs llama.cpp for Android model inference",
+      "expectedFacts": 3,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": false,
+        "requests": 8,
+        "latencyMs": 7.6237,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 3,
+        "coveredFacts": 3,
+        "pass": true,
+        "requests": 10,
+        "latencyMs": 85.2225,
+        "publishers": 3,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 8,
+      "category": "comparison",
+      "question": "Orion 2 versus Vega 3 Android benchmark memory compatibility",
+      "expectedFacts": 3,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": false,
+        "requests": 8,
+        "latencyMs": 9.4732,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 3,
+        "coveredFacts": 3,
+        "pass": true,
+        "requests": 10,
+        "latencyMs": 33.5275,
+        "publishers": 3,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 9,
+      "category": "multipart",
+      "question": "When was Orion announced? What memory does Orion require?",
+      "expectedFacts": 2,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": false,
+        "requests": 6,
+        "latencyMs": 8.3948,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 2,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 7,
+        "latencyMs": 19.7923,
+        "publishers": 2,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 10,
+      "category": "multipart",
+      "question": "How does Orion support Android? How is Orion memory allocated?",
+      "expectedFacts": 2,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": false,
+        "requests": 6,
+        "latencyMs": 6.0122,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 2,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 7,
+        "latencyMs": 20.8564,
+        "publishers": 2,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 11,
+      "category": "multipart",
+      "question": "What is Orion context size? What is Orion quantization?",
+      "expectedFacts": 2,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": false,
+        "requests": 6,
+        "latencyMs": 4.2126,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 2,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 7,
+        "latencyMs": 19.9377,
+        "publishers": 2,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 12,
+      "category": "multipart",
+      "question": "When was Orion published and how much memory does Orion require?",
+      "expectedFacts": 2,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": false,
+        "requests": 6,
+        "latencyMs": 4.378,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 2,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 7,
+        "latencyMs": 16.0746,
+        "publishers": 2,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 13,
+      "category": "numbers",
+      "question": "What is Orion runtime battery result?",
+      "expectedFacts": 2,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 4.4446,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 6.2762,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 14,
+      "category": "table",
+      "question": "What RAM and GPU support does Orion Q4 require?",
+      "expectedFacts": 3,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 3,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.7351,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 3,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 7.1962,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 15,
+      "category": "dates",
+      "question": "When was Orion published and updated?",
+      "expectedFacts": 2,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 4.8805,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 7.8566,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 16,
+      "category": "numbers",
+      "question": "What price and memory does Orion have?",
+      "expectedFacts": 2,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.2831,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 5.1311,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 17,
+      "category": "recent",
+      "question": "Latest Orion Android updates",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 2.9474,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 6.0772,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 18,
+      "category": "stale",
+      "question": "Latest Orion Android updates",
+      "expectedFacts": 0,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.8811,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 5.4168,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 19,
+      "category": "undated",
+      "question": "Orion Android updates today",
+      "expectedFacts": 0,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.4273,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 5.3165,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 20,
+      "category": "future",
+      "question": "Orion Android updates today",
+      "expectedFacts": 0,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.7246,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 7.9525,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 21,
+      "category": "malayalam",
+      "question": "കേരളത്തിലെ Android മോഡൽ പിന്തുണ എന്താണ്?",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 5.859,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 17.9664,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 22,
+      "category": "malayalam",
+      "question": "Orion മോഡൽ മെമ്മറി എത്ര?",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 5.0927,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 10.0432,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 23,
+      "category": "chinese",
+      "question": "Android Vulkan 支持哪些设备？",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.7464,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 5.2696,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 24,
+      "category": "spanish",
+      "question": "Android memoria requisitos para modelos",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.7301,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 6.9181,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 25,
+      "category": "followup",
+      "question": "What is its memory? (Public source topic: Orion runtime documentation)",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 2.5033,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 7.2719,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 26,
+      "category": "followup",
+      "question": "Does it support Android? (Public source topic: Vega runtime)",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.671,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 6.1205,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 27,
+      "category": "ambiguous",
+      "question": "What about that?",
+      "expectedFacts": 0,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 2,
+        "latencyMs": 1.2799,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 3,
+        "latencyMs": 2.0467,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 28,
+      "category": "noanswer",
+      "question": "What is the secret unannounced Orion codename?",
+      "expectedFacts": 0,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 2.875,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 5.3623,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 29,
+      "category": "conflict",
+      "question": "What memory does Orion require?",
+      "expectedFacts": 2,
+      "beta5": {
+        "sources": 2,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 6,
+        "latencyMs": 3.8043,
+        "publishers": 2,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 2,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 6,
+        "latencyMs": 10.6346,
+        "publishers": 2,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 30,
+      "category": "independence",
+      "question": "Orion 2 and Vega 3 Android support memory benchmark",
+      "expectedFacts": 3,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": false,
+        "requests": 8,
+        "latencyMs": 4.4976,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 3,
+        "coveredFacts": 3,
+        "pass": true,
+        "requests": 10,
+        "latencyMs": 32.9686,
+        "publishers": 3,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 31,
+      "category": "suffix",
+      "question": "Orion Android compatibility",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 3.1727,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 5.8852,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 32,
+      "category": "dedupe",
+      "question": "Orion Android compatibility",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 5,
+        "latencyMs": 5.8069,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 5,
+        "latencyMs": 10.6498,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 33,
+      "category": "inaccessible",
+      "question": "Orion memory requirements",
+      "expectedFacts": 0,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 2.7652,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 4.4884,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 34,
+      "category": "captcha",
+      "question": "Compare Orion 2 vs Vega 3 for local Android inference",
+      "expectedFacts": 0,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 2,
+        "latencyMs": 1.7566,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 2,
+        "latencyMs": 2.2564,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 35,
+      "category": "markup",
+      "question": "Orion memory requirements",
+      "expectedFacts": 0,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 2,
+        "latencyMs": 0.8964,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 2,
+        "latencyMs": 1.4526,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 36,
+      "category": "noindex",
+      "question": "Orion documentation support",
+      "expectedFacts": 0,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 2.267,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 6.0184,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 37,
+      "category": "injection",
+      "question": "Orion Android driver compatibility",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 2.9838,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 4.1925,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 38,
+      "category": "hidden",
+      "question": "Orion memory requirements",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 2.7647,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 7.0193,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 39,
+      "category": "focused",
+      "question": "What is Orion memory RAM requirement?",
+      "expectedFacts": 2,
+      "beta5": {
+        "sources": 1,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 7.2802,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 2,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 30.6119,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    },
+    {
+      "case": 40,
+      "category": "lite-layout",
+      "question": "Orion memory requirements",
+      "expectedFacts": 1,
+      "beta5": {
+        "sources": 0,
+        "coveredFacts": 0,
+        "pass": false,
+        "requests": 2,
+        "latencyMs": 1.1024,
+        "publishers": 0,
+        "unsafeTextRemoved": true
+      },
+      "research22": {
+        "sources": 1,
+        "coveredFacts": 1,
+        "pass": true,
+        "requests": 4,
+        "latencyMs": 7.1648,
+        "publishers": 1,
+        "unsafeTextRemoved": true
+      }
+    }
+  ]
+}

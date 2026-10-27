@@ -1,0 +1,11 @@
+{
+  "preparedPid": 23667,
+  "conversationId": 2,
+  "previousConversation": 1,
+  "previousAppearance": "DARK",
+  "contextConversationId": 3,
+  "expectedContext": "Session notes (quoted history; newer messages override):\nUser said: \"My game is Colour Circle\"\nUser said: \"Synthetic session detail 2\"\nUser said: \"Synthetic session detail 3\"",
+  "status": "complete",
+  "model": "Smollm2 135M 8k Lc100K Mix1 Ep2",
+  "restoredPid": 23741
+}

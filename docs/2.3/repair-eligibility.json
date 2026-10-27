@@ -1,0 +1,54 @@
+{
+  "kind": "Supplemental eligibility experiment, excluded from primary pair measurements",
+  "model": "gemma-4-E2B-it.litertlm",
+  "loadMs": 3749,
+  "released": true,
+  "weightsStillMapped": false,
+  "results": [
+    {
+      "id": 11,
+      "mode": "OFF",
+      "support": "LOCAL",
+      "inferenceMs": 10022,
+      "retrievalMs": 0,
+      "httpRequests": 0,
+      "repairAttempted": false,
+      "repairMs": 0,
+      "repairOutcome": "NOT_NEEDED_OR_ELIGIBLE"
+    },
+    {
+      "id": 11,
+      "mode": "ON",
+      "support": "INSUFFICIENT",
+      "inferenceMs": 11282,
+      "retrievalMs": 3434,
+      "httpRequests": 4,
+      "repairAttempted": false,
+      "repairMs": 0,
+      "repairOutcome": "NOT_NEEDED_OR_ELIGIBLE"
+    },
+    {
+      "id": 15,
+      "mode": "OFF",
+      "support": "LOCAL",
+      "inferenceMs": 8291,
+      "retrievalMs": 0,
+      "httpRequests": 0,
+      "repairAttempted": false,
+      "repairMs": 0,
+      "repairOutcome": "NOT_NEEDED_OR_ELIGIBLE"
+    },
+    {
+      "id": 15,
+      "mode": "ON",
+      "support": "PARTIAL",
+      "inferenceMs": 10495,
+      "retrievalMs": 2844,
+      "httpRequests": 4,
+      "repairAttempted": false,
+      "repairMs": 0,
+      "repairOutcome": "NOT_NEEDED_OR_ELIGIBLE"
+    }
+  ],
+  "interpretation": "No optional second generation was eligible/needed. No physical correction-quality or timeout success is claimed; gating and cancellation are covered by JVM tests."
+}

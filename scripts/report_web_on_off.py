@@ -31,19 +31,31 @@ def main():
         item["sources"] = [{k: source.get(k) for k in ("id", "url", "title", "updatedAt", "dateKind")} for source in row["sources"]]
         compact.append(item)
     aggregates = {}
+    def median(values):
+        return statistics.median(values) if values else None
     for mode in ("OFF", "ON"):
         rows = [r for r in report["results"] if r["mode"] == mode]
         reviewed = [r for r in rows if r["review"] is not None]
+        generated = [r for r in rows if r["inferenceMs"] and r.get("telemetry")]
         aggregates[mode] = {
             "answers": len(rows), "httpRequests": sum(r["httpRequests"] for r in rows),
             "medianTotalMs": statistics.median(r["totalMs"] for r in rows) if rows else None,
             "totalRetrievalMs": sum(r["retrievalMs"] for r in rows),
             "totalInferenceMs": sum(r["inferenceMs"] for r in rows),
             "modelInvocations": sum(bool(r["inferenceMs"]) for r in rows),
+            "medianGeneratedTtftMs": median([r["telemetry"]["timeToFirstTokenMs"] for r in generated]),
+            "medianGeneratedTokensPerSecond": median([r["telemetry"]["tokensPerSecond"] for r in generated]),
+            "maximumSampledProcessPssMb": max((r["peakProcessPssKb"] / 1024 for r in rows), default=None),
+            "maximumAndroidThermalStatus": max((max(r["beforeThermal"], r["afterThermal"]) for r in rows), default=None),
             "failures": sum(bool(r["failure"]) for r in rows),
+            "researchUnavailableAnswers": sum(r["support"] == "SEARCH_FAILED" for r in rows),
+            "insufficientEvidenceAnswers": sum(r["support"] == "INSUFFICIENT" for r in rows),
             "reviewed": len(reviewed),
             "reviewQualityPoints": sum(r["review"]["quality"] for r in reviewed),
             "reviewMaxPoints": 2 * len(reviewed),
+            "reviewedCorrectCompleteAnswers": sum(r["review"].get("correctness") == "correct" for r in reviewed),
+            "reviewedClarifications": sum(r["review"].get("correctness") == "clarification" for r in reviewed),
+            "reviewedSafeAbstentions": sum(r["review"].get("correctness") == "safe-abstention" for r in reviewed),
             "unsupportedClaimsObserved": sum(r["review"]["unsupportedClaims"] for r in reviewed),
         }
     lines = ["# Web OFF / ON measured comparison", "",
@@ -70,7 +82,8 @@ def main():
             delta = on["review"]["quality"] - off["review"]["quality"]
             winner = "ON" if delta > 0 else "OFF" if delta < 0 else "Tie"
         speed = "OFF" if off["totalMs"] < on["totalMs"] else "ON" if on["totalMs"] < off["totalMs"] else "Tie"
-        lines.append(f"| {case}: {off['category']} | {excerpt(off)} | {excerpt(on)} | {winner} | {speed} |")
+        question = off["question"].split("https://")[0].replace("|", "\\|").strip()
+        lines.append(f"| {case}: {question} | {excerpt(off)} | {excerpt(on)} | {winner} | {speed} |")
     lines += ["", "## Aggregate measurements", "", "```json", json.dumps(aggregates, indent=2), "```", "",
         "Per-category review points (maximum two per reviewed answer):", "",
         "| Category | OFF points / reviewed maximum | ON points / reviewed maximum |", "| --- | --- | --- |"]
@@ -85,6 +98,8 @@ def main():
     (args.output / "web-on-off-measurements.json").write_text(json.dumps({
         "device": report["device"], "model": report["model"], "sha256": report["sha256"],
         "loadMs": report.get("loadMs"), "released": report.get("released"),
+        "weightsStillMapped": report.get("weightsStillMapped"),
+        "repairEnabled": report.get("repairEnabled"),
         "startedAt": report["startedAt"], "endedAt": report.get("endedAt"),
         "settings": {k: report[k] for k in ("context", "maxOutputTokens", "threads", "temperature", "repeats")},
         "aggregates": aggregates, "results": compact}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

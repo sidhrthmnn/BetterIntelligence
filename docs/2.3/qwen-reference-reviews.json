@@ -1,0 +1,17 @@
+{
+  "method": "Secondary six-pair agent reference audit against ../reference-snapshots.json; same model/settings within each pair. Not independent human grading or a matched Gemma/engine comparison.",
+  "reviews": [
+    {"id":2,"mode":"OFF","quality":2,"unsupportedClaims":0,"correctness":"correct","completeness":2,"notes":"15% of 240 is 36."},
+    {"id":2,"mode":"ON","quality":2,"unsupportedClaims":0,"correctness":"correct","completeness":2,"notes":"36; local arithmetic, no research calls."},
+    {"id":5,"mode":"OFF","quality":1,"unsupportedClaims":0,"correctness":"safe-abstention","completeness":0,"notes":"No stale current-name assertion."},
+    {"id":5,"mode":"ON","quality":1,"unsupportedClaims":0,"correctness":"safe-abstention","completeness":0,"notes":"Final output insufficient, not a correct officeholder answer despite relevant official evidence."},
+    {"id":9,"mode":"OFF","quality":0,"unsupportedClaims":2,"correctness":"unsubstantiated","completeness":0,"notes":"Mischaracterises LiteRT-LM as a LLaMA implementation and infers accelerator capabilities from NDK/ARM optimisation; these are not established by the actual docs."},
+    {"id":9,"mode":"ON","quality":1,"unsupportedClaims":0,"correctness":"safe-abstention","completeness":0,"notes":"Unsupported comparison removed; no useful comparison delivered."},
+    {"id":16,"mode":"OFF","quality":0,"unsupportedClaims":2,"correctness":"unsubstantiated","completeness":0,"notes":"Invents a 2025 registry status and describes IANA page as a registered-domain list without reading it. Avoiding the fictional transfer alone does not make the rest correct."},
+    {"id":16,"mode":"ON","quality":1,"unsupportedClaims":0,"correctness":"safe-abstention","completeness":0,"notes":"No invented transaction/registry claim; reserved-domain explanation still missing."},
+    {"id":20,"mode":"OFF","quality":1,"unsupportedClaims":0,"correctness":"safe-abstention","completeness":0,"notes":"Malayalam live-information limitation, no current-name claim."},
+    {"id":20,"mode":"ON","quality":1,"unsupportedClaims":0,"correctness":"safe-abstention","completeness":0,"notes":"Insufficient evidence fallback; not a successful Malayalam factual answer."},
+    {"id":21,"mode":"OFF","quality":2,"unsupportedClaims":0,"correctness":"correct","completeness":2,"notes":"Valid JSON only; string 001 and boolean false preserved."},
+    {"id":21,"mode":"ON","quality":2,"unsupportedClaims":0,"correctness":"correct","completeness":2,"notes":"Same valid JSON result with no research calls."}
+  ]
+}

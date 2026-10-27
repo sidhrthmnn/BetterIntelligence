@@ -6,6 +6,8 @@ Optional public web research is under **Web & Grounding**. It is off by default 
 
 Offline chat retains session context, format/language instructions and bounded local decimal arithmetic. Current names, prices, weather and recent results are not asserted from stale training memory when no live source was checked. Static explanations and reasoning remain local. Public HTML discovery can be restricted or unavailable; BI explains failure instead of inventing current facts.
 
+See the [2.3 real-device Web OFF/ON comparison](docs/2.3/WEB_ON_OFF.md), [test protocol and limitations](docs/2.3/VALIDATION.md) and [machine-readable measurements](docs/2.3/web-on-off-measurements.json). Citation checks, useful uncertainty and factual accuracy are reported separately; the measurements do not establish a universal engine or backend winner.
+
 The replacement Play app uses package `com.aistudio.betterintelligence.mobile`. Its provider, permission and action names use the same prefix, so it can coexist with the previous app while testers migrate. Consumers must use the updated client and manifest declarations below. See [release signing and publishing](docs/RELEASING.md).
 
 ## Shared AI Polish

@@ -1,0 +1,262 @@
+{
+  "sourceCommit": "baf837eb15924b428df511d8beee0c8056b9d620",
+  "versionCode": 15,
+  "versionName": "2.3.0-beta1",
+  "build": "BUILD SUCCESSFUL in 6m 39s",
+  "tasks": [
+    "testDebugUnitTest",
+    "assembleDebug",
+    "assembleDebugAndroidTest",
+    "lintRelease",
+    "bundleRelease"
+  ],
+  "lintWarnings": 90,
+  "lintErrors": 0,
+  "bundleValidation": "passed",
+  "signatureVerification": "jar verified; expected self-signed upload certificate",
+  "bundleSha256": "f0045d9837557af8287e81a50489a6c53b78193a8ab9565dfccefd005b7eb7a1",
+  "bundleBytes": 90393445,
+  "validationApkSha256": "eb43bdba93834d89808c5f54e443a67b9453baa0d82f66769ad8f8bc541c3133",
+  "suites": [
+    {
+      "name": "com.example.AccelerationTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 8.984
+    },
+    {
+      "name": "com.example.AnswerQualityTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.987
+    },
+    {
+      "name": "com.example.ChatContextMemoryTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 7.621
+    },
+    {
+      "name": "com.example.ChatRenderingTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 15.128
+    },
+    {
+      "name": "com.example.ChatTranscriptTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 22.408
+    },
+    {
+      "name": "com.example.ClaimEvaluationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.129
+    },
+    {
+      "name": "com.example.ClientAccessTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.867
+    },
+    {
+      "name": "com.example.ConversationAndGroundingTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 1.195
+    },
+    {
+      "name": "com.example.DirectWebResearchTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.679
+    },
+    {
+      "name": "com.example.EngineManagerTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.041
+    },
+    {
+      "name": "com.example.ExampleRobolectricTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.742
+    },
+    {
+      "name": "com.example.ExampleUnitTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.0
+    },
+    {
+      "name": "com.example.FocusedResearchTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.217
+    },
+    {
+      "name": "com.example.GenerationPreferencesTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.577
+    },
+    {
+      "name": "com.example.GreetingScreenshotTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 15.097
+    },
+    {
+      "name": "com.example.HuggingFaceCatalogTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.152
+    },
+    {
+      "name": "com.example.ModelDeletionTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 1.02
+    },
+    {
+      "name": "com.example.ModelDownloadSecurityTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.206
+    },
+    {
+      "name": "com.example.ModelLibraryTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.842
+    },
+    {
+      "name": "com.example.ModelOutputValidatorTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.013
+    },
+    {
+      "name": "com.example.ModelPresentationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.173
+    },
+    {
+      "name": "com.example.PolishTextTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.221
+    },
+    {
+      "name": "com.example.PublicWebResearchTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.377
+    },
+    {
+      "name": "com.example.RecentGroundingTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.403
+    },
+    {
+      "name": "com.example.Research22Test",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.97
+    },
+    {
+      "name": "com.example.ResearchDocumentTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.131
+    },
+    {
+      "name": "com.example.ResearchQualityEvaluationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.877
+    },
+    {
+      "name": "com.example.ResumableDownloadTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 3.152
+    },
+    {
+      "name": "com.example.SearchHttpTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.92
+    },
+    {
+      "name": "com.example.VerifiedModelFileCacheTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.992
+    }
+  ]
+}
