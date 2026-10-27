@@ -21,7 +21,7 @@ data class AccelerationCapabilities(
     val gpuReason: String = "Checking packaged Vulkan runtime…",
     val gpuFreeBytes: Long = 0, val gpuTotalBytes: Long = 0,
     val npuAvailable: Boolean = false,
-    val npuReason: String = "GGUF cannot run directly on an NPU. A matching compiled NPU model and vendor runtime/driver are not packaged."
+    val npuReason: String = "Select a matching compiled Qualcomm NPU LiteRT model in a validation build. GGUF uses CPU/Vulkan."
 )
 
 data class ResourceState(
@@ -45,7 +45,7 @@ class HardwareAccelerationManager(private val context: Context? = null) {
         preferences?.edit()?.putString("mode", ProcessingMode.AUTO.name)?.putInt("gpu_layers", -1)?.apply()
     }
     internal fun setMode(mode: ProcessingMode, layers: Int = layerLimit.value) {
-        require(mode != ProcessingMode.NPU) { capabilities.value.npuReason }
+        require(mode != ProcessingMode.NPU || capabilities.value.npuAvailable) { capabilities.value.npuReason }
         require(mode != ProcessingMode.GPU || capabilities.value.gpuAvailable) { capabilities.value.gpuReason }
         _mode.value = mode; _layerLimit.value = layers.coerceIn(-1, 999)
         preferences?.edit()?.putString("mode", mode.name)?.putInt("gpu_layers", _layerLimit.value)?.apply()
@@ -62,8 +62,10 @@ class HardwareAccelerationManager(private val context: Context? = null) {
     internal fun markUnavailable(reason: String) { _capabilities.value = _capabilities.value.copy(gpuAvailable = false, gpuReason = reason) }
     internal fun liteRtGpuStatus(available: Boolean, reason: String) {
         _capabilities.value = _capabilities.value.copy(gpuAvailable = available, gpuName = "LiteRT OpenCL",
-            gpuReason = reason, gpuFreeBytes = 0, gpuTotalBytes = 0,
-            npuReason = "This build provides CPU/OpenCL LiteRT-LM inference. NPU requires a matching compiled model and packaged vendor runtime/driver.")
+            gpuReason = reason, gpuFreeBytes = 0, gpuTotalBytes = 0)
+    }
+    internal fun npuStatus(validated: Boolean, reason: String) {
+        _capabilities.value = _capabilities.value.copy(npuAvailable = validated, npuReason = reason)
     }
     fun resources(): ResourceState {
         val ctx = context ?: return ResourceState()

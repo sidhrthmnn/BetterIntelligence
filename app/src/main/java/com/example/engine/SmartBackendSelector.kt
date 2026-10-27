@@ -44,30 +44,37 @@ class SmartBackendSelector(context: Context? = null, private val now: () -> Long
     init {
         // A process dying in GPU load/decode leaves this marker. Avoid a crash loop.
         if (prefs?.getString("pending_process", null) != processToken)
-            prefs?.getString("pending", null)?.let { failed(it, "Previous GPU attempt did not finish") }
+            prefs?.getString("pending", null)?.let {
+                failed(it, "Previous ${prefs.getString("pending_backend", "GPU")} attempt did not finish")
+            }
     }
-    fun cached(key: String, gpuAvailable: Boolean, availableMb: Long? = null): BackendMeasurement? = runCatching {
+    fun cached(key: String, gpuAvailable: Boolean, availableMb: Long? = null, npuAvailable: Boolean = false): BackendMeasurement? = runCatching {
         val j = cache.optJSONObject(key) ?: return null
         if (now() - j.getLong("saved") !in 0..MAX_AGE_MS) return null
         val mode = ProcessingMode.valueOf(j.getString("backend"))
         if (mode == ProcessingMode.CPU && minimumAvailableMb(key) > 0 && availableMb != null &&
             availableMb >= minimumAvailableMb(key) && !blocked(key, availableMb)) return null
         if (mode == ProcessingMode.GPU && (!gpuAvailable || blocked(key))) return null
+        if (mode == ProcessingMode.NPU && (!npuAvailable || blocked(key) || !hasValidatedNpu(key))) return null
         BackendMeasurement(mode, j.getInt("layers"), j.getInt("threads"), j.getDouble("tps").toFloat(), j.getLong("ttft"),
             j.getDouble("memory").toFloat(), j.getLong("init"), 0, 0, 0f)
     }.getOrNull()
     fun save(key: String, result: BackendMeasurement, samples: List<BackendMeasurement>) {
-        if (samples.any { it.backend == ProcessingMode.GPU && it.stable }) failures.remove(key)
+        if (samples.any { it.backend in setOf(ProcessingMode.GPU, ProcessingMode.NPU) && it.stable }) failures.remove(key)
         if (cache.length() >= 32 && !cache.has(key)) cache.remove(cache.keys().asSequence().minByOrNull { cache.optJSONObject(it)?.optLong("saved") ?: 0 } ?: "")
         cache.put(key, encode(result).put("saved", now()).put("measurements", JSONArray(samples.map { encode(it) })))
         prefs?.edit()?.putString("cache", cache.toString())?.putString("failures", failures.toString())?.apply()
     }
     fun hasValidatedGpu(key: String): Boolean {
+        return hasValidated(key, ProcessingMode.GPU)
+    }
+    fun hasValidatedNpu(key: String): Boolean = hasValidated(key, ProcessingMode.NPU)
+    private fun hasValidated(key: String, backend: ProcessingMode): Boolean {
         val saved = cache.optJSONObject(key) ?: return false
         if (blocked(key) || now() - saved.optLong("saved") !in 0..MAX_AGE_MS) return false
         val samples = saved.optJSONArray("measurements") ?: return false
         return (0 until samples.length()).any { index -> samples.optJSONObject(index)?.let {
-            it.optString("backend") == ProcessingMode.GPU.name && it.optBoolean("stable") && it.optDouble("tps") > 0
+            it.optString("backend") == backend.name && it.optBoolean("stable") && it.optDouble("tps") > 0 && it.optInt("thermalAfter") < 3
         } == true }
     }
     private fun encode(m: BackendMeasurement) = JSONObject().put("backend", m.backend.name).put("layers", m.layers).put("threads", m.threads)
@@ -80,8 +87,9 @@ class SmartBackendSelector(context: Context? = null, private val now: () -> Long
         (minimum > 0 && (availableMb == null || availableMb < minimum)) || now() - it.optLong("time") in 0..it.optLong("cooldown", FAILURE_COOLDOWN_MS)
     } ?: false
     fun failureReason(key: String): String = failures.optJSONObject(key)?.optString("reason").orEmpty()
-    fun beginGpuAttempt(key: String) { prefs?.edit()?.putString("pending", key)?.putString("pending_process", processToken)?.commit() }
-    fun endGpuAttempt() { prefs?.edit()?.remove("pending")?.remove("pending_process")?.commit() }
+    fun beginGpuAttempt(key: String) { prefs?.edit()?.putString("pending", key)?.putString("pending_backend", "GPU")?.putString("pending_process", processToken)?.commit() }
+    fun endGpuAttempt() { prefs?.edit()?.remove("pending")?.remove("pending_backend")?.remove("pending_process")?.commit() }
+    fun beginNpuAttempt(key: String) { prefs?.edit()?.putString("pending", key)?.putString("pending_backend", "NPU")?.putString("pending_process", processToken)?.commit() }
     fun failed(key: String, reason: String, minimumAvailableMb: Long = 0) {
         if (failures.length() >= 32 && !failures.has(key)) failures.remove(failures.keys().next())
         // Resource pressure is transient; don't blacklist a healthy driver for a full day.
@@ -89,7 +97,7 @@ class SmartBackendSelector(context: Context? = null, private val now: () -> Long
         failures.put(key, JSONObject().put("time", now()).put("reason", reason)
             .put("minimumAvailableMb", minimumAvailableMb)
             .put("cooldown", if (resourceFailure) 5L * 60 * 1000 else FAILURE_COOLDOWN_MS)); cache.remove(key)
-        prefs?.edit()?.putString("cache", cache.toString())?.putString("failures", failures.toString())?.remove("pending")?.remove("pending_process")?.commit()
+        prefs?.edit()?.putString("cache", cache.toString())?.putString("failures", failures.toString())?.remove("pending")?.remove("pending_backend")?.remove("pending_process")?.commit()
     }
     fun reset() {
         cache.keys().asSequence().toList().forEach { cache.remove(it) }

@@ -212,6 +212,7 @@ private fun DeleteDialog(title: String, body: String, dismiss: () -> Unit, confi
 @Composable
 fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
     val telemetry by viewModel.telemetry.collectAsState()
+    val acceleration by viewModel.accelerationCapabilities.collectAsState()
     val hardware by viewModel.hardwareProfile.collectAsState()
     val models by viewModel.allModels.collectAsState()
     val secondary by viewModel.secondaryModel.collectAsState()
@@ -238,7 +239,8 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
                     Column(Modifier.weight(1f)) {
                         Text("Automatic", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Automatically benchmarks and selects the optimal CPU or GPU backend, thread count, and layer offload based on live RAM and thermal headroom.",
+                            if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) "Compares compatible CPU, GPU and Qualcomm NPU paths using measured correctness, speed, RAM and thermal headroom. Compiled NPU models must match this phone."
+                            else "Automatically benchmarks and selects the optimal CPU or GPU backend, thread count, and layer offload based on live RAM and thermal headroom.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -246,7 +248,12 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
                 }
             }
             TextButton(onClick = { viewModel.resetBackendDecisions() }, enabled = !telemetry.isRunning) {
-                Text("Reset backend measurements and retry GPU")
+                Text(if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) "Reset backend measurements and retry accelerators" else "Reset backend measurements and retry GPU")
+            }
+            if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) {
+                Text(if (acceleration.npuAvailable) "Qualcomm NPU validation passed for this model. Automatic compares its performance with other compatible processors."
+                    else acceleration.npuReason, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("qualcomm_npu_status"))
             }
         }
         item {
