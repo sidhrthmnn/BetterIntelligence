@@ -1,20 +1,20 @@
 [
   {
     "app": "BI",
-    "sourceCommit": "dc643c3d9876834bcee97c03aa1eeb77b7a92c4a",
-    "versionCode": 16,
+    "sourceCommit": "cb1829921a84009bde08c9b77bbc63cc056c2ff5",
+    "versionCode": 17,
     "unitTests": {
       "failures": 0,
-      "tests": 170,
+      "tests": 171,
       "skipped": 0,
       "errors": 0
     },
     "lintErrors": 0,
     "lintWarnings": 90,
-    "ci": "https://github.com/sidhrthmnn/BetterIntelligence/actions/runs/40517431040",
+    "ci": "https://github.com/sidhrthmnn/BetterIntelligence/actions/runs/40522549778",
     "ciResult": "success",
-    "bundleBytes": 90398053,
-    "sha256": "9269ddf5d449623ba81c872a00138a6f6e496d129ab5ad33978f766898937d5c",
+    "bundleBytes": 90398363,
+    "sha256": "2882db20a6a753b492d561d9801699778deb2d5d1baeee35f8ccaf45b60fe68a",
     "bundletool": "passed",
     "signature": "jar verified",
     "physicalPolish": "Pending: phone disconnected before final cross-app/UI test"
