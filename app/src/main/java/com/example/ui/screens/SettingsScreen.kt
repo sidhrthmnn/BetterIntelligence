@@ -212,6 +212,7 @@ private fun DeleteDialog(title: String, body: String, dismiss: () -> Unit, confi
 @Composable
 fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
     val telemetry by viewModel.telemetry.collectAsState()
+    val acceleration by viewModel.accelerationCapabilities.collectAsState()
     val hardware by viewModel.hardwareProfile.collectAsState()
     val models by viewModel.allModels.collectAsState()
     val secondary by viewModel.secondaryModel.collectAsState()
@@ -247,6 +248,11 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
             }
             TextButton(onClick = { viewModel.resetBackendDecisions() }, enabled = !telemetry.isRunning) {
                 Text("Reset backend measurements and retry GPU")
+            }
+            if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) {
+                Text(if (acceleration.npuAvailable) "Qualcomm NPU validation passed for this model. Automatic compares its performance with other compatible processors."
+                    else acceleration.npuReason, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("qualcomm_npu_status"))
             }
         }
         item {

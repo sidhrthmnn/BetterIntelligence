@@ -140,6 +140,7 @@ class InferenceEngine internal constructor(private val context: android.content.
     @Volatile private var activeJob: Job? = null
     val hardware = HardwareAccelerationManager(context)
     private val selector = SmartBackendSelector(context)
+    private val npuController = QualcommNpuController(hardware, selector)
     private var capabilitiesRead = false
     private var loadedFile: File? = null
     private var modelIdentity = ""
@@ -204,6 +205,7 @@ class InferenceEngine internal constructor(private val context: android.content.
             }
             if (liteSession != null) capabilitiesRead = false
             refreshHardware()
+            hardware.npuStatus(false, "GGUF inference uses CPU/Vulkan. Qualcomm NPU requires a matching compiled LiteRT text graph.")
             owner?.takeIf { it !== this }?.clearModelState()
             liteSession?.close(); liteSession = null
             owner = this
@@ -235,6 +237,7 @@ class InferenceEngine internal constructor(private val context: android.content.
     }
 
     private fun clearModelState() {
+        hardware.npuStatus(false, "Select a matching compiled Qualcomm NPU model; runtime validation is required.")
         if (liteSession != null) capabilitiesRead = false
         liteSession?.close(); liteSession = null; liteName = ""; liteQuantization = ""; liteLibraryModel = null
         loadedFile = null; loadedLayers = 0; selectedKey = ""
@@ -263,6 +266,7 @@ class InferenceEngine internal constructor(private val context: android.content.
             val attentionOnly = catalogModel != null && identity.isNotBlank() && identity == catalogModel.sha256Checksum &&
                 catalogModel.architecture in setOf("gemma4", "gemma3", "qwen3", "qwen2", "phi3")
             val candidate = LiteRtSession(ctx, file, attentionOnly, identity) // Unknown/hybrid files get isolated executors.
+            require(hardware.mode.value != ProcessingMode.CPU || candidate.supportsCpu) { "CPU Only is selected, but this compiled NPU model has no CPU graph. Select Automatic or a standard CPU/GPU model." }
             require(candidate.maximumContext >= 512) { "This package supports fewer than 512 context tokens; choose another mobile instruction model." }
             val loadContext = candidate.configurationContext(initialContext.coerceIn(512, 2048))
             val threads = hardware.threads()
@@ -271,11 +275,20 @@ class InferenceEngine internal constructor(private val context: android.content.
             val cached = selector.cached(selectionKey, candidate.supportsGpu)
             var preferred = if (hardware.mode.value != ProcessingMode.CPU && selector.hasValidatedGpu(selectionKey) &&
                 (hardware.mode.value == ProcessingMode.GPU || cached?.backend == ProcessingMode.GPU)) ProcessingMode.GPU else ProcessingMode.CPU
+            val npuKey = npuController.key(key, loadContext, threads)
+            if (!candidate.supportsCpu) {
+                check(candidate.supportsNpu && !selector.blocked(npuKey)) { "NPU-only model cannot load: ${selector.failureReason(npuKey).ifBlank { candidate.npuReason }}. Select a standard CPU/GPU model." }
+                preferred = ProcessingMode.NPU
+            }
             val allocationContext = candidate.allocationContext(loadContext)
             var estimate = catalogModel?.let { ModelLibrary.memoryEstimate(it, allocationContext, if (preferred == ProcessingMode.GPU) Int.MAX_VALUE else 0) }
                 ?: ModelMemoryPlanner.estimate(file.length(), allocationContext, 524288L, if (preferred == ProcessingMode.GPU) 1 else 0, 1)
             val available = (resources.availableMb + (owner?.releasableGpuWeightsMb() ?: 0)).coerceAtMost(resources.totalMb)
             val budget = ModelMemoryPlanner.budget(resources.totalMb, available)
+            if (preferred == ProcessingMode.NPU) check(!resources.lowMemory && resources.thermal < 3 &&
+                QualcommNpuSupport.memoryMb(file.length(), allocationContext) <= budget) {
+                "Compiled NPU model needs about ${QualcommNpuSupport.memoryMb(file.length(), allocationContext)} MB of shared RAM; $budget MB safely available. Free memory or select a smaller CPU/GPU model."
+            }
             if (preferred == ProcessingMode.GPU && estimate.totalMb > budget) {
                 preferred = ProcessingMode.CPU
                 estimate = catalogModel?.let { ModelLibrary.memoryEstimate(it, allocationContext) }
@@ -289,6 +302,7 @@ class InferenceEngine internal constructor(private val context: android.content.
             owner = this; clearModelState()
             var loadedBackend = if (resources.thermal < 3) preferred else ProcessingMode.CPU
             if (loadedBackend == ProcessingMode.GPU) selector.beginGpuAttempt(selectionKey)
+            if (loadedBackend == ProcessingMode.NPU) selector.beginNpuAttempt(npuKey)
             try {
                 candidate.prepare(loadedBackend, threads, loadContext)
                 if (loadedBackend == ProcessingMode.GPU) {
@@ -298,8 +312,10 @@ class InferenceEngine internal constructor(private val context: android.content.
             }
             catch (failure: Exception) {
                 if (loadedBackend == ProcessingMode.CPU) { candidate.close(); throw failure }
-                selector.failed(selectionKey, failure.message.orEmpty())
-                fallback("Cached LiteRT GPU initialization failed; retrying CPU")
+                selector.failed(if (loadedBackend == ProcessingMode.NPU) npuKey else selectionKey, failure.message.orEmpty())
+                candidate.close()
+                check(candidate.supportsCpu) { "Qualcomm NPU initialization failed and this file has no CPU graph. Select a standard CPU/GPU model. ${failure.message.orEmpty()}" }
+                fallback("LiteRT $loadedBackend initialization failed; retrying CPU")
                 loadedBackend = ProcessingMode.CPU
                 try { candidate.prepare(loadedBackend, threads, loadContext) }
                 catch (cpuFailure: Throwable) { candidate.close(); throw cpuFailure }
@@ -307,19 +323,63 @@ class InferenceEngine internal constructor(private val context: android.content.
             liteSession = candidate; loadedFile = file; modelIdentity = key
             liteName = name; liteQuantization = quantization
             liteLibraryModel = catalogModel
+            hardware.npuStatus(false, candidate.npuReason)
             hardware.liteRtGpuStatus(selector.hasValidatedGpu(selectionKey),
                 if (!candidate.supportsGpu) candidate.gpuReason else if (selector.hasValidatedGpu(selectionKey)) "This configuration previously passed real GPU decode" else "Automatic will validate this model's OpenCL GPU graph")
             val loadFallback = _telemetry.value
             _telemetry.value = HardwareTelemetry(isModelLoaded = true, modelName = name,
                 fallbackCount = loadFallback.fallbackCount, lastFallback = loadFallback.lastFallback,
-                activeBackend = loadedBackend.name, activeThreads = if (loadedBackend == ProcessingMode.CPU) threads else 0,
-                accelerationMode = if (loadedBackend == ProcessingMode.GPU) "GPU (LiteRT OpenCL)" else "CPU (LiteRT-LM)",
+                activeBackend = if (loadedBackend == ProcessingMode.NPU) "Pending validation" else loadedBackend.name,
+                activeThreads = if (loadedBackend == ProcessingMode.CPU) threads else 0,
+                accelerationMode = when (loadedBackend) { ProcessingMode.NPU -> "Qualcomm NPU awaiting decode validation"; ProcessingMode.GPU -> "GPU (LiteRT OpenCL)"; else -> "CPU (LiteRT-LM)" },
                 modelLoadTimeMs = candidate.initializationMs, backendInitializationMs = candidate.initializationMs,
                 memoryUsageMb = memoryMb())
         }
     }
 
     private suspend fun inferLiteRt(prompt: String, params: GenerationParams, listener: StreamTokenListener?, started: Long): String {
+        val session = checkNotNull(liteSession)
+        if (!session.supportsNpu || hardware.mode.value in setOf(ProcessingMode.CPU, ProcessingMode.GPU))
+            return inferLiteRtStandard(prompt, params, listener, started)
+        val effective = params.copy(contextSize = session.configurationContext(params.contextSize.coerceIn(512, 4096)),
+            threads = hardware.threads(params.threads))
+        val target = npuController.select(session, modelIdentity, effective,
+            { status -> _telemetry.value = _telemetry.value.copy(backendStatus = status, backendDecision = status) }, ::fallback)
+        if (target != ProcessingMode.NPU) return inferLiteRtStandard(prompt, effective, listener, started)
+        val key = npuController.key(modelIdentity, effective.contextSize, effective.threads)
+        var visible = false
+        selector.beginNpuAttempt(key)
+        try {
+            session.prepare(ProcessingMode.NPU, effective.threads, effective.contextSize)
+            val initialized = hardware.resources()
+            check(!initialized.lowMemory && initialized.availableMb >= 512 && initialized.thermal < 3) { "Memory or thermal pressure after NPU initialization" }
+            _telemetry.value = _telemetry.value.copy(activeBackend = "NPU", accelerationMode = "NPU (Qualcomm QNN/Hexagon)",
+                activeThreads = 0, activeGpuLayers = 0, backendInitializationMs = session.initializationMs, backendStatus = "Generating")
+            val result = session.generate(prompt, effective) { delta, index ->
+                val resources = hardware.resources()
+                check(!resources.lowMemory && resources.availableMb >= 256 && resources.thermal < 5) { "Critical memory/thermal pressure; partial output is preserved" }
+                visible = true
+                if (_telemetry.value.timeToFirstTokenMs == 0L) _telemetry.value = _telemetry.value.copy(timeToFirstTokenMs = SystemClock.elapsedRealtime() - started)
+                listener?.onToken(delta, index)
+            }
+            _telemetry.value = _telemetry.value.copy(tokensPerSecond = result.tokensPerSecond, completionTokens = result.outputTokens,
+                promptTokens = result.inputTokens, promptEvaluationTimeMs = result.prefillMs, peakMemoryUsageMb = memoryMb())
+            listener?.onComplete(result.text, SystemClock.elapsedRealtime() - started, result.tokensPerSecond, result.inputTokens, result.outputTokens)
+            return result.text
+        } catch (failure: Exception) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            selector.failed(key, failure.message.orEmpty()); hardware.npuStatus(false, "Qualcomm execution failed: ${failure.message.orEmpty().take(160)}")
+            fallback("Qualcomm NPU execution failed: ${failure.message.orEmpty().take(160)}")
+            if (visible || !session.supportsCpu) {
+                session.close()
+                _telemetry.value = _telemetry.value.copy(activeBackend = "None", accelerationMode = "No active backend", isModelLoaded = false)
+                throw IllegalStateException(if (visible) "NPU stopped; partial output is preserved. Retry with a CPU/GPU model." else "This NPU-only file cannot fall back to CPU. Select a standard CPU/GPU model.", failure)
+            }
+            return inferLiteRtStandard(prompt, effective, listener, started)
+        } finally { selector.endGpuAttempt() }
+    }
+
+    private suspend fun inferLiteRtStandard(prompt: String, params: GenerationParams, listener: StreamTokenListener?, started: Long): String {
         val session = checkNotNull(liteSession)
         val state = hardware.resources()
         val effective = params.copy(contextSize = session.configurationContext(params.contextSize.coerceIn(512, 4096)),

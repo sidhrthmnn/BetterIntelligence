@@ -36,6 +36,9 @@ internal class LiteRtSession(private val context: Context, val file: File,
     private val reuseAttentionExecutor: Boolean = false, identity: String = "") : AutoCloseable {
     val supportsGpu: Boolean
     val gpuReason: String
+    val supportsCpu: Boolean
+    val supportsNpu: Boolean
+    val npuReason: String
     val maximumContext: Int
     val minimumContext = ModelLibrary.liteRtMinimumContext(identity)
     private val float32Gpu = ModelLibrary.liteRtFloat32Gpu(identity)
@@ -65,8 +68,11 @@ internal class LiteRtSession(private val context: Context, val file: File,
         ModelInfo.from(file.absolutePath).use { info ->
             require(info is ModelInfo.Llm) { "Select a LiteRT-LM text-generation model, not an embedding model" }
             val backends = info.supportedBackends(Modality.TEXT)
-            require(com.google.ai.edge.litertlm.BackendType.CPU in backends) {
-                "This LiteRT model has no CPU path. Select the standard CPU/GPU .litertlm file for safe fallback."
+            supportsCpu = com.google.ai.edge.litertlm.BackendType.CPU in backends
+            val npu = QualcommNpuSupport.inspect(context, info)
+            supportsNpu = npu.compatible; npuReason = npu.reason
+            require(supportsCpu || supportsNpu) {
+                "This LiteRT model has no CPU fallback. ${npu.reason} Select the standard CPU/GPU file instead."
             }
             val restriction = ModelLibrary.liteRtGpuRestriction(identity)
             supportsGpu = com.google.ai.edge.litertlm.BackendType.GPU in backends && restriction.isEmpty()
@@ -78,8 +84,10 @@ internal class LiteRtSession(private val context: Context, val file: File,
     }
 
     fun prepare(mode: ProcessingMode, threads: Int, contextSize: Int) {
-        require(mode == ProcessingMode.CPU || mode == ProcessingMode.GPU)
+        require(mode in setOf(ProcessingMode.CPU, ProcessingMode.GPU, ProcessingMode.NPU))
+        require(mode != ProcessingMode.CPU || supportsCpu) { "This compiled NPU file has no CPU graph. Use the standard CPU/GPU model for fallback." }
         require(mode != ProcessingMode.GPU || supportsGpu) { gpuReason }
+        require(mode != ProcessingMode.NPU || supportsNpu) { npuReason }
         val graphContext = configurationContext(contextSize)
         val key = "$mode:$threads:$graphContext"
         if (engine?.isInitialized() == true && key == configuration) return
@@ -87,8 +95,13 @@ internal class LiteRtSession(private val context: Context, val file: File,
         privateBaselineMb = privateDirtyMb()
         val start = SystemClock.elapsedRealtime()
         ExperimentalFlags.enableBenchmark = true
+        if (mode == ProcessingMode.NPU) QualcommNpuSupport.configureDspSearchPath(context)
         val candidate = Engine(EngineConfig(modelPath = file.absolutePath,
-            backend = if (mode == ProcessingMode.GPU) Backend.GPU() else Backend.CPU(threads),
+            backend = when (mode) {
+                ProcessingMode.GPU -> Backend.GPU()
+                ProcessingMode.NPU -> Backend.NPU(nativeLibraryDir = this.context.applicationInfo.nativeLibraryDir)
+                else -> Backend.CPU(threads)
+            },
             maxNumTokens = graphContext,
             // Gemma 4 has upstream FP16 GPU correctness reports (#4001). Use
             // the public 0.18 FP32 override for these exact verified packages,
