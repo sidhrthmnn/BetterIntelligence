@@ -78,15 +78,27 @@ class HardwareAccelerationManager(private val context: Context? = null) {
         ResourcePolicy.threads(capabilities.value.cores, performanceCores, requested, state)
 
     private fun detectPerformanceCores(): Int {
+        val capacities = (0 until Runtime.getRuntime().availableProcessors()).mapNotNull { core ->
+            runCatching { File("/sys/devices/system/cpu/cpu$core/cpu_capacity").readText().trim().toLong() }.getOrNull()
+        }
         val frequencies = (0 until Runtime.getRuntime().availableProcessors()).mapNotNull { core ->
             runCatching { File("/sys/devices/system/cpu/cpu$core/cpufreq/cpuinfo_max_freq").readText().trim().toLong() }.getOrNull()
         }
-        val max = frequencies.maxOrNull() ?: return 0
-        return if (frequencies.distinct().size > 1) frequencies.count { it >= max * 0.85 } else 0
+        return ResourcePolicy.performanceCores(capacities, frequencies)
     }
 }
 
 object ResourcePolicy {
+    fun performanceCores(capacities: List<Long>, frequencies: List<Long>): Int {
+        // Scheduler capacity distinguishes small cores from merely lower-clocked
+        // performance cores. SM8750 reports six 792-capacity and two 1024-capacity
+        // cores; frequency-only detection wrongly selected just its two prime cores.
+        val measured = capacities.filter { it > 0 }
+        if (measured.distinct().size > 1) return measured.count { it >= measured.max() * .75 }
+        val validFrequencies = frequencies.filter { it > 0 }
+        val max = validFrequencies.maxOrNull() ?: return 0
+        return if (validFrequencies.distinct().size > 1) validFrequencies.count { it >= max * .85 } else 0
+    }
     fun threads(cores: Int, performanceCores: Int, requested: Int, state: ResourceState): Int {
         val automatic = (if (performanceCores > 0) performanceCores else ceil(cores / 2.0).toInt()).coerceIn(1, 4)
         val normal = (if (requested > 0) requested else automatic).coerceIn(1, minOf(8, cores.coerceAtLeast(1)))

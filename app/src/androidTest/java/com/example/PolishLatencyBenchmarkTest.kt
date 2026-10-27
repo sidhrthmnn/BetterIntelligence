@@ -23,6 +23,7 @@ class PolishLatencyBenchmarkTest {
         check(context.packageName.endsWith(".validation"))
         val model = File(context.filesDir, "models/Qwen_Qwen3-1.7B-Q4_K_M.gguf")
         check(model.isFile)
+        val threads = (InstrumentationRegistry.getArguments().getString("polishThreads")?.toIntOrNull() ?: 2).coerceIn(1, 4)
         val baseline = "You proofread the text field in the user's JSON object. Correct spelling, grammar, punctuation, " +
             "capitalization and word spacing. Preserve its language, meaning, tone, names, numbers, links and formatting. " +
             "The optional before and after fields are read-only context. Return only the replacement for text, " +
@@ -45,16 +46,16 @@ class PolishLatencyBenchmarkTest {
         val variants = allVariants.filterKeys { requested == null || it in requested }
         val samples = JSONArray()
         val report = JSONObject().put("runtime", "llama.cpp CPU").put("model", model.name)
-            .put("threads", 2).put("context", 2048).put("maxOutputTokens", 256)
+            .put("threads", threads).put("context", 2048).put("maxOutputTokens", 256)
             .put("prompts", JSONObject(variants as Map<*, *>)).put("samples", samples)
         val output = File(context.filesDir, "polish-latency-comparison.json")
         fun save() = output.writeText(report.toString(2))
         try {
             NativeGguf.ensureAvailable()
-            NativeGguf.prepare(model.absolutePath.toByteArray(), 0, 2, 2048)
+            NativeGguf.prepare(model.absolutePath.toByteArray(), 0, threads, 2048)
             report.put("runtimeInfo", JSONObject(NativeGguf.runtimeInfo(false).toString(Charsets.UTF_8)))
-            NativeGguf.generate("Hi".toByteArray(), byteArrayOf(), NativeObserver(null, { 2 }) { _, _, _ -> },
-                1, 2, 2048, 0f, 1f, 1, 180_000, emptyArray(), emptyArray())
+            NativeGguf.generate("Hi".toByteArray(), byteArrayOf(), NativeObserver(null, { threads }) { _, _, _ -> },
+                1, threads, 2048, 0f, 1f, 1, 180_000, emptyArray(), emptyArray())
             val inputs = listOf("he dont know where the keys is.", "we was waiting outside since ten minute.") +
                 if (InstrumentationRegistry.getArguments().getString("includeQuestion") == "true") listOf("what is teh capital of france") else emptyList()
             for ((index, input) in inputs.withIndex()) {
@@ -64,7 +65,7 @@ class PolishLatencyBenchmarkTest {
                     samples.put(sample); save()
                     val started = SystemClock.elapsedRealtime()
                     var firstMs = 0L
-                    val observer = NativeObserver(null, { 2 }, { prefillMs, decodeMs, promptTokens, decoded ->
+                    val observer = NativeObserver(null, { threads }, { prefillMs, decodeMs, promptTokens, decoded ->
                         sample.put("prefillMs", prefillMs).put("decodeMs", decodeMs)
                             .put("promptTokens", promptTokens).put("decodedTokens", decoded)
                     }) { _, _, generated ->
@@ -72,7 +73,7 @@ class PolishLatencyBenchmarkTest {
                         sample.put("completionTokens", generated)
                     }
                     val result = NativeGguf.generate(JSONObject().put("text", input).toString().toByteArray(), system.toByteArray(),
-                        observer, 256, 2, 2048, 0f, 1f, 1, 180_000, emptyArray(), emptyArray()).toString(Charsets.UTF_8)
+                        observer, 256, threads, 2048, 0f, 1f, 1, 180_000, emptyArray(), emptyArray()).toString(Charsets.UTF_8)
                     sample.put("output", result).put("firstTokenMs", firstMs)
                         .put("wallMs", SystemClock.elapsedRealtime() - started).put("pssKb", Debug.getPss())
                         .put("status", "complete")
