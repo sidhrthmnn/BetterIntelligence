@@ -43,12 +43,15 @@ internal object QualcommNpuSupport {
     }
 
     fun inspect(context: Context, info: ModelInfo): NpuCompatibility {
+        if (!BuildConfig.QUALCOMM_NPU_ENABLED) return NpuCompatibility(false,
+            "Qualcomm NPU validation build required; CPU/GPU remain available in this release.")
         val directory = File(context.applicationInfo.nativeLibraryDir)
+        val hasNpu = BackendType.NPU in info.supportedBackends(Modality.TEXT)
         val result = compatibility(BuildConfig.QUALCOMM_NPU_ENABLED, Build.VERSION.SDK_INT,
             Build.SUPPORTED_ABIS.firstOrNull().orEmpty(),
             if (Build.VERSION.SDK_INT >= 31) Build.SOC_MODEL else "",
-            info.socName(Modality.TEXT).orEmpty(), BackendType.NPU in info.supportedBackends(Modality.TEXT),
-            info.npuBrand(Modality.TEXT) == NpuBrand.QUALCOMM,
+            if (hasNpu) info.socName(Modality.TEXT).orEmpty() else "", hasNpu,
+            hasNpu && info.npuBrand(Modality.TEXT) == NpuBrand.QUALCOMM,
             libraries.all { File(directory, it).isFile })
         if (!result.compatible) return result
         return try {

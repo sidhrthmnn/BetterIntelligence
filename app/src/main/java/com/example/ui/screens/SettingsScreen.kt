@@ -239,7 +239,8 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
                     Column(Modifier.weight(1f)) {
                         Text("Automatic", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Automatically benchmarks and selects the optimal CPU or GPU backend, thread count, and layer offload based on live RAM and thermal headroom.",
+                            if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) "Compares compatible CPU, GPU and Qualcomm NPU paths using measured correctness, speed, RAM and thermal headroom. Compiled NPU models must match this phone."
+                            else "Automatically benchmarks and selects the optimal CPU or GPU backend, thread count, and layer offload based on live RAM and thermal headroom.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -247,7 +248,7 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
                 }
             }
             TextButton(onClick = { viewModel.resetBackendDecisions() }, enabled = !telemetry.isRunning) {
-                Text("Reset backend measurements and retry GPU")
+                Text(if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) "Reset backend measurements and retry accelerators" else "Reset backend measurements and retry GPU")
             }
             if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) {
                 Text(if (acceleration.npuAvailable) "Qualcomm NPU validation passed for this model. Automatic compares its performance with other compatible processors."

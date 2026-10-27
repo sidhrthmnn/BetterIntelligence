@@ -19,6 +19,25 @@ import java.security.MessageDigest
 /** Real Qualcomm-only test. Requires explicitly staged, licensed matching weights. */
 @RunWith(AndroidJUnit4::class)
 class QualcommNpuDeviceTest {
+    @Test fun validationProfileOnEmulatorKeepsGgufOnCpu() = runBlocking {
+        assumeTrue(InstrumentationRegistry.getArguments().getString("testNpuUnavailable") == "true")
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        check(context.packageName.endsWith(".validation"))
+        assumeTrue(android.os.Build.SUPPORTED_ABIS.firstOrNull() == "x86_64")
+        val model = File(context.filesDir, "models/Qwen_Qwen3-1.7B-Q4_K_M.gguf")
+        check(model.isFile)
+        val engine = InferenceEngine(context)
+        try {
+            engine.loadCustomGguf(model).getOrThrow()
+            assertFalse(engine.hardware.capabilities.value.npuAvailable)
+            assertTrue(runCatching { engine.setProcessingMode(ProcessingMode.NPU) }.isFailure)
+            engine.setProcessingMode(ProcessingMode.CPU)
+            assertTrue(engine.generateSync("Hi", GenerationParams(maxTokens = 2, threads = 2, contextSize = 512, temperature = 0f)).isNotBlank())
+            assertEquals("CPU", engine.telemetry.value.activeBackend)
+            assertEquals(0, engine.telemetry.value.activeGpuLayers)
+        } finally { engine.unloadActiveModel(); assertFalse(engine.isReady()) }
+    }
+
     @Test fun compiledModelRunsThroughQnnAndUnloadsCleanly() = runBlocking {
         val args = InstrumentationRegistry.getArguments()
         assumeTrue(args.getString("testQualcommNpu") == "true")

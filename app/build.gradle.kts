@@ -15,8 +15,10 @@ val qualcommNpu = providers.gradleProperty("biQualcommNpu").map { it.toBooleanSt
 val qnnRuntime by configurations.creating { isTransitive = false }
 val qualcommOutput = layout.buildDirectory.dir("generated/qualcomm-npu")
 val prepareQualcommNpu by tasks.registering {
+  notCompatibleWithConfigurationCache("Optional vendor extraction uses Gradle project copy operations")
   inputs.property("enabled", qualcommNpu)
   inputs.files(qnnRuntime)
+  inputs.file(rootProject.file("third_party/litert-samples-LICENSE"))
   outputs.dir(qualcommOutput)
   doLast {
     val output = qualcommOutput.get().asFile
