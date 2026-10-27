@@ -44,6 +44,12 @@ class AccelerationTest {
     }
 
     @Test fun resourcePolicyBoundsThreadsAndAccountsForSharedRam() {
+        assertEquals(8, ResourcePolicy.performanceCores(List(6) { 792L } + List(2) { 1024L }, emptyList()))
+        assertEquals(4, ResourcePolicy.performanceCores(List(4) { 480L } + List(4) { 1024L }, emptyList()))
+        assertEquals(2, ResourcePolicy.performanceCores(emptyList(), listOf(1800, 1800, 2800, 2800)))
+        assertEquals(0, ResourcePolicy.performanceCores(emptyList(), emptyList()))
+        assertEquals(4, ResourcePolicy.threads(8, 8, 0, ResourceState()))
+        assertEquals(2, ResourcePolicy.threads(8, 8, 0, ResourceState(thermal = 3)))
         assertEquals(4096, ModelMemoryPlanner.liteRtAllocationContext(512, 4096, false))
         assertEquals(512, ModelMemoryPlanner.liteRtAllocationContext(512, 32000, true))
         assertEquals(1280, ModelMemoryPlanner.liteRtAllocationContext(2048, 1280, true))
