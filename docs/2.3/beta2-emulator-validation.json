@@ -1,0 +1,101 @@
+{
+  "dateUtc": "2026-10-27T16:39:49.6737201Z",
+  "device": "Android 16 API 36 x86_64 emulator",
+  "processing": "CPU",
+  "appVersions": {
+    "TypeRight": 222,
+    "BI": 17
+  },
+  "productionCodeChanged": false,
+  "primary": "Gemma 4 E4B LiteRT",
+  "secondary": "Qwen 3 1.7B GGUF",
+  "weightSha256Verified": true,
+  "setup4Gb": {
+    "primary": "Gemma 4 E4B Instruct · LiteRT",
+    "secondary": "Qwen 3 1.7B · GGUF",
+    "availableRamMb": 2214,
+    "safeBudgetMb": 1702,
+    "primaryRequiredMb": 3590,
+    "secondaryRequiredMb": 1801,
+    "pressureSimulated": false
+  },
+  "setup5Gb": {
+    "primary": "Gemma 4 E4B Instruct · LiteRT",
+    "secondary": "Qwen 3 1.7B · GGUF",
+    "availableRamMb": 2616,
+    "safeBudgetMb": 2104,
+    "primaryRequiredMb": 3590,
+    "secondaryRequiredMb": 1801,
+    "pressureSimulated": false
+  },
+  "fallback": {
+    "before": "BUSY",
+    "primaryModelLoadedBefore": false,
+    "firstMs": 75778,
+    "firstOutput": "i has 2 apples.",
+    "visibleProgress": [
+      "Checking available RAM and choosing a model…",
+      "Loading fallback model · Qwen 3 1.7B · GGUF…",
+      "Preparing your text · Qwen3 1.7B…",
+      "Polish draft"
+    ],
+    "model": "Qwen3 1.7B",
+    "role": "SECONDARY_FALLBACK",
+    "secondPreparationPhases": [
+      "CONNECTING",
+      "CHECKING_MEMORY",
+      "CHECKING_MEMORY"
+    ],
+    "secondOutput": "she have a book.",
+    "secondProgress": [
+      "CONNECTING",
+      "CHECKING_MEMORY",
+      "CHECKING_MEMORY",
+      "PREPARING_INPUT",
+      "GENERATING",
+      "FINALIZING"
+    ],
+    "status": "completed",
+    "totalMs": 118225
+  },
+  "lowMemory": {
+    "status": "ERROR",
+    "activity": "LOW_MEMORY",
+    "message": "There isn't enough free RAM for a downloaded model. Close unused apps or choose a smaller fallback in Better Intelligence. Your text hasn't been changed.",
+    "draftPreserved": true,
+    "resultInserted": false
+  },
+  "nativeMappings": {
+    "primaryPresent": false,
+    "secondaryPresent": true
+  },
+  "tests": {
+    "fallbackUiAndReuse": {
+      "seconds": 123.107,
+      "passed": true
+    },
+    "lowMemoryDraftPreservation": {
+      "seconds": 4.652,
+      "passed": true
+    },
+    "nativeEditorQuotesApplyUndo": {
+      "passed": true,
+      "syntheticService": true,
+      "seconds": 11.483
+    }
+  },
+  "initialAttempts": [
+    "4 GB positive attempt returned LOW_MEMORY before generation; dedicated negative test then passed.",
+    "First 5 GB instrumentation startup exited with background startup ANR before tests began; retry passed in 1.056 seconds after emulator settled."
+  ],
+  "limitations": [
+    "Both diagnostic grammar samples were returned unchanged by the model. Functional transport/progress passed; correction quality did not.",
+    "Wall-clock times are emulator UI measurements, not phone performance benchmarks.",
+    "Phone/GPU/NPU execution not verified; temporary phone validation-app cleanup still needs reconnection."
+  ],
+  "configuredRamMb": [
+    4096,
+    5120
+  ],
+  "emulatorCleanupPassed": true
+}

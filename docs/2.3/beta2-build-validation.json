@@ -17,7 +17,8 @@
     "sha256": "2882db20a6a753b492d561d9801699778deb2d5d1baeee35f8ccaf45b60fe68a",
     "bundletool": "passed",
     "signature": "jar verified",
-    "physicalPolish": "Pending: phone disconnected before final cross-app/UI test"
+    "physicalPolish": "Not verified: HONOR disconnected; user authorised emulator validation and publication on 27 October 2026",
+    "emulatorFunctionalChecks": "Passed: real Qwen CPU fallback and reuse, no-fit draft preservation, native editor apply/undo. See emulator validation record for model-quality and startup caveats."
   },
   {
     "app": "TypeRight",
@@ -37,6 +38,7 @@
     "sha256": "93c66800e85a31b9ada2b19f914d4291d0ae7cee3a7a7d9b082f1467c30c9689",
     "bundletool": "passed",
     "signature": "jar verified",
-    "physicalPolish": "Pending: phone disconnected before final cross-app/UI test"
+    "physicalPolish": "Not verified: HONOR disconnected; user authorised emulator validation and publication on 27 October 2026",
+    "emulatorFunctionalChecks": "Passed: real Qwen CPU fallback and reuse, no-fit draft preservation, native editor apply/undo. See emulator validation record for model-quality and startup caveats."
   }
 ]
