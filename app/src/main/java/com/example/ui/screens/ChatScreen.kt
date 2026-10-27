@@ -305,11 +305,14 @@ private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: 
         } else SelectionContainer { MarkdownText(message.content, sources.map { it.id }.toSet()) { selectedSource = it } }
         if (!user) {
             val notice = when (message.groundingStatus) {
-                "EVIDENCE_CITED" -> "Sources cited · Check the evidence"
+                "EVIDENCE_CITED" -> "Web answer · Passage checks passed; check sources"
+                "PARTIALLY_SUPPORTED" -> "Partial web answer · Unsupported details omitted"
                 "CITATIONS_MISSING" -> "Sources retrieved; the answer did not cite them"
-                "SEARCH_FAILED" -> "Live sources unavailable · Model-only answer"
+                "SEARCH_FAILED" -> "Web search unavailable"
                 "INSUFFICIENT_EVIDENCE" -> "Web answer could not be verified"
                 "PRIVACY_BLOCKED" -> "Search skipped to protect possible credentials · Local-only answer"
+                "LOCAL" -> "Local answer · Web not used"
+                "LOCAL_UNVERIFIED" -> "Live facts not checked · Web not used"
                 else -> ""
             }
             if (notice.isNotEmpty()) Text(notice, Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelMedium,

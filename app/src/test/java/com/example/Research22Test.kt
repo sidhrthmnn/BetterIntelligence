@@ -35,7 +35,8 @@ class Research22Test {
         val source = WebPageExtractor.article(WebDocument("https://docs.example/runtimes", html, "text/html"), 1, question)!!
         val prepared = GroundingPolicy.prepareEvidence(question, listOf(source), 2200)
         assertTrue(prepared.sources.single().excerpt.contains("OakRT")); assertTrue(prepared.sources.single().excerpt.contains("pine.cpp"))
-        assertTrue(prepared.sources.single().excerpt.contains("Engine | Compatibility"))
+        assertTrue(prepared.sources.single().excerpt.contains("Engine: pine.cpp"))
+        assertTrue(prepared.sources.single().excerpt.contains("Compatibility and memory tradeoffs:"))
         assertTrue(source.excerpt.indexOf("pine.cpp") < source.excerpt.indexOf("OakRT")) // retain publisher row order
     }
     @Test fun comparisonPlansBoundedDistinctFacetsAndRetainsVersions() {
@@ -44,7 +45,7 @@ class Research22Test {
         assertEquals(3, plan.searches.size)
         assertTrue(plan.searches.all { "Gemma 4" in it && "Qwen 3.5" in it })
         assertTrue(plan.searches.any { "memory" in it }); assertTrue(plan.searches.any { "benchmark" in it })
-        assertEquals(3, plan.focuses.size)
+        assertEquals(5, plan.focuses.size)
     }
     @Test fun nonEnglishQuestionsRetainTheirScriptAndMultipartQuestionsAreFocused() {
         for (question in listOf("Gemma 4 Qwen 3.5 മോഡലുകൾ തമ്മിൽ താരതമ്യം ചെയ്യുക", "കേരളത്തിൽ ഇന്ന് എന്താണ് വാർത്ത?", "Android Vulkan 支持哪些设备？", "¿Qué versión de Android es compatible?")) {

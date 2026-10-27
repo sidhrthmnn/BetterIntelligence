@@ -1,0 +1,200 @@
+{
+  "scope": "24 synthetic deterministic claim fixtures; not factual accuracy or Android latency",
+  "baselineRef": "b90955b",
+  "legacyPass": 10,
+  "newPass": 24,
+  "cases": [
+    {
+      "id": 1,
+      "claim": "Orion requires 4 GB RAM [1].",
+      "expectedAccepted": true,
+      "legacyAccepted": true,
+      "claimChecksAccepted": true,
+      "checkMsJvm": 3.4428
+    },
+    {
+      "id": 2,
+      "claim": "Orion does not support Vulkan [1].",
+      "expectedAccepted": true,
+      "legacyAccepted": true,
+      "claimChecksAccepted": true,
+      "checkMsJvm": 3.7781
+    },
+    {
+      "id": 3,
+      "claim": "Orion supports OpenCL only with the vendor SDK [1].",
+      "expectedAccepted": true,
+      "legacyAccepted": true,
+      "claimChecksAccepted": true,
+      "checkMsJvm": 3.3833
+    },
+    {
+      "id": 4,
+      "claim": "Orion has 2 CPU threads [1].",
+      "expectedAccepted": true,
+      "legacyAccepted": true,
+      "claimChecksAccepted": true,
+      "checkMsJvm": 4.4057
+    },
+    {
+      "id": 5,
+      "claim": "Orion is faster than Vega on the tested device [1].",
+      "expectedAccepted": true,
+      "legacyAccepted": true,
+      "claimChecksAccepted": true,
+      "checkMsJvm": 3.1908
+    },
+    {
+      "id": 6,
+      "claim": "1. Orion requires 4 GB RAM [1].",
+      "expectedAccepted": true,
+      "legacyAccepted": true,
+      "claimChecksAccepted": true,
+      "checkMsJvm": 3.6587
+    },
+    {
+      "id": 7,
+      "claim": "Orion supports Vulkan [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 4.0922
+    },
+    {
+      "id": 8,
+      "claim": "Orion requires 4 MB RAM [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 3.1279
+    },
+    {
+      "id": 9,
+      "claim": "Vega requires 4 GB RAM [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 1.7243
+    },
+    {
+      "id": 10,
+      "claim": "Orion requires 8 GB RAM [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": false,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 0.9955
+    },
+    {
+      "id": 11,
+      "claim": "Orion has 4 CPU threads [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 3.0005
+    },
+    {
+      "id": 12,
+      "claim": "Orion requires 2 GB RAM [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 4.8522
+    },
+    {
+      "id": 13,
+      "claim": "Vega is faster than Orion [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 1.7456
+    },
+    {
+      "id": 14,
+      "claim": "Orion supports OpenCL [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 10.0967
+    },
+    {
+      "id": 15,
+      "claim": "Orion always supports OpenCL on every device [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 10.1084
+    },
+    {
+      "id": 16,
+      "claim": "Orion requires 4 GB RAM [99].",
+      "expectedAccepted": false,
+      "legacyAccepted": false,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 2.0362
+    },
+    {
+      "id": 17,
+      "claim": "Orion requires 4 GB RAM https:\/\/invented.example\/proof [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 1.7803
+    },
+    {
+      "id": 18,
+      "claim": "I downloaded Orion with 4 GB RAM [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 1.8895
+    },
+    {
+      "id": 19,
+      "claim": "Orion can perfectly replace every runtime [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 3.5116
+    },
+    {
+      "id": 20,
+      "claim": "Orion needs no RAM [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 3.8427
+    },
+    {
+      "id": 21,
+      "claim": "Vega has 2 CPU threads [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 2.8102
+    },
+    {
+      "id": 22,
+      "claim": "Orion supports Vulkan and needs 4 GB RAM [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": true,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 4.1215
+    },
+    {
+      "id": 23,
+      "claim": "Orion requires 4 GB RAM [1, 99].",
+      "expectedAccepted": false,
+      "legacyAccepted": false,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 1.6873
+    },
+    {
+      "id": 24,
+      "claim": "Orion was published in 2026 [1].",
+      "expectedAccepted": false,
+      "legacyAccepted": false,
+      "claimChecksAccepted": false,
+      "checkMsJvm": 1.776
+    }
+  ]
+}

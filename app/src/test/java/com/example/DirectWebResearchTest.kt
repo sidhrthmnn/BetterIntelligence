@@ -50,7 +50,9 @@ class DirectWebResearchTest {
         assertNull(WebPageExtractor.article(page("<meta name='robots' content='max-snippet:0'>$article"), 1, "Android Vulkan"))
         assertNull(WebPageExtractor.article(page("<title>Subscribe to read</title>$article"), 1, "Android Vulkan"))
         assertNotNull(WebPageExtractor.article(page(article, "noindex"), 1, "Android Vulkan"))
-        assertTrue(WebPageExtractor.article(page(article, "max-snippet: 90"), 1, "Android Vulkan")!!.excerpt.length <= 90)
+        // A publisher's limit can be smaller than the first complete sentence.
+        // Omit it rather than cutting off a qualification or negation.
+        assertTrue((WebPageExtractor.article(page(article, "max-snippet: 90"), 1, "Android Vulkan")?.excerpt?.length ?: 0) <= 90)
     }
     @Test fun updatedPublisherDateCanQualifyOldDocumentationForCurrentQuestion() {
         val today = java.time.LocalDate.now()

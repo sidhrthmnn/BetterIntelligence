@@ -61,12 +61,22 @@ object WebPageExtractor {
         // or global site banners for the article's publication/update line.
         val dateLines = root.select("p, em, time, [class*=byline]").map { it.text().trim() }
             .filter { it.length <= 220 && visibleDate.containsMatchIn(it) }.distinct().take(3)
+        // A signed letter/report date is document content, not publication time.
+        // Keep its distinct provenance and reject biographical dates.
+        val signatureDates = root.select("p:has(br)").map { it.text().trim() }.filter { line ->
+            line.length <= 300 && Regex("(?i)chief executive officer|chairman|signed by|author").containsMatchIn(line) &&
+                !Regex("(?i)\\b(?:born|died|since|appointed|joined)\\b").containsMatchIn(line)
+        }.mapNotNull { line ->
+            Regex("([A-Za-z]{3,9}\\s+\\d{1,2},?\\s+\\d{4})\\s*$").find(line)?.value?.trim()?.let { value ->
+                ResearchQuery.date(value)?.takeIf { it <= query.today.plusDays(1) }?.toString()?.let { it to "DOCUMENT_REPORTED" }
+            }
+        }.take(2)
         val visible = dateLines.flatMap { line -> visibleDate.findAll(line).mapNotNull { match ->
             ResearchQuery.date(match.groupValues[2])?.takeIf { it <= query.today.plusDays(1) }?.let {
                 it.toString() to if (match.groupValues[1].contains("updat", true)) "MODIFIED" else "PUBLISHED"
             }
         }.toList() }
-        val dates = (visible + listOf(metadataDate)).filter { ResearchQuery.date(it.first) != null }
+        val dates = (visible + listOf(metadataDate) + signatureDates).filter { ResearchQuery.date(it.first) != null }
         val date = (if (query.earliest != null) dates.maxByOrNull { ResearchQuery.date(it.first)!! }
             else dates.firstOrNull { it.second == "PUBLISHED" } ?: dates.firstOrNull()) ?: ("" to "")
         val title = (doc.selectFirst("meta[property=og:title]")?.attr("content")?.takeIf { it.isNotBlank() }
@@ -88,7 +98,7 @@ object WebPageExtractor {
                         node.selectFirst("p, h1, h2, h3, h4, ul, ol, pre, table, dd, dt") == null &&
                         node.children().none { child -> child.tagName() in setOf("div", "section") && child.text().trim().length >= 25 }
                 } else {
-                    node.parents().takeWhile { it != root }.none { it.tagName() in setOf("ul", "ol", "pre", "table", "p") }
+                    node.parents().takeWhile { it != root }.none { it.tagName() in if (node.tagName() == "table") setOf("table") else setOf("ul", "ol", "pre", "table", "p") }
                 }
             }
             .flatMap { node ->
@@ -116,7 +126,7 @@ object WebPageExtractor {
                     node.tagName() in setOf("ul", "ol") -> {
                         val heading = currentHeading()
                         val items = node.select("> li").ifEmpty { node.select("li") }
-                            .map { it.text().replace(Regex("[\\t ]+"), " ").trim() }
+                            .map { item -> item.clone().also { it.select("table").remove() }.text().replace(Regex("[\\t ]+"), " ").trim() }
                             .filter { it.length >= 4 }
                         if (items.isEmpty()) emptyList()
                         else {
@@ -140,16 +150,9 @@ object WebPageExtractor {
                     }
                     node.tagName() == "table" -> {
                         val heading = currentHeading()
-                        val rows = node.select("tr")
-                        val firstRow = rows.firstOrNull()
-                        val firstRowText = firstRow?.select("th, td")?.joinToString(" | ") { it.text().trim() }.orEmpty()
-                        val hasImplicitHeader = firstRow != null && firstRow.select("th").isEmpty() &&
-                            Regex("(?i)\\b(s\\.?\\s*no|sr\\.?\\s*no|name|minister|prime\\s+minister|chief\\s+minister|office|tenure|term|party|portrait|from|to|took\\s+office|left\\s+office|model|ram|gpu|price|version)\\b").containsMatchIn(firstRowText)
-                        val headerRow = rows.firstOrNull { it.select("th").isNotEmpty() } ?: if (hasImplicitHeader) firstRow else null
-                        val header = headerRow?.select("th, td")?.joinToString(" | ") { it.text().trim() }.orEmpty()
                         val caption = node.selectFirst("caption")?.text().orEmpty()
-                        rows.filter { it != headerRow && it.select("td").isNotEmpty() }.take(80).map { row ->
-                            listOf(heading, caption, header, row.select("th, td").joinToString(" | ") { it.text().trim() })
+                        HtmlEvidenceTable.rows(node).map { row ->
+                            listOf(heading, caption, row)
                                 .filter { it.isNotBlank() }.distinct().joinToString("\n")
                         }
                     }
@@ -159,7 +162,10 @@ object WebPageExtractor {
                     }
                 }
             }
-        val clean = blocks.map { it.replace(Regex("[\\t ]+"), " ").trim().take(1800) }
+        val clean = blocks.flatMap { block ->
+            val normalized = block.replace(Regex("[\\t ]+"), " ").trim()
+            if (normalized.length <= 1800) listOf(normalized) else ClaimVerification.sentences(normalized)
+        }
             .filter { it.length >= 12 && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) }
             .distinct().take(350)
         val usable = clean.ifEmpty { listOf(body.trim().take(2200)) }
@@ -241,7 +247,7 @@ object WebPageExtractor {
             }.thenBy { it })
             else -> selected.toList()
         }
-        return (dates + orderedSelected.map { candidates[it] }).distinct().joinToString("\n\n").take(budget)
+        return EvidencePacket.completeExcerpt((dates + orderedSelected.map { candidates[it] }).distinct().joinToString("\n\n"), budget)
     }
 
     /** At most one useful same-origin child may be followed by the caller. */
@@ -272,6 +278,10 @@ object WebPageExtractor {
 
     private fun reportedDate(doc: Document, query: ResearchQuery): Pair<String, String> {
         val dates = mutableListOf<Pair<String, String>>()
+        doc.select("p, time").map { it.text().trim() }.filter { it.length <= 100 }.forEach { line ->
+            visibleDate.find(line)?.let { match -> dates += match.groupValues[2] to
+                if (match.groupValues[1].contains("updat", true)) "MODIFIED" else "PUBLISHED" }
+        }
         for ((key, kind) in listOf("article:published_time" to "PUBLISHED", "datePublished" to "PUBLISHED", "article:modified_time" to "MODIFIED", "dateModified" to "MODIFIED"))
             doc.select("meta[property=$key], meta[name=$key], time[itemprop=$key]").forEach {
                 dates += it.attr("content").ifBlank { it.attr("datetime") } to kind

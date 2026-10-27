@@ -1,0 +1,203 @@
+{
+  "baselineRef": "b90955b",
+  "legacyPass": 19,
+  "newPass": 28,
+  "cases": [
+    {
+      "question": "What is the population of Tokyo?",
+      "expectedSearch": true,
+      "legacySearch": false,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "Who is the CEO of Microsoft?",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "What is the price of the Pixel 10?",
+      "expectedSearch": true,
+      "legacySearch": false,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "Which Android version is currently supported?",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "Who won the 2026 Nobel Prize in Physics?",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Recent event result"
+    },
+    {
+      "question": "Is Gemma 4 better than Qwen 3.5?",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Technical comparison"
+    },
+    {
+      "question": "Compare the latest LiteRT and llama.cpp features.",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "Current UK Prime Minister",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "Today's London weather",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "Current phone price",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "Compare recent Android AI frameworks",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "Check again",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Public research follow-up"
+    },
+    {
+      "question": "കേരളത്തിന്റെ ഇപ്പോഴത്തെ മുഖ്യമന്ത്രി ആരാണ്?",
+      "expectedSearch": true,
+      "legacySearch": false,
+      "actualSearch": true,
+      "reason": "Changing factual information"
+    },
+    {
+      "question": "Verify the 1969 Moon landing",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Requested source or verification"
+    },
+    {
+      "question": "Read https:\/\/docs.example\/orion",
+      "expectedSearch": true,
+      "legacySearch": true,
+      "actualSearch": true,
+      "reason": "Requested source or verification"
+    },
+    {
+      "question": "Does LiteRT-LM support GPU?",
+      "expectedSearch": true,
+      "legacySearch": false,
+      "actualSearch": true,
+      "reason": "Runtime or product compatibility"
+    },
+    {
+      "question": "Explain recursion",
+      "expectedSearch": false,
+      "legacySearch": false,
+      "actualSearch": false,
+      "reason": "Definition or general explanation"
+    },
+    {
+      "question": "Write a birthday message",
+      "expectedSearch": false,
+      "legacySearch": false,
+      "actualSearch": false,
+      "reason": "Creative or supplied-text task"
+    },
+    {
+      "question": "What is 15% of 240?",
+      "expectedSearch": false,
+      "legacySearch": false,
+      "actualSearch": false,
+      "reason": "Static explanation, reasoning or ordinary conversation"
+    },
+    {
+      "question": "Summarise supplied text: Today's price was wrong.",
+      "expectedSearch": false,
+      "legacySearch": true,
+      "actualSearch": false,
+      "reason": "Creative or supplied-text task"
+    },
+    {
+      "question": "Who was UK prime minister in 1945?",
+      "expectedSearch": false,
+      "legacySearch": true,
+      "actualSearch": false,
+      "reason": "Historical background"
+    },
+    {
+      "question": "Difference between RAM and storage",
+      "expectedSearch": false,
+      "legacySearch": true,
+      "actualSearch": false,
+      "reason": "Static explanation, reasoning or ordinary conversation"
+    },
+    {
+      "question": "Explain electric current flow",
+      "expectedSearch": false,
+      "legacySearch": true,
+      "actualSearch": false,
+      "reason": "Definition or general explanation"
+    },
+    {
+      "question": "Write a poem about today",
+      "expectedSearch": false,
+      "legacySearch": false,
+      "actualSearch": false,
+      "reason": "Creative or supplied-text task"
+    },
+    {
+      "question": "Translate this weather sentence into Malayalam",
+      "expectedSearch": false,
+      "legacySearch": false,
+      "actualSearch": false,
+      "reason": "Creative or supplied-text task"
+    },
+    {
+      "question": "Explain Android's activity lifecycle",
+      "expectedSearch": false,
+      "legacySearch": false,
+      "actualSearch": false,
+      "reason": "Definition or general explanation"
+    },
+    {
+      "question": "Who won the 1901 Nobel Prize in Physics?",
+      "expectedSearch": false,
+      "legacySearch": true,
+      "actualSearch": false,
+      "reason": "Historical background"
+    },
+    {
+      "question": "Create JSON with name and age",
+      "expectedSearch": false,
+      "legacySearch": false,
+      "actualSearch": false,
+      "reason": "Static explanation, reasoning or ordinary conversation"
+    }
+  ]
+}

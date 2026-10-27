@@ -77,10 +77,12 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
             text = {
                 Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(source.url.toHttpUrl().host, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                    Text(source.url, style = MaterialTheme.typography.bodySmall)
                     if (source.updatedAt.isNotBlank()) Text(when (source.dateKind) {
                         "PUBLISHED" -> "Page-reported publication: ${source.updatedAt.take(10)}"
                         "MODIFIED" -> "Page-reported update: ${source.updatedAt.take(10)}"
                         "SEARCH_REPORTED" -> "Search-reported date: ${source.updatedAt.take(40)}"
+                        "DOCUMENT_REPORTED" -> "Document-reported date: ${source.updatedAt.take(10)} (publication date unknown)"
                         else -> "Reported date: ${source.updatedAt.take(40)}"
                     })
                     Text("Retrieved ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(source.retrievedAt))}")

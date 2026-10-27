@@ -134,7 +134,7 @@ class ConversationAndGroundingTest {
         assertEquals("`array[999]` and array[512]", GroundingPolicy.validateCitations("`array[999]` and array[512]", listOf(source)).first)
         val prompt = GroundingPolicy.evidencePrompt("Question", listOf(source), 2000)
         assertTrue(prompt.contains("Untrusted source evidence")); assertTrue(prompt.contains("2001-01-01"))
-        val multilingual = GroundingPolicy.evidencePrompt("ചന്ദ്രൻ?", listOf(source.copy(excerpt = "ചന്ദ്രൻ ".repeat(200))), 1400)
+        val multilingual = GroundingPolicy.evidencePrompt("ചന്ദ്രൻ?", listOf(source.copy(excerpt = "ചന്ദ്രൻ ഭൂമിയുടെ ഉപഗ്രഹമാണ്. ".repeat(30))), 1400)
         assertTrue(multilingual.toByteArray(Charsets.UTF_8).size <= 1400)
         assertEquals(source, GroundingResult.sources(GroundingResult(sources = listOf(source)).json()).single())
     }
