@@ -20,19 +20,22 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class ClientFallbackSetupTest {
     @Test fun prepareRealModelsAndSyntheticClient() = runBlocking {
-        if (InstrumentationRegistry.getArguments().getString("setupClientFallback") != "true") return@runBlocking
+        val arguments = InstrumentationRegistry.getArguments()
+        if (arguments.getString("setupClientFallback") != "true") return@runBlocking
+        val primaryFile = arguments.getString("primaryModel") ?: "gemma-4-E2B-it.litertlm"
+        val secondaryFile = arguments.getString("secondaryModel") ?: "smollm2-135m-instruct-q4_k_m.gguf"
         val context = ApplicationProvider.getApplicationContext<Context>()
         check(context.packageName.endsWith(".validation"))
         val repository = AiCoreRepository.getInstance(context)
         val rows = withTimeout(300_000) { repository.allModels.first { models ->
             models.size >= ModelLibrary.read(context).size &&
-                models.any { it.filename == "gemma-4-E2B-it.litertlm" && it.isInstalled } &&
-                models.any { it.filename == "smollm2-135m-instruct-q4_k_m.gguf" && it.isInstalled }
+                models.any { it.filename == primaryFile && it.isInstalled } &&
+                models.any { it.filename == secondaryFile && it.isInstalled }
         } }
         withTimeout(300_000) { while (repository.isModelLoading) delay(50) }
         repository.unloadModel()
-        val primary = rows.single { it.filename == "gemma-4-E2B-it.litertlm" }
-        val secondary = rows.single { it.filename == "smollm2-135m-instruct-q4_k_m.gguf" }
+        val primary = rows.single { it.filename == primaryFile }
+        val secondary = rows.single { it.filename == secondaryFile }
         repository.preferencesRepository.savePrimaryModelId(primary.id)
         repository.preferencesRepository.saveSecondaryModelId(secondary.id)
         repository.preferencesRepository.saveAutoRamFallback(true)
