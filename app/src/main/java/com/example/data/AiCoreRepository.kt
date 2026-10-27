@@ -281,6 +281,9 @@ class AiCoreRepository(
         val chosen = ModelMemoryPlanner.resolveTier(primary, secondary, profile, requestedContext, autoFallback)
         val decision = if (preferLoaded && chosen.model?.id != preferred?.id && chosen.role != ModelTierRole.NONE)
             chosen.copy(role = ModelTierRole.SECONDARY_FALLBACK) else chosen
+        // NONE retains the rejected candidate only to explain why it cannot fit.
+        // Never pass that candidate to the loader, even when no engine is ready.
+        if (decision.role == ModelTierRole.NONE) return@withContext decision
         val target = decision.model
         if (target != null && target.isInstalled) {
             when {

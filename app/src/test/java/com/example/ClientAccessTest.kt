@@ -17,6 +17,32 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ClientAccessTest {
+    @Test fun rejectedRamAdmissionNeverAttemptsToLoadTheInstalledPrimary() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        org.robolectric.shadows.ShadowBuild.setSupportedAbis(arrayOf("arm64-v8a"))
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        org.robolectric.Shadows.shadowOf(activityManager).setMemoryInfo(android.app.ActivityManager.MemoryInfo().apply {
+            totalMem = 8L * 1024 * 1024 * 1024
+            availMem = 3L * 1024 * 1024 * 1024
+        })
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val repository = AiCoreRepository(context, db, EngineManager(context), SettingsPreferencesRepository(context))
+        kotlinx.coroutines.withTimeout(10_000) { while (repository.isModelLoading) kotlinx.coroutines.delay(10) }
+        val primary = repository.allModels.first().single { it.filename == "gemma-4-E4B-it.litertlm" }
+        // This catalog row is installed, but its file is deliberately absent:
+        // rejected admission must return LOW_MEMORY before touching the loader.
+        db.modelDao().updateModel(primary.copy(isInstalled = true))
+        repository.preferencesRepository.savePrimaryModelId(primary.id)
+        repository.preferencesRepository.saveAutoRamFallback(false)
+        val hardware = com.example.engine.HardwareAnalyzer.analyze(context)
+        assertTrue(com.example.engine.ModelLibrary.memoryEstimate(primary, 512).totalMb > hardware.safeModelRamLimitMb)
+        repository.clientPreparation.request()
+        kotlinx.coroutines.withTimeout(10_000) { while (repository.clientPreparation.isPreparing) kotlinx.coroutines.delay(10) }
+        assertEquals("LOW_MEMORY", repository.clientPreparation.state.value.phase)
+        assertFalse(repository.engine.isReady())
+        assertNull(db.modelDao().getActiveModel().first())
+    }
+
     @Test fun pendingApprovalScopesRateLimitsAndPrivateLogs() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
