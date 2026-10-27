@@ -49,7 +49,7 @@ class LocalAiCoreService : Service() {
     // AIDL v2 has no context argument. Use BI's user-selected mobile context
     // instead of silently rebuilding a 4K graph behind chat's 2K configuration.
     private fun clientContextSize(): Int = runBlocking(Dispatchers.IO) {
-        repository.preferencesRepository.generationPreferences.first().contextSize
+        repository.clientContextSize()
     }
 
     private fun enforceCallerPermission() {

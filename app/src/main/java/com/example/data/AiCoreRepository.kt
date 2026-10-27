@@ -131,6 +131,30 @@ class AiCoreRepository(
     private val modelOperations = java.util.concurrent.atomic.AtomicInteger(1) // Startup/restore owns the first lease.
     val isModelLoading: Boolean get() = modelOperations.get() > 0
 
+    val clientPreparation = com.example.engine.ClientModelPreparation(repositoryScope,
+        generating = { engine.telemetry.value.isRunning }, loading = { isModelLoading }) { progress ->
+        val requested = preferencesRepository.generationPreferences.first().contextSize
+        val decision = resolveAndActivateForRam(requested, preferLoaded = true, onLoading = { model, role ->
+            progress(com.example.engine.ClientModelState("LOADING_MODEL", model.name, role.name))
+        })
+        if (decision.role == ModelTierRole.NONE) {
+            com.example.engine.ClientModelState(if (decision.model == null) "MODEL_REQUIRED" else "LOW_MEMORY",
+                error = if (decision.model == null) "Download and select a model in Better Intelligence."
+                    else "Not enough RAM for a downloaded model. Free memory or select a smaller fallback model in Better Intelligence.")
+        } else {
+            check(engine.isReady() && modelDao.getActiveModel().first()?.id == decision.model?.id) { "Model preparation did not activate its target" }
+            com.example.engine.ClientModelState("READY", engine.activeModelName, decision.role.name, decision.effectiveContext)
+        }
+    }
+
+    /** Use the admitted context for the actual model, not the larger primary's
+     * settings. A manual switch invalidates the cached preparation. */
+    suspend fun clientContextSize(): Int {
+        val prepared = clientPreparation.state.value
+        return if (prepared.phase == "READY" && prepared.model == engine.activeModelName && prepared.context > 0)
+            prepared.context else preferencesRepository.generationPreferences.first().contextSize.coerceIn(512, 2048)
+    }
+
     private suspend fun <T> withModelLoading(block: suspend () -> T): T {
         modelOperations.incrementAndGet()
         try { return block() } finally { modelOperations.decrementAndGet() }
@@ -218,10 +242,12 @@ class AiCoreRepository(
     suspend fun unloadModel() = withContext(Dispatchers.IO) {
         explicitModelSelection = true
         modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() }
+        clientPreparation.invalidate()
     }
 
     suspend fun switchActiveModel(model: ModelEntity) {
         explicitModelSelection = true
+        clientPreparation.invalidate()
         preferencesRepository.savePrimaryModelId(model.id)
         activateModel(model)
     }
@@ -231,13 +257,17 @@ class AiCoreRepository(
     }
 
     /** Evaluates current available RAM against Primary and Secondary models and hot-swaps if required. */
-    suspend fun resolveAndActivateForRam(requestedContext: Int): ModelTierDecision = withContext(Dispatchers.IO) {
+    suspend fun resolveAndActivateForRam(requestedContext: Int, preferLoaded: Boolean = false,
+        onLoading: (ModelEntity, ModelTierRole) -> Unit = { _, _ -> }): ModelTierDecision = withContext(Dispatchers.IO) {
         val models = modelDao.getAllModels().first()
         val currentActive = modelDao.getActiveModel().first()
         val primaryId = preferencesRepository.primaryModelId.first()
         val secondaryId = preferencesRepository.secondaryModelId.first()
         val autoFallback = preferencesRepository.autoRamFallback.first()
-        val primary = models.find { it.id == primaryId && it.isInstalled } ?: currentActive
+        val preferred = models.find { it.id == primaryId && it.isInstalled } ?: currentActive
+        // A short external polish reuses a working fallback. Only explicit model
+        // selection/chat policy promotes back to the larger Primary model.
+        val primary = if (preferLoaded && engine.isReady()) currentActive ?: preferred else preferred
         val secondary = models.find { it.id == secondaryId && it.isInstalled && it.id != primary?.id }
             ?: ModelMemoryPlanner.pickDefaultSecondary(models, primary)
         val rawProfile = HardwareAnalyzer.analyze(appContext)
@@ -248,24 +278,32 @@ class AiCoreRepository(
             safeModelRamLimitMb = ModelMemoryPlanner.budget(rawProfile.totalRamMb, available)
         )
         _hardwareProfile.value = rawProfile
-        val decision = ModelMemoryPlanner.resolveTier(primary, secondary, profile, requestedContext, autoFallback)
+        val chosen = ModelMemoryPlanner.resolveTier(primary, secondary, profile, requestedContext, autoFallback)
+        val decision = if (preferLoaded && chosen.model?.id != preferred?.id && chosen.role != ModelTierRole.NONE)
+            chosen.copy(role = ModelTierRole.SECONDARY_FALLBACK) else chosen
         val target = decision.model
         if (target != null && target.isInstalled) {
             when {
                 decision.role == ModelTierRole.SECONDARY_FALLBACK && currentActive?.id != target.id -> {
-                    runCatching { activateModel(target) }
+                    onLoading(target, decision.role)
+                    activateModel(target, contextOverride = decision.effectiveContext)
                 }
                 decision.role in setOf(ModelTierRole.PRIMARY, ModelTierRole.PRIMARY_STEPPED_DOWN) &&
                     currentActive?.id != target.id &&
-                    profile.safeModelRamLimitMb >= decision.estimatedRamMb + 192 -> {
-                    runCatching { activateModel(target) }
+                    (preferLoaded || profile.safeModelRamLimitMb >= decision.estimatedRamMb + 192) -> {
+                    onLoading(target, decision.role)
+                    activateModel(target, contextOverride = decision.effectiveContext)
+                }
+                !engine.isReady() && preferLoaded -> {
+                    onLoading(target, decision.role)
+                    activateModel(target, contextOverride = decision.effectiveContext)
                 }
             }
         }
         decision
     }
 
-    private suspend fun activateModel(model: ModelEntity, restoring: Boolean = false) = withContext(Dispatchers.IO) {
+    private suspend fun activateModel(model: ModelEntity, restoring: Boolean = false, contextOverride: Int? = null) = withContext(Dispatchers.IO) {
         modelLock.withLock {
             if (restoring && (explicitModelSelection || engine.isReady())) return@withLock
             withModelLoading {
@@ -285,7 +323,7 @@ class AiCoreRepository(
                 val adjusted = profile.copy(availableRamMb = available,
                     safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
                 val liteRt = model.filename.endsWith(".litertlm", true)
-                val requestedContext = preferencesRepository.generationPreferences.first().contextSize
+                val requestedContext = contextOverride ?: preferencesRepository.generationPreferences.first().contextSize
                 ModelLibrary.incompatibilityReason(model, adjusted, if (liteRt) minOf(requestedContext, model.contextLength) else 512)?.let { error(it) }
                 val result = if (liteRt) engine.loadLiteRt(file, model.name, model.sha256Checksum.orEmpty(), model.quantization, requestedContext)
                     else engine.loadCustomGguf(file, model.sha256Checksum.orEmpty()).map { Unit }

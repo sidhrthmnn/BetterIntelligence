@@ -66,6 +66,8 @@ class ClientAccessTest {
             assertEquals(2, loading.getInt("api_version"))
             assertEquals("BUSY", loading.getString("status"))
             assertTrue(loading.getBoolean("model_loading"))
+            assertEquals("LOADING_MODEL", loading.getString("activity"))
+            assertTrue(loading.getBoolean("supports_model_preparation"))
             assertFalse(loading.getBoolean("model_loaded"))
         } finally { release.countDown() }
         kotlinx.coroutines.withTimeout(10_000) { while (repository.isModelLoading) kotlinx.coroutines.delay(10) }
