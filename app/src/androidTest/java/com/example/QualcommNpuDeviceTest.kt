@@ -19,7 +19,7 @@ import java.security.MessageDigest
 /** Real Qualcomm-only test. Requires explicitly staged, licensed matching weights. */
 @RunWith(AndroidJUnit4::class)
 class QualcommNpuDeviceTest {
-    @Test fun validationProfileOnEmulatorKeepsGgufOnCpu() = runBlocking {
+    @Test fun validationProfileOnEmulatorKeepsGgufOnCpu(): Unit = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("testNpuUnavailable") == "true")
         val context = ApplicationProvider.getApplicationContext<Context>()
         check(context.packageName.endsWith(".validation"))
@@ -38,7 +38,7 @@ class QualcommNpuDeviceTest {
         } finally { engine.unloadActiveModel(); assertFalse(engine.isReady()) }
     }
 
-    @Test fun compiledModelRunsThroughQnnAndUnloadsCleanly() = runBlocking {
+    @Test fun compiledModelRunsThroughQnnAndUnloadsCleanly(): Unit = runBlocking {
         val args = InstrumentationRegistry.getArguments()
         assumeTrue(args.getString("testQualcommNpu") == "true")
         assertTrue("Build with -PbiQualcommNpu=true", BuildConfig.QUALCOMM_NPU_ENABLED)
