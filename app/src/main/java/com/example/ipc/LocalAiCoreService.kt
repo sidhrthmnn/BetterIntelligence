@@ -386,8 +386,8 @@ class LocalAiCoreService : Service() {
     }
 
     companion object {
-        const val ACTION_BIND = "com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE"
-        const val PERMISSION_BIND = "com.aistudio.betterintelligence.mobile.permission.BIND_LOCAL_AI_CORE"
+        const val ACTION_BIND = "${com.example.BuildConfig.APPLICATION_ID}.ACTION_BIND_AI_CORE"
+        const val PERMISSION_BIND = "${com.example.BuildConfig.APPLICATION_ID}.permission.BIND_LOCAL_AI_CORE"
         const val CHANNEL_ID = "better_intelligence_channel"
     }
 }

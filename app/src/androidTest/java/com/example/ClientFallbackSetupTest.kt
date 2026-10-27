@@ -26,6 +26,7 @@ class ClientFallbackSetupTest {
         val secondaryFile = arguments.getString("secondaryModel") ?: "smollm2-135m-instruct-q4_k_m.gguf"
         val context = ApplicationProvider.getApplicationContext<Context>()
         check(context.packageName.endsWith(".validation"))
+        check(com.example.ipc.LocalAiCoreService.PERMISSION_BIND == "${context.packageName}.permission.BIND_LOCAL_AI_CORE")
         val repository = AiCoreRepository.getInstance(context)
         val rows = withTimeout(300_000) { repository.allModels.first { models ->
             models.size >= ModelLibrary.read(context).size &&
