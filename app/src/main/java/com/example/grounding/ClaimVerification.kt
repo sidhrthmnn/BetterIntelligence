@@ -86,12 +86,14 @@ object ClaimVerification {
         val units = quantities(claim)
         val passages = source.excerpt.split(Regex("\\n\\s*\\n")).flatMap { block ->
             val lines = block.lines()
+            val exampleContext = Regex("(?i)representative example|illustrative examples?|example purchase").containsMatchIn(block)
             val heading = lines.firstOrNull()?.takeIf { lines.size > 1 && it.length < 150 && !it.endsWith('.') &&
                 entities.count { entity -> ResearchQuery.words(entity).all { word -> word in ResearchQuery.words(it) } } <= 1 }
             sentences(if (heading != null) lines.drop(1).joinToString(" ") else block).flatMap { sentence ->
                 val subject = Regex("^([\\p{L}][\\p{L}\\p{N} ._-]{0,45}?)\\s+(?i:does|is|has|supports?|requires?)\\b").find(sentence)?.groupValues?.get(1).orEmpty()
                 sentence.split(Regex("(?i)\\s+(?:but|whereas|although)\\s+|;\\s*")).mapIndexed { index, clause ->
-                    (heading?.plus("\n") ?: "") + (if (index > 0 && subject.isNotEmpty()) "$subject " else "") + clause
+                    (heading?.plus("\n") ?: "") + (if (exampleContext) "Representative example\n" else "") +
+                        (if (index > 0 && subject.isNotEmpty()) "$subject " else "") + clause
                 }
             }
         }.filter { passage ->
