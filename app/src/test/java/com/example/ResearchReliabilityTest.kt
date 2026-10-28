@@ -52,6 +52,14 @@ class ResearchReliabilityTest {
         assertNull(ResearchQuery("Weather in London today?").freshnessFilter)
         val prepared = GroundingPolicy.prepareEvidence("Weather in London?", listOf(read), 2300)
         assertTrue(prepared.sources.single().excerpt, EvidenceAnswer.hasTemperature(prepared.sources.single().excerpt))
+        for (place in listOf("London", "New York", "new york")) {
+            val question = "What is the weather in $place today?"
+            assertEquals(listOf(place), ResearchPlanner.subjects(question))
+            val observation = read.copy(title = "$place - BBC Weather", excerpt = read.excerpt.replace("London", place))
+            val answer = EvidenceAnswer.resolve("Uncited draft", listOf(observation), question)
+            assertTrue(answer.text, answer.text.contains("Observed temperature: 11 °C (52 °F)"))
+            assertTrue(answer.text, answer.text.contains("Today forecast: high 16 °C; low 8 °C"))
+        }
     }
 
     @Test fun fallbackQuotesActualEvidenceAndDoesNotCertifyUncitedOrInventedModelText() {

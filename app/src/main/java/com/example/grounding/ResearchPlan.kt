@@ -95,7 +95,7 @@ object ResearchPlanner {
             .filter { it.length >= 2 && it.lowercase() !in setOf("is", "are", "when", "what", "who", "where", "how", "why", "compare", "explain", "does", "can", "tell", "read", "which", "public", "source", "topic") }
         val locations = Regex("\\b(?:in|near|for|of)\\s+([A-Z][\\p{L}]+(?:[, ]+[A-Z][\\p{L}]+){0,2})").findAll(text).map { it.groupValues[1] }
         val weatherLocations = if (Regex("(?i)\\b(weather|temperature|forecast|rain|wind|humidity)\\b").containsMatchIn(text)) {
-            Regex("(?i)\\b(?:in|near|for|at)\\s+([\\p{L}][\\p{L}-]{2,}(?:\\s+[\\p{L}][\\p{L}-]{2,}){0,2})(?=\\s*(?:today|tonight|now|right now|currently|tomorrow|this week|\\?|$))")
+            Regex("(?i)\\b(?:in|near|for|at)\\s+([\\p{L}][\\p{L}-]{2,}(?:\\s+[\\p{L}][\\p{L}-]{2,}){0,2}?)(?=\\s*(?:today|tonight|now|right now|currently|tomorrow|this week|\\?|$))")
                 .findAll(text.substringBefore("(Public source topic:"))
                 .map { it.groupValues[1].trim() }
                 .filter { it.lowercase() !in setOf("the", "this", "that", "today", "now", "celsius", "fahrenheit") }
