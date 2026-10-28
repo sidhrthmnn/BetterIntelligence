@@ -24,7 +24,7 @@ object FactualResearch {
         if (definition != null) return if (Regex("(?i)^(?:(?:really|very|especially)\\s+)?(?:important|essential|vital|common|popular|widespread|responsible)\\b").containsMatchIn(definition)) 0 else 85
         val namedProcess = Regex("(?i)\\b(?:this|the) (?:process|method|reaction|phenomenon|technique) (?:is |are )?(?:called|known as|termed|named) ${Regex.escape(topic)}\\b").find(plain) ?: return 0
         val explanation = plain.substring(0, namedProcess.range.first).trimEnd()
-        return if (explanation.endsWith('.') && explanation.split(Regex("\\s+")).size >= 8) 65 else 0
+        return if (explanation.lastOrNull() in listOf('.', '!') && explanation.split(Regex("\\s+")).size >= 8) 65 else 0
     }
     fun capitalPlace(question: String): String? = Regex("(?i)^\\s*what(?:['’]s|\\s+is)\\s+(?:the\\s+)?capital(?:\\s+city)?\\s+of\\s+([\\p{L}][\\p{L} .'-]{1,60})[?!.]*\\s*$")
         .matchEntire(question)?.groupValues?.get(1)?.trim(' ', '.', '?', '!')

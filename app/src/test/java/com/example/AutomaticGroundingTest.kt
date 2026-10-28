@@ -152,6 +152,7 @@ class AutomaticGroundingTest {
             assertNull(question, FactualResearch.definitionTopic(question))
         assertTrue(FactualResearch.incomplete("Photosynthesis is important because"))
         assertTrue(FactualResearch.definitionLine("Green plants use light energy to make their own food. This process is called photosynthesis.", query))
+        assertTrue(FactualResearch.definitionLine("Green plants use light energy to make their own food! This process called photosynthesis.", query))
         assertFalse(FactualResearch.definitionLine("This process is called photosynthesis.", query))
         assertFalse(FactualResearch.definitionLine("Photosynthesis takes place inside chloroplasts which are small objects inside plant cells.", query))
         assertTrue(FactualResearch.definitionLine("To summarise, photosynthesis uses light energy to make glucose and oxygen.", query))
@@ -161,6 +162,9 @@ class AutomaticGroundingTest {
                 val actual = WebPageExtractor.article(WebDocument("https://www.bbc.co.uk/bitesize/articles/zdxkcmn", capture.readText(), "text/html"), 1, query)!!
                 val packet = GroundingPolicy.prepareEvidence(query, listOf(actual), 2300)
                 val checked = EvidenceAnswer.resolve("Photosynthesis is important for plants [1].", packet.sources, query)
+                java.io.File(directory, "bi-v20-definition-diagnostic.json").writeText(org.json.JSONObject()
+                    .put("excerpt", actual.excerpt).put("prepared", org.json.JSONArray(GroundingResult(sources = packet.sources).json()))
+                    .put("answer", checked.text).put("claims", checked.claims.toString()).toString(2))
                 assertTrue(checked.text, checked.text.contains("light", true))
                 assertNotEquals(checked.claims.toString(), AnswerSupport.INSUFFICIENT, checked.support)
             }
