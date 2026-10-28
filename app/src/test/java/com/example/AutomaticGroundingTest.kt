@@ -153,6 +153,8 @@ class AutomaticGroundingTest {
         assertTrue(FactualResearch.incomplete("Photosynthesis is important because"))
         assertTrue(FactualResearch.definitionLine("Green plants use light energy to make their own food. This process is called photosynthesis.", query))
         assertFalse(FactualResearch.definitionLine("This process is called photosynthesis.", query))
+        assertFalse(FactualResearch.definitionLine("Photosynthesis takes place inside chloroplasts which are small objects inside plant cells.", query))
+        assertTrue(FactualResearch.definitionLine("To summarise, photosynthesis uses light energy to make glucose and oxygen.", query))
         System.getenv("BI_RELIABILITY_CAPTURE")?.let { directory ->
             val capture = java.io.File(directory, "bi-v20-photosynthesis.html")
             if (capture.isFile) {

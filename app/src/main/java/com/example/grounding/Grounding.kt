@@ -181,6 +181,7 @@ object GroundingPolicy {
             val words = ResearchQuery.words(text)
             researchPlan.coverage(text).size * 100 + researchPlan.entities.count { entity -> ResearchQuery.words(entity).all { it in words } } * 30 +
                 (if (option.sources.any { FactualResearch.definitionLine(it.excerpt, question) }) 120 else 0) +
+                option.sources.maxOf { FactualResearch.definitionQuality(it.excerpt, question) } +
                 minOf(20, text.length / 100) + option.sources.map { EvidenceRanking.publisher(it.url) }.distinct().size * 3
         }
         error("Web evidence does not fit this model's context. Choose 2048 context in Advanced settings, shorten the question, or turn web search off.")

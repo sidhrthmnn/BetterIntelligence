@@ -14,15 +14,17 @@ object FactualResearch {
         if (!question.trimStart().startsWith("define ", true) && Regex("(?i)\\b(?:weather|temperature|forecast|capital|price|cost|population|date|version)\\b").containsMatchIn(topic)) return null
         return topic
     }
-    fun definitionLine(text: String, question: String): Boolean {
-        val topic = definitionTopic(question) ?: return false
+    fun definitionLine(text: String, question: String) = definitionQuality(text, question) > 0
+    fun definitionQuality(text: String, question: String): Int {
+        val topic = definitionTopic(question) ?: return 0
         val plain = text.replace(Regex("[*`#>]"), "")
-        val definition = Regex("(?i)(?:^|[.!?]\\s+|\\n+)${Regex.escape(topic)}[^.!?\\n]{0,100}?\\b(?:is|are|means|refers to)\\s+([^.!?\\n]+)")
+        if (Regex("(?i)(?:^|\\n+)(?:to summari[sz]e|in summary)[,:]?\\s+${Regex.escape(topic)}\\s+(?:is|are|uses?|converts?|transforms?|takes?|means|refers to|describes|consists|involves)\\b").containsMatchIn(plain)) return 100
+        val definition = Regex("(?i)(?:^|[.!?]\\s+|\\n+)${Regex.escape(topic)}(?:\\s*\\([^)!?\\n]{0,120}\\))?(?:\\s*\\[\\d+(?:[,– -]\\d+)*])*\\s+(?:is|are|means|refers to)\\s+([^.!?\\n]+)")
             .find(plain)?.groupValues?.get(1)
-        if (definition != null) return !Regex("(?i)^(?:(?:really|very|especially)\\s+)?(?:important|essential|vital|common|popular|widespread|responsible)\\b").containsMatchIn(definition)
-        val namedProcess = Regex("(?i)\\b(?:this|the) (?:process|method|reaction|phenomenon|technique) (?:is |are )?(?:called|known as|termed|named) ${Regex.escape(topic)}\\b").find(plain) ?: return false
+        if (definition != null) return if (Regex("(?i)^(?:(?:really|very|especially)\\s+)?(?:important|essential|vital|common|popular|widespread|responsible)\\b").containsMatchIn(definition)) 0 else 85
+        val namedProcess = Regex("(?i)\\b(?:this|the) (?:process|method|reaction|phenomenon|technique) (?:is |are )?(?:called|known as|termed|named) ${Regex.escape(topic)}\\b").find(plain) ?: return 0
         val explanation = plain.substring(0, namedProcess.range.first).trimEnd()
-        return explanation.endsWith('.') && explanation.split(Regex("\\s+")).size >= 8
+        return if (explanation.endsWith('.') && explanation.split(Regex("\\s+")).size >= 8) 65 else 0
     }
     fun capitalPlace(question: String): String? = Regex("(?i)^\\s*what(?:['’]s|\\s+is)\\s+(?:the\\s+)?capital(?:\\s+city)?\\s+of\\s+([\\p{L}][\\p{L} .'-]{1,60})[?!.]*\\s*$")
         .matchEntire(question)?.groupValues?.get(1)?.trim(' ', '.', '?', '!')

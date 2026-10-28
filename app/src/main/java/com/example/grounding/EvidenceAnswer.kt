@@ -45,7 +45,7 @@ object EvidenceAnswer {
                 (!labelledWeather || Regex("(?i)observed temperature:|today forecast: high").containsMatchIn(text))
             if (text.length !in 25..700 || !subject || !topical || boilerplate || wrongRole || !current || !weatherEvidence ||
                 EvidenceRanking.contextOnly(source, plan)) null
-            else Extract(source, text, query.score(text) + (if (hasTemperature(text)) 35 else 0) +
+            else Extract(source, text, query.score(text) + FactualResearch.definitionQuality(body, question) + (if (hasTemperature(text)) 35 else 0) +
                 (if (Regex("(?i)observed temperature").containsMatchIn(text)) 30 else 0))
         } }.sortedByDescending { it.score }.distinctBy { it.text.lowercase() }.take(if (weather) 2 else 1)
         if (extracts.isEmpty()) {

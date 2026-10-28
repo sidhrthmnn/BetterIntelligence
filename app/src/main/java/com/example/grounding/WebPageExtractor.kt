@@ -267,7 +267,7 @@ object WebPageExtractor {
                     else -> 0
                 } else 0
                 val definitionScore = if (FactualResearch.definitionTopic(question) != null) when {
-                    FactualResearch.definitionLine(castingBody, question) -> 85
+                    FactualResearch.definitionLine(castingBody, question) -> FactualResearch.definitionQuality(castingBody, question)
                     Regex("(?i)\\b(?:important|importance|benefits?)\\b").containsMatchIn(castingBody) -> -25
                     else -> 0
                 } else 0
