@@ -260,10 +260,16 @@ object WebPageExtractor {
                     val temperature = Regex("(?i)-?\\d+(?:\\.\\d+)?\\s*°\\s*[CF]\\b|\\d+\\s+degrees?\\s+(?:celsius|fahrenheit)").containsMatchIn(blockText)
                     (if (temperature) 70 else 10) + if (currentWeatherTimingPattern.containsMatchIn(blockText)) 30 else 0
                 } else 0
+                val castingBody = blockText.substringAfter('\n', blockText)
+                val castingScore = if (FactualResearch.isCasting(question)) when {
+                    FactualResearch.speculativeCasting(question, castingBody) -> -60
+                    FactualResearch.castingRelation(castingBody) -> 60
+                    else -> 0
+                } else 0
                 query.bm25Score(blockText, docFreqs, candidates.size, avgWords) +
                     (plan.coverage(blockText) - covered).size * 15 +
                     mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20 +
-                    incumbentScore + weatherScore + roleScore(blockText)
+                    incumbentScore + weatherScore + castingScore + roleScore(blockText)
             }
             remaining.remove(index)
             val block = candidates[index]

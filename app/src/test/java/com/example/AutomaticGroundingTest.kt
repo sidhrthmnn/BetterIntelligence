@@ -127,4 +127,13 @@ class AutomaticGroundingTest {
         assertTrue(answer.text, answer.text.contains("Robert Downey Jr."))
         assertNotEquals(answer.claims.toString(), AnswerSupport.INSUFFICIENT, answer.support)
     }
+
+    @Test fun actualRoleParagraphBeatsDramaticRhetoricalCastingQuotes() {
+        val noise = (1..10).joinToString("") { "<p>Who could possibly play Doctor Doom in Avengers Doomsday? A theory suggests Doom could appear in the Avengers movie. Many fans speculate about who might play Doom.</p>" }
+        val html = "<title>${confirmed.title}</title><article><h1>${confirmed.title}</h1><p>Robert Downey Jr. returns in a new role as Doctor Doom in Avengers: Doomsday. Marvel announced his new role.</p>$noise</article>"
+        val source = WebPageExtractor.article(WebDocument(confirmed.url, html, "text/html"), 1, question)!!
+        val prepared = GroundingPolicy.prepareEvidence(question, listOf(source), 2300)
+        assertTrue(prepared.sources.single().excerpt, prepared.sources.single().excerpt.contains("new role as Doctor Doom"))
+        assertTrue(FactualResearch.usable(prepared.sources.single(), question))
+    }
 }
