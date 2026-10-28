@@ -5,10 +5,10 @@ import com.example.grounding.ResearchQuery
 
 /** Chat-only instructions. Native model templates and external-app contracts stay unchanged. */
 object ChatAnswerPolicy {
-    const val liveUnavailable = "I haven't checked live sources, so I can't confirm a current name, result or number for this question. Enable Web Automatic or On (and allow web research in Settings) to check public sources."
+    const val liveUnavailable = "I haven't checked live sources, so I can't confirm a current name, result or number for this question. Enable web research in Settings; factual questions are then researched automatically."
     fun requiresLiveData(question: String): Boolean {
         if (!ResearchRouting.decide(question).search) return false
-        return ResearchQuery.isCurrentIncumbentQuery(question) ||
+        return ResearchQuery.isCurrentIncumbentQuery(question) || com.example.grounding.FactualResearch.isCasting(question) ||
             Regex("(?i)\\b(?:news|headlines|population|prices?|cost of|weather|temperature|forecast|exchange rate|latest stable|current .*version)\\b|കാലാവസ്ഥ|ജനസംഖ്യ").containsMatchIn(question) ||
             Regex("(?i)\\b(?:who won|winner|prize|award)\\b").containsMatchIn(question) &&
                 Regex("\\b20\\d{2}\\b").findAll(question).any { it.value.toInt() >= java.time.LocalDate.now().year - 1 }
@@ -25,7 +25,7 @@ object ChatAnswerPolicy {
         }
     } else
         if (Regex("[\\u0D00-\\u0D7F]").containsMatchIn(question))
-            "തത്സമയ സ്രോതസ്സുകൾ പരിശോധിച്ചിട്ടില്ല; അതിനാൽ നിലവിലെ പേര്, ഫലം, സംഖ്യ എന്നിവ ഉറപ്പിക്കാൻ കഴിയില്ല. പൊതുസ്രോതസ്സുകൾ പരിശോധിക്കാൻ വെബ് ഗവേഷണം അനുവദിച്ച് Web Automatic അല്ലെങ്കിൽ On തിരഞ്ഞെടുക്കുക."
+            "തത്സമയ സ്രോതസ്സുകൾ പരിശോധിച്ചിട്ടില്ല; അതിനാൽ നിലവിലെ പേര്, ഫലം, സംഖ്യ എന്നിവ ഉറപ്പിക്കാൻ കഴിയില്ല. പൊതുസ്രോതസ്സുകൾ പരിശോധിക്കാൻ Settings-ൽ വെബ് ഗവേഷണം അനുവദിക്കുക; വസ്തുതാപരമായ ചോദ്യങ്ങൾ സ്വയമേവ അന്വേഷിക്കും."
         else liveUnavailable
     fun system(question: String, grounded: Boolean, contextSize: Int, custom: String? = null): String {
         val base = custom?.takeIf { it.isNotBlank() } ?: "You are Better Intelligence, a helpful on-device assistant."

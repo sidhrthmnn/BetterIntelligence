@@ -49,7 +49,8 @@ fun interface WebFetcher {
 /** Bounded public-page research, implemented locally. No search/grounding APIs,
  * proxy, account, scripts, cookies, forms, sign-in or background crawling.
  */
-class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private val discoveryOverride: DiscoveryProvider? = null) : SearchProvider {
+class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private val discoveryOverride: DiscoveryProvider? = null,
+    private val backupAllowed: suspend () -> Boolean = { false }) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
     companion object {
         fun candidates(html: String): List<String> = HtmlDiscovery.links(WebDocument(
@@ -67,7 +68,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val permitted: suspend (String) -> Boolean = { robots.allowed(it, transport) }
         val explicit = plan.explicitUrls
         val query = ResearchQuery(question)
-        val discovery = discoveryOverride ?: HtmlSearchDiscovery(transport, permitted)
+        val discovery = discoveryOverride ?: FreeSearchDiscovery(HtmlSearchDiscovery(transport, permitted), MwmblDiscovery(transport, permitted), backupAllowed)
         var discoveryFailed = false
         var blocked = false
         var discoveryTimedOut = false
@@ -82,7 +83,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
                 discoveryFailed = true; blocked = true; return null
             }
-            return result.candidates.filter { query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) }
+            return result.candidates.filter { query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) &&
+                !FactualResearch.speculativeCasting(question, it.title) }
         }
 
         val links = if (explicit.isNotEmpty()) explicit.map { ResearchCandidate(it, "") } else {
@@ -98,7 +100,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             }
             if (candidates.isEmpty() && !blocked && !discoveryFailed && searches < 3) {
                 val reformulated = if (query.freshnessFilter != null) plan.searches.first()
-                    else "${plan.searches.first()} documentation"
+                    else if (FactualResearch.isCasting(question)) "${plan.searches.first()} official cast" else "${plan.searches.first()} documentation"
                 candidates += discover(reformulated, query.freshnessFilter != null).orEmpty()
             }
             candidates

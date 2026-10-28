@@ -137,14 +137,15 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     private var editingMessageId: Long? = null
     private val _isEditingMessage = MutableStateFlow(false)
     val isEditingMessage = _isEditingMessage.asStateFlow()
-    private val _groundingMode = MutableStateFlow(GroundingMode.OFF)
+    private val _groundingMode = MutableStateFlow(GroundingMode.AUTO)
     val groundingMode = _groundingMode.asStateFlow()
     private val _chatStatus = MutableStateFlow("")
     val chatStatus = _chatStatus.asStateFlow()
     val appearance = repository.preferencesRepository.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, "DARK")
     val webAllowed = repository.preferencesRepository.webAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    val defaultWebMode = repository.preferencesRepository.webMode.stateIn(viewModelScope, SharingStarted.Eagerly, "OFF")
-    private val grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch()))
+    val freeSearchBackupAllowed = repository.preferencesRepository.freeSearchBackupAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    private val grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(
+        backupAllowed = { repository.preferencesRepository.freeSearchBackupAllowed.first() })))
     init { LegacySearchCleanup.clear(application) }
 
     val allMemories: StateFlow<List<MemorySnippetEntity>> = repository.allMemories
@@ -337,9 +338,9 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         if (!value) { grounding.clearTemporaryData(); if (chatInferenceJob == null && _isChatGenerating.value) chatPreparationJob?.cancel() }
         viewModelScope.launch { repository.preferencesRepository.saveWebAllowed(value) }
     }
-    fun setDefaultWebMode(value: String) { viewModelScope.launch { repository.preferencesRepository.saveWebMode(value) } }
     fun clearSearchData() { grounding.clearTemporaryData(); _userMessage.value = "Temporary search data cleared." }
-    fun setGroundingMode(mode: GroundingMode) {
+    @androidx.annotation.VisibleForTesting
+    internal fun setGroundingMode(mode: GroundingMode) {
         _groundingMode.value = mode
         val id = _conversationId.value
         viewModelScope.launch { repository.saveGroundingMode(id, mode.name) }
@@ -358,7 +359,9 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         repository.preferencesRepository.saveActiveConversation(id)
         _draft.value = if (savedState.get<Long>("draftConversation") == id) savedState.get<String>("draft") ?: conversation.draft else conversation.draft
         savedState["draft"] = _draft.value; savedState["draftConversation"] = id
-        _groundingMode.value = runCatching { GroundingMode.valueOf(conversation.groundingMode) }.getOrDefault(GroundingMode.OFF)
+        // Automatic is the app's conversation behaviour, including old Off/On chats.
+        // The separate web permission and explicit offline instructions still apply.
+        _groundingMode.value = GroundingMode.AUTO
         editingMessageId = null
         _isEditingMessage.value = false
         _conversationId.value = id
@@ -371,7 +374,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     fun newConversation() { viewModelScope.launch { conversationLock.withLock {
         stopChatAndSaveDraft()
         val id = repository.createConversation()
-        repository.saveGroundingMode(id, repository.preferencesRepository.webMode.first())
+        repository.saveGroundingMode(id, GroundingMode.AUTO.name)
         activateConversation(id); selectTab(AppTab.CHAT)
     } } }
     fun openConversation(id: Long) { viewModelScope.launch { conversationLock.withLock {

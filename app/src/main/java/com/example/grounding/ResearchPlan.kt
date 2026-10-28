@@ -53,6 +53,7 @@ object ResearchPlanner {
         val subject = if (plain.any { it.code > 127 }) query.searchText else entities.joinToString(" ").ifBlank { query.searchText }
         val searches = when {
             urls.isNotEmpty() -> emptyList()
+            FactualResearch.isCasting(plain) -> listOf(query.searchText)
             technicalComparison -> listOf("$subject Android runtime GPU compatibility", "$subject memory RAM quantization", "$subject Android benchmark device context tokens latency")
             parts.size > 1 -> parts.map { part ->
                 val q = ResearchQuery(part, today).searchText

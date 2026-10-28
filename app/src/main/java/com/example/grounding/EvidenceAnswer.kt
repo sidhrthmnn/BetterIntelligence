@@ -20,6 +20,9 @@ object EvidenceAnswer {
         data class Extract(val source: EvidenceSource, val text: String, val score: Int)
         val extracts = sources.flatMap { source -> source.excerpt.split(Regex("\\n\\s*\\n")).mapNotNull { block ->
             val text = block.trim()
+            val body = if ('\n' in text) text.substringAfter('\n') else text
+            if (FactualResearch.headlineOnly(text, source.title) || FactualResearch.speculativeCasting(question, source.title) ||
+                FactualResearch.isCasting(question) && (!FactualResearch.castingRelation(body) || FactualResearch.speculativeCasting(question, body))) return@mapNotNull null
             val found = ResearchQuery.words(text)
             val activeOffice = Regex("(?i)\\b(incumbent|current|present|serving|in office|leads|is (?:the )?(?:chief minister|prime minister|president|governor|mayor|ceo))\\b").containsMatchIn(text)
             val titleWords = ResearchQuery.words(source.title)
