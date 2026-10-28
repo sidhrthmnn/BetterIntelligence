@@ -7,7 +7,7 @@ object ResearchRouting {
     data class Decision(val search: Boolean, val reason: String)
     private val transformation = Regex("(?i)^\\s*(?:please\\s+)?(?:write|draft|compose|imagine|brainstorm|translate|rewrite|polish|proofread|summari[sz]e|format|extract|convert)\\b|^(?:എഴുതുക|വിവർത്തനം)")
     private val verification = Regex("(?i)\\b(?:verify|fact[- ]?check|sources?|citations?|official (?:documents?|documentation|specifications?)|prove|evidence|search|look up|check online)\\b|സത്യമാണോ|തെളിവ്")
-    private val changing = Regex("(?i)\\b(?:population|prices?|costs?|weather|forecast|exchange rate|stock price|ceo|chief (?:executive|minister)|prime minister|president|king|queen|monarch|mayor|chancellor|incumbent|supported versions?|support end|security update)\\b|കാലാവസ്ഥ|ജനസംഖ്യ|പ്രധാനമന്ത്രി|മുഖ്യമന്ത്രി")
+    private val changing = Regex("(?i)\\b(?:population|prices?|costs?|weather|temperature|forecast|exchange rate|stock price|ceo|chief (?:executive|minister)|prime minister|president|king|queen|monarch|mayor|chancellor|incumbent|supported versions?|support end|security update)\\b|കാലാവസ്ഥ|ജനസംഖ്യ|പ്രധാനമന്ത്രി|മുഖ്യമന്ത്രി")
     private val freshness = Regex("(?i)\\b(?:latest|today|tonight|yesterday|currently|recent|this (?:week|month|year)|right now)\\b|\\bcurrent\\s+(?!flow|electric|in a circuit)|ഇന്ന്|ഇപ്പോൾ|നിലവിലെ|ഏറ്റവും പുതിയ")
     private val comparison = Regex("(?i)\\b(?:compare|versus|vs\\.?|better than|difference between)\\b|താരതമ്യം|തമ്മിൽ")
     private val technical = Regex("(?i)\\b(?:android|phones?|pixel|iphone|litert(?:-lm)?|llama\\.cpp|gguf|qwen|gemma|frameworks?|runtimes?|gpu|npu|models?)\\b")

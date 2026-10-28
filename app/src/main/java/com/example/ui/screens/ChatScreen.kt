@@ -307,6 +307,7 @@ private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: 
             val notice = when (message.groundingStatus) {
                 "EVIDENCE_CITED" -> "Web answer · Passage checks passed; check sources"
                 "PARTIALLY_SUPPORTED" -> "Partial web answer · Unsupported details omitted"
+                "SOURCE_EXCERPTS" -> "Quoted web evidence · Check the source and reported time"
                 "CITATIONS_MISSING" -> "Sources retrieved; the answer did not cite them"
                 "SEARCH_FAILED" -> "Web search unavailable"
                 "INSUFFICIENT_EVIDENCE" -> "Web answer could not be verified"

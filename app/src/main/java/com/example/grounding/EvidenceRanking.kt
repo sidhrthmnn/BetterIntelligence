@@ -38,11 +38,13 @@ object EvidenceRanking {
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
         val q = ResearchQuery(plan.question)
+        val currentWeather = ConversationalResearch.isWeather(plan.question) && WeatherPageEvidence.current(source.excerpt, q.today) &&
+            ResearchQuery.date(source.updatedAt)?.isAfter(q.today.plusDays(1)) != true
         val explicitIncumbent = source.updatedAt.isBlank() && plan.explicitUrls.isNotEmpty() && ResearchQuery.isCurrentIncumbentQuery(plan.question) &&
             Regex("(?i)\\b(?:current role holder|current (?:prime minister|ceo)|incumbent|is (?:the )?(?:chairman and )?chief executive officer)\\b").containsMatchIn(source.excerpt)
         // An undated, explicitly requested role page may identify its current
         // holder. Keep the date unknown; never invent a fresh publication date.
-        if ((!q.currentEnough(source.updatedAt) && !explicitIncumbent && !contextOnly(source, plan)) || q.isPrediction(source.title)) return false
+        if ((!q.currentEnough(source.updatedAt) && !explicitIncumbent && !currentWeather && !contextOnly(source, plan)) || q.isPrediction(source.title)) return false
         if (plan.explicitUrls.isNotEmpty()) return true
         val found = ResearchQuery.words(source.title + " " + source.excerpt)
         if (q.years.isNotEmpty() && !found.containsAll(q.years)) return false

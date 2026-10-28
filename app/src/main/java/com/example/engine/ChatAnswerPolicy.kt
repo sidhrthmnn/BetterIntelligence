@@ -9,7 +9,7 @@ object ChatAnswerPolicy {
     fun requiresLiveData(question: String): Boolean {
         if (!ResearchRouting.decide(question).search) return false
         return ResearchQuery.isCurrentIncumbentQuery(question) ||
-            Regex("(?i)\\b(?:population|prices?|cost of|weather|forecast|exchange rate|latest stable|current .*version)\\b|കാലാവസ്ഥ|ജനസംഖ്യ").containsMatchIn(question) ||
+            Regex("(?i)\\b(?:population|prices?|cost of|weather|temperature|forecast|exchange rate|latest stable|current .*version)\\b|കാലാവസ്ഥ|ജനസംഖ്യ").containsMatchIn(question) ||
             Regex("(?i)\\b(?:who won|winner|prize|award)\\b").containsMatchIn(question) &&
                 Regex("\\b20\\d{2}\\b").findAll(question).any { it.value.toInt() >= java.time.LocalDate.now().year - 1 }
     }

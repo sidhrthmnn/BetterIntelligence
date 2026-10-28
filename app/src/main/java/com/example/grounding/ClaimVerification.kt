@@ -2,7 +2,7 @@ package com.example.grounding
 
 enum class AnswerSupport { CITED, PARTIAL, INSUFFICIENT }
 data class ClaimCheck(val text: String, val sourceIds: Set<Int>, val supported: Boolean, val reason: String)
-data class CheckedAnswer(val text: String, val support: AnswerSupport, val claims: List<ClaimCheck>)
+data class CheckedAnswer(val text: String, val support: AnswerSupport, val claims: List<ClaimCheck>, val sourceExtract: Boolean = false)
 
 /** Conservative, deterministic evidence checks, NOT general semantic entailment
  * or a guarantee that a publisher is correct. Each surviving claim must match
@@ -53,7 +53,11 @@ object ClaimVerification {
                 Regex("(?i)\\b(?:the following|as follows|listed below|two parts)\\b").containsMatchIn(body) && !body.substringAfter(':', "").any { it.isLetterOrDigit() } -> "Incomplete referential claim"
                 Regex("(?i)\\bI (?:have |just )?(?:accessed|opened|downloaded|sent|installed|contacted|browsed)\\b").containsMatchIn(body) -> "Unperformed tool action"
                 url.findAll(line).any { match -> sources.none { it.id in ids && it.url == match.value.trimEnd('.', ',') } } -> "Unprovided URL"
-                ids.mapNotNull(byId::get).none { supports(body, it, entities, ResearchQuery.isCurrentIncumbentQuery(question), it.id in contextOnly) } -> "Passage does not substantiate subject, wording, polarity or values"
+                ids.mapNotNull(byId::get).none { source ->
+                    val found = ResearchQuery.words(source.title + " " + source.excerpt)
+                    val requestedSubject = comparison || ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in found } }
+                    requestedSubject && supports(body, source, entities, ResearchQuery.isCurrentIncumbentQuery(question), source.id in contextOnly)
+                } -> "Passage does not substantiate subject, wording, polarity or values"
                 else -> "Passage checks passed"
             }
             ClaimCheck(rendered, ids, reason in setOf("Passage checks passed", "Explicit uncertainty", "Heading"), reason)

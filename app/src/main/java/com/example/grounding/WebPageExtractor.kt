@@ -30,6 +30,7 @@ object WebPageExtractor {
         val query = ResearchQuery(question)
         val metadataDate = reportedDate(doc, query)
         doc.select(boilerplate).remove()
+        doc.select(".reflist, .mw-references-wrap, .references, [class*=weather-watchers], [class*=WeatherWatchers], [class*=socialShare]").remove()
         doc.select(cookieOverlaySelector).filter { el ->
             el.tagName() !in setOf("html", "body", "main", "article") &&
                 el.selectFirst("main, [role=main], article, h1") == null
@@ -162,8 +163,9 @@ object WebPageExtractor {
                     }
                 }
             }
-        val clean = blocks.flatMap { block ->
-            val normalized = block.replace(Regex("[\\t ]+"), " ").trim()
+        val weatherBlocks = if (ConversationalResearch.isWeather(question)) WeatherPageEvidence.blocks(root, title, page.url) else emptyList()
+        val clean = (weatherBlocks + blocks).flatMap { block ->
+            val normalized = block.replace(Regex("[\\u200B\\uFEFF]"), "").replace(Regex("[\\t ]+"), " ").trim()
             if (normalized.length <= 1800) listOf(normalized) else ClaimVerification.sentences(normalized)
         }
             .filter { it.length >= 12 && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) }
@@ -203,7 +205,7 @@ object WebPageExtractor {
         }
         var size = dates.joinToString("\n").length
         val isIncumbentQuery = ResearchQuery.isCurrentIncumbentQuery(question)
-        val isWeatherQuery = Regex("(?i)\\b(weather|temperature|forecast|rain|wind|humidity|celsius|fahrenheit|sunny|cloudy|storm)\\b").containsMatchIn(question)
+        val isWeatherQuery = ConversationalResearch.isWeather(question)
         val weatherDataPattern = Regex("(?i)(?:\\b\\d{1,2}\\s*°\\s*[CF]?\\b|\\b\\d{1,2}\\s+degrees?\\s+(?:celsius|fahrenheit)\\b|\\b(?:feels\\s+like|humidity|wind\\s+speed|precipitation|uv\\s+index|visibility|air\\s+quality|pressure|sunny|cloudy|overcast|clear|scattered\\s+clouds|light\\s+rain|heavy\\s+rain|showers|thunderstorm|drizzle|mist|fog)\\b)")
         val currentWeatherTimingPattern = Regex("(?i)\\b(today|tonight|now|current|currently|this\\s+morning|this\\s+afternoon|this\\s+evening|next\\s+hour|observed\\s+at|right\\s+now|minimum\\s+temperature|maximum\\s+temperature|daytime|nighttime)\\b")
         val presentPattern = Regex("(?i)\\b(incumbent|present(?!\\s*-\\s*day)|till\\s+date|to\\s+date|current(?!\\s+(?:affairs|gk|general\\s+knowledge))|currently|assumed\\s+office|serving\\s+since|in\\s+office|is\\s+the\\s+(?:current\\s+|present\\s+|\\d+(?:st|nd|rd|th)\\s+and\\s+current\\s+)?(?:chief\\s+minister|prime\\s+minister|president|governor|mayor|ceo|cm|pm))\\b")
@@ -212,6 +214,13 @@ object WebPageExtractor {
         val remaining = candidates.indices.filterNot { idx ->
             hasIncumbentCandidate && pastObituaryPattern.containsMatchIn(candidates[idx]) && !presentPattern.containsMatchIn(candidates[idx])
         }.toMutableSet()
+        fun roleScore(block: String): Int {
+            val role = Regex("(?i)\\b(mayor|president|minister|governor|ceo)\\b").find(question)?.value ?: return 0
+            val section = block.substringBefore('\n').substringAfterLast('›')
+            if (!Regex("(?i)\\b${Regex.escape(role)}\\b").containsMatchIn(section)) return 0
+            val qualifier = Regex("(?i)\\b(lord|lady|deputy|vice|former|assistant)\\b").find(section)?.value
+            return if (qualifier != null && !Regex("(?i)\\b${Regex.escape(qualifier)}\\b").containsMatchIn(question)) -60 else 25
+        }
         while (remaining.isNotEmpty() && selected.size < 7) {
             val index = remaining.maxBy { i ->
                 val blockText = candidates[i]
@@ -225,12 +234,13 @@ object WebPageExtractor {
                     }
                 } else 0
                 val weatherScore = if (isWeatherQuery && weatherDataPattern.containsMatchIn(blockText)) {
-                    if (currentWeatherTimingPattern.containsMatchIn(blockText)) 36 else 20
+                    val temperature = Regex("(?i)-?\\d+(?:\\.\\d+)?\\s*°\\s*[CF]\\b|\\d+\\s+degrees?\\s+(?:celsius|fahrenheit)").containsMatchIn(blockText)
+                    (if (temperature) 70 else 10) + if (currentWeatherTimingPattern.containsMatchIn(blockText)) 30 else 0
                 } else 0
                 query.bm25Score(blockText, docFreqs, candidates.size, avgWords) +
                     (plan.coverage(blockText) - covered).size * 15 +
                     mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20 +
-                    incumbentScore + weatherScore
+                    incumbentScore + weatherScore + roleScore(blockText)
             }
             remaining.remove(index)
             val block = candidates[index]
@@ -241,9 +251,10 @@ object WebPageExtractor {
             if (covered.size == plan.focuses.size && selected.size >= 3 && subjects.size == plan.entities.size && size >= minOf(650, budget / 2)) break
         }
         val orderedSelected = when {
-            hasIncumbentCandidate -> selected.sortedWith(compareByDescending<Int> { presentPattern.containsMatchIn(candidates[it]) }.thenBy { it })
+            hasIncumbentCandidate -> selected.sortedWith(compareByDescending<Int> { roleScore(candidates[it]) }
+                .thenByDescending { presentPattern.containsMatchIn(candidates[it]) }.thenBy { it })
             isWeatherQuery -> selected.sortedWith(compareByDescending<Int> {
-                weatherDataPattern.containsMatchIn(candidates[it]) && currentWeatherTimingPattern.containsMatchIn(candidates[it])
+                Regex("(?i)(?:observed temperature|today forecast: high)").containsMatchIn(candidates[it])
             }.thenBy { it })
             else -> selected.toList()
         }

@@ -101,15 +101,23 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
     private val lower = plain.lowercase()
     private fun has(phrase: String) = Regex("(?<![\\p{L}\\p{M}])${Regex.escape(phrase)}(?![\\p{L}\\p{M}])").containsMatchIn(lower)
     val relative = listOf("latest", "recent", "recently", "current", "currently", "today", "yesterday", "this week", "this month", "now", "who won", "ഇന്ന്", "ഇപ്പോൾ").any(::has)
+    // A maintained office-holder page may have been published years ago.
+    // Ask for the incumbent, not exclusively for news published this month.
+    private val currentRoleLookup = isCurrentIncumbentQuery(userPlain) &&
+        !Regex("(?i)\\b(news|announced|appointed|became|election|elected|resigned)\\b").containsMatchIn(userPlain)
     val useNews = relative || years.any { it.toInt() >= today.year - 1 }
     val searchText = searchOverride ?: (expandedSearchTerms + years + if (relative && years.isEmpty()) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
     val earliest: LocalDate? = when {
+        currentRoleLookup -> null
         has("today") || has("ഇന്ന്") -> today
         has("yesterday") -> today.minusDays(1)
         listOf("latest", "recent", "recently", "current", "currently", "now", "this week", "this month", "ഇപ്പോൾ").any(::has) -> today.minusDays(30)
         else -> null
     }
     val freshnessFilter: String? = when {
+        currentRoleLookup -> null
+        // Forecast pages roll forward without publishing a new news article.
+        ConversationalResearch.isWeather(userPlain) -> null
         has("today") || has("yesterday") || has("ഇന്ന്") -> "d"
         has("this week") -> "w"
         earliest != null -> "m"

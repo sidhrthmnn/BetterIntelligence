@@ -19,6 +19,13 @@ data class ResearchPlan(val question: String, val intents: Set<ResearchIntent>, 
 /** Bounded, deterministic planning. No model allocation, translation, or private
  * conversation text. Non-Latin text is retained verbatim in outgoing queries. */
 object ResearchPlanner {
+    /** Capitalised capabilities are facets, not identities such as London/Orion. */
+    fun subjects(text: String): List<String> {
+        val facets = ResearchQuery.words("CPU GPU NPU RAM API weather temperature forecast Vulkan memory")
+        return entities(text).map { entity ->
+            entity.split(Regex("\\s+")).filter { token -> ResearchQuery.words(token).any { it !in facets } }.joinToString(" ")
+        }.filter(String::isNotBlank).distinct()
+    }
     fun plan(question: String, today: LocalDate = LocalDate.now()): ResearchPlan {
         val urls = Regex("https?://[^\\s<>]+").findAll(question).map { it.value.trimEnd('.', ',', ')', ']') }.distinct().toList()
         require(urls.all(GroundingPolicy::publicHttpsUrl)) { "Use a public HTTPS link" }
