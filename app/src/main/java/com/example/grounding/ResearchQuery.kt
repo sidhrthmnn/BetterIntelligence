@@ -30,10 +30,11 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         private val modelVersion = Regex("(?i)\\b(gemma|qwen)(\\d+(?:\\.\\d+)*)\\b")
         private fun normalizedModels(text: String) = modelVersion.replace(text, "$1 $2")
         // Mild English inflection matching, without damaging non-Latin words.
-        private fun stem(value: String) = if (value.matches(englishWord)) when {
+        private fun undouble(value: String) = if (value.length > 3 && value.last() in "bdfgmnprt" && value.last() == value[value.lastIndex - 1]) value.dropLast(1) else value
+        private fun stem(value: String) = if (value == "registration") "register" else if (value.matches(englishWord)) when {
             value.endsWith("ies") -> value.dropLast(3) + "y"
-            value.endsWith("ing") && value.length >= 7 -> value.dropLast(3)
-            value.endsWith("ed") && value.length >= 6 && !value.endsWith("eed") -> value.dropLast(2)
+            value.endsWith("ing") && value.length >= 7 -> undouble(value.dropLast(3))
+            value.endsWith("ed") && value.length >= 6 && !value.endsWith("eed") -> undouble(value.dropLast(2))
             value.endsWith("s") && !value.endsWith("ss") -> value.dropLast(1)
             else -> value
         } else value

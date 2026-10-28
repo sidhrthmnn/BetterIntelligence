@@ -353,13 +353,15 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     }
     private suspend fun activateConversation(id: Long) {
         val conversation = repository.conversation(id) ?: return
-        _conversationId.value = id
+        // Finish the suspending preference write before publishing a usable ID.
+        // Otherwise the first send can see the new chat while its lock is held.
+        repository.preferencesRepository.saveActiveConversation(id)
         _draft.value = if (savedState.get<Long>("draftConversation") == id) savedState.get<String>("draft") ?: conversation.draft else conversation.draft
         savedState["draft"] = _draft.value; savedState["draftConversation"] = id
         _groundingMode.value = runCatching { GroundingMode.valueOf(conversation.groundingMode) }.getOrDefault(GroundingMode.OFF)
-        repository.preferencesRepository.saveActiveConversation(id)
         editingMessageId = null
         _isEditingMessage.value = false
+        _conversationId.value = id
     }
     private suspend fun stopChatAndSaveDraft() {
         chatPreparationJob?.cancelAndJoin()

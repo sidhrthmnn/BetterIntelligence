@@ -133,15 +133,52 @@ class ResearchReliabilityTest {
         assertTrue(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "Why does human ancestry affect appearance and evolution?"))
     }
 
+    @Test fun publicPlaceSurvivesGenericSourceTitlesAndOldHeadingOnlySources() {
+        val page = EvidenceSource(1, "The Mayor and his team", "https://www.london.gov.uk/people",
+            "The Mayor and his team › Mayor of London › Ada Example\nMayor of London", 1)
+        val bound = ConversationalResearch.bindPublicPlace("Who is the mayor in London?", listOf(page)).single()
+        assertEquals("London", bound.publicPlace)
+        for (s in listOf(page, bound)) {
+            val encoded = GroundingResult(sources = listOf(s)).json()
+            val history = listOf(ChatMessageEntity(role = "assistant", content = "Public answer", sourcesJson = encoded))
+            assertEquals("What is the temperature in London?", ConversationalResearch.question("What is the temperature there?", history))
+        }
+        assertEquals("", ConversationalResearch.bindPublicPlace("Who is the mayor in Oslo?", listOf(page)).single().publicPlace)
+    }
+
+    @Test fun registrationInflectionsAndIllustrativeDocumentationAreNotFinance() {
+        val s = source("Example Domains\nThese domains may be used as illustrative examples in documents without prior coordination. They are not available for registration or transfer.", "Example Domains")
+        val question = "Can example domains be registered or transferred?"
+        val checked = GroundingPolicy.checkAnswer("Example domains are not available for registration or transfer [1].", listOf(s), question)
+        assertEquals(checked.claims.toString(), AnswerSupport.CITED, checked.support)
+        assertTrue(EvidenceAnswer.resolve("Uncited draft", listOf(s), question).sourceExtract)
+        assertEquals(ResearchQuery.words("registered transferred"), ResearchQuery.words("registration transfer"))
+    }
+
+    @Test fun shortProductCardPricesStayBoundToProductAndLocale() {
+        val html = """<title>Device prices</title><main><h1>Shop devices</h1>
+            <div class="card"><div>NEW Orion Take a closer look</div><div class="scrim"><span class="price">From £999</span> Buy</div></div>
+            <p>Compare available mobile devices and choose the model and storage that suit your needs. Product information is available from each card.</p>
+            <h2>Representative example</h2><p>Purchase amount £1,200. Monthly payment £107.72 for 12 months at 14.9% APR.</p></main>"""
+        val question = "What does Orion cost in the UK?"
+        val s = WebPageExtractor.article(WebDocument("https://shop.example/uk/shop", html, "text/html"), 1, question)!!
+        assertTrue(s.excerpt, s.excerpt.contains("£999")); assertFalse(s.excerpt.contains("1,200"))
+        assertEquals(AnswerSupport.CITED, GroundingPolicy.checkAnswer("Orion starts from £999 in the UK [1].", listOf(s), question).support)
+        assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("Orion starts from £999 in the US [1].", listOf(s), "What does Orion cost in the US?").support)
+        assertTrue(EvidenceAnswer.resolve("Uncited draft", listOf(s), question).sourceExtract)
+    }
+
     /** Optional diagnostics against captured public HTML. Fixtures above remain offline. */
     @Test fun capturedPublicPagesOptional() {
         val directory = System.getenv("BI_RELIABILITY_CAPTURE") ?: return
-        val results = listOf("bi-city-mayor" to "Who is the mayor in London?", "bi-bbc-weather" to "What is the weather in London?").map { (name, question) ->
-            val url = if (name.contains("bbc")) "https://www.bbc.co.uk/weather/2643743" else "https://www.cityoflondon.gov.uk/about-us/about-the-city-of-london-corporation/lord-mayor/lord-mayor-mayor-of-london"
+        val results = listOf("bi-city-mayor" to "Who is the mayor in London?", "bi-bbc-weather" to "What is the weather in London?",
+            "bi-apple-iphone" to "What does iPhone Duo cost in the UK?").map { (name, question) ->
+            val url = if (name.contains("bbc")) "https://www.bbc.co.uk/weather/2643743" else if (name.contains("apple")) "https://www.apple.com/uk/shop/buy-iphone" else "https://www.cityoflondon.gov.uk/about-us/about-the-city-of-london-corporation/lord-mayor/lord-mayor-mayor-of-london"
             val s = WebPageExtractor.article(WebDocument(url, File(directory, "$name.html").readText(), "text/html"), 1, question)!!
             val resolved = EvidenceAnswer.resolve("Uncited draft", listOf(s), question)
             assertTrue(resolved.text, resolved.sourceExtract)
             if (name.contains("bbc")) assertTrue(resolved.text, EvidenceAnswer.hasTemperature(resolved.text))
+            else if (name.contains("apple")) assertTrue(resolved.text, resolved.text.contains("£1,999"))
             else assertTrue(resolved.text, resolved.text.contains("Sadiq Khan"))
             org.json.JSONObject().put("question", question).put("excerpt", s.excerpt).put("answer", resolved.text)
         }

@@ -32,14 +32,16 @@ enum class ResearchFailure(val notice: String) {
 data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: ResearchFailure? = null, val conflicts: List<String> = emptyList())
 
 data class EvidenceSource(val id: Int, val title: String, val url: String, val excerpt: String,
-    val retrievedAt: Long, val updatedAt: String = "", val kind: String = "ARTICLE_SUMMARY", val dateKind: String = "")
+    val retrievedAt: Long, val updatedAt: String = "", val kind: String = "ARTICLE_SUMMARY", val dateKind: String = "",
+    val publicPlace: String = "")
 
 data class PreparedEvidence(val prompt: String, val sources: List<EvidenceSource>)
 
 data class GroundingResult(val status: String = "LOCAL", val sources: List<EvidenceSource> = emptyList(), val notice: String = "") {
     fun json(): String = JSONArray().apply { sources.forEach { source -> put(JSONObject()
         .put("id", source.id).put("title", source.title).put("url", source.url).put("excerpt", source.excerpt)
-        .put("retrievedAt", source.retrievedAt).put("updatedAt", source.updatedAt).put("kind", source.kind).put("dateKind", source.dateKind)) } }.toString()
+        .put("retrievedAt", source.retrievedAt).put("updatedAt", source.updatedAt).put("kind", source.kind).put("dateKind", source.dateKind)
+        .apply { if (source.publicPlace.isNotBlank()) put("publicPlace", source.publicPlace) }) } }.toString()
     companion object {
         fun sources(json: String): List<EvidenceSource> = runCatching {
             val array = JSONArray(json)
@@ -47,7 +49,8 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
                 val item = array.getJSONObject(index)
                 item.optString("url").takeIf(GroundingPolicy::publicHttpsUrl)?.let { url ->
                     EvidenceSource(item.getInt("id"), item.getString("title"), url, item.optString("excerpt"),
-                        item.optLong("retrievedAt"), item.optString("updatedAt"), item.optString("kind"), item.optString("dateKind"))
+                        item.optLong("retrievedAt"), item.optString("updatedAt"), item.optString("kind"), item.optString("dateKind"),
+                        item.optString("publicPlace").takeIf(ConversationalResearch::validPublicPlace).orEmpty())
                 }
             }
         }.getOrDefault(emptyList())
@@ -276,7 +279,7 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
             val outcome = if (cached != null) ResearchOutcome(cached) else kotlinx.coroutines.withTimeoutOrNull(30_000) {
                 checkNotNull(providers[provider]).research(question, progress)
             } ?: return GroundingResult("SEARCH_FAILED", notice = ResearchFailure.TIMEOUT.notice)
-            val sources = outcome.sources
+            val sources = ConversationalResearch.bindPublicPlace(question, outcome.sources)
             if (sources.isEmpty()) GroundingResult("SEARCH_FAILED", notice = (outcome.failure ?: ResearchFailure.INSUFFICIENT).notice)
             else {
                 synchronized(this) {

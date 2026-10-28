@@ -2,6 +2,9 @@ package com.example
 
 import android.content.Context
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
@@ -56,7 +59,9 @@ class ResearchReliabilityDeviceTest {
                 val count = previous.size
                 val draft = java.util.concurrent.atomic.AtomicReference("")
                 val streaming = launch(Dispatchers.Default) { vm.streamingChatText.collect { if (it.isNotBlank()) draft.set(it) } }
-                compose.runOnUiThread { vm.sendChatMessage(question) }
+                compose.waitForIdle()
+                compose.onNodeWithTag("chat_input_field").performTextReplacement(question)
+                compose.onNodeWithTag("send_message_btn").performClick()
                 compose.waitUntil(240_000) { !vm.isChatGenerating.value && vm.chatMessages.value.size > count }
                 streaming.cancelAndJoin()
                 val answer = repository.messages(vm.conversationId.value).first().last { it.role == "assistant" }
@@ -97,6 +102,7 @@ class ResearchReliabilityDeviceTest {
             val before = vm.conversationId.value
             compose.runOnUiThread { vm.newConversation() }
             compose.waitUntil(15_000) { vm.conversationId.value != before && vm.conversationId.value != 0L }
+            compose.waitForIdle()
             compose.runOnUiThread { vm.setGroundingMode(GroundingMode.AUTO) }
             val missingPlace = ask("Who is the mayor there?")
             verify(missingPlace.content == ConversationalResearch.askPlace && missingPlace.completionTokens == 0 &&
@@ -106,6 +112,7 @@ class ResearchReliabilityDeviceTest {
             val old = vm.conversationId.value
             compose.runOnUiThread { vm.newConversation() }
             compose.waitUntil(15_000) { vm.conversationId.value != old && vm.conversationId.value != 0L }
+            compose.waitForIdle()
             compose.runOnUiThread { vm.setGroundingMode(GroundingMode.OFF) }
             ask("Let's play a harmless guessing game. The item is a snake. Answer my next questions with only Yes or No.")
             val mammal = ask("Is it a mammal?")

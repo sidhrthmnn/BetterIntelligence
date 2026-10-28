@@ -5,6 +5,9 @@
 - Public place references such as “Who is the mayor there?” resolve from this
   conversation's retrieved source titles. A different conversation does not
   inherit the location. Missing places trigger a clarification instead of a guess.
+  A source-confirmed public place is retained in optional source metadata so a
+  generic next-page title does not erase it. Old source heading paths are also
+  readable; no database or Binder migration is required.
 - Planning, evidence preparation and final verification use the same resolved
   question. A checked response is saved once rather than checked again against
   an unresolved follow-up.
@@ -36,6 +39,12 @@
   allow harmless games and avoid unsupported tool/capability claims.
 - Representative finance examples cannot be presented as product-specific
   payments while dropping the example purchase amount and qualifications.
+  Short visible price fields bind to their nearest matching product card, and an
+  explicit locale path can establish market scope without supplying any price.
+  Finance qualifications are not applied to unrelated illustrative documentation.
+- English inflection matching handles registered/registration and transferred/
+  transfer consistently. New conversation IDs are published after their
+  suspending activation work, so an immediate first send is not silently dropped.
 
 No Binder/AIDL, model loader, download or TypeRight interface changes are needed.
 

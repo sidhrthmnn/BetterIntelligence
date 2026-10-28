@@ -164,11 +164,15 @@ object WebPageExtractor {
                 }
             }
         val weatherBlocks = if (ConversationalResearch.isWeather(question)) WeatherPageEvidence.blocks(root, title, page.url) else emptyList()
-        val clean = (weatherBlocks + blocks).flatMap { block ->
+        val priceRequest = Regex("(?i)\\b(?:prices?|costs?|how much)\\b").containsMatchIn(question)
+        val financeRequest = Regex("(?i)\\b(?:finance|financing|loan|APR|interest|repayment|example|monthly)\\b").containsMatchIn(question)
+        val prices = if (priceRequest) priceCards(root, title, question, page.url) else emptyList()
+        val clean = (weatherBlocks + prices + blocks).flatMap { block ->
             val normalized = block.replace(Regex("[\\u200B\\uFEFF]"), "").replace(Regex("[\\t ]+"), " ").trim()
             if (normalized.length <= 1800) listOf(normalized) else ClaimVerification.sentences(normalized)
         }
-            .filter { it.length >= 12 && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) }
+            .filter { it.length >= 12 && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) &&
+                (!priceRequest || financeRequest || !ClaimVerification.financeExample(it)) }
             .distinct().take(350)
         val usable = clean.ifEmpty { listOf(body.trim().take(2200)) }
         val text = focused(usable, dateLines, question, minOf(2200, snippetLimit)).trim()
@@ -181,6 +185,21 @@ object WebPageExtractor {
     fun focusExcerpt(text: String, question: String, budget: Int): String = focused(
         text.split(Regex("\\n\\s*\\n")).let { blocks -> if (blocks.size > 1) blocks else text.lines().chunked(2).map { it.joinToString("\n") } },
         text.lines().filter { it.length <= 220 && visibleDate.containsMatchIn(it) }.take(2), question, budget)
+
+    /** Bind short visible price fields to their nearest bounded product card.
+     * Standalone prices and amounts in general finance examples have no owner. */
+    private fun priceCards(root: Element, title: String, question: String, url: String): List<String> {
+        val required = ResearchQuery(question).terms - ResearchQuery.words("price cost how much buy shop") - EvidenceRanking.localeWords(url)
+        if (required.isEmpty()) return emptyList()
+        val currency = Regex("[£$€₹]\\s*\\d")
+        return root.select("[itemprop=price], [class*=price]").asSequence().filter { node ->
+            node.text().length <= 180 && currency.containsMatchIn(node.text())
+        }.mapNotNull { price ->
+            generateSequence(price) { it.parent() }.take(5).map { it.text().trim() }.firstOrNull { text ->
+                text.length in 20..800 && required.all { it in ResearchQuery.words(text) } && !ClaimVerification.financeExample(text)
+            }?.let { "$title\n$it" }
+        }.distinct().take(6).toList()
+    }
 
     private fun focused(blocks: List<String>, dates: List<String>, question: String, budget: Int): String {
         val plan = ResearchPlanner.plan(question)

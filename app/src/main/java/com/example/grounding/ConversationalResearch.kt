@@ -6,6 +6,21 @@ import com.example.data.ChatMessageEntity
  * Stored private user/assistant messages are never copied into a search query.
  */
 object ConversationalResearch {
+    fun validPublicPlace(place: String) = Regex("^[\\p{L}][\\p{L} ,.'()-]{1,69}$").matches(place) &&
+        !GroundingPolicy.containsCredential(place) && !Regex("(?i)ignore|instructions|system prompt").containsMatchIn(place)
+    /** Bind only a place in this public request that the actual pages mention.
+     * This survives generic page titles without copying private chat history. */
+    fun bindPublicPlace(question: String, sources: List<EvidenceSource>): List<EvidenceSource> {
+        val plain = question.substringBefore("(Public source topic:")
+        val place = (if (isWeather(plain)) weatherCity(plain) else
+            Regex("(?i)\\b(?:mayor|governor)\\s+(?:in|of|for)\\s+([\\p{L}][\\p{L} ,.'-]{1,69})")
+                .find(plain)?.groupValues?.get(1)?.trim(' ', '.', ',', '?'))?.takeIf(::validPublicPlace) ?: return sources
+        val required = ResearchQuery.words(place)
+        return sources.map { source ->
+            val mentioned = ResearchQuery.words(source.title + " " + source.excerpt + " " + source.url)
+            if (required.all { it in mentioned }) source.copy(publicPlace = place) else source
+        }
+    }
     private val followUpPattern = Regex(
         "(?i)\\b(he|him|his|she|her|they|them|their|there|that|those|this|it|its|second|third|first|driver|winner|current|incumbent|now|present|still|again|sure|wrong|incorrect|right|really|verify|recheck)\\b|" +
             "^\\s*(?:please\\s+)?(?:check|search|verify|try|look)\\b|അത്|അവൻ|അവർ|അവയുടെ|അതിന്റെ"
@@ -36,7 +51,11 @@ object ConversationalResearch {
         // Do not send private chat text, or the old weather intent, to discovery.
         if (Regex("(?i)\\bthere\\b").containsMatchIn(question)) {
             val places = sources.mapNotNull { source ->
-                Regex("(?i)^(?:weather|temperature|forecast)\\s+(?:in|for|at)\\s+(.{2,70}?)(?=\\s+(?:in|for)\\s+(?:20\\d{2}|January|February|March|April|May|June|July|August|September|October|November|December)|\\s*[-–—|]|$)")
+                source.publicPlace.takeIf(::validPublicPlace) ?: source.excerpt.lines().filter { '›' in it }
+                    .flatMap { it.split('›') }.firstNotNullOfOrNull { section ->
+                        Regex("(?i)^(?:the )?(?:mayor|governor) of ([\\p{L}][\\p{L} .'-]{1,69}?)(?:,.*)?$")
+                            .matchEntire(section.trim())?.groupValues?.get(1)?.trim()
+                    } ?: Regex("(?i)^(?:weather|temperature|forecast)\\s+(?:in|for|at)\\s+(.{2,70}?)(?=\\s+(?:in|for)\\s+(?:20\\d{2}|January|February|March|April|May|June|July|August|September|October|November|December)|\\s*[-–—|]|$)")
                     .find(source.title)?.groupValues?.get(1)?.trim()
                     ?: Regex("(?i)^(.{2,70}?)\\s*(?:[-–—|]\\s*(?:BBC\\s+)?(?:weather|forecast)\\b|\\s+(?:weather|forecast)\\b)")
                     .find(source.title)?.groupValues?.get(1)?.trim()

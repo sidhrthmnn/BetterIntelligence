@@ -5,6 +5,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 /** Lexical relevance and collection coverage, not neural semantic entailment.
  * Publisher suffixes (.gov/.edu) alone confer no authority. */
 object EvidenceRanking {
+    /** An explicit locale path can scope a page, but never supplies a value. */
+    fun localeWords(url: String): Set<String> = url.toHttpUrl().pathSegments.firstOrNull()
+        ?.takeIf { Regex("[a-zA-Z]{2}(?:-[a-zA-Z]{2})?").matches(it) }?.let { ResearchQuery.words(it) }.orEmpty()
     fun publisher(url: String): String = url.toHttpUrl().let { it.topPrivateDomain() ?: it.host }
     fun primaryRelevance(url: String, question: String): Int {
         val parsed = url.toHttpUrl()

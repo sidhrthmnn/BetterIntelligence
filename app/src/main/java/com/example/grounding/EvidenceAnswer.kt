@@ -24,10 +24,10 @@ object EvidenceAnswer {
             val activeOffice = Regex("(?i)\\b(incumbent|current|present|serving|in office|leads|is (?:the )?(?:chief minister|prime minister|president|governor|mayor|ceo))\\b").containsMatchIn(text)
             val titleWords = ResearchQuery.words(source.title)
             val roleContext = office && activeOffice && ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in titleWords } }
-            val contextual = if (roleContext) found + titleWords else found
+            val contextual = (if (roleContext) found + titleWords else found) + EvidenceRanking.localeWords(source.url)
             val subject = ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in contextual } }
             val topical = query.terms.isNotEmpty() && query.terms.count { it in contextual } >= kotlin.math.ceil(query.terms.size * .65).toInt()
-            val boilerplate = Regex("(?i)ignore.{0,30}instructions|system prompt|^references\\b|go to facebook|go to twitter|representative example|illustrative examples?|example purchase").containsMatchIn(text)
+            val boilerplate = Regex("(?i)ignore.{0,30}instructions|system prompt|^references\\b|go to facebook|go to twitter").containsMatchIn(text) || ClaimVerification.financeExample(text)
             val role = Regex("(?i)\\b(mayor|president|minister|governor|ceo)\\b").find(question)?.value
             val section = text.substringBefore('\n').substringAfterLast('›')
             val wrongRole = role != null && Regex("(?i)\\b(lord|lady|deputy|vice|former|assistant)\\b").find(section)?.value?.let {
