@@ -42,6 +42,9 @@
   Short visible price fields bind to their nearest matching product card, and an
   explicit locale path can establish market scope without supplying any price.
   Finance qualifications are not applied to unrelated illustrative documentation.
+- Static publisher `noscript` fallbacks are read as HTML content; scripts and
+  iframes are still removed. Byte-budget clipping preserves paragraph boundaries
+  so one product/role's passage cannot be merged into the next.
 - English inflection matching handles registered/registration and transferred/
   transfer consistently. New conversation IDs are published after their
   suspending activation work, so an immediate first send is not silently dropped.
