@@ -46,8 +46,8 @@ fun interface WebFetcher {
     }
 }
 
-/** Bounded public-page research, implemented locally. No search/grounding APIs,
- * proxy, account, scripts, cookies, forms, sign-in or background crawling.
+/** Bounded local page reading with HTML and optional anonymous link discovery.
+ * No cloud model, API key, proxy, account, scripts, cookies or background crawling.
  */
 class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private val discoveryOverride: DiscoveryProvider? = null,
     private val backupAllowed: suspend () -> Boolean = { false }) : SearchProvider {

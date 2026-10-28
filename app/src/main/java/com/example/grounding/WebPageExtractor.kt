@@ -208,7 +208,7 @@ object WebPageExtractor {
     private fun focused(blocks: List<String>, dates: List<String>, question: String, budget: Int): String {
         val plan = ResearchPlanner.plan(question)
         val query = ResearchQuery(question)
-        val candidates = blocks.filter { it.isNotBlank() }.distinct().take(350)
+        val candidates = blocks.filter { it.isNotBlank() && !FactualResearch.incomplete(it.substringAfter('\n', it)) }.distinct().take(350)
         if (candidates.isEmpty()) return dates.joinToString("\n").take(budget)
         val docFreqs = mutableMapOf<String, Int>()
         var totalWords = 0
@@ -266,10 +266,15 @@ object WebPageExtractor {
                     FactualResearch.castingRelation(castingBody) -> 60
                     else -> 0
                 } else 0
+                val definitionScore = if (FactualResearch.definitionTopic(question) != null) when {
+                    FactualResearch.definitionLine(castingBody, question) -> 85
+                    Regex("(?i)\\b(?:important|importance|benefits?)\\b").containsMatchIn(castingBody) -> -25
+                    else -> 0
+                } else 0
                 query.bm25Score(blockText, docFreqs, candidates.size, avgWords) +
                     (plan.coverage(blockText) - covered).size * 15 +
                     mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20 +
-                    incumbentScore + weatherScore + castingScore + roleScore(blockText)
+                    incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText)
             }
             remaining.remove(index)
             val block = candidates[index]

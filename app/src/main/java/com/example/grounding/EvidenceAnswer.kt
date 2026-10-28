@@ -11,7 +11,8 @@ object EvidenceAnswer {
         val weather = ConversationalResearch.isWeather(question)
         val missingTemperature = weather && !hasTemperature(checked.text)
         val labelledWeather = weather && sources.any { Regex("(?i)observed temperature:|today forecast: high").containsMatchIn(it.excerpt) }
-        if (checked.support != AnswerSupport.INSUFFICIENT && !missingTemperature && !labelledWeather) return checked
+        val definitionMissing = FactualResearch.definitionTopic(question) != null && !FactualResearch.definitionLine(checked.text, question)
+        if (checked.support != AnswerSupport.INSUFFICIENT && !missingTemperature && !labelledWeather && !definitionMissing) return checked
         val query = ResearchQuery(question)
         val plan = ResearchPlanner.plan(question)
         val office = ResearchQuery.isCurrentIncumbentQuery(question)
@@ -22,6 +23,7 @@ object EvidenceAnswer {
             val text = block.trim()
             val body = if ('\n' in text) text.substringAfter('\n') else text
             if (FactualResearch.headlineOnly(text, source.title) || FactualResearch.speculativeCasting(question, source.title) ||
+                FactualResearch.incomplete(body) || definitionMissing && !FactualResearch.definitionLine(body, question) ||
                 FactualResearch.isCasting(question) && (!FactualResearch.castingRelation(body) || FactualResearch.speculativeCasting(question, body))) return@mapNotNull null
             val found = ResearchQuery.words(text)
             val activeOffice = Regex("(?i)\\b(incumbent|current|present|serving|in office|leads|is (?:the )?(?:chief minister|prime minister|president|governor|mayor|ceo))\\b").containsMatchIn(text)
@@ -47,13 +49,14 @@ object EvidenceAnswer {
                 (if (Regex("(?i)observed temperature").containsMatchIn(text)) 30 else 0))
         } }.sortedByDescending { it.score }.distinctBy { it.text.lowercase() }.take(if (weather) 2 else 1)
         if (extracts.isEmpty()) {
+            if (definitionMissing) return CheckedAnswer(GroundingPolicy.unavailableAnswer, AnswerSupport.INSUFFICIENT, checked.claims)
             if (!missingTemperature || checked.support == AnswerSupport.INSUFFICIENT) return checked
             return checked.copy(text = "${checked.text}\n\nTemperature was not available in the pages I could read.", support = AnswerSupport.PARTIAL)
         }
         val quotes = extracts.joinToString("\n\n") { extract ->
             extract.text.lines().joinToString("\n") { "> $it" } + " [${extract.source.id}]"
         }
-        val existing = checked.text.takeIf { checked.support != AnswerSupport.INSUFFICIENT && !labelledWeather }.orEmpty()
+        val existing = checked.text.takeIf { checked.support != AnswerSupport.INSUFFICIENT && !labelledWeather && !definitionMissing }.orEmpty()
         return CheckedAnswer("From the retrieved pages:\n\n$quotes" + if (existing.isBlank()) "" else "\n\n$existing",
             AnswerSupport.PARTIAL, checked.claims, sourceExtract = true)
     }

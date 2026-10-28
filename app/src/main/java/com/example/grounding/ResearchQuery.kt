@@ -98,7 +98,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             (!FactualResearch.isCasting(userPlain) || it !in setOf("playing", "plays", "played", "play", "portraying", "portrays", "portrayed", "voicing", "voices", "voiced")) }.take(14).toList()
     private val expandedSearchTerms = rawTerms.flatMap { token ->
         phraseAbbreviations.firstOrNull { it.first == token }?.second ?: listOf(token)
-    }
+    } + if (FactualResearch.capitalPlace(userPlain) != null) listOf("city") else emptyList()
     val terms = rawTerms.map(::stem).toSet()
     private val lower = plain.lowercase()
     private fun has(phrase: String) = Regex("(?<![\\p{L}\\p{M}])${Regex.escape(phrase)}(?![\\p{L}\\p{M}])").containsMatchIn(lower)

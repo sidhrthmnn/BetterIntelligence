@@ -7,6 +7,23 @@ object FactualResearch {
     fun isCasting(question: String) = casting.containsMatchIn(question)
     fun speculationRequested(question: String) = Regex("(?i)\\b(?:theories|theory|rumou?rs?|speculation|fan[- ]?casting)\\b").containsMatchIn(question)
     fun speculativeCasting(question: String, text: String) = isCasting(question) && !speculationRequested(question) && speculative.containsMatchIn(text)
+    fun definitionTopic(question: String): String? {
+        val topic = Regex("(?i)^\\s*(?:what(?:\\s+(?:is|are)|['’]s)|define)\\s+(?:(?:a|an|the)\\s+)?([\\p{L}\\p{N}][\\p{L}\\p{N} /.'’-]{1,70})[?!.]*\\s*$")
+            .matchEntire(question)?.groupValues?.get(1)?.trim(' ', '.', '?', '!') ?: return null
+        if (Regex("(?i)\\b(?:of|in|for|from|my|our|your|it|this|that|there|today|tonight|now|current|latest|best|better)\\b|['’]s\\b").containsMatchIn(topic)) return null
+        if (!question.trimStart().startsWith("define ", true) && Regex("(?i)\\b(?:weather|temperature|forecast|capital|price|cost|population|date|version)\\b").containsMatchIn(topic)) return null
+        return topic
+    }
+    fun definitionLine(text: String, question: String): Boolean {
+        val topic = definitionTopic(question) ?: return false
+        val plain = text.replace(Regex("[*`#>]"), "")
+        val definition = Regex("(?i)(?:^|[.!?]\\s+|\\n+)${Regex.escape(topic)}[^.!?\\n]{0,100}?\\b(?:is|are|means|refers to)\\s+([^.!?\\n]+)")
+            .find(plain)?.groupValues?.get(1) ?: return false
+        return !Regex("(?i)^(?:(?:really|very|especially)\\s+)?(?:important|essential|vital|common|popular|widespread|responsible)\\b").containsMatchIn(definition)
+    }
+    fun capitalPlace(question: String): String? = Regex("(?i)^\\s*what(?:['’]s|\\s+is)\\s+(?:the\\s+)?capital(?:\\s+city)?\\s+of\\s+([\\p{L}][\\p{L} .'-]{1,60})[?!.]*\\s*$")
+        .matchEntire(question)?.groupValues?.get(1)?.trim(' ', '.', '?', '!')
+    fun incomplete(text: String) = Regex("(?i)\\b(?:because|such as|as follows|the following)\\s*:?$|:\\s*$").containsMatchIn(text.trim())
     fun castingRelation(text: String) = Regex("(?i)\\b(?:play(?:s|ed|ing)?|portray(?:s|ed|ing)?|voic(?:e|es|ed|ing)|cast as|role (?:as|of)|star(?:s|ring)? as)\\b").containsMatchIn(text) ||
         Regex("\\b[A-Z][\\p{L}.'’-]+(?:\\s+[A-Z][\\p{L}.'’-]+){0,4}\\s+as\\s+[A-Z][\\p{L}.'’-]+").containsMatchIn(text)
 
@@ -17,6 +34,7 @@ object FactualResearch {
         return title.isNotBlank() && words.isNotEmpty() && (words - ResearchQuery.words(title)).isEmpty()
     }
     fun usable(source: EvidenceSource, question: String): Boolean = !headlineOnly(source.excerpt, source.title) &&
+        (capitalPlace(question) == null || !Regex("(?i)\\bcapital punishment\\b").containsMatchIn(source.title)) &&
         !speculativeCasting(question, source.title) && (!isCasting(question) || source.excerpt.split(Regex("\\n\\s*\\n")).any { block ->
             val body = if ('\n' in block) block.substringAfter('\n') else block
             !headlineOnly(body, source.title) && castingRelation(body) && !speculativeCasting(question, body)

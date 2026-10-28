@@ -22,6 +22,11 @@ a matching theory headline when no actual casting passage was available.
   actor/role passage. A headline alone cannot become an answer or fallback quote.
 - Sentence checking preserves suffixes and initials such as Jr., Dr. and A.; they
   no longer split a named person's cited statement into incomplete fragments.
+- Definition requests prioritise actual defining passages over importance/FAQ
+  tangents and incomplete reasons. Evidence fitting prefers a complete definition;
+  if generated prose misses it, a labelled exact definition can be quoted.
+  Capital-city searches disambiguate the requested city from capital punishment
+  and ask for the city/country without unrequested historical detours.
 - DuckDuckGo HTML/Lite remain the primary discovery path. Optional anonymous Mwmbl
   search is a separate permitted backup; source pages are still read directly.
   Snippets never become evidence. Captchas/denials are not bypassed.

@@ -136,4 +136,44 @@ class AutomaticGroundingTest {
         assertTrue(prepared.sources.single().excerpt, prepared.sources.single().excerpt.contains("new role as Doctor Doom"))
         assertTrue(FactualResearch.usable(prepared.sources.single(), question))
     }
+
+    @Test fun definitionRequestsKeepTheProcessRatherThanImportanceOrIncompleteReasons() {
+        val query = "What is photosynthesis?"
+        val definition = "Photosynthesis is a process in which plants convert light energy into chemical energy stored as sugars."
+        val noise = (1..12).joinToString("") { "<h2>Why is photosynthesis important?</h2><p>Photosynthesis is really important for animals, including humans because</p><p>Photosynthesis is important for the plant because it provides the plant with food.</p>" }
+        val html = "<title>Photosynthesis explained</title><main><h1>Photosynthesis</h1><p>$definition</p>$noise</main>"
+        val source = WebPageExtractor.article(WebDocument("https://science.example/plant-process", html, "text/html"), 1, query)!!
+        val prepared = GroundingPolicy.prepareEvidence(query, listOf(source), 2300)
+        assertTrue(prepared.sources.single().excerpt, prepared.sources.single().excerpt.contains(definition))
+        val answer = EvidenceAnswer.resolve("Photosynthesis is important for the plant because it provides the plant with food [1].", prepared.sources, query)
+        assertTrue(answer.text, answer.text.contains(definition)); assertTrue(answer.sourceExtract)
+        assertFalse(answer.text.contains("provides the plant with food"))
+        for (question in listOf("What is the temperature there?", "What is the current weather?", "What is Orion's RAM?", "What is the capital of France?"))
+            assertNull(question, FactualResearch.definitionTopic(question))
+        assertTrue(FactualResearch.incomplete("Photosynthesis is important because"))
+        System.getenv("BI_RELIABILITY_CAPTURE")?.let { directory ->
+            val capture = java.io.File(directory, "bi-v20-photosynthesis.html")
+            if (capture.isFile) {
+                val actual = WebPageExtractor.article(WebDocument("https://www.bbc.co.uk/bitesize/articles/zdxkcmn", capture.readText(), "text/html"), 1, query)!!
+                val packet = GroundingPolicy.prepareEvidence(query, listOf(actual), 2300)
+                val checked = EvidenceAnswer.resolve("Photosynthesis is important for plants [1].", packet.sources, query)
+                assertTrue(checked.text, checked.text.contains("light", true))
+                assertNotEquals(checked.claims.toString(), AnswerSupport.INSUFFICIENT, checked.support)
+            }
+        }
+    }
+
+    @Test fun cityLookupDoesNotUseCapitalPunishment() = runBlocking {
+        val query = "What is the capital of France?"
+        assertEquals("France", FactualResearch.capitalPlace(query))
+        assertTrue(ResearchQuery(query).searchText.contains("city"))
+        val wrong = EvidenceSource(1, "Capital punishment in France", "https://country.example/law", "Capital punishment in France has a long history.", 1)
+        assertFalse(EvidenceRanking.acceptable(wrong, ResearchPlanner.plan(query)))
+        assertTrue(EvidenceRanking.acceptable(wrong, ResearchPlanner.plan("What is capital punishment in France?")))
+        val primary = DiscoveryProvider { _, _ -> DiscoveryResult(listOf(ResearchCandidate(wrong.url, wrong.title)), DiscoveryState.FOUND) }
+        var fallbackCalls = 0
+        val backup = DiscoveryProvider { _, _ -> fallbackCalls++; DiscoveryResult(listOf(ResearchCandidate("https://country.example/capital", "Capital city of France")), DiscoveryState.FOUND) }
+        assertEquals("https://country.example/capital", FreeSearchDiscovery(primary, backup) { true }.discover(ResearchQuery(query), false).candidates.single().url)
+        assertEquals(1, fallbackCalls)
+    }
 }

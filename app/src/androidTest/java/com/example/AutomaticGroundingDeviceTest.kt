@@ -89,7 +89,8 @@ class AutomaticGroundingDeviceTest {
             compose.runOnUiThread { vm.newConversation() }
             compose.waitUntil(20_000) { vm.conversationId.value != old && vm.conversationId.value != 0L }
             assertEquals(GroundingMode.AUTO, vm.groundingMode.value)
-            ask("What is the capital of France?", Regex("(?i)Paris"))
+            val capital = ask("What is the capital of France?", Regex("(?i)Paris"))
+            verify(!Regex("\\b(?:18|19|20)\\d{2}\\b").containsMatchIn(capital.content), "Unrequested capital timeline: ${capital.content}")
             val unknown = ask("What is the unannounced launch date of fictional Zephrin? Read https://www.iana.org/help/example-domains", research = null)
             // The requested page is retrieved but must not substantiate an unrelated fact.
             verify(unknown.groundingStatus == "INSUFFICIENT_EVIDENCE", "Unrelated evidence gave an answer")

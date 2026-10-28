@@ -49,7 +49,8 @@ class FreeSearchDiscovery(private val primary: DiscoveryProvider, private val ba
     override suspend fun discover(query: ResearchQuery, broad: Boolean): DiscoveryResult {
         fun relevant(result: DiscoveryResult): DiscoveryResult {
             val found = result.candidates.filter { query.candidateRelevant(it.title, it.routingHint) &&
-                !query.isPrediction(it.title) && !FactualResearch.speculativeCasting(query.question, it.title) }
+                !query.isPrediction(it.title) && !FactualResearch.speculativeCasting(query.question, it.title) &&
+                (FactualResearch.capitalPlace(query.question) == null || !Regex("(?i)\\bcapital punishment\\b").containsMatchIn(it.title)) }
             return result.copy(candidates = found, state = if (result.state == DiscoveryState.FOUND && found.isEmpty()) DiscoveryState.EMPTY else result.state)
         }
         val first = try { withTimeoutOrNull(2_500) { relevant(primary.discover(query, broad)) }
