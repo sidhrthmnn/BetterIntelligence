@@ -29,6 +29,10 @@ object WebPageExtractor {
         val snippetLimit = policies.flatMap { policy -> Regex("(?i)max-snippet\\s*:\\s*(\\d+)").findAll(policy).map { it.groupValues[1].toIntOrNull() ?: 0 }.toList() }.minOrNull() ?: 2200
         val query = ResearchQuery(question)
         val metadataDate = reportedDate(doc, query)
+        // A non-JavaScript reader should see the publisher's noscript fallback.
+        // Apple and other catalogues put their actual product cards here.
+        // This only retains static text/markup; scripts/iframes are still removed.
+        doc.select("noscript").forEach { it.unwrap() }
         doc.select(boilerplate).remove()
         doc.select(".reflist, .mw-references-wrap, .references, [class*=weather-watchers], [class*=WeatherWatchers], [class*=socialShare]").remove()
         doc.select(cookieOverlaySelector).filter { el ->

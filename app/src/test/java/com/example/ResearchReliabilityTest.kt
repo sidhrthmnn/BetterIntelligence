@@ -157,7 +157,7 @@ class ResearchReliabilityTest {
 
     @Test fun shortProductCardPricesStayBoundToProductAndLocale() {
         val html = """<title>Device prices</title><main><h1>Shop devices</h1>
-            <div class="card"><div>NEW Orion Take a closer look</div><div class="scrim"><span class="price">From £999</span> Buy</div></div>
+            <noscript><div class="card"><div>NEW Orion Take a closer look</div><div class="scrim"><span class="price">From £999</span> Buy</div></div></noscript>
             <p>Compare available mobile devices and choose the model and storage that suit your needs. Product information is available from each card.</p>
             <h2>Representative example</h2><p>Purchase amount £1,200. Monthly payment £107.72 for 12 months at 14.9% APR.</p></main>"""
         val question = "What does Orion cost in the UK?"
