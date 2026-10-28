@@ -58,9 +58,13 @@ class AutomaticGroundingDeviceTest {
 
             suspend fun ask(question: String, expected: Regex? = null, research: Boolean? = true): com.example.data.ChatMessageEntity {
                 val count = repository.messages(vm.conversationId.value).first().size
+                compose.waitUntil(30_000) { !repository.isModelLoading && repository.engine.isReady() }
                 compose.waitForIdle()
                 compose.onNodeWithTag("chat_input_field").performTextReplacement(question)
+                val sendWidth = compose.onNodeWithTag("send_message_btn").fetchSemanticsNode().boundsInRoot.width
+                check(sendWidth >= 40 * context.resources.displayMetrics.density) { "Send control squeezed to $sendWidth pixels" }
                 compose.onNodeWithTag("send_message_btn").performClick()
+                compose.waitUntil(15_000) { vm.isChatGenerating.value || vm.chatMessages.value.size > count }
                 compose.waitUntil(240_000) { !vm.isChatGenerating.value && vm.chatMessages.value.size > count }
                 val answer = repository.messages(vm.conversationId.value).first().last { it.role == "assistant" }
                 val sources = GroundingResult.sources(answer.sourcesJson)

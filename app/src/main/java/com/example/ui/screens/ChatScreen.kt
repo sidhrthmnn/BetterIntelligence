@@ -159,14 +159,13 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                                 focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
                                 unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Box {
+                            Box(Modifier.weight(1f)) {
                                 TextButton(onClick = { viewModel.selectTab(AppTab.WEB) },
                                     modifier = Modifier.testTag("chat_grounding")) {
                                     Icon(Icons.Default.Language, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                                    Text(if (allowed) "Research: Automatic" else "Enable web research")
+                                    Text(if (allowed) "Research: Automatic" else "Enable web research", maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
-                            Spacer(Modifier.weight(1f))
                             FilledIconButton(onClick = { if (generating) viewModel.cancelGeneration() else { keyboard?.hide(); viewModel.sendChatMessage(draft) } },
                                 enabled = generating || (draft.isNotBlank() && conversation != 0L),
                                 modifier = Modifier.size(48.dp).testTag(if (generating) "stop_generation_btn" else "send_message_btn")) {
