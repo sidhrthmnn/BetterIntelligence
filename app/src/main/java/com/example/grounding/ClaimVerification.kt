@@ -97,7 +97,8 @@ object ClaimVerification {
                 }
             }
         }.filter { passage ->
-            subjects.all { entity -> ResearchQuery.words(entity).all { it in ResearchQuery.words(passage + " " + source.title) } }
+            val scoped = ResearchQuery.words(passage + " " + source.title) + EvidenceRanking.localeWords(source.url)
+            subjects.all { entity -> ResearchQuery.words(entity).all { it in scoped } }
         }
         return passages.any { passage ->
             val evidence = terms(passage) + EvidenceRanking.localeWords(source.url)

@@ -163,9 +163,14 @@ class ResearchReliabilityTest {
         val question = "What does Orion cost in the UK?"
         val s = WebPageExtractor.article(WebDocument("https://shop.example/uk/shop", html, "text/html"), 1, question)!!
         assertTrue(s.excerpt, s.excerpt.contains("£999")); assertFalse(s.excerpt.contains("1,200"))
-        assertEquals(AnswerSupport.CITED, GroundingPolicy.checkAnswer("Orion starts from £999 in the UK [1].", listOf(s), question).support)
+        val checked = GroundingPolicy.checkAnswer("Orion starts from £999 in the UK [1].", listOf(s), question)
+        assertEquals("${s.excerpt}\n${checked.claims}", AnswerSupport.CITED, checked.support)
         assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("Orion starts from £999 in the US [1].", listOf(s), "What does Orion cost in the US?").support)
         assertTrue(EvidenceAnswer.resolve("Uncited draft", listOf(s), question).sourceExtract)
+        val blocks = "Orion\nFrom £999\n\nVega\nFrom £1,299\n\nA long unrelated third product paragraph that exceeds the small byte budget."
+        val clipped = EvidencePacket.completeExcerpt(blocks, 55)
+        assertTrue(clipped, clipped.contains("\n\nVega"))
+        assertTrue(clipped.toByteArray().size <= 55)
     }
 
     /** Optional diagnostics against captured public HTML. Fixtures above remain offline. */
@@ -176,7 +181,9 @@ class ResearchReliabilityTest {
             val url = if (name.contains("bbc")) "https://www.bbc.co.uk/weather/2643743" else if (name.contains("apple")) "https://www.apple.com/uk/shop/buy-iphone" else "https://www.cityoflondon.gov.uk/about-us/about-the-city-of-london-corporation/lord-mayor/lord-mayor-mayor-of-london"
             val s = WebPageExtractor.article(WebDocument(url, File(directory, "$name.html").readText(), "text/html"), 1, question)!!
             val resolved = EvidenceAnswer.resolve("Uncited draft", listOf(s), question)
-            assertTrue(resolved.text, resolved.sourceExtract)
+            File(directory, "bi-reliability-$name.json").writeText(org.json.JSONObject().put("question", question)
+                .put("excerpt", s.excerpt).put("answer", resolved.text).put("claims", resolved.claims.toString()).toString(2))
+            assertTrue("$name: ${resolved.text}\n${s.excerpt}", resolved.sourceExtract)
             if (name.contains("bbc")) assertTrue(resolved.text, EvidenceAnswer.hasTemperature(resolved.text))
             else if (name.contains("apple")) assertTrue(resolved.text, resolved.text.contains("£1,999"))
             else assertTrue(resolved.text, resolved.text.contains("Sadiq Khan"))
