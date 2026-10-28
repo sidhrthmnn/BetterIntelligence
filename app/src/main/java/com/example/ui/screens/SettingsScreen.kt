@@ -120,7 +120,7 @@ fun AppearanceScreen(viewModel: AiCoreViewModel) {
 @Composable
 fun WebSettingsScreen(viewModel: AiCoreViewModel) {
     val allowed by viewModel.webAllowed.collectAsState()
-    val mode by viewModel.defaultWebMode.collectAsState()
+    val backupAllowed by viewModel.freeSearchBackupAllowed.collectAsState()
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -128,20 +128,17 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
                 Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Research may send up to three focused searches derived from your current question to DuckDuckGo's public HTML page, then reads public websites directly. A follow-up can include up to two already retrieved public source titles. Those sites receive ordinary connection information, including your IP address. Private chat history, saved memories and connected-app requests are not sent. Do not include passwords or sensitive information in a web-enabled question.")
+            Text("Research sends focused searches from your current factual question to DuckDuckGo's public HTML/Lite pages and, when enabled, Mwmbl's anonymous free search service. BI then reads public websites directly. A follow-up can include already retrieved public source titles. These sites receive your query and ordinary connection information, including your IP address. Stored private chat history, memories and connected-app requests are not sent. Do not include secrets or sensitive information in a web-enabled question.")
+            if (allowed && !backupAllowed) TextButton(onClick = { viewModel.setWebAllowed(true) }) { Text("Enable free Mwmbl backup search") }
         }
         item {
-            Text("Default behaviour for new conversations", style = MaterialTheme.typography.titleMedium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("OFF" to "Off", "AUTO" to "Automatic", "ON" to "On").forEach { (value, label) ->
-                    FilterChip(mode == value, { viewModel.setDefaultWebMode(value) }, enabled = allowed, label = { Text(label) })
-                }
-            }
-            Text("Automatic searches questions about current facts or verification. You can change this in each conversation.", style = MaterialTheme.typography.bodySmall)
+            Text("Always automatic", style = MaterialTheme.typography.titleMedium)
+            Text("Every conversation researches public factual questions, including casting, history and definitions. Creative writing, calculations and personal conversation stay local. Explicit offline requests are respected. The switch above controls permission to use the web.", style = MaterialTheme.typography.bodySmall)
+            Text("No API key, account or payment is needed. Mwmbl's anonymous backup currently allows 1,000 searches per month per public IP and about one request per second. Shared networks share that quota. Limits or outages do not trigger paid access; use DuckDuckGo or provide a public HTTPS page.", style = MaterialTheme.typography.bodySmall)
         }
         item {
             Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
-            Text("BI extracts and ranks page passages on this device, checks publisher restrictions and reported dates, and supplies cited evidence to your local model. It uses no search, weather or grounding API. Public sites can block automated access; then BI cannot verify an answer. Paste a public HTTPS link to read it directly.")
+            Text("BI extracts and ranks page passages on this device, checks publisher restrictions and reported dates, and supplies evidence to your local model. Search snippets and matching headlines are not answers. The optional Mwmbl service only discovers links; no cloud model or weather API is used. Public sites can block access. Paste a public HTTPS link to read it directly.")
             Text("Search can be blocked or unavailable. Pages requiring sign-in, scripts, CAPTCHA or unsupported file formats are skipped. Sources can be incomplete or wrong; citations show where text came from, not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
         }
         item {
@@ -190,7 +187,7 @@ fun PrivacyScreen(viewModel: AiCoreViewModel) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { Text("You control your data", style = MaterialTheme.typography.headlineSmall) }
         item { Text("Conversations, drafts, model files and app approvals are stored locally. Android backup may include settings and conversations according to your system backup preferences; model files and provider credentials are excluded.") }
-        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses DuckDuckGo's public HTML page and reads publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
+        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses DuckDuckGo and an explicitly enabled anonymous Mwmbl backup, then reads publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
         item { Text("Deleting a model frees its storage and leaves your conversations intact. Revoking app access prevents new requests. Personal memory sharing has separate app permissions.") }
         item { TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Manage model storage") }
             TextButton(onClick = { viewModel.selectTab(AppTab.CONNECT) }) { Text("Manage app access") }

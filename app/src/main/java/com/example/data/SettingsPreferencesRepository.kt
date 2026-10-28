@@ -75,7 +75,9 @@ class SettingsPreferencesRepository(private val context: Context) {
     val appearance = preferences.map { it[KEY_APPEARANCE] ?: if (it[KEY_DARK_THEME] == "false") "LIGHT" else "DARK" }
     // The search destination changed from Bing feeds to DuckDuckGo's public HTML.
     // Ask once for the updated disclosure; never broaden an old consent silently.
-    val webAllowed = preferences.map { it[KEY_WEB_ALLOWED] == "true" && it[KEY_WEB_RESEARCH_CONSENT] == "2" }
+    val webAllowed = preferences.map { it[KEY_WEB_ALLOWED] == "true" && it[KEY_WEB_RESEARCH_CONSENT] in setOf("2", "3") }
+    // Existing consent keeps DuckDuckGo working; the new destination needs an explicit enable.
+    val freeSearchBackupAllowed = preferences.map { it[KEY_WEB_ALLOWED] == "true" && it[KEY_WEB_RESEARCH_CONSENT] == "3" }
     val webMode = preferences.map { it[KEY_WEB_MODE] ?: "OFF" }
     val activeConversation = preferences.map { it[KEY_CONVERSATION]?.toLongOrNull() ?: 0L }
     val memoryEnabled = preferences.map { it[KEY_MEMORY] == "true" }
@@ -98,7 +100,7 @@ class SettingsPreferencesRepository(private val context: Context) {
         require(value in setOf("LIGHT", "DARK", "AMOLED"))
         context.dataStore.edit { it[KEY_APPEARANCE] = value; it[KEY_DARK_THEME] = (value != "LIGHT").toString() }
     }
-    suspend fun saveWebAllowed(value: Boolean) { context.dataStore.edit { it[KEY_WEB_ALLOWED] = value.toString(); it[KEY_WEB_RESEARCH_CONSENT] = "2" } }
+    suspend fun saveWebAllowed(value: Boolean) { context.dataStore.edit { it[KEY_WEB_ALLOWED] = value.toString(); it[KEY_WEB_RESEARCH_CONSENT] = "3" } }
     suspend fun saveWebMode(value: String) { require(value in setOf("OFF", "AUTO", "ON")); context.dataStore.edit { it[KEY_WEB_MODE] = value } }
     suspend fun saveActiveConversation(id: Long) { context.dataStore.edit { it[KEY_CONVERSATION] = id.toString() } }
     suspend fun saveMemoryEnabled(enabled: Boolean) { context.dataStore.edit { it[KEY_MEMORY] = enabled.toString() } }

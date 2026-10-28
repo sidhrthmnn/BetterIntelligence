@@ -94,20 +94,23 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
     private val userPlain = plain.substringBefore("(Public source topic:")
     val years = Regex("\\b(?:19|20)\\d{2}\\b").findAll(userPlain).map { it.value }.toSet()
     private val rawTerms = wordPattern.findAll(normalizedModels(plain.lowercase())).map { it.value }
-        .filter { stem(it) !in normalizedStop && it !in years }.take(14).toList()
+        .filter { stem(it) !in normalizedStop && it !in years &&
+            (!FactualResearch.isCasting(userPlain) || it !in setOf("playing", "plays", "played", "play", "portraying", "portrays", "portrayed", "voicing", "voices", "voiced")) }.take(14).toList()
     private val expandedSearchTerms = rawTerms.flatMap { token ->
         phraseAbbreviations.firstOrNull { it.first == token }?.second ?: listOf(token)
-    }
+    } + if (FactualResearch.capitalPlace(userPlain) != null) listOf("city") else emptyList()
     val terms = rawTerms.map(::stem).toSet()
     private val lower = plain.lowercase()
     private fun has(phrase: String) = Regex("(?<![\\p{L}\\p{M}])${Regex.escape(phrase)}(?![\\p{L}\\p{M}])").containsMatchIn(lower)
     val relative = listOf("latest", "recent", "recently", "current", "currently", "today", "yesterday", "this week", "this month", "now", "who won", "ഇന്ന്", "ഇപ്പോൾ").any(::has)
     // A maintained office-holder page may have been published years ago.
     // Ask for the incumbent, not exclusively for news published this month.
-    private val currentRoleLookup = isCurrentIncumbentQuery(userPlain) &&
+    private val currentRoleLookup = (isCurrentIncumbentQuery(userPlain) || FactualResearch.isCasting(userPlain)) &&
         !Regex("(?i)\\b(news|announced|appointed|became|election|elected|resigned)\\b").containsMatchIn(userPlain)
     val useNews = relative || years.any { it.toInt() >= today.year - 1 }
-    val searchText = searchOverride ?: (expandedSearchTerms + years + if (relative && years.isEmpty()) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
+    val searchText = searchOverride ?: (expandedSearchTerms + years +
+        (if (FactualResearch.isCasting(userPlain)) listOf("actor", "cast") else emptyList()) +
+        if (relative && years.isEmpty() && !currentRoleLookup) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
     val earliest: LocalDate? = when {
         currentRoleLookup -> null
         has("today") || has("ഇന്ന്") -> today

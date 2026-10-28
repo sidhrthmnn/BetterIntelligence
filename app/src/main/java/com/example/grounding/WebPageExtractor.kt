@@ -208,7 +208,7 @@ object WebPageExtractor {
     private fun focused(blocks: List<String>, dates: List<String>, question: String, budget: Int): String {
         val plan = ResearchPlanner.plan(question)
         val query = ResearchQuery(question)
-        val candidates = blocks.filter { it.isNotBlank() }.distinct().take(350)
+        val candidates = blocks.filter { it.isNotBlank() && !FactualResearch.incomplete(it.substringAfter('\n', it)) }.distinct().take(350)
         if (candidates.isEmpty()) return dates.joinToString("\n").take(budget)
         val docFreqs = mutableMapOf<String, Int>()
         var totalWords = 0
@@ -260,10 +260,21 @@ object WebPageExtractor {
                     val temperature = Regex("(?i)-?\\d+(?:\\.\\d+)?\\s*°\\s*[CF]\\b|\\d+\\s+degrees?\\s+(?:celsius|fahrenheit)").containsMatchIn(blockText)
                     (if (temperature) 70 else 10) + if (currentWeatherTimingPattern.containsMatchIn(blockText)) 30 else 0
                 } else 0
+                val castingBody = blockText.substringAfter('\n', blockText)
+                val castingScore = if (FactualResearch.isCasting(question)) when {
+                    FactualResearch.speculativeCasting(question, castingBody) -> -60
+                    FactualResearch.castingRelation(castingBody) -> 60
+                    else -> 0
+                } else 0
+                val definitionScore = if (FactualResearch.definitionTopic(question) != null) when {
+                    FactualResearch.definitionLine(castingBody, question) -> FactualResearch.definitionQuality(castingBody, question)
+                    Regex("(?i)\\b(?:important|importance|benefits?)\\b").containsMatchIn(castingBody) -> -25
+                    else -> 0
+                } else 0
                 query.bm25Score(blockText, docFreqs, candidates.size, avgWords) +
                     (plan.coverage(blockText) - covered).size * 15 +
                     mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20 +
-                    incumbentScore + weatherScore + roleScore(blockText)
+                    incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText)
             }
             remaining.remove(index)
             val block = candidates[index]

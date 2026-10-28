@@ -13,6 +13,8 @@ object EvidenceRanking {
         val parsed = url.toHttpUrl()
         val q = question.lowercase()
         val primary = when {
+            FactualResearch.isCasting(q) && Regex("\\b(?:marvel|avengers)\\b").containsMatchIn(q) &&
+                parsed.host in setOf("www.marvel.com", "marvel.com", "thewaltdisneycompany.com", "www.thewaltdisneycompany.com", "d23.com", "movies.disney.com") -> true
             "litert" in q && parsed.host in setOf("ai.google.dev", "developers.google.com") && "litert" in parsed.encodedPath -> true
             "litert" in q && parsed.host == "github.com" && parsed.encodedPath.startsWith("/google-ai-edge/LiteRT", true) -> true
             "llama.cpp" in q && parsed.host == "github.com" && Regex("(?i)^/(?:ggml-org|ggerganov)/llama\\.cpp(?:/|$)").containsMatchIn(parsed.encodedPath) -> true
@@ -41,10 +43,13 @@ object EvidenceRanking {
             val hasPastOnly = !hasPresent && Regex("(?i)\\b(passed\\s+away|died|former|was\\s+the\\s+\\d+(?:st|nd|rd|th)?)\\b").containsMatchIn(text)
             if (hasPresent) 15 else if (hasPastOnly) -10 else 0
         } else 0
-        return q.score(text) + entityCoverage * 8 + plan.coverage(text).size * 5 + provenance + incumbentBonus + weatherQuality + primaryRelevance(source.url, plan.question) +
+        val directAnswer = if (FactualResearch.isCasting(plan.question) && FactualResearch.usable(source, plan.question)) 25 else 0
+        val definition = if (FactualResearch.definitionLine(source.excerpt, plan.question)) 25 else 0
+        return q.score(text) + entityCoverage * 8 + plan.coverage(text).size * 5 + provenance + incumbentBonus + weatherQuality + directAnswer + definition + primaryRelevance(source.url, plan.question) +
             minOf(4, source.excerpt.length / 300)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
+        if (!FactualResearch.usable(source, plan.question)) return false
         val q = ResearchQuery(plan.question)
         val currentWeather = ConversationalResearch.isWeather(plan.question) && WeatherPageEvidence.current(source.excerpt, q.today) &&
             ResearchQuery.date(source.updatedAt)?.isAfter(q.today.plusDays(1)) != true

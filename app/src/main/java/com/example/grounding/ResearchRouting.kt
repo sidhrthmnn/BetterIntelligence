@@ -20,7 +20,9 @@ object ResearchRouting {
             if (supplied || !requestedResearch && !Regex("https?://").containsMatchIn(q)) return Decision(false, "Creative or supplied-text task")
         }
         if (explicit) return Decision(true, "Requested source or verification")
+        if (com.example.engine.LocalCalculation.evaluate(q) != null) return Decision(false, "Local calculation")
         if ("(Public source topic:" in q || ConversationalResearch.isRecheck(q)) return Decision(true, "Public research follow-up")
+        if (FactualResearch.publicLookup(q)) return Decision(true, "Public factual question")
         if (Regex("(?i)^\\s*(?:how (?:long|many years) did|when did|what year did)\\b").containsMatchIn(q) &&
             !Regex("(?i)\\b(?:I|we|my|our)\\b").containsMatchIn(q)) return Decision(true, "Historical dates or duration need sources")
         if (Regex("(?i)^\\s*(?:why|how|explain)\\b.*\\b(?:evolution|genetics?|ancestry|fittest|skin colou?r|human variation)\\b").containsMatchIn(q) &&

@@ -16,11 +16,19 @@ object ClaimVerification {
     private val uncertainty = Regex("(?i)^(?:I (?:cannot|can't|couldn't)|(?:The )?(?:sources?|evidence) (?:do not|does not|don't|doesn't)|There (?:is|are) (?:not enough|insufficient))")
     private fun terms(text: String): Set<String> = ResearchQuery.words(marker.replace(text, "")) - ignored
     private fun prose(text: String) = text.replace(Regex("(?m)^\\s*(?:[-*]|\\d{1,2}[.)])\\s+"), "").trim()
-    fun sentences(text: String): List<String> = text
-        .replace(Regex("(?m)^\\s*\\d{1,2}[.)]\\s+"), "")
-        .replace(Regex("([.!?])\\s+(\\[\\d+(?:,\\s*\\d+)*])"), "$2$1")
-        .split(Regex("\\n+|(?<=])(?:\\s*;\\s*|,?\\s+(?:and|but|whereas)\\s+)|(?<=[.!?])\\s+(?=[\\p{L}\\p{N}*\\[])"))
-        .map(String::trim).filter(String::isNotBlank).take(40)
+    fun sentences(text: String): List<String> {
+        val normalized = text.replace(Regex("(?m)^\\s*\\d{1,2}[.)]\\s+"), "")
+            .replace(Regex("([.!?])\\s+(\\[\\d+(?:,\\s*\\d+)*])"), "$2$1")
+        val boundaries = Regex("\\n+|(?<=])(?:\\s*;\\s*|,?\\s+(?:and|but|whereas)\\s+)|(?<=[.!?])\\s+(?=[\\p{L}\\p{N}*\\[])")
+            .findAll(normalized).filterNot { boundary ->
+                '\n' !in boundary.value && Regex("\\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|[A-Z])\\.$")
+                    .containsMatchIn(normalized.substring(0, boundary.range.first).takeLast(12))
+            }
+        val result = mutableListOf<String>(); var start = 0
+        for (boundary in boundaries) { result += normalized.substring(start, boundary.range.first); start = boundary.range.last + 1 }
+        result += normalized.substring(start)
+        return result.map(String::trim).filter(String::isNotBlank).take(40)
+    }
 
     fun check(text: String, sources: List<EvidenceSource>, question: String = ""): CheckedAnswer {
         val byId = sources.associateBy { it.id }

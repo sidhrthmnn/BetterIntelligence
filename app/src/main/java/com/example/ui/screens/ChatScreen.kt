@@ -60,13 +60,11 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
     val conversation by viewModel.conversationId.collectAsState()
     val status by viewModel.chatStatus.collectAsState()
     val allowed by viewModel.webAllowed.collectAsState()
-    val mode by viewModel.groundingMode.collectAsState()
     val ready by viewModel.telemetry.collectAsState()
     val editing by viewModel.isEditingMessage.collectAsState()
     val pendingReplyId by viewModel.pendingReplyId.collectAsState()
     val clipboard = LocalClipboardManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    var showWebMenu by remember { mutableStateOf(false) }
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -161,18 +159,13 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                                 focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
                                 unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Box {
-                                TextButton(onClick = { if (allowed) showWebMenu = true else viewModel.selectTab(AppTab.WEB) },
+                            Box(Modifier.weight(1f)) {
+                                TextButton(onClick = { viewModel.selectTab(AppTab.WEB) },
                                     modifier = Modifier.testTag("chat_grounding")) {
                                     Icon(Icons.Default.Language, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                                    Text("Web: ${if (!allowed || mode == GroundingMode.OFF) "Off" else if (mode == GroundingMode.AUTO) "Auto" else "On"}")
-                                }
-                                DropdownMenu(showWebMenu, { showWebMenu = false }) {
-                                    GroundingMode.entries.forEach { option -> DropdownMenuItem(text = { Text(option.name.lowercase().replaceFirstChar { it.uppercase() }) },
-                                        onClick = { viewModel.setGroundingMode(option); showWebMenu = false }) }
+                                    Text(if (allowed) "Research: Automatic" else "Enable web research", maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
-                            Spacer(Modifier.weight(1f))
                             FilledIconButton(onClick = { if (generating) viewModel.cancelGeneration() else { keyboard?.hide(); viewModel.sendChatMessage(draft) } },
                                 enabled = generating || (draft.isNotBlank() && conversation != 0L),
                                 modifier = Modifier.size(48.dp).testTag(if (generating) "stop_generation_btn" else "send_message_btn")) {

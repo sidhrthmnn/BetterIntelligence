@@ -14,12 +14,16 @@ fun interface DiscoveryProvider {
 class HtmlSearchDiscovery(
     private val fetcher: WebFetcher,
     private val permitted: suspend (String) -> Boolean,
-    private val enableFallback: Boolean = false
+    private val enableFallback: Boolean = true
 ) : DiscoveryProvider {
     override suspend fun discover(query: ResearchQuery, broad: Boolean): DiscoveryResult {
-        val primary = fetchDiscoveryPage(HtmlDiscovery.searchUrl(query, broad))
+        val primary = try { fetchDiscoveryPage(HtmlDiscovery.searchUrl(query, broad)) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
         if (primary.state == DiscoveryState.FOUND || primary.state == DiscoveryState.BLOCKED || !enableFallback) return primary
-        val lite = runCatching { fetchDiscoveryPage(HtmlDiscovery.liteSearchUrl(query, broad)) }.getOrNull()
+        val lite = try { fetchDiscoveryPage(HtmlDiscovery.liteSearchUrl(query, broad)) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { null }
         if (lite != null && (lite.state == DiscoveryState.FOUND || lite.state == DiscoveryState.BLOCKED)) return lite
         return primary
     }

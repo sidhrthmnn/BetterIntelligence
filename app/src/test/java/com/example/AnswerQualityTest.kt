@@ -32,11 +32,11 @@ class AnswerQualityTest {
             "Compare recent Android AI frameworks" to true, "Check again" to true,
             "കേരളത്തിന്റെ ഇപ്പോഴത്തെ മുഖ്യമന്ത്രി ആരാണ്?" to true, "Verify the 1969 Moon landing" to true,
             "Read https://docs.example/orion" to true, "Does LiteRT-LM support GPU?" to true,
-            "Explain recursion" to false, "Write a birthday message" to false, "What is 15% of 240?" to false,
-            "Summarise supplied text: Today's price was wrong." to false, "Who was UK prime minister in 1945?" to false,
-            "Difference between RAM and storage" to false, "Explain electric current flow" to false,
+            "Explain recursion" to true, "Write a birthday message" to false, "What is 15% of 240?" to false,
+            "Summarise supplied text: Today's price was wrong." to false, "Who was UK prime minister in 1945?" to true,
+            "Difference between RAM and storage" to true, "Explain electric current flow" to true,
             "Write a poem about today" to false, "Translate this weather sentence into Malayalam" to false,
-            "Explain Android's activity lifecycle" to false, "Who won the 1901 Nobel Prize in Physics?" to false,
+            "Explain Android's activity lifecycle" to true, "Who won the 1901 Nobel Prize in Physics?" to true,
             "Create JSON with name and age" to false)
         val rows = JSONArray(); var oldPass = 0
         // Frozen latest-main AUTO rule, used only for this before/after report.
