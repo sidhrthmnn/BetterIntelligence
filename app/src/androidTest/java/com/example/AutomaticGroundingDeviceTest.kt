@@ -61,6 +61,10 @@ class AutomaticGroundingDeviceTest {
                 compose.waitUntil(30_000) { !repository.isModelLoading && repository.engine.isReady() }
                 compose.waitForIdle()
                 compose.onNodeWithTag("chat_input_field").performTextReplacement(question)
+                compose.waitForIdle()
+                compose.waitUntil(10_000) {
+                    compose.onNodeWithTag("send_message_btn").fetchSemanticsNode().boundsInRoot.width >= 40 * context.resources.displayMetrics.density
+                }
                 val sendWidth = compose.onNodeWithTag("send_message_btn").fetchSemanticsNode().boundsInRoot.width
                 check(sendWidth >= 40 * context.resources.displayMetrics.density) { "Send control squeezed to $sendWidth pixels" }
                 compose.onNodeWithTag("send_message_btn").performClick()
@@ -100,6 +104,12 @@ class AutomaticGroundingDeviceTest {
             verify(unknown.groundingStatus == "INSUFFICIENT_EVIDENCE", "Unrelated evidence gave an answer")
             assertTrue(failures.joinToString("\n"), failures.isEmpty())
         } finally {
+            InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?.let { bitmap ->
+                File(context.filesDir, "automatic-grounding-screen.png").outputStream().use {
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                }
+                bitmap.recycle()
+            }
             repository.engine.unloadActiveModel()
             File(context.filesDir, "automatic-grounding-evaluation.json").writeText(report.toString(2))
         }
