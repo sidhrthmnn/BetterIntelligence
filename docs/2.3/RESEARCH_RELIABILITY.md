@@ -29,6 +29,13 @@
   Unsupported comparisons, conflicting numerical reports and unrelated passages
   do not gain this fallback. Missing temperature is stated explicitly.
 - Streaming web prose is labelled as a draft while checking is pending.
+- Current-role checks recognise CM/PM and “who's”, and reject a historical holder
+  as an answer to a current-role question. Generic news asks for a topic before
+  discovery. Historical durations and public scientific explanations can use
+  evidence in Automatic mode. Local prompts preserve conversational tasks,
+  allow harmless games and avoid unsupported tool/capability claims.
+- Representative finance examples cannot be presented as product-specific
+  payments while dropping the example purchase amount and qualifications.
 
 No Binder/AIDL, model loader, download or TypeRight interface changes are needed.
 
@@ -46,8 +53,9 @@ the `.validation` package plus a checksum-verified `gemma-4-E2B-it.litertlm` in 
 models directory. It uses the real chat ViewModel, public HTML websites and local
 CPU inference. It records final persisted answers, draft text, resolved queries,
 sources and timings in `files/research-reliability-phone.json`. Cases cover
-weather, mayor/temperature follow-ups, IANA registration restrictions, arithmetic,
-an unrelated-source refusal, cross-chat location clarification and its answer.
+weather, mayor/temperature follow-ups, IANA restrictions, UK PM/Kerala CM,
+UK product pricing, news clarification, arithmetic, unrelated-source refusal,
+cross-chat location clarification and a controlled multi-turn game.
 
 ## Limits
 

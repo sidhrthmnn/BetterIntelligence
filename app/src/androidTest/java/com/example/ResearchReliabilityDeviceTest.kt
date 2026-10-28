@@ -35,6 +35,8 @@ class ResearchReliabilityDeviceTest {
         check(context.packageName.endsWith(".validation"))
         val repository = AiCoreRepository.getInstance(context)
         val report = JSONArray()
+        val failures = mutableListOf<String>()
+        fun verify(value: Boolean, message: String) { if (!value) failures += message }
         try {
             val model = withTimeout(120_000) { repository.allModels.first { models ->
                 models.any { it.filename == "gemma-4-E2B-it.litertlm" && it.isInstalled }
@@ -63,36 +65,56 @@ class ResearchReliabilityDeviceTest {
                     .put("state", answer.messageState).put("model", answer.modelName).put("sources", JSONArray(answer.sourcesJson))
                     .put("latencyMs", answer.latencyMs).put("completionTokens", answer.completionTokens))
                 File(context.filesDir, "research-reliability-phone.json").writeText(report.toString(2))
-                assertEquals(answer.content, "COMPLETE", answer.messageState)
+                verify(answer.messageState == "COMPLETE", "Incomplete response to $question: ${answer.content}")
                 return answer
             }
             val weather = ask("What is the weather in London today?")
-            assertTrue(weather.content, EvidenceAnswer.hasTemperature(weather.content))
-            assertNotEquals("INSUFFICIENT_EVIDENCE", weather.groundingStatus)
+            verify(EvidenceAnswer.hasTemperature(weather.content), "Missing weather temperature: ${weather.content}")
+            if (GroundingResult.sources(weather.sourcesJson).any { it.excerpt.contains("Observed temperature:") })
+                verify(weather.content.contains("Observed temperature:"), "Observation lost: ${weather.content}")
+            verify(weather.groundingStatus != "INSUFFICIENT_EVIDENCE", "Weather was rejected")
             val mayor = ask("Who is the mayor there?")
-            assertTrue(mayor.content, mayor.content.contains("Khan", true))
-            assertFalse(mayor.content.contains("Susan Langley"))
+            verify(mayor.content.contains("Khan", true), "Wrong/missing mayor: ${mayor.content}")
+            verify(!mayor.content.contains("Susan Langley"), "Different mayor role: ${mayor.content}")
             val temperature = ask("What is the temperature there?")
-            assertTrue(temperature.content, EvidenceAnswer.hasTemperature(temperature.content))
+            verify(EvidenceAnswer.hasTemperature(temperature.content), "Lost temperature follow-up: ${temperature.content}")
             val domains = ask("Can example domains be registered or transferred? Read https://www.iana.org/help/example-domains")
-            assertTrue(domains.content, Regex("(?i)not available|cannot|can't|not .*register|not .*transfer").containsMatchIn(domains.content))
-            assertNotEquals("INSUFFICIENT_EVIDENCE", domains.groundingStatus)
+            verify(Regex("(?i)not available|cannot|can't|not .*register|not .*transfer").containsMatchIn(domains.content), "Wrong IANA restriction: ${domains.content}")
+            verify(domains.groundingStatus != "INSUFFICIENT_EVIDENCE", "IANA answer was rejected")
+            val uk = ask("Who is the PM of UK?")
+            verify(uk.content.contains("Andy Burnham", true), "Wrong/missing UK PM: ${uk.content}")
+            val kerala = ask("Who is the CM of Kerala?")
+            verify(kerala.content.contains("Satheesan", true), "Wrong/missing Kerala CM: ${kerala.content}")
+            val price = ask("What does iPhone Duo cost in the UK? Read https://www.apple.com/uk/shop/buy-iphone")
+            verify(Regex("£\\s*1,?999\\b").containsMatchIn(price.content), "Wrong/missing starting price: ${price.content}")
+            val news = ask("Give me news update")
+            verify(news.content == ConversationalResearch.askNewsTopic && news.completionTokens == 0, "News topic was not clarified: ${news.content}")
             val calculation = ask("What is 15% of 240?")
-            assertTrue(calculation.content, Regex("\\b36\\b").containsMatchIn(calculation.content))
-            assertTrue(GroundingResult.sources(calculation.sourcesJson).isEmpty())
+            verify(Regex("\\b36\\b").containsMatchIn(calculation.content), "Wrong arithmetic: ${calculation.content}")
+            verify(GroundingResult.sources(calculation.sourcesJson).isEmpty(), "Arithmetic incorrectly used web research")
             val unknown = ask("What is the unannounced launch date of the fictional Orion device? Read https://www.iana.org/help/example-domains")
-            assertEquals(unknown.content, "INSUFFICIENT_EVIDENCE", unknown.groundingStatus)
-            assertEquals(GroundingPolicy.unavailableAnswer, unknown.content)
+            verify(unknown.groundingStatus == "INSUFFICIENT_EVIDENCE" && unknown.content == GroundingPolicy.unavailableAnswer, "Unrelated evidence produced an answer: ${unknown.content}")
             val before = vm.conversationId.value
             compose.runOnUiThread { vm.newConversation() }
             compose.waitUntil(15_000) { vm.conversationId.value != before && vm.conversationId.value != 0L }
             compose.runOnUiThread { vm.setGroundingMode(GroundingMode.AUTO) }
             val missingPlace = ask("Who is the mayor there?")
-            assertEquals(ConversationalResearch.askPlace, missingPlace.content)
-            assertTrue(GroundingResult.sources(missingPlace.sourcesJson).isEmpty())
-            assertEquals(0, missingPlace.completionTokens)
+            verify(missingPlace.content == ConversationalResearch.askPlace && missingPlace.completionTokens == 0 &&
+                GroundingResult.sources(missingPlace.sourcesJson).isEmpty(), "New conversation inherited a place: ${missingPlace.content}")
             val clarified = ask("London")
-            assertTrue(clarified.content, clarified.content.contains("Khan", true))
+            verify(clarified.content.contains("Khan", true), "Location clarification failed: ${clarified.content}")
+            val old = vm.conversationId.value
+            compose.runOnUiThread { vm.newConversation() }
+            compose.waitUntil(15_000) { vm.conversationId.value != old && vm.conversationId.value != 0L }
+            compose.runOnUiThread { vm.setGroundingMode(GroundingMode.OFF) }
+            ask("Let's play a harmless guessing game. The item is a snake. Answer my next questions with only Yes or No.")
+            val mammal = ask("Is it a mammal?")
+            verify(Regex("(?i)^no\\b").containsMatchIn(mammal.content.trim()), "Game clue contradicted the item: ${mammal.content}")
+            val reptile = ask("Is it a reptile?")
+            verify(Regex("(?i)^yes\\b").containsMatchIn(reptile.content.trim()), "Reptile clue/context failed: ${reptile.content}")
+            val item = ask("What was our game item?")
+            verify(item.content.contains("snake", true), "Game context lost: ${item.content}")
+            assertTrue(failures.joinToString("\n"), failures.isEmpty())
         } finally {
             repository.engine.unloadActiveModel()
             File(context.filesDir, "research-reliability-phone.json").writeText(report.toString(2))

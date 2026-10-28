@@ -22,6 +22,10 @@ class ResearchReliabilityTest {
         assertEquals("Who is the mayor in London", query)
         assertFalse(ConversationalResearch.isWeather(query))
         assertFalse(query.contains("Private")); assertFalse(query.contains("BBC"))
+        val longTitle = history.dropLast(1) + history.last().copy(sourcesJson = GroundingResult(sources = listOf(
+            source("Weather", "Weather in London, United Kingdom in October 2026 - Detailed Forecast"),
+            source("Weather", "London - BBC Weather"))).json())
+        assertEquals("Who is the mayor in London", ConversationalResearch.question("Who is the mayor there", longTitle))
         assertEquals("What is the temperature in London?", ConversationalResearch.question("What is the temperature there?", history))
         assertTrue(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "What is the temperature in London?"))
         assertTrue(com.example.engine.ChatAnswerPolicy.requiresLiveData("What is the temperature in London?"))
@@ -87,6 +91,46 @@ class ResearchReliabilityTest {
         assertTrue(s.excerpt, s.excerpt.indexOf("Sadiq Khan") < s.excerpt.indexOf("Dame Example"))
         val resolved = EvidenceAnswer.resolve("Sadiq Khan is Mayor of London.", listOf(s), "Who is the mayor in London?")
         assertTrue(resolved.sourceExtract); assertTrue(resolved.text.contains("Sadiq Khan")); assertFalse(resolved.text.contains("Dame Example"))
+    }
+
+    @Test fun currentOfficeQuestionsCannotBeAnsweredWithAFormerHolder() {
+        listOf("Who is the PM of UK?", "Who is the CM of Kerala?", "Who's the CM OF KERALA", "Who’s the CM of Kerala?").forEach {
+            assertTrue(it, GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, it))
+            assertTrue(it, ResearchQuery.isCurrentIncumbentQuery(it))
+        }
+        val recheck = ConversationalResearch.question("check again", listOf(ChatMessageEntity(role = "assistant", content = "Old answer",
+            sourcesJson = GroundingResult(sources = listOf(source("Public role list", "List of Chief Ministers of Kerala"))).json())))
+        assertTrue(recheck, ResearchQuery.isCurrentIncumbentQuery(recheck))
+        assertNull(ResearchQuery(recheck).freshnessFilter)
+        val historical = source("Orion Province\nBea Example was the 10th Chief Minister of Orion Province.", "Chief Ministers of Orion Province")
+        val question = "Who is the Chief Minister of Orion Province?"
+        assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("Bea Example was the 10th Chief Minister of Orion Province [1].", listOf(historical), question).support)
+        assertEquals(AnswerSupport.INSUFFICIENT, EvidenceAnswer.resolve("Bea Example was the 10th Chief Minister of Orion Province [1].", listOf(historical), question).support)
+        val current = source("Prime Minister\nCurrent role holder: Ada Example.", "Prime Minister - GOV.UK")
+        val answer = EvidenceAnswer.resolve("Uncited draft", listOf(current), "Who is the PM of UK?")
+        assertTrue(answer.text, answer.sourceExtract); assertTrue(answer.text.contains("Ada Example"))
+    }
+
+    @Test fun genericNewsNeedsATopicAndNeverPromisesUnsupportedActions() = kotlinx.coroutines.runBlocking {
+        assertTrue(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "Give me news update"))
+        assertTrue(com.example.engine.ChatAnswerPolicy.requiresLiveData("Give me news update"))
+        var calls = 0
+        val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to object : SearchProvider {
+            override suspend fun search(question: String): List<EvidenceSource> { calls++; return emptyList() }
+        }))
+        assertEquals(ConversationalResearch.askNewsTopic, coordinator.retrieve("Give me news update", true, GroundingMode.AUTO, SearchProviderId.WEB).notice)
+        assertEquals(0, calls)
+        val history = listOf(ChatMessageEntity(role = "assistant", content = ConversationalResearch.askNewsTopic))
+        assertEquals("Latest news about Technology", ConversationalResearch.question("Technology", history))
+    }
+
+    @Test fun illustrativeFinanceExamplesAreNotProductSpecificPricesAndHistoricalDurationUsesSources() {
+        val s = source("Orion purchase\nRepresentative example: Purchase amount £1,200. Monthly payment £107.72 for 12 months.", "Orion finance")
+        assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("Orion monthly payment is £107.72 for 12 months [1].", listOf(s), "Orion cost?").support)
+        assertEquals(AnswerSupport.INSUFFICIENT, EvidenceAnswer.resolve("Orion monthly payment is £107.72 for 12 months [1].", listOf(s), "Orion cost?").support)
+        assertTrue(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "How long did British rule India?"))
+        assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "How long did I spend on my private project?"))
+        assertTrue(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "Why does human ancestry affect appearance and evolution?"))
     }
 
     /** Optional diagnostics against captured public HTML. Fixtures above remain offline. */

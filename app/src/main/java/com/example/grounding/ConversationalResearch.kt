@@ -17,9 +17,12 @@ object ConversationalResearch {
     fun needsSubject(question: String): Boolean = Regex("(?i)^\\s*(?:who (?:owns|developed|made)|whose is|what is the owner of)\\s+(?:it|this|that)\\s*[?!.]*$").matches(question)
     const val askSubject = "Which product, organisation or item do you mean? Please name it so I can check the right subject."
     const val askPlace = "Which city or place do you mean? I don't have access to your location."
+    const val askNewsTopic = "Which topic, country or event would you like news about?"
+    fun needsNewsTopic(question: String) = Regex("(?i)^\\s*(?:(?:please |give me |show me |tell me |the |latest |some |a |an )*)(?:news|headlines)(?: updates?| today| now)?[?!.]*\\s*$").matches(question)
     fun needsPlace(question: String) = Regex("(?i)\\bthere\\b").containsMatchIn(question) &&
         Regex("(?i)\\b(mayor|governor)\\b").containsMatchIn(question)
     fun question(question: String, history: List<ChatMessageEntity>): String {
+        if (history.lastOrNull()?.content == askNewsTopic && Regex("^[\\p{L}\\p{N} ,.'-]{2,100}$").matches(question)) return "Latest news about $question"
         if (history.lastOrNull()?.content == askPlace && Regex("^[\\p{L} ,.'-]{2,70}$").matches(question)) {
             val role = Regex("(?i)\\b(mayor|governor)\\b").find(history.lastOrNull { it.role == "user" }?.content.orEmpty())?.value
             if (role != null) return "Who is the $role in $question?"
@@ -33,13 +36,15 @@ object ConversationalResearch {
         // Do not send private chat text, or the old weather intent, to discovery.
         if (Regex("(?i)\\bthere\\b").containsMatchIn(question)) {
             val places = sources.mapNotNull { source ->
-                Regex("(?i)^(.{2,70}?)\\s*(?:[-–—|]\\s*(?:BBC\\s+)?(?:weather|forecast)\\b|\\s+(?:weather|forecast)\\b)")
+                Regex("(?i)^(?:weather|temperature|forecast)\\s+(?:in|for|at)\\s+(.{2,70}?)(?=\\s+(?:in|for)\\s+(?:20\\d{2}|January|February|March|April|May|June|July|August|September|October|November|December)|\\s*[-–—|]|$)")
+                    .find(source.title)?.groupValues?.get(1)?.trim()
+                    ?: Regex("(?i)^(.{2,70}?)\\s*(?:[-–—|]\\s*(?:BBC\\s+)?(?:weather|forecast)\\b|\\s+(?:weather|forecast)\\b)")
                     .find(source.title)?.groupValues?.get(1)?.trim()
                     ?: Regex("(?i)^(?:the )?(?:mayor|governor) of ([\\p{L}][\\p{L} .'-]{1,60}?)(?=\\s*[-–—|,]|$)")
                         .find(source.title)?.groupValues?.get(1)?.trim()
             }.filter { place -> place.any(Char::isLetter) && !GroundingPolicy.containsCredential(place) &&
                 !Regex("(?i)ignore|instructions|https?://|[\\p{Cc}]").containsMatchIn(place) }
-            val place = places.firstOrNull()?.takeIf { first -> places.all { other ->
+            val place = places.minByOrNull { ResearchQuery.words(it).size }?.takeIf { first -> places.all { other ->
                 val a = ResearchQuery.words(first); val b = ResearchQuery.words(other)
                 a.containsAll(b) || b.containsAll(a)
             } }

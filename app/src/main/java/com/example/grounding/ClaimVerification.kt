@@ -49,6 +49,7 @@ object ClaimVerification {
                 uncertainty.containsMatchIn(body) -> "Explicit uncertainty"
                 ids.isEmpty() -> "Missing citation"
                 ids.any { it !in byId } -> "Unknown citation"
+                ResearchQuery.isCurrentIncumbentQuery(question) && Regex("(?i)\\b(?:former|previous|deceased|died|passed away|was\\s+(?:the\\s+)?(?:\\d+(?:st|nd|rd|th)\\s+)?(?:chief minister|prime minister|president|governor|mayor|ceo))\\b").containsMatchIn(body) -> "Historical role does not answer the current office-holder question"
                 comparison && missingSubject && !inherited -> "Comparison subject missing"
                 Regex("(?i)\\b(?:the following|as follows|listed below|two parts)\\b").containsMatchIn(body) && !body.substringAfter(':', "").any { it.isLetterOrDigit() } -> "Incomplete referential claim"
                 Regex("(?i)\\bI (?:have |just )?(?:accessed|opened|downloaded|sent|installed|contacted|browsed)\\b").containsMatchIn(body) -> "Unperformed tool action"
@@ -111,6 +112,12 @@ object ClaimVerification {
             val numbersMatch = CitationSupport.supportsNumbers("$claim [${source.id}]", listOf(source.copy(title = "", excerpt = passage)))
             val qualified = Regex("(?i)\\b(?:only (?:when|with|on|for|if)|provided that|except|unless|on the tested device)\\b").containsMatchIn(passage)
             val qualifications = !qualified || Regex("(?i)\\b(?:only|when|with|provided|except|unless|tested device)\\b").containsMatchIn(claim)
+            val illustrative = Regex("(?i)representative example|illustrative examples?|example purchase").containsMatchIn(passage)
+            val amountPattern = Regex("(?i)purchase amount\\s*[:|]?\\s*([£$€₹]\\s*\\d[\\d,.]*)")
+            val exampleAmount = amountPattern.find(passage)?.groupValues?.get(1) ?: amountPattern.findAll(source.excerpt)
+                .map { it.groupValues[1] }.distinct().toList().singleOrNull()
+            val exampleMatches = !illustrative || Regex("(?i)\\b(?:example|illustrative|representative)\\b").containsMatchIn(claim) &&
+                exampleAmount != null && CitationSupport.supportsNumbers("$exampleAmount [${source.id}]", listOf(source.copy(title = "", excerpt = claim)))
             val universal = !Regex("(?i)\\b(?:always|every|all devices|any device|guaranteed)\\b").containsMatchIn(claim) ||
                 Regex("(?i)\\b(?:always|every|all devices|any device|guaranteed)\\b").containsMatchIn(passage)
             val incumbent = !currentOffice || !Regex("(?i)\\b(?:former|deceased|died|passed away|was the)\\b").containsMatchIn(passage)
@@ -130,7 +137,7 @@ object ClaimVerification {
                 val order = subjects.size < 2 || subjects.map { passage.indexOf(it, ignoreCase = true) }.let { it == it.sorted() }
                 sameRelation && order
             } ?: true
-            lexical && named && namesPresent && polarity && quantitiesMatch && numbersMatch && comparison && qualifications && universal && incumbent && recency && datedAction && backendMatches
+            lexical && named && namesPresent && polarity && quantitiesMatch && numbersMatch && comparison && qualifications && exampleMatches && universal && incumbent && recency && datedAction && backendMatches
         }
     }
     private fun quantities(text: String): Set<String> = Regex("(?i)(-?\\d+(?:\\.\\d+)?)\\s*(GB|GiB|MB|MiB|KB|ms|milliseconds?|seconds?|tk/s|tokens/(?:s|second)|%|°\\s*[CF])(?!\\p{L})")

@@ -76,8 +76,8 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             if (Regex("\\b(who\\s+was|former|previous|first|second|third|\\d+(?:st|nd|rd|th)|19\\d{2}|20[01]\\d)\\b").containsMatchIn(q)) return false
             if (Regex("പ്രധാനമന്ത്രി|മുഖ്യമന്ത്രി|പ്രസിഡന്റ്").containsMatchIn(q) &&
                 Regex("ഇപ്പോൾ|ഇപ്പോഴ|നിലവിലെ|ആരാണ്").containsMatchIn(q) && !Regex("മുൻ|ആയിരുന്നു").containsMatchIn(q)) return true
-            return Regex("\\b(?:who\\s+is|what\\s+is|current|incumbent|present)\\b").containsMatchIn(q) &&
-                Regex("\\b(cm|pm|ceo|chief\\s+minister|prime\\s+minister|president|governor|mayor|leader|chancellor|king|queen|monarch|head|minister|secretary|director|chair(?:man|person)?)\\b").containsMatchIn(q)
+            return Regex("\\b(?:who(?:\\s+is|['’]s)|what\\s+is|current|incumbent|present)\\b").containsMatchIn(q) &&
+                Regex("\\b(cm|pm|ceo|chief\\s+ministers?|prime\\s+ministers?|presidents?|governors?|mayors?|leader|chancellor|king|queen|monarch|head|minister|secretary|director|chair(?:man|person)?)\\b").containsMatchIn(q)
         }
         private val normalizedStop = words(stop.joinToString(" "))
         private val writtenDates = listOf("MMMM d, uuuu", "MMM d, uuuu", "d MMMM uuuu", "d MMM uuuu").map {
@@ -89,7 +89,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             runCatching { LocalDate.parse(value.trim(), format) }.getOrNull()
         }
     }
-    private val plain = question.replace(Regex("https?://\\S+"), " ")
+    private val plain = question.replace(Regex("(?i)\\bwho['’]s\\b"), "who is").replace(Regex("https?://\\S+"), " ")
     private val userPlain = plain.substringBefore("(Public source topic:")
     val years = Regex("\\b(?:19|20)\\d{2}\\b").findAll(userPlain).map { it.value }.toSet()
     private val rawTerms = wordPattern.findAll(normalizedModels(plain.lowercase())).map { it.value }

@@ -260,6 +260,7 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
         if (!GroundingPolicy.shouldSearch(allowed, mode, question)) return GroundingResult()
         if (GroundingPolicy.containsCredential(question)) return GroundingResult("PRIVACY_BLOCKED", notice = "This question appears to contain credentials. Search was skipped; this answer is local-only.")
         if (ConversationalResearch.needsSubject(question)) return GroundingResult("NEEDS_SUBJECT", notice = ConversationalResearch.askSubject)
+        if (ConversationalResearch.needsNewsTopic(question)) return GroundingResult("NEEDS_SUBJECT", notice = ConversationalResearch.askNewsTopic)
         if (ConversationalResearch.needsPlace(question)) return GroundingResult("NEEDS_LOCATION", notice = ConversationalResearch.askPlace)
         if (!question.contains("https://") && !question.contains("http://") && ConversationalResearch.isWeather(question) && !Regex("(?i)\\b(tomorrow|week|month|yesterday|history|why|how)\\b").containsMatchIn(question)) {
             if (ConversationalResearch.weatherCity(question) == null)
