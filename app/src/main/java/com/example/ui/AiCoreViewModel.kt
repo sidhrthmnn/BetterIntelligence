@@ -353,13 +353,15 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     }
     private suspend fun activateConversation(id: Long) {
         val conversation = repository.conversation(id) ?: return
-        _conversationId.value = id
+        // Finish the suspending preference write before publishing a usable ID.
+        // Otherwise the first send can see the new chat while its lock is held.
+        repository.preferencesRepository.saveActiveConversation(id)
         _draft.value = if (savedState.get<Long>("draftConversation") == id) savedState.get<String>("draft") ?: conversation.draft else conversation.draft
         savedState["draft"] = _draft.value; savedState["draftConversation"] = id
         _groundingMode.value = runCatching { GroundingMode.valueOf(conversation.groundingMode) }.getOrDefault(GroundingMode.OFF)
-        repository.preferencesRepository.saveActiveConversation(id)
         editingMessageId = null
         _isEditingMessage.value = false
+        _conversationId.value = id
     }
     private suspend fun stopChatAndSaveDraft() {
         chatPreparationJob?.cancelAndJoin()
@@ -878,6 +880,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             var outputTokens = 0
             var reachedOutputLimit = false
             var evidence = GroundingResult()
+            var researchQuestion = text
+            var resolvedAnswer: com.example.grounding.CheckedAnswer? = null
             var pendingId: Long? = null
             var partialWriter: kotlinx.coroutines.Job? = null
             var foregroundToken = 0L
@@ -909,7 +913,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 editingMessageId = null
                 if (_isAutoMemoryCaptureEnabled.value) autoExtractMemory(text, "Chat")
                 val allowed = repository.preferencesRepository.webAllowed.first()
-                var researchQuestion = com.example.grounding.ConversationalResearch.question(text, previous)
+                researchQuestion = com.example.grounding.ConversationalResearch.question(text, previous)
                 if (previous.lastOrNull()?.content == com.example.grounding.ConversationalResearch.askCity &&
                     Regex("^[\\p{L} ,.'-]{2,70}$").matches(text)) researchQuestion = "Weather in $text today"
                 if (GroundingPolicy.shouldSearch(allowed, mode, researchQuestion)) _chatStatus.value = "Finding and reading public sources"
@@ -952,7 +956,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 chatInferenceJob = repository.engineManager.currentEngine.generateStreamWithCallback(prompt, config, object : StreamTokenListener {
                     override fun onToken(token: String, tokenIndex: Int) {
                         if (localNeedsLive) return
-                        _streamingChatText.value += token; _chatStatus.value = ""
+                        _streamingChatText.value += token
+                        _chatStatus.value = if (evidence.sources.isEmpty()) "" else "Draft · Checking against sources"
                     }
                     override fun onComplete(fullText: String, latencyMs: Long, tokensPerSec: Float, promptTokens: Int, completionTokens: Int) {
                         result = fullText; latency = latencyMs; speed = tokensPerSec
@@ -986,6 +991,9 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                         if (corrected != null && withContext(Dispatchers.Default) { GroundingPolicy.checkAnswer(corrected, evidence.sources, effectiveQuestion).support } != AnswerSupport.INSUFFICIENT)
                             result = corrected
                     }
+                    resolvedAnswer = withContext(Dispatchers.Default) {
+                        com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion)
+                    }
                 }
                 if (error == null && localNeedsLive) {
                     result = com.example.engine.ChatAnswerPolicy.finishLocal(text, result)
@@ -1009,8 +1017,10 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     if (foregroundToken != 0L) InferenceForegroundService.stop(getApplication(), 0, 0, 0f, foregroundToken)
                     partialWriter?.cancelAndJoin()
                     try { if (savedUser && pendingId != null) {
-                        val checked = if (evidence.sources.isNotEmpty()) withContext(Dispatchers.Default) { GroundingPolicy.checkAnswer(result, evidence.sources, text) } else null
-                        val status = if (checked == null) evidence.status else when (checked.support) {
+                        val checked = resolvedAnswer ?: if (evidence.sources.isNotEmpty()) withContext(Dispatchers.Default) {
+                            GroundingPolicy.checkAnswer(result, evidence.sources, researchQuestion)
+                        } else null
+                        val status = if (checked == null) evidence.status else if (checked.sourceExtract) "SOURCE_EXCERPTS" else when (checked.support) {
                             AnswerSupport.CITED -> "EVIDENCE_CITED"
                             AnswerSupport.PARTIAL -> "PARTIALLY_SUPPORTED"
                             AnswerSupport.INSUFFICIENT -> "INSUFFICIENT_EVIDENCE"

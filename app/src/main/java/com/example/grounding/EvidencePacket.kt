@@ -13,10 +13,14 @@ data class EvidencePacket(val source: EvidenceSource, val objectives: List<Strin
         fun completeExcerpt(text: String, bytes: Int): String {
             if (text.toByteArray().size <= bytes) return text
             val output = StringBuilder()
-            for (line in text.split(Regex("(?<=[.!?])\\s+(?=\\p{L})|\\n+"))) {
-                if ((output.toString() + "\n" + line).toByteArray().size > bytes) break
-                if (output.isNotEmpty()) output.append('\n')
-                output.append(line)
+            for (block in text.split(Regex("\\n\\s*\\n"))) {
+                var started = false
+                for (line in block.split(Regex("(?<=[.!?])\\s+(?=\\p{L})|\\n+"))) {
+                    val separator = if (output.isEmpty()) "" else if (started) "\n" else "\n\n"
+                    if ((output.toString() + separator + line).toByteArray().size > bytes) return output.toString()
+                    output.append(separator).append(line)
+                    started = true
+                }
             }
             return output.toString()
         }

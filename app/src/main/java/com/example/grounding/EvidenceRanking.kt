@@ -5,6 +5,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 /** Lexical relevance and collection coverage, not neural semantic entailment.
  * Publisher suffixes (.gov/.edu) alone confer no authority. */
 object EvidenceRanking {
+    /** An explicit locale path can scope a page, but never supplies a value. */
+    fun localeWords(url: String): Set<String> = url.toHttpUrl().pathSegments.firstOrNull()
+        ?.takeIf { Regex("[a-zA-Z]{2}(?:-[a-zA-Z]{2})?").matches(it) }?.let { ResearchQuery.words(it) }.orEmpty()
     fun publisher(url: String): String = url.toHttpUrl().let { it.topPrivateDomain() ?: it.host }
     fun primaryRelevance(url: String, question: String): Int {
         val parsed = url.toHttpUrl()
@@ -28,21 +31,28 @@ object EvidenceRanking {
             Regex("(?i)\\b(documentation|reference|release notes|security bulletin|research paper|abstract|doi|authors?)\\b").containsMatchIn(text) -> 3
             else -> 0
         }
+        val weatherQuality = if (ConversationalResearch.isWeather(plan.question)) when {
+            WeatherPageEvidence.current(source.excerpt, q.today) -> 45
+            Regex("(?i)historical average|monthly average|climate average").containsMatchIn(source.excerpt) -> -30
+            else -> 0
+        } else 0
         val incumbentBonus = if (ResearchQuery.isCurrentIncumbentQuery(plan.question)) {
             val hasPresent = Regex("(?i)\\b(incumbent|present(?!\\s*-\\s*day)|till\\s+date|to\\s+date|current(?!\\s+(?:affairs|gk|general\\s+knowledge))|currently|assumed\\s+office|serving\\s+since|in\\s+office|is\\s+the\\s+(?:current\\s+|present\\s+|\\d+(?:st|nd|rd|th)\\s+and\\s+current\\s+)?(?:chief\\s+minister|prime\\s+minister|president|governor|mayor|ceo|cm|pm))\\b").containsMatchIn(text)
             val hasPastOnly = !hasPresent && Regex("(?i)\\b(passed\\s+away|died|former|was\\s+the\\s+\\d+(?:st|nd|rd|th)?)\\b").containsMatchIn(text)
             if (hasPresent) 15 else if (hasPastOnly) -10 else 0
         } else 0
-        return q.score(text) + entityCoverage * 8 + plan.coverage(text).size * 5 + provenance + incumbentBonus + primaryRelevance(source.url, plan.question) +
+        return q.score(text) + entityCoverage * 8 + plan.coverage(text).size * 5 + provenance + incumbentBonus + weatherQuality + primaryRelevance(source.url, plan.question) +
             minOf(4, source.excerpt.length / 300)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
         val q = ResearchQuery(plan.question)
+        val currentWeather = ConversationalResearch.isWeather(plan.question) && WeatherPageEvidence.current(source.excerpt, q.today) &&
+            ResearchQuery.date(source.updatedAt)?.isAfter(q.today.plusDays(1)) != true
         val explicitIncumbent = source.updatedAt.isBlank() && plan.explicitUrls.isNotEmpty() && ResearchQuery.isCurrentIncumbentQuery(plan.question) &&
             Regex("(?i)\\b(?:current role holder|current (?:prime minister|ceo)|incumbent|is (?:the )?(?:chairman and )?chief executive officer)\\b").containsMatchIn(source.excerpt)
         // An undated, explicitly requested role page may identify its current
         // holder. Keep the date unknown; never invent a fresh publication date.
-        if ((!q.currentEnough(source.updatedAt) && !explicitIncumbent && !contextOnly(source, plan)) || q.isPrediction(source.title)) return false
+        if ((!q.currentEnough(source.updatedAt) && !explicitIncumbent && !currentWeather && !contextOnly(source, plan)) || q.isPrediction(source.title)) return false
         if (plan.explicitUrls.isNotEmpty()) return true
         val found = ResearchQuery.words(source.title + " " + source.excerpt)
         if (q.years.isNotEmpty() && !found.containsAll(q.years)) return false

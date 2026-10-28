@@ -2,7 +2,7 @@ package com.example.grounding
 
 enum class AnswerSupport { CITED, PARTIAL, INSUFFICIENT }
 data class ClaimCheck(val text: String, val sourceIds: Set<Int>, val supported: Boolean, val reason: String)
-data class CheckedAnswer(val text: String, val support: AnswerSupport, val claims: List<ClaimCheck>)
+data class CheckedAnswer(val text: String, val support: AnswerSupport, val claims: List<ClaimCheck>, val sourceExtract: Boolean = false)
 
 /** Conservative, deterministic evidence checks, NOT general semantic entailment
  * or a guarantee that a publisher is correct. Each surviving claim must match
@@ -49,11 +49,16 @@ object ClaimVerification {
                 uncertainty.containsMatchIn(body) -> "Explicit uncertainty"
                 ids.isEmpty() -> "Missing citation"
                 ids.any { it !in byId } -> "Unknown citation"
+                ResearchQuery.isCurrentIncumbentQuery(question) && Regex("(?i)\\b(?:former|previous|deceased|died|passed away|was\\s+(?:the\\s+)?(?:\\d+(?:st|nd|rd|th)\\s+)?(?:chief minister|prime minister|president|governor|mayor|ceo))\\b").containsMatchIn(body) -> "Historical role does not answer the current office-holder question"
                 comparison && missingSubject && !inherited -> "Comparison subject missing"
                 Regex("(?i)\\b(?:the following|as follows|listed below|two parts)\\b").containsMatchIn(body) && !body.substringAfter(':', "").any { it.isLetterOrDigit() } -> "Incomplete referential claim"
                 Regex("(?i)\\bI (?:have |just )?(?:accessed|opened|downloaded|sent|installed|contacted|browsed)\\b").containsMatchIn(body) -> "Unperformed tool action"
                 url.findAll(line).any { match -> sources.none { it.id in ids && it.url == match.value.trimEnd('.', ',') } } -> "Unprovided URL"
-                ids.mapNotNull(byId::get).none { supports(body, it, entities, ResearchQuery.isCurrentIncumbentQuery(question), it.id in contextOnly) } -> "Passage does not substantiate subject, wording, polarity or values"
+                ids.mapNotNull(byId::get).none { source ->
+                    val found = ResearchQuery.words(source.title + " " + source.excerpt) + EvidenceRanking.localeWords(source.url)
+                    val requestedSubject = comparison || ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in found } }
+                    requestedSubject && supports(body, source, entities, ResearchQuery.isCurrentIncumbentQuery(question), source.id in contextOnly)
+                } -> "Passage does not substantiate subject, wording, polarity or values"
                 else -> "Passage checks passed"
             }
             ClaimCheck(rendered, ids, reason in setOf("Passage checks passed", "Explicit uncertainty", "Heading"), reason)
@@ -81,32 +86,42 @@ object ClaimVerification {
         val units = quantities(claim)
         val passages = source.excerpt.split(Regex("\\n\\s*\\n")).flatMap { block ->
             val lines = block.lines()
+            val exampleContext = financeExample(block)
             val heading = lines.firstOrNull()?.takeIf { lines.size > 1 && it.length < 150 && !it.endsWith('.') &&
                 entities.count { entity -> ResearchQuery.words(entity).all { word -> word in ResearchQuery.words(it) } } <= 1 }
             sentences(if (heading != null) lines.drop(1).joinToString(" ") else block).flatMap { sentence ->
                 val subject = Regex("^([\\p{L}][\\p{L}\\p{N} ._-]{0,45}?)\\s+(?i:does|is|has|supports?|requires?)\\b").find(sentence)?.groupValues?.get(1).orEmpty()
                 sentence.split(Regex("(?i)\\s+(?:but|whereas|although)\\s+|;\\s*")).mapIndexed { index, clause ->
-                    (heading?.plus("\n") ?: "") + (if (index > 0 && subject.isNotEmpty()) "$subject " else "") + clause
+                    (heading?.plus("\n") ?: "") + (if (exampleContext) "Representative example\n" else "") +
+                        (if (index > 0 && subject.isNotEmpty()) "$subject " else "") + clause
                 }
             }
         }.filter { passage ->
-            subjects.all { entity -> ResearchQuery.words(entity).all { it in ResearchQuery.words(passage + " " + source.title) } }
+            val scoped = ResearchQuery.words(passage + " " + source.title) + EvidenceRanking.localeWords(source.url)
+            subjects.all { entity -> ResearchQuery.words(entity).all { it in scoped } }
         }
         return passages.any { passage ->
-            val evidence = terms(passage)
+            val evidence = terms(passage) + EvidenceRanking.localeWords(source.url)
             val requested = terms(claim)
             val lexical = requested.isNotEmpty() && requested.count { it in evidence }.toDouble() / requested.size >= .65
-            val named = ResearchPlanner.entities(claim).all { entity -> ResearchQuery.words(entity).all { it in ResearchQuery.words(passage) } }
+            val scopedWords = ResearchQuery.words(passage) + EvidenceRanking.localeWords(source.url)
+            val named = ResearchPlanner.entities(claim).all { entity -> ResearchQuery.words(entity).all { it in scopedWords } }
             val namesPresent = subjects.all { entity ->
                 // A multi-product page title must not bind a number from another
                 // product's row. Require subjects in the actual passage.
-                ResearchQuery.words(entity).all { it in ResearchQuery.words(passage) }
+                ResearchQuery.words(entity).all { it in scopedWords }
             }
             val polarity = negative.containsMatchIn(claim) == negative.containsMatchIn(passage)
             val quantitiesMatch = quantities(passage).containsAll(units)
             val numbersMatch = CitationSupport.supportsNumbers("$claim [${source.id}]", listOf(source.copy(title = "", excerpt = passage)))
             val qualified = Regex("(?i)\\b(?:only (?:when|with|on|for|if)|provided that|except|unless|on the tested device)\\b").containsMatchIn(passage)
             val qualifications = !qualified || Regex("(?i)\\b(?:only|when|with|provided|except|unless|tested device)\\b").containsMatchIn(claim)
+            val illustrative = exampleContextInPassage(passage, source.excerpt)
+            val amountPattern = Regex("(?i)purchase amount\\s*[:|]?\\s*([£$€₹]\\s*\\d[\\d,.]*)")
+            val exampleAmount = amountPattern.find(passage)?.groupValues?.get(1) ?: amountPattern.findAll(source.excerpt)
+                .map { it.groupValues[1] }.distinct().toList().singleOrNull()
+            val exampleMatches = !illustrative || Regex("(?i)\\b(?:example|illustrative|representative)\\b").containsMatchIn(claim) &&
+                exampleAmount != null && CitationSupport.supportsNumbers("$exampleAmount [${source.id}]", listOf(source.copy(title = "", excerpt = claim)))
             val universal = !Regex("(?i)\\b(?:always|every|all devices|any device|guaranteed)\\b").containsMatchIn(claim) ||
                 Regex("(?i)\\b(?:always|every|all devices|any device|guaranteed)\\b").containsMatchIn(passage)
             val incumbent = !currentOffice || !Regex("(?i)\\b(?:former|deceased|died|passed away|was the)\\b").containsMatchIn(passage)
@@ -126,9 +141,13 @@ object ClaimVerification {
                 val order = subjects.size < 2 || subjects.map { passage.indexOf(it, ignoreCase = true) }.let { it == it.sorted() }
                 sameRelation && order
             } ?: true
-            lexical && named && namesPresent && polarity && quantitiesMatch && numbersMatch && comparison && qualifications && universal && incumbent && recency && datedAction && backendMatches
+            lexical && named && namesPresent && polarity && quantitiesMatch && numbersMatch && comparison && qualifications && exampleMatches && universal && incumbent && recency && datedAction && backendMatches
         }
     }
+    internal fun financeExample(text: String) = Regex("(?i)representative example|illustrative examples?|example purchase").containsMatchIn(text) &&
+        Regex("(?i)purchase amount|\\b(?:APR|interest|monthly payment|finance|financing|loan|repayment)\\b").containsMatchIn(text)
+    private fun exampleContextInPassage(passage: String, source: String) = financeExample(passage) ||
+        passage.contains("Representative example\n") && financeExample(source)
     private fun quantities(text: String): Set<String> = Regex("(?i)(-?\\d+(?:\\.\\d+)?)\\s*(GB|GiB|MB|MiB|KB|ms|milliseconds?|seconds?|tk/s|tokens/(?:s|second)|%|°\\s*[CF])(?!\\p{L})")
         .findAll(text).map { match ->
             val value = runCatching { java.math.BigDecimal(match.groupValues[1]).stripTrailingZeros().toPlainString() }.getOrDefault(match.groupValues[1])

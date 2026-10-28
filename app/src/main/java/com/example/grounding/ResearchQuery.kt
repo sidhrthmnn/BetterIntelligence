@@ -30,10 +30,11 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         private val modelVersion = Regex("(?i)\\b(gemma|qwen)(\\d+(?:\\.\\d+)*)\\b")
         private fun normalizedModels(text: String) = modelVersion.replace(text, "$1 $2")
         // Mild English inflection matching, without damaging non-Latin words.
-        private fun stem(value: String) = if (value.matches(englishWord)) when {
+        private fun undouble(value: String) = if (value.length > 3 && value.last() in "bdfgmnprt" && value.last() == value[value.lastIndex - 1]) value.dropLast(1) else value
+        private fun stem(value: String) = if (value == "registration") "register" else if (value.matches(englishWord)) when {
             value.endsWith("ies") -> value.dropLast(3) + "y"
-            value.endsWith("ing") && value.length >= 7 -> value.dropLast(3)
-            value.endsWith("ed") && value.length >= 6 && !value.endsWith("eed") -> value.dropLast(2)
+            value.endsWith("ing") && value.length >= 7 -> undouble(value.dropLast(3))
+            value.endsWith("ed") && value.length >= 6 && !value.endsWith("eed") -> undouble(value.dropLast(2))
             value.endsWith("s") && !value.endsWith("ss") -> value.dropLast(1)
             else -> value
         } else value
@@ -76,8 +77,8 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             if (Regex("\\b(who\\s+was|former|previous|first|second|third|\\d+(?:st|nd|rd|th)|19\\d{2}|20[01]\\d)\\b").containsMatchIn(q)) return false
             if (Regex("പ്രധാനമന്ത്രി|മുഖ്യമന്ത്രി|പ്രസിഡന്റ്").containsMatchIn(q) &&
                 Regex("ഇപ്പോൾ|ഇപ്പോഴ|നിലവിലെ|ആരാണ്").containsMatchIn(q) && !Regex("മുൻ|ആയിരുന്നു").containsMatchIn(q)) return true
-            return Regex("\\b(?:who\\s+is|what\\s+is|current|incumbent|present)\\b").containsMatchIn(q) &&
-                Regex("\\b(cm|pm|ceo|chief\\s+minister|prime\\s+minister|president|governor|mayor|leader|chancellor|king|queen|monarch|head|minister|secretary|director|chair(?:man|person)?)\\b").containsMatchIn(q)
+            return Regex("\\b(?:who(?:\\s+is|['’]s)|what\\s+is|current|incumbent|present)\\b").containsMatchIn(q) &&
+                Regex("\\b(cm|pm|ceo|chief\\s+ministers?|prime\\s+ministers?|presidents?|governors?|mayors?|leader|chancellor|king|queen|monarch|head|minister|secretary|director|chair(?:man|person)?)\\b").containsMatchIn(q)
         }
         private val normalizedStop = words(stop.joinToString(" "))
         private val writtenDates = listOf("MMMM d, uuuu", "MMM d, uuuu", "d MMMM uuuu", "d MMM uuuu").map {
@@ -89,7 +90,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             runCatching { LocalDate.parse(value.trim(), format) }.getOrNull()
         }
     }
-    private val plain = question.replace(Regex("https?://\\S+"), " ")
+    private val plain = question.replace(Regex("(?i)\\bwho['’]s\\b"), "who is").replace(Regex("https?://\\S+"), " ")
     private val userPlain = plain.substringBefore("(Public source topic:")
     val years = Regex("\\b(?:19|20)\\d{2}\\b").findAll(userPlain).map { it.value }.toSet()
     private val rawTerms = wordPattern.findAll(normalizedModels(plain.lowercase())).map { it.value }
@@ -101,15 +102,23 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
     private val lower = plain.lowercase()
     private fun has(phrase: String) = Regex("(?<![\\p{L}\\p{M}])${Regex.escape(phrase)}(?![\\p{L}\\p{M}])").containsMatchIn(lower)
     val relative = listOf("latest", "recent", "recently", "current", "currently", "today", "yesterday", "this week", "this month", "now", "who won", "ഇന്ന്", "ഇപ്പോൾ").any(::has)
+    // A maintained office-holder page may have been published years ago.
+    // Ask for the incumbent, not exclusively for news published this month.
+    private val currentRoleLookup = isCurrentIncumbentQuery(userPlain) &&
+        !Regex("(?i)\\b(news|announced|appointed|became|election|elected|resigned)\\b").containsMatchIn(userPlain)
     val useNews = relative || years.any { it.toInt() >= today.year - 1 }
     val searchText = searchOverride ?: (expandedSearchTerms + years + if (relative && years.isEmpty()) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
     val earliest: LocalDate? = when {
+        currentRoleLookup -> null
         has("today") || has("ഇന്ന്") -> today
         has("yesterday") -> today.minusDays(1)
         listOf("latest", "recent", "recently", "current", "currently", "now", "this week", "this month", "ഇപ്പോൾ").any(::has) -> today.minusDays(30)
         else -> null
     }
     val freshnessFilter: String? = when {
+        currentRoleLookup -> null
+        // Forecast pages roll forward without publishing a new news article.
+        ConversationalResearch.isWeather(userPlain) -> null
         has("today") || has("yesterday") || has("ഇന്ന്") -> "d"
         has("this week") -> "w"
         earliest != null -> "m"

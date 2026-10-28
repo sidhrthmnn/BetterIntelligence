@@ -112,7 +112,7 @@ class ConversationAndGroundingTest {
         assertEquals("LOCAL", coordinator.retrieve("Latest news", true, GroundingMode.OFF, SearchProviderId.WEB).status)
         assertEquals("LOCAL", coordinator.retrieve("Write a poem", true, GroundingMode.AUTO, SearchProviderId.WEB).status)
         assertEquals(0, calls)
-        val failure = coordinator.retrieve("Latest news", true, GroundingMode.AUTO, SearchProviderId.WEB)
+        val failure = coordinator.retrieve("Latest Android news", true, GroundingMode.AUTO, SearchProviderId.WEB)
         assertEquals("SEARCH_FAILED", failure.status); assertFalse(failure.notice.contains("private-query")); assertEquals(1, calls)
         assertEquals("PRIVACY_BLOCKED", coordinator.retrieve("password: sampleSecret123", true, GroundingMode.ON, SearchProviderId.WEB).status)
         assertEquals(1, calls)
