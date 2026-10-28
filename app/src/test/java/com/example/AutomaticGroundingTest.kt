@@ -151,6 +151,8 @@ class AutomaticGroundingTest {
         for (question in listOf("What is the temperature there?", "What is the current weather?", "What is Orion's RAM?", "What is the capital of France?"))
             assertNull(question, FactualResearch.definitionTopic(question))
         assertTrue(FactualResearch.incomplete("Photosynthesis is important because"))
+        assertTrue(FactualResearch.definitionLine("Green plants use light energy to make their own food. This process is called photosynthesis.", query))
+        assertFalse(FactualResearch.definitionLine("This process is called photosynthesis.", query))
         System.getenv("BI_RELIABILITY_CAPTURE")?.let { directory ->
             val capture = java.io.File(directory, "bi-v20-photosynthesis.html")
             if (capture.isFile) {

@@ -18,8 +18,11 @@ object FactualResearch {
         val topic = definitionTopic(question) ?: return false
         val plain = text.replace(Regex("[*`#>]"), "")
         val definition = Regex("(?i)(?:^|[.!?]\\s+|\\n+)${Regex.escape(topic)}[^.!?\\n]{0,100}?\\b(?:is|are|means|refers to)\\s+([^.!?\\n]+)")
-            .find(plain)?.groupValues?.get(1) ?: return false
-        return !Regex("(?i)^(?:(?:really|very|especially)\\s+)?(?:important|essential|vital|common|popular|widespread|responsible)\\b").containsMatchIn(definition)
+            .find(plain)?.groupValues?.get(1)
+        if (definition != null) return !Regex("(?i)^(?:(?:really|very|especially)\\s+)?(?:important|essential|vital|common|popular|widespread|responsible)\\b").containsMatchIn(definition)
+        val namedProcess = Regex("(?i)\\b(?:this|the) (?:process|method|reaction|phenomenon|technique) (?:is |are )?(?:called|known as|termed|named) ${Regex.escape(topic)}\\b").find(plain) ?: return false
+        val explanation = plain.substring(0, namedProcess.range.first).trimEnd()
+        return explanation.endsWith('.') && explanation.split(Regex("\\s+")).size >= 8
     }
     fun capitalPlace(question: String): String? = Regex("(?i)^\\s*what(?:['’]s|\\s+is)\\s+(?:the\\s+)?capital(?:\\s+city)?\\s+of\\s+([\\p{L}][\\p{L} .'-]{1,60})[?!.]*\\s*$")
         .matchEntire(question)?.groupValues?.get(1)?.trim(' ', '.', '?', '!')
