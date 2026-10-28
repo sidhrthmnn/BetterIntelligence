@@ -21,7 +21,7 @@ object FactualResearch {
         if (Regex("(?i)(?:^|\\n+)(?:to summari[sz]e|in summary)[,:]?\\s+${Regex.escape(topic)}\\s+(?:is|are|uses?|converts?|transforms?|takes?|means|refers to|describes|consists|involves)\\b").containsMatchIn(plain)) return 100
         val definition = Regex("(?i)(?:^|[.!?]\\s+|\\n+)${Regex.escape(topic)}(?:\\s*\\([^)!?\\n]{0,120}\\))?(?:\\s*\\[\\d+(?:[,– -]\\d+)*])*\\s+(?:is|are|means|refers to)\\s+([^.!?\\n]+)")
             .find(plain)?.groupValues?.get(1)
-        if (definition != null) return if (Regex("(?i)^(?:(?:really|very|especially)\\s+)?(?:important|essential|vital|common|popular|widespread|responsible)\\b").containsMatchIn(definition)) 0 else 85
+        if (definition != null) return if (Regex("(?i)^(?:(?:really|very|especially)\\s+)?(?:important|essential|vital|critical|crucial|common|popular|widespread|responsible)\\b").containsMatchIn(definition)) 0 else 85
         val namedProcess = Regex("(?i)\\b(?:this|the) (?:process|method|reaction|phenomenon|technique) (?:is |are )?(?:called|known as|termed|named) ${Regex.escape(topic)}\\b").find(plain) ?: return 0
         val explanation = plain.substring(0, namedProcess.range.first).trimEnd()
         return if (explanation.lastOrNull() in listOf('.', '!') && explanation.split(Regex("\\s+")).size >= 8) 65 else 0

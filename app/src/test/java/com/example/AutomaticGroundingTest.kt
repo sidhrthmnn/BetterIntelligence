@@ -156,6 +156,15 @@ class AutomaticGroundingTest {
         assertFalse(FactualResearch.definitionLine("This process is called photosynthesis.", query))
         assertFalse(FactualResearch.definitionLine("Photosynthesis takes place inside chloroplasts which are small objects inside plant cells.", query))
         assertTrue(FactualResearch.definitionLine("To summarise, photosynthesis uses light energy to make glucose and oxygen.", query))
+        assertFalse(FactualResearch.definitionLine("Photosynthesis is critical for life on Earth.", query))
+        val importance = "Photosynthesis is critical for life on Earth."
+        val mechanism = "Green plants can use light energy to make their own food! This process called photosynthesis."
+        val actualAnswer = EvidenceAnswer.resolve("$importance [1].", listOf(
+            source.copy(id = 1, excerpt = importance),
+            source.copy(id = 2, excerpt = "Plant processes\n$mechanism")
+        ), query)
+        assertTrue(actualAnswer.text, actualAnswer.text.contains(mechanism))
+        assertTrue(actualAnswer.sourceExtract)
         System.getenv("BI_RELIABILITY_CAPTURE")?.let { directory ->
             val capture = java.io.File(directory, "bi-v20-photosynthesis.html")
             if (capture.isFile) {
