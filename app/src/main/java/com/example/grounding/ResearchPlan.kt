@@ -87,7 +87,7 @@ object ResearchPlanner {
             .findAll(text).flatMap { sequenceOf(it.groupValues[1], it.groupValues[2]) }
         val versions = Regex("\\b[\\p{L}][\\p{L}\\p{N}-]{1,25}\\s+\\d+(?:\\.\\d+)*(?:\\s+[A-Z]\\d+[A-Z]?)?\\b").findAll(text).map { it.value }
         val names = Regex("\\b[A-Z][\\p{L}\\p{N}-]+(?:\\s+[A-Z][\\p{L}\\p{N}-]+){0,3}\\b").findAll(text).map { it.value }
-            .map { it.replace(Regex("(?i)^(?:Compare|Explain|What|When|Which|Who|Where|Is|Are|Does|Do|How|Why|Tell|Read|Current|Check|Verify)\\s+"), "") }
+            .map { it.replace(Regex("(?i)^(?:Compare|Explain|What|When|Which|Who|Where|Is|Are|Does|Do|How|Why|Tell|Read|Current|Check|Verify|Search|Research|Find)\\s+"), "") }
             .map { candidate ->
                 candidate.split(Regex("\\s+"))
                     .filter { token -> token.lowercase() !in setOf("of", "the", "in", "for", "to", "on", "at", "by", "with", "from", "is", "are", "who", "what", "where", "when", "why", "how", "cm", "pm", "ceo", "current", "incumbent", "list", "all") }

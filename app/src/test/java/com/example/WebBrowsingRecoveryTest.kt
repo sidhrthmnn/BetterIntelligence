@@ -138,4 +138,18 @@ class WebBrowsingRecoveryTest {
         val ambiguous = org.jsoup.Jsoup.parse("<div class='WeatherObservationsContainer'><div class='ObservationsContainerText'>Observed at, 20:00 GMT</div>Temperature 13</div>")
         assertTrue(WeatherPageEvidence.blocks(ambiguous, "London", "https://www.bbc.com/weather/2643743").isEmpty())
     }
+
+    @Test fun conversationalFramingCannotRejectOtherwiseRelevantReadPages() {
+        val q = "How is the election going on in Israel"
+        assertEquals(setOf("election", "israel"), ResearchQuery(q).terms)
+        val election = EvidenceSource(1, "Israel election results", "https://publisher.example/israel", 
+            "Israel election results show that no bloc has enough seats to form a majority. Vote counting and coalition talks continue.", 1,
+            java.time.LocalDate.now().toString(), "WEB_PAGE", "PUBLISHED")
+        assertTrue(EvidenceRanking.acceptable(election, ResearchPlanner.plan(q)))
+        val technical = "Search Kotlin coroutines documentation"
+        assertEquals(listOf("Kotlin"), ResearchPlanner.subjects(technical))
+        val docs = election.copy(title = "Coroutines | Kotlin Documentation", url = "https://kotlinlang.org/docs/coroutines-overview.html",
+            excerpt = "Kotlin coroutines simplify asynchronous programming. A coroutine can suspend execution and resume later without blocking a thread.", updatedAt = "")
+        assertTrue(EvidenceRanking.acceptable(docs, ResearchPlanner.plan(technical)))
+    }
 }

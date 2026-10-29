@@ -20,6 +20,12 @@ object NewsIntent {
         Regex("(?i)\\b(?:news|headlines)\\b|വാർത്ത").containsMatchIn(question)
 
     /** The request's framing is not a fact that an article must repeat. */
-    fun topicQuestion(question: String): String = if (!isLiveRequest(question)) question else question.replace(
-        Regex("(?i)^\\s*what(?:['’]s|s| is)\\s+(?:(?:happening|going on)\\s+(?:in|with|to)|new\\s+(?:in|with|for))\\s+"), "")
+    fun topicQuestion(question: String): String {
+        if (!isLiveRequest(question)) return question
+        val plain = question.replace(Regex("(?i)^\\s*what(?:['’]s|s| is)\\s+(?:(?:happening|going on)\\s+(?:in|with|to)|new\\s+(?:in|with|for))\\s+"), "")
+        return if (Regex("(?i)^\\s*how (?:is|are)\\b").containsMatchIn(plain)) plain
+            .replace(Regex("(?i)^\\s*how (?:is|are)\\s+(?:the\\s+)?"), "")
+            .replace(Regex("(?i)\\b(?:going(?:\\s+on)?|ongoing|progressing|unfolding)\\b"), " ")
+            .replace(Regex("\\s+"), " ").trim() else plain
+    }
 }
