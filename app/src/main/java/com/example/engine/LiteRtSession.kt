@@ -22,6 +22,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.ensureActive
 import java.io.File
 
 internal data class LiteRtResult(val text: String, val inputTokens: Int, val outputTokens: Int,
@@ -33,7 +34,8 @@ internal data class LiteRtResult(val text: String, val inputTokens: Int, val out
  */
 @OptIn(ExperimentalApi::class)
 internal class LiteRtSession(private val context: Context, val file: File,
-    private val reuseAttentionExecutor: Boolean = false, identity: String = "") : AutoCloseable {
+    private val reuseAttentionExecutor: Boolean = false, identity: String = "",
+    private val experimentalMtp: Boolean = false) : AutoCloseable {
     val supportsGpu: Boolean
     val gpuReason: String
     val supportsCpu: Boolean
@@ -44,6 +46,9 @@ internal class LiteRtSession(private val context: Context, val file: File,
     private val float32Gpu = ModelLibrary.liteRtFloat32Gpu(identity)
     val dynamicContext: Boolean
     val supportsThinking: Boolean
+    val supportsMtp: Boolean
+    private var mtpQuarantined = false
+    var lastMtpUsed = false; private set
     val needsThoughtBudget: Boolean get() = supportsThinking && !reuseAttentionExecutor
     fun configurationContext(requested: Int) = requested.coerceIn(minimumContext, maximumContext)
     fun allocationContext(requested: Int) = ModelMemoryPlanner.liteRtAllocationContext(configurationContext(requested), maximumContext, dynamicContext)
@@ -57,7 +62,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
     var allocatedContext = 0; private set
     var configuredContext = 0; private set
     var allocatedThreads = 0; private set
-    fun prepared(mode: ProcessingMode, threads: Int, context: Int) = isInitialized && configuration == "$mode:$threads:${configurationContext(context)}"
+    fun prepared(mode: ProcessingMode, threads: Int, context: Int) = isInitialized && configuration == ModelMemoryPlanner.liteRtConfigurationKey(mode, threads, configurationContext(context))
     private var privateBaselineMb = 0L
     // Credit only model-attributable private dirty allocations on unload.
     // Clean mmap pages are already reclaimable in Android's available RAM.
@@ -80,6 +85,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
             maximumContext = info.maxContextTokens().takeIf { it > 0 } ?: 2048
             dynamicContext = info.isDynamicContext()
             supportsThinking = info.supportsThinking()
+            supportsMtp = info.hasSpeculativeDecodingSupport()
         }
     }
 
@@ -89,12 +95,15 @@ internal class LiteRtSession(private val context: Context, val file: File,
         require(mode != ProcessingMode.GPU || supportsGpu) { gpuReason }
         require(mode != ProcessingMode.NPU || supportsNpu) { npuReason }
         val graphContext = configurationContext(contextSize)
-        val key = "$mode:$threads:$graphContext"
+        val key = ModelMemoryPlanner.liteRtConfigurationKey(mode, threads, graphContext)
         if (engine?.isInitialized() == true && key == configuration) return
         close()
         privateBaselineMb = privateDirtyMb()
         val start = SystemClock.elapsedRealtime()
         ExperimentalFlags.enableBenchmark = true
+        // Never inherit an export's experimental speculative-decoding default.
+        // MTP needs its own compatible drafter and physical validation.
+        ExperimentalFlags.enableSpeculativeDecoding = false
         if (mode == ProcessingMode.NPU) QualcommNpuSupport.configureDspSearchPath(context)
         val candidate = Engine(EngineConfig(modelPath = file.absolutePath,
             backend = when (mode) {
@@ -121,6 +130,31 @@ internal class LiteRtSession(private val context: Context, val file: File,
 
     suspend fun generate(prompt: String, params: GenerationParams,
         onText: (String, Int) -> Unit = { _, _ -> }): LiteRtResult {
+        // Test-only explicit opt-in. Production constructors leave this false.
+        // Lazy drafter allocations need extra shared-memory headroom, not an
+        // assumption that the standard GPU graph also includes a drafter.
+        val mtpEligible = experimentalMtp && supportsMtp && !mtpQuarantined && backend == ProcessingMode.GPU
+        val memory = if (mtpEligible) android.app.ActivityManager.MemoryInfo().also {
+            context.getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(it)
+        } else null
+        val thermal = if (mtpEligible && android.os.Build.VERSION.SDK_INT >= 29)
+            context.getSystemService(android.os.PowerManager::class.java).currentThermalStatus else 0
+        val mtp = mtpEligible && memory != null && !memory.lowMemory && memory.availMem >= 1024L * 1048576 && thermal < 2
+        lastMtpUsed = mtp
+        var visible = false
+        return try { generateOnce(prompt, params, mtp) { delta, index -> visible = true; onText(delta, index) } }
+        catch (failure: Exception) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            if (!mtp || visible) throw failure
+            // generateOnce has already joined cancellation and closed its
+            // Conversation. Replay only before any visible text, once, normally.
+            mtpQuarantined = true; lastMtpUsed = false
+            generateOnce(prompt, params, false, onText)
+        }
+    }
+
+    private suspend fun generateOnce(prompt: String, params: GenerationParams, mtp: Boolean,
+        onText: (String, Int) -> Unit): LiteRtResult {
         val started = SystemClock.elapsedRealtime()
         if (resetRequired || (usedForConversation && !reuseAttentionExecutor)) {
             // LiteRT-LM #3165: rewinding a new Conversation does not reliably reset
@@ -135,7 +169,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
             systemInstruction = params.systemPrompt?.takeIf { it.isNotBlank() }?.let { Contents.of(it) },
             samplerConfig = SamplerConfig(topK = params.topK.coerceIn(1, 100),
                 topP = params.topP.coerceIn(.1f, 1f).toDouble(), temperature = params.temperature.coerceIn(0f, 2f).toDouble()),
-            maxOutputToken = params.maxTokens.coerceIn(1, 1024), thinkingConfig = ThinkingConfig(enableThinking = false)))
+            maxOutputToken = params.maxTokens.coerceIn(1, 1024), thinkingConfig = ThinkingConfig(enableThinking = false), enableSpeculativeDecoding = mtp))
         val completion = CompletableDeferred<Unit>()
         val nativeFinished = CompletableDeferred<Unit>()
         val text = StringBuilder()

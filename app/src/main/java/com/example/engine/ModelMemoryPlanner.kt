@@ -23,6 +23,8 @@ data class ModelTierDecision(
  * Offloading moves weights within shared RAM; it does not create more memory.
  */
 object ModelMemoryPlanner {
+    fun liteRtConfigurationKey(mode: ProcessingMode, threads: Int, context: Int) =
+        "$mode:${if (mode == ProcessingMode.CPU) threads else 0}:$context"
     fun liteRtAllocationContext(requested: Int, maximum: Int, dynamic: Boolean): Int =
         if (dynamic) minOf(requested, maximum.takeIf { it > 0 } ?: requested)
         else maximum.takeIf { it > 0 } ?: maxOf(requested, 2048)
@@ -76,11 +78,12 @@ object ModelMemoryPlanner {
     ): ModelTierDecision {
         val targetContext = requestedContext.coerceIn(512, 4096)
         if (primary != null && primary.isInstalled) {
-            if (ModelLibrary.fits(primary, profile, targetContext)) {
-                val est = ModelLibrary.memoryEstimate(primary, targetContext).totalMb
-                return ModelTierDecision(ModelTierRole.PRIMARY, primary, targetContext, est, profile.safeModelRamLimitMb)
+            val configured = ModelLibrary.configuredContext(primary, targetContext)
+            if (ModelLibrary.fits(primary, profile, configured)) {
+                val est = ModelLibrary.memoryEstimate(primary, configured).totalMb
+                return ModelTierDecision(ModelTierRole.PRIMARY, primary, configured, est, profile.safeModelRamLimitMb)
             }
-            val steppedContexts = listOf(1024, 512).filter { it < targetContext }.distinct()
+            val steppedContexts = listOf(1024, 512).map { ModelLibrary.configuredContext(primary, it) }.filter { it < configured }.distinct()
             for (stepped in steppedContexts) {
                 if (ModelLibrary.fits(primary, profile, stepped)) {
                     val est = ModelLibrary.memoryEstimate(primary, stepped).totalMb
@@ -96,7 +99,7 @@ object ModelMemoryPlanner {
             }
         }
         if (autoFallback && secondary != null && secondary.isInstalled && secondary.id != primary?.id) {
-            val candidateContexts = listOf(targetContext, 1024, 512).distinct().sortedDescending()
+            val candidateContexts = listOf(targetContext, 1024, 512).map { ModelLibrary.configuredContext(secondary, it) }.distinct().sortedDescending()
             for (ctx in candidateContexts) {
                 if (ModelLibrary.fits(secondary, profile, ctx)) {
                     val est = ModelLibrary.memoryEstimate(secondary, ctx).totalMb

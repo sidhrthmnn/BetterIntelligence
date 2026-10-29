@@ -26,17 +26,17 @@ class AnswerQualityTest {
         val cases = linkedMapOf(
             "What is the population of Tokyo?" to true, "Who is the CEO of Microsoft?" to true,
             "What is the price of the Pixel 10?" to true, "Which Android version is currently supported?" to true,
-            "Who won the 2026 Nobel Prize in Physics?" to true, "Is Gemma 4 better than Qwen 3.5?" to true,
+            "Who won the 2026 Nobel Prize in Physics?" to true, "Is Gemma 4 better than Qwen 3.5?" to false,
             "Compare the latest LiteRT and llama.cpp features." to true, "Current UK Prime Minister" to true,
             "Today's London weather" to true, "Current phone price" to true,
-            "Compare recent Android AI frameworks" to true, "Check again" to true,
+            "Compare recent Android AI frameworks" to true, "Check again" to false,
             "കേരളത്തിന്റെ ഇപ്പോഴത്തെ മുഖ്യമന്ത്രി ആരാണ്?" to true, "Verify the 1969 Moon landing" to true,
             "Read https://docs.example/orion" to true, "Does LiteRT-LM support GPU?" to true,
-            "Explain recursion" to true, "Write a birthday message" to false, "What is 15% of 240?" to false,
-            "Summarise supplied text: Today's price was wrong." to false, "Who was UK prime minister in 1945?" to true,
-            "Difference between RAM and storage" to true, "Explain electric current flow" to true,
+            "Explain recursion" to false, "Write a birthday message" to false, "What is 15% of 240?" to false,
+            "Summarise supplied text: Today's price was wrong." to false, "Who was UK prime minister in 1945?" to false,
+            "Difference between RAM and storage" to false, "Explain electric current flow" to false,
             "Write a poem about today" to false, "Translate this weather sentence into Malayalam" to false,
-            "Explain Android's activity lifecycle" to true, "Who won the 1901 Nobel Prize in Physics?" to true,
+            "Explain Android's activity lifecycle" to false, "Who won the 1901 Nobel Prize in Physics?" to false,
             "Create JSON with name and age" to false)
         val rows = JSONArray(); var oldPass = 0
         // Frozen latest-main AUTO rule, used only for this before/after report.
@@ -131,7 +131,7 @@ class AnswerQualityTest {
         assertTrue(ChatAnswerPolicy.system("JSON only with identifier 001", false, 2048).contains("valid JSON only"))
         assertTrue(ChatAnswerPolicy.system("Manglish please", false, 2048).contains("Latin letters"))
         assertTrue(ChatAnswerPolicy.system("മലയാളത്തിൽ വിശദീകരിക്കുക", false, 2048).contains("Reply in Malayalam"))
-        assertTrue(ChatAnswerPolicy.history(listOf(ChatTurn("assistant", "old evidence repeated")), true).isEmpty())
+        assertTrue(ChatAnswerPolicy.history(listOf(ChatTurn("assistant", "old evidence repeated")), true).single().content.contains("unverified context"))
         assertEquals(1, ChatAnswerPolicy.history(listOf(ChatTurn("user", "My project")), false).size)
         assertEquals(ChatAnswerPolicy.liveUnavailable, ChatAnswerPolicy.finishLocal("Who is the current UK Prime Minister?", "A stale person is the current Prime Minister."))
         assertEquals(ChatAnswerPolicy.liveUnavailable, ChatAnswerPolicy.finishLocal("Today's London weather", "It is sunny and 24 degrees."))

@@ -113,7 +113,7 @@ class Research22Test {
         val transport = WebFetcher { url -> WebDocument(url, if (url.endsWith("robots.txt")) "User-agent: *\nAllow: /" else "<main><p>Orion supports Android devices and the documented runtime. Its memory requirements depend on context size and quantization.</p></main>", if (url.endsWith("robots.txt")) "text/plain" else "text/html") }
         val engine = PublicWebResearch(transport, discovery)
         val failed = engine.research("Compare Orion 2 vs Vega 3 for local Android inference") {}
-        assertEquals(ResearchFailure.DISCOVERY_UNAVAILABLE, failed.failure); assertEquals(1, discoveryCalls)
+        assertEquals(ResearchFailure.BLOCKED, failed.failure); assertEquals(1, discoveryCalls)
         assertTrue(engine.search("Read https://docs.example/orion").isNotEmpty()); assertEquals(1, discoveryCalls)
     }
     @Test fun progressCancellationAndPrivacyModesWorkWithoutInferenceOrNetworkLeakage() = runBlocking {

@@ -133,7 +133,7 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
         }
         item {
             Text("Always automatic", style = MaterialTheme.typography.titleMedium)
-            Text("Every conversation researches public factual questions, including casting, history and definitions. Creative writing, calculations and personal conversation stay local. Explicit offline requests are respected. The switch above controls permission to use the web.", style = MaterialTheme.typography.bodySmall)
+            Text("Answers use the on-device model by default. Automatic research checks current facts, compatibility and explicit source requests. Definitions, established history, reasoning, writing and personal conversation stay local. If research is unavailable, useful local answers remain available; live facts are never guessed. The switch above controls web permission.", style = MaterialTheme.typography.bodySmall)
             Text("No API key, account or payment is needed. Mwmbl's anonymous backup currently allows 1,000 searches per month per public IP and about one request per second. Shared networks share that quota. Limits or outages do not trigger paid access; use DuckDuckGo or provide a public HTTPS page.", style = MaterialTheme.typography.bodySmall)
         }
         item {
@@ -142,7 +142,7 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
             Text("Search can be blocked or unavailable. Pages requiring sign-in, scripts, CAPTCHA or unsupported file formats are skipped. Sources can be incomplete or wrong; citations show where text came from, not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
         }
         item {
-            Text("Questions and retrieved page text are excluded from app logs. Temporary search data is held in memory for up to five minutes. Sources attached to an answer stay with that conversation until you delete it.", style = MaterialTheme.typography.bodySmall)
+            Text("Questions and retrieved page text are excluded from app logs. Temporary public evidence is held in memory for up to 15 minutes; weather expires after one minute and changing facts after five. Sources attached to an answer stay with that conversation until you delete it.", style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
         }
     }

@@ -1,0 +1,107 @@
+[
+  {
+    "question": "Explain recursion in one short sentence.",
+    "answer": "Recursion is a method where a function calls itself to solve a problem by breaking it down into smaller, identical subproblems.",
+    "status": "LOCAL",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 5437,
+    "providerCalls": 0
+  },
+  {
+    "question": "What is the capital of France? Give only the city.",
+    "answer": "Paris",
+    "status": "LOCAL",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 2962,
+    "providerCalls": 0
+  },
+  {
+    "question": "What is the current temperature in London?",
+    "answer": "I couldn't check the live weather or temperature right now.",
+    "status": "WEB_UNAVAILABLE",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 0,
+    "providerCalls": 1
+  },
+  {
+    "question": "Verify this claim using official sources: Orion supports Vulkan.",
+    "answer": "I couldn't verify this from the requested sources right now. You can try another public HTTPS source.",
+    "status": "WEB_UNAVAILABLE",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 0,
+    "providerCalls": 2
+  },
+  {
+    "question": "How does Gemma 4 work, and what's its latest supported Android runtime?",
+    "answer": "Gemma 4 is a large language model developed by Google DeepMind, which means it is a complex neural network trained on a massive dataset of text and code to understand and generate human-like text based on the patterns it has learned.\n\nI couldn't check the current information right now.",
+    "status": "LOCAL_WITH_WEB_GAP",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 5471,
+    "providerCalls": 3
+  },
+  {
+    "question": "Search for recursion, then explain it in one sentence.",
+    "answer": "Recursion is a method where a function calls itself to solve a problem by breaking it down into smaller, identical subproblems.\n\nWeb research was unavailable; this answer uses on-device knowledge.",
+    "status": "LOCAL_WEB_UNAVAILABLE",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 4464,
+    "providerCalls": 4
+  },
+  {
+    "question": "Remember our test project is Cobalt Lantern. Acknowledge briefly.",
+    "answer": "Acknowledged.",
+    "status": "LOCAL",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 3565,
+    "providerCalls": 4
+  },
+  {
+    "question": "What was our test project?",
+    "answer": "Our test project is Cobalt Lantern.",
+    "status": "LOCAL",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 3743,
+    "providerCalls": 4
+  },
+  {
+    "question": "Write a one-line birthday greeting.",
+    "answer": "Wishing you a day filled with joy and wonderful memories!",
+    "status": "LOCAL",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 3913,
+    "providerCalls": 4
+  },
+  {
+    "question": "What's the weather in London today?",
+    "answer": "I couldn't check the live weather or temperature right now.",
+    "status": "WEB_UNAVAILABLE",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 0,
+    "providerCalls": 4
+  },
+  {
+    "question": "Cancel researched response on first visible text",
+    "answer": "Or",
+    "status": "UNVERIFIED_PARTIAL",
+    "state": "STOPPED"
+  },
+  {
+    "question": "What is 15% of 240?",
+    "answer": "36",
+    "status": "LOCAL",
+    "state": "COMPLETE",
+    "model": "Gemma 4 E2B Instruct · LiteRT",
+    "latencyMs": 4309,
+    "providerCalls": 4
+  }
+]

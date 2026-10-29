@@ -84,9 +84,9 @@ class AutomaticGroundingDeviceTest {
             val casting = ask("Who is playing doom in avengers doomsday", Regex("(?i)Robert Downey"))
             verify(!casting.content.contains("hiding in plain sight", true), "Theory headline passed as casting")
             ask("Who plays Doctor Doom in Avengers: Doomsday?", Regex("(?i)Robert Downey"))
-            ask("Who wrote Pride and Prejudice?", Regex("(?i)Jane Austen"))
-            ask("Who directed Inception?", Regex("(?i)Christopher Nolan"))
-            ask("What is photosynthesis?", Regex("(?i)light|sunlight|solar"))
+            ask("Who wrote Pride and Prejudice?", Regex("(?i)Jane Austen"), false)
+            ask("Who directed Inception?", Regex("(?i)Christopher Nolan"), false)
+            ask("What is photosynthesis?", Regex("(?i)light|sunlight|solar"), false)
             ask("Can example domains be registered or transferred? Read https://www.iana.org/help/example-domains", Regex("(?i)not available|cannot|can't|not .*register|not .*transfer"))
             val weather = ask("What is the weather in London today?")
             verify(EvidenceAnswer.hasTemperature(weather.content), "Missing weather temperature")
@@ -97,7 +97,7 @@ class AutomaticGroundingDeviceTest {
             compose.runOnUiThread { vm.newConversation() }
             compose.waitUntil(20_000) { vm.conversationId.value != old && vm.conversationId.value != 0L }
             assertEquals(GroundingMode.AUTO, vm.groundingMode.value)
-            val capital = ask("What is the capital of France?", Regex("(?i)Paris"))
+            val capital = ask("What is the capital of France?", Regex("(?i)Paris"), false)
             verify(!Regex("\\b(?:18|19|20)\\d{2}\\b").containsMatchIn(capital.content), "Unrequested capital timeline: ${capital.content}")
             val unknown = ask("What is the unannounced launch date of fictional Zephrin? Read https://www.iana.org/help/example-domains", research = null)
             // The requested page is retrieved but must not substantiate an unrelated fact.

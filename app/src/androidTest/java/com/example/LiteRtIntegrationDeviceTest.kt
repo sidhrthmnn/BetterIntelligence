@@ -117,7 +117,10 @@ class LiteRtIntegrationDeviceTest {
                 "Do not delete the backup." to "Do not delete the backup.",
                 "Keep com.example.demo unchanged." to "Keep com.example.demo unchanged.",
                 "Visit https://example.com at 09:15." to "Visit https://example.com at 09:15.",
-                "Email dev@example.com, not user@example.com." to "Email dev@example.com, not user@example.com.")) {
+                "Email dev@example.com, not user@example.com." to "Email dev@example.com, not user@example.com.",
+                "ഞാൻ നാളെ ഓഫീസിൽ വരാം." to "ഞാൻ നാളെ ഓഫീസിൽ വരാം.",
+                "Njan naale office-il varaam." to "Njan naale office-il varaam.",
+                "Meeting നാളെ 09:15-ന് ആണ്." to "Meeting നാളെ 09:15-ന് ആണ്.")) {
                 val result = binder.polishText(input)
                 val row = org.json.JSONObject().put("input", input).put("expected", expected).put("status", result.getString("status"))
                     .put("output", result.getString("text")).put("latencyMs", result.getLong("latency_ms"))
@@ -125,7 +128,7 @@ class LiteRtIntegrationDeviceTest {
                 if (result.getString("status") != "SUCCESS") {
                     // Fixed synthetic text only: diagnose actual production-prompt failures without logging user text.
                     runCatching { engine.generateSync(com.example.ipc.PolishText.prompt(input),
-                        com.example.ipc.PolishText.parameters(engine.activeContextLength)) }
+                        com.example.ipc.PolishText.parameters(engine.activeContextLength, input)) }
                         .onSuccess { row.put("diagnosticRaw", it) }.onFailure { row.put("diagnosticFailure", it.toString()) }
                 }
                 polish.put(row)
@@ -134,7 +137,7 @@ class LiteRtIntegrationDeviceTest {
             for (index in 0 until polish.length()) {
                 val row = polish.getJSONObject(index)
                 assertEquals(row.getString("input"), "SUCCESS", row.getString("status"))
-                assertEquals(row.getString("input"), row.getString("expected"), row.getString("output"))
+                assertEquals(row.getString("input"), row.getString("expected"), row.getString("output").trim())
                 assertEquals("Polish must execute on the requested qualified backend", polishBackend, row.getString("actualBackend"))
             }
 

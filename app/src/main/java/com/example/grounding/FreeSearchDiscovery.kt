@@ -45,7 +45,7 @@ class MwmblDiscovery(private val fetcher: WebFetcher, private val permitted: sus
 }
 
 class FreeSearchDiscovery(private val primary: DiscoveryProvider, private val backup: DiscoveryProvider,
-    private val backupAllowed: suspend () -> Boolean) : DiscoveryProvider {
+    private val primaryCircuit: DiscoveryCircuit? = null, private val backupAllowed: suspend () -> Boolean) : DiscoveryProvider {
     override suspend fun discover(query: ResearchQuery, broad: Boolean): DiscoveryResult {
         fun relevant(result: DiscoveryResult): DiscoveryResult {
             val found = result.candidates.filter { query.candidateRelevant(it.title, it.routingHint) &&
@@ -53,10 +53,12 @@ class FreeSearchDiscovery(private val primary: DiscoveryProvider, private val ba
                 (FactualResearch.capitalPlace(query.question) == null || !Regex("(?i)\\bcapital punishment\\b").containsMatchIn(it.title)) }
             return result.copy(candidates = found, state = if (result.state == DiscoveryState.FOUND && found.isEmpty()) DiscoveryState.EMPTY else result.state)
         }
-        val first = try { withTimeoutOrNull(2_500) { relevant(primary.discover(query, broad)) }
-            ?: DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
+        val paused = primaryCircuit?.unavailable()
+        val first = if (paused != null) DiscoveryResult(emptyList(), paused) else try { withTimeoutOrNull(2_500) { relevant(primary.discover(query, broad)) }
+            ?: DiscoveryResult(emptyList(), DiscoveryState.TIMEOUT) }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
+        if (paused == null) primaryCircuit?.record(first.state)
         if (first.state == DiscoveryState.FOUND || !backupAllowed()) return first
         // A primary challenge ends requests to that service. The independent,
         // explicitly allowed backup does not solve or bypass its challenge.

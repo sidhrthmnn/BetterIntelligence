@@ -1,0 +1,1059 @@
+{
+  "baseline": "81253eee23b2e9ebf96eb813f5339f8d623d7032",
+  "scope": "Labelled deterministic routing corpus, not real-world model accuracy. JVM elapsed routing time includes warmup.",
+  "cases": [
+    {
+      "question": "What is artificial intelligence?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is the capital of France?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Who wrote Pride and Prejudice?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Who directed Inception?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is photosynthesis?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What are mitochondria?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is gravity?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is the water cycle?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Why is the sky blue?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How do lithium batteries work?",
+      "category": "knowledge",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain recursion.",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Define entropy.",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain probability simply.",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What does CPU stand for?",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is an algorithm?",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain the difference between RAM and storage.",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How does a GPU work?",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain NPU inference.",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain how temperature is measured.",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is the role of a prime minister?",
+      "category": "definition",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is 15% of 240?",
+      "category": "math",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Local calculation"
+    },
+    {
+      "question": "What is 8 multiplied by 7?",
+      "category": "math",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Calculate 2 + 3.",
+      "category": "math",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Local calculation"
+    },
+    {
+      "question": "Explain the Pythagorean theorem.",
+      "category": "math",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How do I solve a quadratic equation?",
+      "category": "math",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "A train travels 60 km in an hour. Explain its average speed.",
+      "category": "reasoning",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "If all roses are flowers, are all flowers roses?",
+      "category": "reasoning",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Help me reason through this puzzle.",
+      "category": "reasoning",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Compare the advantages of arrays and linked lists.",
+      "category": "reasoning",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Why can correlation differ from causation?",
+      "category": "reasoning",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Write a birthday message.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Writing or supplied-text task"
+    },
+    {
+      "question": "Write a story set on Mars.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Writing or supplied-text task"
+    },
+    {
+      "question": "Write a poem about today.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Writing or supplied-text task"
+    },
+    {
+      "question": "Draft an email to my colleague.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Writing or supplied-text task"
+    },
+    {
+      "question": "Imagine a new game mechanic.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Writing or supplied-text task"
+    },
+    {
+      "question": "Help me design a game.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Brainstorm names for a space game.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Writing or supplied-text task"
+    },
+    {
+      "question": "Translate this weather sentence into Malayalam.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Writing or supplied-text task"
+    },
+    {
+      "question": "Improve this sentence.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Summarise this pasted text.",
+      "category": "creative",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Writing or supplied-text task"
+    },
+    {
+      "question": "Explain Android lifecycle.",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain binary search.",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How does web search indexing work?",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain the code I pasted.",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain the current code I pasted.",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How can I make my application faster?",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What does the current flow do?",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain my latest function.",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How do I debug a memory leak?",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Write a Kotlin coroutine example.",
+      "category": "programming",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Writing or supplied-text task"
+    },
+    {
+      "question": "Compare GPU and CPU concepts.",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Difference between RAM and storage.",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain electric current flow.",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How does Vulkan synchronization work?",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain quantization for language models.",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Why does context size affect memory?",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How does a neural network learn?",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is the difference between CPU and NPU?",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain research methods.",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is fact checking?",
+      "category": "technical",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Who was UK prime minister in 1945?",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How long did British rule India?",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Who won the 1901 Nobel Prize in Physics?",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "When did the first Moon landing happen?",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain the history of the printing press.",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What happened at Waterloo in 1815?",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Who was Ada Lovelace?",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Why did the Roman Empire decline?",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "When did World War II end?",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Who won the 2018 World Cup?",
+      "category": "history",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What about the previous example?",
+      "category": "followup",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Explain it simply.",
+      "category": "followup",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What about NPU?",
+      "category": "followup",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Make it shorter.",
+      "category": "followup",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Can it run Gemma 4?",
+      "category": "followup",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Remember our project is Cobalt Lantern.",
+      "category": "followup",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Possible credentials stay on device"
+    },
+    {
+      "question": "What was our project?",
+      "category": "followup",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Possible credentials stay on device"
+    },
+    {
+      "question": "Correct my previous sentence.",
+      "category": "followup",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What did I do today?",
+      "category": "privacy",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "How was my day today?",
+      "category": "privacy",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What is my current password?",
+      "category": "privacy",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Possible credentials stay on device"
+    },
+    {
+      "question": "What did we decide yesterday?",
+      "category": "privacy",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": true,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "കൃത്രിമ ബുദ്ധി എന്താണ്?",
+      "category": "multilingual",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "പ്രകാശസംശ്ലേഷണം വിശദീകരിക്കുക.",
+      "category": "multilingual",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "ഒരു കഥ എഴുതുക.",
+      "category": "multilingual",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "റാം എന്താണ്?",
+      "category": "multilingual",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "ഇത് ലളിതമായി വിശദീകരിക്കുക.",
+      "category": "multilingual",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "Ithu Manglishil explain cheyyu.",
+      "category": "multilingual",
+      "expected": "LOCAL",
+      "actual": "LOCAL",
+      "legacyWeb": false,
+      "reason": "Established knowledge, reasoning or conversation"
+    },
+    {
+      "question": "What's the weather in London today?",
+      "category": "weather",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "What is the current temperature in London?",
+      "category": "weather",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Weather forecast for Paris tomorrow.",
+      "category": "weather",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "What is the temperature in Kochi?",
+      "category": "weather",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Who is the current UK Prime Minister?",
+      "category": "current",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Who is the CEO of Microsoft?",
+      "category": "current",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "What is the population of Tokyo?",
+      "category": "current",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "What is the current exchange rate?",
+      "category": "current",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Who is the CM of Kerala?",
+      "category": "current",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Who is playing Doom in Avengers Doomsday?",
+      "category": "current",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "What happened in AI news today?",
+      "category": "news",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Show me recent space news.",
+      "category": "news",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "What happened in London yesterday?",
+      "category": "news",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Who won the latest F1 race?",
+      "category": "news",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Who won the 2026 Nobel Prize in Physics?",
+      "category": "news",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "What's the latest Android version?",
+      "category": "versions",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Latest Android security patch?",
+      "category": "versions",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Compare recent Android AI frameworks.",
+      "category": "versions",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Does LiteRT-LM support GPU?",
+      "category": "versions",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Which Android version is currently supported?",
+      "category": "versions",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Compare the latest specifications of these phones.",
+      "category": "products",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Compare current GPU benchmarks.",
+      "category": "products",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "What is the price of the Pixel 10?",
+      "category": "products",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Find the current price of this product.",
+      "category": "products",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Is Gemma 4 compatible with LiteRT on Android?",
+      "category": "products",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Verify this claim using official sources.",
+      "category": "verification",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Requested external evidence"
+    },
+    {
+      "question": "Search for official Gemma documentation.",
+      "category": "verification",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Requested external evidence"
+    },
+    {
+      "question": "Look up Android Vulkan documentation.",
+      "category": "verification",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Requested external evidence"
+    },
+    {
+      "question": "Explain recursion with cited sources.",
+      "category": "verification",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Requested external evidence"
+    },
+    {
+      "question": "Fact-check the 1969 Moon landing.",
+      "category": "verification",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Requested external evidence"
+    },
+    {
+      "question": "Can you search for public information about Gemma?",
+      "category": "verification",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Requested external evidence"
+    },
+    {
+      "question": "Read https:\/\/www.iana.org\/help\/example-domains",
+      "category": "verification",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Requested external evidence"
+    },
+    {
+      "question": "Verify the current weather in London.",
+      "category": "verification",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Requested external evidence"
+    },
+    {
+      "question": "How does Gemma 4 work, and what's its latest supported Android runtime?",
+      "category": "mixed",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "Explain CPUs; what are the latest GPU benchmarks?",
+      "category": "mixed",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "ഇന്ന് ലണ്ടനിലെ കാലാവസ്ഥ എന്താണ്?",
+      "category": "multilingual",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "കേരളത്തിന്റെ ഇപ്പോഴത്തെ മുഖ്യമന്ത്രി ആരാണ്?",
+      "category": "multilingual",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "ഏറ്റവും പുതിയ Android പതിപ്പ് ഏതാണ്?",
+      "category": "multilingual",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": true,
+      "reason": "Changing facts or runtime compatibility"
+    },
+    {
+      "question": "വെബിൽ Gemma തിരയുക.",
+      "category": "multilingual",
+      "expected": "WEB_GROUNDED",
+      "actual": "WEB_GROUNDED",
+      "legacyWeb": false,
+      "reason": "Requested external evidence"
+    },
+    {
+      "question": "What is the weather today?",
+      "category": "missing",
+      "expected": "CLARIFICATION",
+      "actual": "CLARIFICATION",
+      "legacyWeb": true,
+      "reason": "Missing public subject or place"
+    },
+    {
+      "question": "Who owns it?",
+      "category": "missing",
+      "expected": "CLARIFICATION",
+      "actual": "CLARIFICATION",
+      "legacyWeb": false,
+      "reason": "Missing subject"
+    },
+    {
+      "question": "Who is the mayor there?",
+      "category": "missing",
+      "expected": "CLARIFICATION",
+      "actual": "CLARIFICATION",
+      "legacyWeb": true,
+      "reason": "Missing public subject or place"
+    },
+    {
+      "question": "Latest news.",
+      "category": "missing",
+      "expected": "CLARIFICATION",
+      "actual": "CLARIFICATION",
+      "legacyWeb": true,
+      "reason": "Missing public subject or place"
+    }
+  ],
+  "localCases": 88,
+  "legacyUnnecessarySearches": 56,
+  "newUnnecessarySearches": 0,
+  "legacyRoutingNs": 15307400,
+  "newRoutingNs": 19905200
+}

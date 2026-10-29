@@ -1,0 +1,66 @@
+[
+  {
+    "backend": "CPU",
+    "prompt": "Count from one to fifty, separated by commas.",
+    "text": "From one to fifty, separated by commas, is:\n\n1, 2, 3, 4, 5, 6, 7, ",
+    "tokens": 32,
+    "tps": 26.006592,
+    "ttft": 967
+  },
+  {
+    "backend": "CPU",
+    "prompt": "What is 17 multiplied by 6? Give only the number.",
+    "text": "17 multiplied by 6 is 102. So, the answer is 102.",
+    "tokens": 23,
+    "tps": 36.88927,
+    "ttft": 289
+  },
+  {
+    "backend": "CPU",
+    "prompt": "What is 23 plus 19? Give only the number.",
+    "text": "23 + 19 = 42. So, the answer is 42.",
+    "tokens": 21,
+    "tps": 37.482212,
+    "ttft": 269
+  },
+  {
+    "backend": "CPU",
+    "prompt": "What is 9 multiplied by 7? Give only the number.",
+    "text": "9 multiplied by 7 is 63. So, the answer is 63.",
+    "tokens": 20,
+    "tps": 37.065887,
+    "ttft": 268
+  },
+  {
+    "backend": "GPU",
+    "prompt": "Count from one to fifty, separated by commas.",
+    "text": "Counting from 1 to 50, separated by commas:\n\n1, 2, 3, 4, 5, 6, ",
+    "tokens": 32,
+    "tps": 26.213432,
+    "ttft": 701
+  },
+  {
+    "backend": "GPU",
+    "prompt": "What is 17 multiplied by 6? Give only the number.",
+    "text": "17 × 6 = 102. So, the answer is 102.",
+    "tokens": 22,
+    "tps": 43.455257,
+    "ttft": 212
+  },
+  {
+    "backend": "GPU",
+    "prompt": "What is 23 plus 19? Give only the number.",
+    "text": "23 + 19 = 42. So, the answer is 42.",
+    "tokens": 21,
+    "tps": 42.31594,
+    "ttft": 196
+  },
+  {
+    "backend": "GPU",
+    "prompt": "What is 9 multiplied by 7? Give only the number.",
+    "text": "9 multiplied by 7 is 63. So the answer is 63.",
+    "tokens": 19,
+    "tps": 35.68659,
+    "ttft": 256
+  }
+]

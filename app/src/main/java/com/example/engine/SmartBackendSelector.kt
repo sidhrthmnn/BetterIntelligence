@@ -26,7 +26,7 @@ class SmartBackendSelector(context: Context? = null, private val now: () -> Long
         // not a crashed previous launch simply because another facade is created.
         private val processToken = java.util.UUID.randomUUID().toString()
         const val RUNTIME = "llama-0.7.0-vulkan-policy-4"
-        const val LITERT_RUNTIME = "litertlm-0.18.0-policy-5-f32-gemma"
+        const val LITERT_RUNTIME = "litertlm-0.18.0-policy-7-f32-sd-off-numeric-probes"
         const val MAX_AGE_MS = 30L * 24 * 60 * 60 * 1000
         const val FAILURE_COOLDOWN_MS = 24L * 60 * 60 * 1000
         fun key(vararg parts: Any): String = MessageDigest.getInstance("SHA-256").digest(parts.joinToString("|").toByteArray())
@@ -39,6 +39,7 @@ class SmartBackendSelector(context: Context? = null, private val now: () -> Long
         }
     }
     private val prefs = context?.getSharedPreferences("backend_decisions", Context.MODE_PRIVATE)
+    private val crashSignature = key(android.os.Build.FINGERPRINT.orEmpty(), RUNTIME, LITERT_RUNTIME, QualcommNpuSupport.RUNTIME)
     private val cache = runCatching { JSONObject(prefs?.getString("cache", "{}") ?: "{}") }.getOrDefault(JSONObject())
     private val failures = runCatching { JSONObject(prefs?.getString("failures", "{}") ?: "{}") }.getOrDefault(JSONObject())
     init {
@@ -46,6 +47,10 @@ class SmartBackendSelector(context: Context? = null, private val now: () -> Long
         if (prefs?.getString("pending_process", null) != processToken)
             prefs?.getString("pending", null)?.let {
                 failed(it, "Previous ${prefs.getString("pending_backend", "GPU")} attempt did not finish")
+                // A native crash can recur with a different layer/context key.
+                // Quarantine automatic accelerators across configurations, while
+                // retaining CPU. Firmware/runtime changes or explicit reset clear it.
+                prefs.edit().putLong("crash_time", now()).putString("crash_signature", crashSignature).commit()
             }
     }
     fun cached(key: String, gpuAvailable: Boolean, availableMb: Long? = null, npuAvailable: Boolean = false): BackendMeasurement? = runCatching {
@@ -82,22 +87,37 @@ class SmartBackendSelector(context: Context? = null, private val now: () -> Long
         .put("init", m.initializationMs).put("thermalBefore", m.thermalBefore).put("thermalAfter", m.thermalAfter)
         .put("batteryDeltaC", m.batteryDeltaC.toDouble()).put("stable", m.stable)
     fun minimumAvailableMb(key: String): Long = failures.optJSONObject(key)?.takeIf { now() - it.optLong("time") in 0..MAX_AGE_MS }?.optLong("minimumAvailableMb") ?: 0
-    fun blocked(key: String, availableMb: Long? = null): Boolean = failures.optJSONObject(key)?.let {
+    private fun crashQuarantined() = prefs?.getString("crash_signature", null) == crashSignature &&
+        now() - (prefs?.getLong("crash_time", 0) ?: 0) in 0..FAILURE_COOLDOWN_MS
+    fun blocked(key: String, availableMb: Long? = null): Boolean = crashQuarantined() || (failures.optJSONObject(key)?.let {
         val minimum = minimumAvailableMb(key)
         (minimum > 0 && (availableMb == null || availableMb < minimum)) || now() - it.optLong("time") in 0..it.optLong("cooldown", FAILURE_COOLDOWN_MS)
-    } ?: false
-    fun failureReason(key: String): String = failures.optJSONObject(key)?.optString("reason").orEmpty()
+    } ?: false)
+    fun failureReason(key: String): String = failures.optJSONObject(key)?.optString("reason") ?: if (crashQuarantined())
+        "A previous native accelerator attempt did not finish; automatic retries are paused" else ""
     fun beginGpuAttempt(key: String) { prefs?.edit()?.putString("pending", key)?.putString("pending_backend", "GPU")?.putString("pending_process", processToken)?.commit() }
     fun endGpuAttempt() { prefs?.edit()?.remove("pending")?.remove("pending_backend")?.remove("pending_process")?.commit() }
     fun beginNpuAttempt(key: String) { prefs?.edit()?.putString("pending", key)?.putString("pending_backend", "NPU")?.putString("pending_process", processToken)?.commit() }
     fun failed(key: String, reason: String, minimumAvailableMb: Long = 0) {
         if (failures.length() >= 32 && !failures.has(key)) failures.remove(failures.keys().next())
         // Resource pressure is transient; don't blacklist a healthy driver for a full day.
-        val resourceFailure = listOf("memory", "thermal", "out of resources", "allocation", "oom").any { it in reason.lowercase() }
+        val resourceFailure = minimumAvailableMb > 0 || listOf("memory", "thermal", "out of resources", "oom").any { it in reason.lowercase() }
         failures.put(key, JSONObject().put("time", now()).put("reason", reason)
             .put("minimumAvailableMb", minimumAvailableMb)
-            .put("cooldown", if (resourceFailure) 5L * 60 * 1000 else FAILURE_COOLDOWN_MS)); cache.remove(key)
+            .put("resource", resourceFailure)
+            .put("cooldown", if (resourceFailure) 5L * 60 * 1000 else FAILURE_COOLDOWN_MS))
+        // Pressure does not invalidate a previously correct GPU measurement.
+        // Driver/correctness failures do; they must pass validation again.
+        if (!resourceFailure) cache.remove(key)
         prefs?.edit()?.putString("cache", cache.toString())?.putString("failures", failures.toString())?.remove("pending")?.remove("pending_backend")?.remove("pending_process")?.commit()
+    }
+    fun reconsiderResources(key: String, availableMb: Long, thermal: Int, lowMemory: Boolean): Boolean {
+        val failure = failures.optJSONObject(key) ?: return false
+        if (!failure.optBoolean("resource") || lowMemory || thermal >= 2 ||
+            now() - failure.optLong("time") < 30_000 || availableMb < maxOf(768, failure.optLong("minimumAvailableMb"))) return false
+        failures.remove(key)
+        prefs?.edit()?.putString("failures", failures.toString())?.apply()
+        return true
     }
     fun reset() {
         cache.keys().asSequence().toList().forEach { cache.remove(it) }

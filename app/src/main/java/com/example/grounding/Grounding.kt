@@ -27,7 +27,8 @@ enum class ResearchFailure(val notice: String) {
     INSUFFICIENT("I couldn't find enough relevant evidence to answer this question. Try a more specific question or a public HTTPS source."),
     INACCESSIBLE("The sources could not be read. They may be restricted or temporarily unavailable. Try another public HTTPS source."),
     DISCOVERY_UNAVAILABLE("Web discovery is unavailable. You can still provide a public HTTPS source to read directly."),
-    TIMEOUT("Web research timed out. Try a narrower question or a public HTTPS source.")
+    TIMEOUT("Web research timed out. Try a narrower question or a public HTTPS source."),
+    BLOCKED("The search provider is temporarily blocking requests. Try a public HTTPS source instead.")
 }
 data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: ResearchFailure? = null, val conflicts: List<String> = emptyList())
 
@@ -37,7 +38,7 @@ data class EvidenceSource(val id: Int, val title: String, val url: String, val e
 
 data class PreparedEvidence(val prompt: String, val sources: List<EvidenceSource>)
 
-data class GroundingResult(val status: String = "LOCAL", val sources: List<EvidenceSource> = emptyList(), val notice: String = "") {
+data class GroundingResult(val status: String = "LOCAL", val sources: List<EvidenceSource> = emptyList(), val notice: String = "", val failure: ResearchFailure? = null) {
     fun json(): String = JSONArray().apply { sources.forEach { source -> put(JSONObject()
         .put("id", source.id).put("title", source.title).put("url", source.url).put("excerpt", source.excerpt)
         .put("retrievedAt", source.retrievedAt).put("updatedAt", source.updatedAt).put("kind", source.kind).put("dateKind", source.dateKind)
@@ -61,13 +62,7 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
 object GroundingPolicy {
     fun containsCredential(question: String): Boolean = Regex("(?i)(password|api[_ -]?key|secret|access[_ -]?token)\\s*[:=]\\s*\\S+|-----BEGIN .*PRIVATE KEY-----|\\bBearer\\s+[A-Za-z0-9._-]{12,}").containsMatchIn(question)
     fun shouldSearch(allowed: Boolean, mode: GroundingMode, question: String): Boolean {
-        if (!allowed || mode == GroundingMode.OFF) return false
-        if (ResearchRouting.localOnly(question)) return false
-        // Explicit decimal calculations are reasoning, not changing web facts.
-        // A real local calculation supplies the same value in every web mode.
-        if (com.example.engine.LocalCalculation.evaluate(question) != null) return false
-        if (mode == GroundingMode.ON) return !ResearchRouting.explicitlyLocalTransformation(question)
-        return ResearchRouting.decide(question).search
+        return allowed && mode != GroundingMode.OFF && AnswerRoutingPolicy.decide(question, allowed, mode).path != AnswerPath.LOCAL
     }
     fun publicHttpsUrl(value: String): Boolean {
         val url = value.toHttpUrlOrNull() ?: return false
@@ -261,15 +256,15 @@ class SearchHttp internal constructor(
     }
 }
 
-/** Chat-only coordinator. Cache contains public evidence and query keys in RAM for five minutes. */
-class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchProvider>) {
+/** Chat-only, bounded public evidence cache; live observations expire quickly. */
+class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchProvider>, private val now: () -> Long = System::currentTimeMillis) {
     private val cache = LinkedHashMap<String, Pair<Long, List<EvidenceSource>>>()
     private var epoch = 0L
     @Synchronized fun clearTemporaryData() { epoch++; cache.clear() }
     suspend fun retrieve(question: String, allowed: Boolean, mode: GroundingMode, provider: SearchProviderId,
         progress: (ResearchStage) -> Unit = {}): GroundingResult {
-        if (!GroundingPolicy.shouldSearch(allowed, mode, question)) return GroundingResult()
         if (GroundingPolicy.containsCredential(question)) return GroundingResult("PRIVACY_BLOCKED", notice = "This question appears to contain credentials. Search was skipped; this answer is local-only.")
+        if (!GroundingPolicy.shouldSearch(allowed, mode, question)) return GroundingResult()
         if (ConversationalResearch.needsSubject(question)) return GroundingResult("NEEDS_SUBJECT", notice = ConversationalResearch.askSubject)
         if (ConversationalResearch.needsNewsTopic(question)) return GroundingResult("NEEDS_SUBJECT", notice = ConversationalResearch.askNewsTopic)
         if (ConversationalResearch.needsPlace(question)) return GroundingResult("NEEDS_LOCATION", notice = ConversationalResearch.askPlace)
@@ -282,18 +277,19 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
         val key = "$provider:${java.time.LocalDate.now()}:$question"
         val startedEpoch = synchronized(this) { epoch }
         val recheck = ConversationalResearch.isRecheck(question) || Regex("(?i)\\b(?:check|search|verify) again\\b").containsMatchIn(question)
-        val cached = synchronized(this) { cache[key]?.takeIf { !recheck && System.currentTimeMillis() - it.first < 300_000 }?.second }
+        val lifetime = if (ConversationalResearch.isWeather(question)) 60_000L else if (AnswerRoutingPolicy.decide(question).requiresLive) 300_000L else 900_000L
+        val cached = synchronized(this) { cache[key]?.takeIf { !recheck && now() - it.first in 0 until lifetime }?.second }
         return try {
             val outcome = if (cached != null) ResearchOutcome(cached) else kotlinx.coroutines.withTimeoutOrNull(30_000) {
                 checkNotNull(providers[provider]).research(question, progress)
-            } ?: return GroundingResult("SEARCH_FAILED", notice = ResearchFailure.TIMEOUT.notice)
+            } ?: return GroundingResult("SEARCH_FAILED", notice = ResearchFailure.TIMEOUT.notice, failure = ResearchFailure.TIMEOUT)
             val sources = ConversationalResearch.bindPublicPlace(question, outcome.sources)
-            if (sources.isEmpty()) GroundingResult("SEARCH_FAILED", notice = (outcome.failure ?: ResearchFailure.INSUFFICIENT).notice)
+            if (sources.isEmpty()) GroundingResult("SEARCH_FAILED", notice = (outcome.failure ?: ResearchFailure.INSUFFICIENT).notice, failure = outcome.failure ?: ResearchFailure.INSUFFICIENT)
             else {
                 synchronized(this) {
-                    if (epoch == startedEpoch) {
+                    if (epoch == startedEpoch && cached == null) {
                         if (cache.size >= 8) cache.remove(cache.keys.first())
-                        cache[key] = System.currentTimeMillis() to sources
+                        cache[key] = now() to sources
                     }
                 }
                 GroundingResult("SOURCES_RETRIEVED", sources)
@@ -301,7 +297,7 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
             // Deliberately omit exception causes: HTTP exceptions can include private request URLs.
-            GroundingResult("SEARCH_FAILED", notice = "Live sources unavailable. Check your connection or try a public HTTPS link.")
+            GroundingResult("SEARCH_FAILED", notice = "Live sources unavailable. Check your connection or try a public HTTPS link.", failure = ResearchFailure.DISCOVERY_UNAVAILABLE)
         }
     }
 }

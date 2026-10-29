@@ -4,7 +4,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.jsoup.Jsoup
 
 data class ResearchCandidate(val url: String, val title: String, val routingHint: String = "")
-enum class DiscoveryState { FOUND, EMPTY, BLOCKED, UNAVAILABLE }
+enum class DiscoveryState { FOUND, EMPTY, BLOCKED, UNAVAILABLE, TIMEOUT }
 data class DiscoveryResult(val candidates: List<ResearchCandidate>, val state: DiscoveryState)
 fun interface DiscoveryProvider {
     suspend fun discover(query: ResearchQuery, broad: Boolean): DiscoveryResult

@@ -136,9 +136,9 @@ class ResearchReliabilityTest {
         val s = source("Orion purchase\nRepresentative example: Purchase amount £1,200. Monthly payment £107.72 for 12 months.", "Orion finance")
         assertEquals(AnswerSupport.INSUFFICIENT, GroundingPolicy.checkAnswer("Orion monthly payment is £107.72 for 12 months [1].", listOf(s), "Orion cost?").support)
         assertEquals(AnswerSupport.INSUFFICIENT, EvidenceAnswer.resolve("Orion monthly payment is £107.72 for 12 months [1].", listOf(s), "Orion cost?").support)
-        assertTrue(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "How long did British rule India?"))
+        assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "How long did British rule India?"))
         assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "How long did I spend on my private project?"))
-        assertTrue(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "Why does human ancestry affect appearance and evolution?"))
+        assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "Why does human ancestry affect appearance and evolution?"))
     }
 
     @Test fun publicPlaceSurvivesGenericSourceTitlesAndOldHeadingOnlySources() {

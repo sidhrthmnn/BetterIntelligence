@@ -45,12 +45,6 @@ object FactualResearch {
             !headlineOnly(body, source.title) && castingRelation(body) && !speculativeCasting(question, body)
         })
 
-    fun publicLookup(question: String): Boolean {
-        // Context-only requests, games and supplied personal information stay local.
-        if (Regex("(?i)\\b(?:my|our|we|your|you|I)\\b|\\b(?:our game|game item|guessing game)\\b").containsMatchIn(question)) return false
-        if (Regex("(?i)\\b(?:it|its|him|her|them|their|this|that)\\b").containsMatchIn(question) &&
-            !question.contains("(Public source topic:") && ResearchPlanner.subjects(question).isEmpty()) return false
-        return Regex("(?i)^\\s*(?:who(?:['’]s)?|what(?:['’]s)?|when|where|which|why|how|is|are|was|were|does|do|did|can|could|explain|define|describe|list|difference between)\\b").containsMatchIn(question) ||
-            Regex("(?i)^\\s*(?:tell me about|give me (?:information|facts) (?:about|on))\\b").containsMatchIn(question) || isCasting(question)
-    }
+    /** Compatibility helper; question words alone are never a research trigger. */
+    fun publicLookup(question: String): Boolean = AnswerRoutingPolicy.decide(question).path != AnswerPath.LOCAL
 }

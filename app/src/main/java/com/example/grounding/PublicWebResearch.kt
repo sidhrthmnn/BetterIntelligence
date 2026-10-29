@@ -52,6 +52,7 @@ fun interface WebFetcher {
 class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private val discoveryOverride: DiscoveryProvider? = null,
     private val backupAllowed: suspend () -> Boolean = { false }) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
+    private val htmlCircuit = DiscoveryCircuit()
     companion object {
         fun candidates(html: String): List<String> = HtmlDiscovery.links(WebDocument(
             "https://html.duckduckgo.com/html/", html, "text/html")).map { it.url }
@@ -68,7 +69,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val permitted: suspend (String) -> Boolean = { robots.allowed(it, transport) }
         val explicit = plan.explicitUrls
         val query = ResearchQuery(question)
-        val discovery = discoveryOverride ?: FreeSearchDiscovery(HtmlSearchDiscovery(transport, permitted), MwmblDiscovery(transport, permitted), backupAllowed)
+        val discovery = discoveryOverride ?: FreeSearchDiscovery(HtmlSearchDiscovery(transport, permitted), MwmblDiscovery(transport, permitted), htmlCircuit, backupAllowed)
         var discoveryFailed = false
         var blocked = false
         var discoveryTimedOut = false
@@ -80,8 +81,9 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
             } ?: run { discoveryTimedOut = true; return null }
+            if (result.state == DiscoveryState.TIMEOUT) { discoveryTimedOut = true; return null }
             if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
-                discoveryFailed = true; blocked = true; return null
+                discoveryFailed = true; blocked = result.state == DiscoveryState.BLOCKED; return null
             }
             return result.candidates.filter { query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) &&
                 !FactualResearch.speculativeCasting(question, it.title) }
@@ -93,7 +95,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             // At most three discovery pages in total, including reformulation.
             // Sequential discovery stops immediately on a challenge/denial.
             var searches = 0
-            for (search in plan.searches) {
+            for (search in plan.searches.take(1)) {
                 val result = discover(search, false); searches++
                 candidates += result.orEmpty()
                 if (result == null || blocked) break
@@ -106,8 +108,20 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             candidates
         }
         val seen = mutableSetOf<String>()
+        val attempted = mutableSetOf<String>()
         val domains = mutableMapOf<String, Int>()
-        val unique = links.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }
+        val reads = Semaphore(2)
+        val childReads = java.util.concurrent.atomic.AtomicInteger(1)
+        val sources = mutableListOf<EvidenceSource>()
+        var readCount = 0
+        fun enough(): Boolean {
+            val selected = EvidenceRanking.select(sources, plan)
+            val covered = selected.flatMap { plan.coverage(it.excerpt) }.toSet()
+            return covered.size == plan.focuses.size && (selected.size >= 2 || selected.size == 1 &&
+                (explicit.isNotEmpty() || EvidenceRanking.primaryRelevance(selected.single().url, question) > 0)) && EvidenceRanking.conflicts(selected).isEmpty()
+        }
+        suspend fun readCandidates(candidates: List<ResearchCandidate>) {
+        val unique = candidates.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }.filter { it.url !in attempted }
         val ordered = unique
             .sortedWith(compareBy<ResearchCandidate> { candidate ->
                 // Prefer the first result from each publisher before a second.
@@ -116,14 +130,13 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 val combined = "${it.title} ${it.routingHint}".trim()
                 plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question)
             })
-            .filter { domains.merge(domain(it.url), 1, Int::plus)!! <= 2 }.take(8)
-        val reads = Semaphore(2)
-        val childReads = java.util.concurrent.atomic.AtomicInteger(1)
-        val sources = mutableListOf<EvidenceSource>()
+            .filter { domains.getOrDefault(domain(it.url), 0) < 2 }.take((8 - readCount).coerceAtLeast(0))
         if (ordered.isNotEmpty()) progress(ResearchStage.READING)
         // Read in waves: stop after enough evidence instead of fetching every result.
-        for (wave in ordered.chunked(4)) {
-            val fetched = wave.map { candidate -> async {
+        for (wave in ordered.chunked(2)) {
+            val admitted = wave.filter { attempted.add(it.url) && domains.merge(domain(it.url), 1, Int::plus)!! <= 2 }
+            readCount += admitted.size
+            val fetched = admitted.map { candidate -> async {
                 reads.withPermit {
                     var finished = false
                     val result = withTimeoutOrNull(7_000) {
@@ -145,18 +158,27 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 }
             } }.awaitAll().filterNotNull()
             fetched.forEach { if (seen.add(it.url)) sources += it }
-            val selected = EvidenceRanking.select(sources, plan)
-            val covered = selected.flatMap { plan.coverage(it.excerpt) }.toSet()
-            val simple = plan.focuses.size == 1 && ResearchIntent.COMPARISON !in plan.intents
-            if ((selected.size >= 3 || simple && selected.size >= 1 && explicit.isNotEmpty()) && covered.size == plan.focuses.size) break
+            if (enough()) break
+        }
+        }
+        readCandidates(links)
+        // Expand only after actual passages fail to cover the requested facets.
+        if (explicit.isEmpty() && !enough() && !blocked && !discoveryFailed && !discoveryTimedOut) {
+            for (search in plan.searches.drop(1)) {
+                if (readCount >= 8) break
+                progress(ResearchStage.SEARCHING)
+                readCandidates(discover(search, false).orEmpty())
+                if (enough() || blocked || discoveryFailed || discoveryTimedOut) break
+            }
         }
         progress(ResearchStage.COMPARING)
         val selected = EvidenceRanking.select(sources, plan)
         ResearchOutcome(selected, when {
             selected.isNotEmpty() -> null
             discoveryTimedOut || readTimeouts.get() > 0 -> ResearchFailure.TIMEOUT
-            ordered.isEmpty() && discoveryFailed -> ResearchFailure.DISCOVERY_UNAVAILABLE
-            ordered.isNotEmpty() && failedReads.get() >= ordered.size -> ResearchFailure.INACCESSIBLE
+            readCount == 0 && blocked -> ResearchFailure.BLOCKED
+            readCount == 0 && discoveryFailed -> ResearchFailure.DISCOVERY_UNAVAILABLE
+            readCount > 0 && failedReads.get() >= readCount -> ResearchFailure.INACCESSIBLE
             else -> ResearchFailure.INSUFFICIENT
         }, EvidenceRanking.conflicts(selected))
     }
