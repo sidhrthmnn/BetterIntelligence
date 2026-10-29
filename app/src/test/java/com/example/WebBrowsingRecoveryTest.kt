@@ -173,4 +173,53 @@ class WebBrowsingRecoveryTest {
         assertEquals(answer, NewsIntent.withReportTimes("Explain elections", answer, listOf(source)))
         assertFalse(NewsIntent.withReportTimes("How is the election going on in Israel?", "No clear winner [1].", listOf(source)).contains(source.updatedAt))
     }
+
+    @Test fun smallModelEvidenceKeepsTheReviewRatingInsteadOfPublisherControls() {
+        val title = "Jailer 2 movie review"
+        val html = "<title>$title</title><article><h1>$title</h1><p>You are logged in</p><p>Loading...</p><p>You don’t have any Active Subscription.</p>" +
+            "<p>Jailer 2 movie cast: Actor One, Actor Two. Jailer 2 movie director: Director One.</p>" +
+            "<p>The critic rated Jailer 2 at 2.5 stars, praising its leading performance but criticising the uneven screenplay.</p></article>"
+        val q = "How is Jailer 2 movie?"
+        val source = WebPageExtractor.article(WebDocument("https://publisher.example/review", html, "text/html"), 1, q)!!
+        val prepared = GroundingPolicy.prepareEvidence(q, listOf(source), 6000)
+        assertTrue(prepared.sources.single().excerpt.contains("2.5 stars"))
+        assertFalse(prepared.prompt.contains("Loading...")); assertFalse(prepared.prompt.contains("Active Subscription"))
+        val result = EvidenceAnswer.resolve("Jailer 2 was directed by Director One [1].", prepared.sources, q)
+        assertTrue(result.text, result.text.contains("2.5 stars")); assertTrue(result.sourceExtract)
+    }
+
+    @Test fun electionCountSurvivesContextShrinkingBeforeBackgroundAllegations() {
+        val q = "How is the election going on in Israel?"
+        val title = "Israel election latest"
+        val source = EvidenceSource(1, title, "https://publisher.example/count", listOf(
+            "$title\nListen (4 mins)", "$title\nSave", "$title\nIsrael election leaders exchanged allegations about the election campaign.",
+            "$title\nWith 90 percent of votes counted in Israel, no bloc has a majority. Coalition talks continue.").joinToString("\n\n"), 1,
+            java.time.LocalDate.now().toString(), "WEB_PAGE", "PUBLISHED")
+        val prepared = GroundingPolicy.prepareEvidence(q, listOf(source), 6000)
+        assertTrue(prepared.sources.single().excerpt.contains("90 percent"))
+        assertFalse(prepared.prompt.contains("Listen (4 mins)"))
+        val resolved = EvidenceAnswer.resolve("Israel election leaders exchanged allegations about the election campaign [1].", prepared.sources, q)
+        assertTrue(resolved.text, resolved.text.contains("90 percent"))
+    }
+
+    @Test fun documentationBodyDoesNotNeedToCallItselfDocumentation() {
+        val q = "Search Kotlin coroutines documentation"
+        val html = "<title>Coroutines | Kotlin Documentation</title><meta property='og:title' content='Coroutines | Kotlin'><main><h1>Coroutines</h1>" +
+            "<p>Kotlin uses coroutines for asynchronous programming. Coroutines suspend execution without blocking system resources and resume later.</p></main>"
+        val source = WebPageExtractor.article(WebDocument("https://kotlinlang.org/docs/coroutines-overview.html", html, "text/html"), 1, q)!!
+        assertEquals("Coroutines | Kotlin", source.title)
+        assertTrue(EvidenceRanking.acceptable(source, ResearchPlanner.plan(q)))
+    }
+
+    @Test fun directPageSummaryNeverRequiresThePublisherToRepeatTheInstruction() {
+        val q = "Summarize https://www.iana.org/help/example-domains"
+        assertTrue(ResearchPlanner.subjects(q).isEmpty())
+        val source = EvidenceSource(1, "Example Domains", "https://www.iana.org/help/example-domains",
+            "Example Domains\nInstructions and Guides\n\nExample Domains\nExample domains are maintained for documentation purposes. They are not available for registration or transfer.", 1)
+        val result = EvidenceAnswer.resolve("An unsupported uncited summary.", listOf(source), q)
+        assertTrue(result.sourceExtract)
+        assertTrue(result.text, result.text.contains("not available for registration or transfer"))
+        assertFalse(result.text.contains("Instructions and Guides"))
+        assertFalse(EvidenceAnswer.resolve("An unsupported uncited summary.", listOf(source), "What is this site's owner?").sourceExtract)
+    }
 }

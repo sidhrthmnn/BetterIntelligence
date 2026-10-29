@@ -106,7 +106,8 @@ class ChatProductDeviceTest {
             record("web-researched-answer", grounded)
             assertTrue(grounded.messageState in setOf("COMPLETE", "LENGTH_LIMIT"))
             assertTrue("No actual page text retrieved", GroundingResult.sources(grounded.sourcesJson).isNotEmpty())
-            assertTrue(grounded.groundingStatus in setOf("EVIDENCE_CITED", "CITATIONS_MISSING"))
+            assertTrue("Direct page summary failed: ${grounded.content}", grounded.groundingStatus in setOf("EVIDENCE_CITED", "PARTIALLY_SUPPORTED", "SOURCE_EXCERPTS"))
+            assertTrue(grounded.content, Regex("(?i)example\\.com|example domains|documentation purposes").containsMatchIn(grounded.content))
             assertFalse(Regex("https?://").containsMatchIn(grounded.content))
             screenshot(context, "chat-web-sources.png")
             // A rejected local URL must not be sent to search or called grounded.

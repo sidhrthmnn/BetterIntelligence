@@ -46,7 +46,7 @@ object EvidenceRanking {
         val directAnswer = if (FactualResearch.isCasting(plan.question) && FactualResearch.usable(source, plan.question)) 25 else 0
         val definition = if (FactualResearch.definitionLine(source.excerpt, plan.question)) 25 else 0
         return q.score(text) + entityCoverage * 8 + plan.coverage(text).size * 5 + provenance + incumbentBonus + weatherQuality + directAnswer + definition + primaryRelevance(source.url, plan.question) +
-            minOf(4, source.excerpt.length / 300)
+            minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question) / 2
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
         if (source.kind == "INSTANT_ANSWER" && (source.discoveryProvider != LegacyTopicEvidence.providerName ||

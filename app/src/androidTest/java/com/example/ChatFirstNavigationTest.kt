@@ -24,6 +24,7 @@ class ChatFirstNavigationTest {
         screenshot("qwen-1.7b-beta.png")
         compose.onNodeWithTag("navigate_back").performClick()
         openSetting("Web & grounding")
+        compose.onNodeWithTag("web_settings_list").performScrollToNode(hasText("Find, read and cite"))
         compose.onNodeWithText("Find, read and cite").assertExists()
         compose.onNodeWithText("Search provider").assertDoesNotExist()
         compose.onNodeWithText("Brave configuration").assertDoesNotExist()

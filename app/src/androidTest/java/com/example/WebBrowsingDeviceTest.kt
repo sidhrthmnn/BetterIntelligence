@@ -35,6 +35,7 @@ class WebBrowsingDeviceTest {
             File(context.filesDir, "web-browsing-device.json").writeText(rows.toString(2))
             assertEquals(question, AnswerPath.WEB_GROUNDED, AnswerRoutingPolicy.decide(question).path)
             assertTrue(result.sources.all { it.kind == "WEB_PAGE" && it.discoveryProvider == "Exa" })
+            assertTrue("No readable evidence for $question: ${result.failure}", result.sources.isNotEmpty())
             assertFalse(requests.any { "mwmbl.org" in it || "api.duckduckgo.com" in it || "html.duckduckgo.com" in it || "lite.duckduckgo.com" in it })
         }
         val doom = rows.getJSONObject(0).getJSONArray("sources").toString()
