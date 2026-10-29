@@ -10,7 +10,7 @@ object EvidenceAnswer {
         val checked = GroundingPolicy.checkAnswer(draft, sources, question)
         val weather = ConversationalResearch.isWeather(question)
         val missingTemperature = weather && !hasTemperature(checked.text)
-        val labelledWeather = weather && sources.any { Regex("(?i)observed temperature:|today forecast: high").containsMatchIn(it.excerpt) }
+        val labelledWeather = weather && sources.any { Regex("(?i)observed temperature:|(?:today|tonight) forecast: (?:high|low)").containsMatchIn(it.excerpt) }
         val definitionMissing = FactualResearch.definitionTopic(question) != null && !FactualResearch.definitionLine(checked.text, question)
         if (checked.support != AnswerSupport.INSUFFICIENT && !missingTemperature && !labelledWeather && !definitionMissing) return checked
         val query = ResearchQuery(question)
@@ -42,7 +42,7 @@ object EvidenceAnswer {
             val weatherEvidence = !weather || hasTemperature(text) &&
                 Regex("(?i)\\b(observed|observation|today|tonight|forecast|high|low|maximum|minimum)\\b").containsMatchIn(text) &&
                 !Regex("(?i)photo|weather watchers|historical average|upcoming days|monthly average").containsMatchIn(text) &&
-                (!labelledWeather || Regex("(?i)observed temperature:|today forecast: high").containsMatchIn(text))
+                (!labelledWeather || Regex("(?i)observed temperature:|(?:today|tonight) forecast: (?:high|low)").containsMatchIn(text))
             if (text.length !in 25..700 || !subject || !topical || boilerplate || wrongRole || !current || !weatherEvidence ||
                 EvidenceRanking.contextOnly(source, plan)) null
             else Extract(source, text, query.score(text) + FactualResearch.definitionQuality(body, question) + (if (hasTemperature(text)) 35 else 0) +

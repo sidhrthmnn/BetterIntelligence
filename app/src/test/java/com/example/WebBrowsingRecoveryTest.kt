@@ -120,4 +120,22 @@ class WebBrowsingRecoveryTest {
         assertEquals("https://first.example/orion", result.sources.single().url)
         assertNull(result.failure)
     }
+
+    @Test fun explicitlyLabelledWeatherSurvivesMissingDegreeGlyphAndNightForecast() {
+        val day = java.time.LocalDate.now()
+        val month = day.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
+        for (glyph in listOf("°", "\uFFFD", "")) {
+            val html = "<title>London - BBC Weather</title><main><div class='WeatherObservationsContainer'><div class='ObservationsContainerText'>Observed at, 20:00 GMT ${day.dayOfMonth} $month</div><span>Temperature 13$glyph Celsius</span><span>Temperature 56$glyph Fahrenheit</span></div></main>"
+            val source = WebPageExtractor.article(WebDocument("https://www.bbc.com/weather/2643743", html, "text/html"), 1, "Weather in London today")!!
+            assertTrue(source.excerpt, source.excerpt.contains("Observed temperature: 13 °C (56 °F)."))
+            assertTrue(EvidenceRanking.acceptable(source, ResearchPlanner.plan("Weather in London today")))
+            assertTrue(EvidenceAnswer.resolve("The weather is mild [1].", listOf(source), "Weather in London today").text.contains("13 °C"))
+        }
+        val night = org.jsoup.Jsoup.parse("<a id='daylink-0'>Tonight<span class='wr-day-temperature__low'><span class='wr-value--temperature--c'>8°</span></span></a>")
+        val text = WeatherPageEvidence.blocks(night, "London - BBC Weather", "https://www.bbc.com/weather/2643743").single()
+        assertTrue(text.contains("Tonight forecast: low 8 °C.")); assertFalse(text.contains("Observed temperature"))
+        assertTrue(WeatherPageEvidence.current(text, day))
+        val ambiguous = org.jsoup.Jsoup.parse("<div class='WeatherObservationsContainer'><div class='ObservationsContainerText'>Observed at, 20:00 GMT</div>Temperature 13</div>")
+        assertTrue(WeatherPageEvidence.blocks(ambiguous, "London", "https://www.bbc.com/weather/2643743").isEmpty())
+    }
 }
