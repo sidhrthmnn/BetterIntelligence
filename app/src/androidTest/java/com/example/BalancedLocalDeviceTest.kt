@@ -73,6 +73,9 @@ class BalancedLocalDeviceTest {
             ask("Explain recursion in one short sentence.", "LOCAL", Regex("(?i)itself|it.self|recursive"))
             ask("What is the capital of France? Give only the city.", "LOCAL", Regex("(?i)Paris"))
             assertEquals(0, queries.size)
+            ask("What's happening in france now", "WEB_UNAVAILABLE", Regex("couldn't check"))
+            ask("What's happening in France?", "WEB_UNAVAILABLE", Regex("couldn't check"))
+            assertEquals(2, queries.size)
             ask("What is the current temperature in London?", "WEB_UNAVAILABLE", Regex("couldn't check"))
             ask("Verify this claim using official sources: Orion supports Vulkan.", "WEB_UNAVAILABLE", Regex("couldn't verify"))
             ask("How does Gemma 4 work, and what's its latest supported Android runtime?", "LOCAL_WITH_WEB_GAP", Regex("couldn't check the current"))
@@ -84,7 +87,7 @@ class BalancedLocalDeviceTest {
             compose.waitUntil(10_000) { !vm.webAllowed.value }
             val calls = queries.size
             ask("Write a one-line birthday greeting.", "LOCAL")
-            ask("What's the weather in London today?", "WEB_UNAVAILABLE", Regex("couldn't check"))
+            ask("What's the weather in London today?", "WEB_DISABLED", Regex("Web research is off"))
             assertEquals(calls, queries.size)
             compose.runOnUiThread {
                 vm.setWebAllowed(true)

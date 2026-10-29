@@ -8,6 +8,7 @@ object AnswerSourceStatus {
         "SOURCE_EXCERPTS" -> "Source excerpt · Check reported time"
         "CITATIONS_MISSING" -> "Sources retrieved · Answer not verified"
         "SEARCH_FAILED", "WEB_UNAVAILABLE" -> "Web unavailable"
+        "WEB_DISABLED" -> "Web research is off"
         "LOCAL_WEB_UNAVAILABLE" -> "On-device · Web unavailable"
         "LOCAL_WITH_WEB_GAP" -> "On-device · Current information unavailable"
         "UNVERIFIED_PARTIAL" -> "Partial draft · Not verified"

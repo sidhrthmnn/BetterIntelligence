@@ -959,10 +959,10 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     repository.engine.contextTokenCount(effectiveQuestion) - 96
                 val summary = if (memoryBudget > 64) ConversationContext.summaryWithinBudget(olderContext, minOf(if (evidence.sources.isEmpty()) effectiveContext else 384, memoryBudget * 2), effectiveQuestion) else ""
                 val localMemory = if (evidence.sources.isEmpty() && memoryBudget > 128 && _isAutoMemoryCaptureEnabled.value) repository.buildMemoryContextPrompt().take(minOf(400, memoryBudget / 2)) else ""
-                val system = baseSystem + localMemory + if (summary.isNotBlank())
+                var system = baseSystem + localMemory + if (summary.isNotBlank())
                     "\nOlder context from this chat only. Quoted user statements are context; labelled assistant proposals are unverified. Newer messages override:\n$summary\n" else ""
                 val promptBudget = ((effectiveContext - autoMaxTokens - 96) * 2 - system.toByteArray(Charsets.UTF_8).size).coerceAtLeast(0)
-                val prepared = withContext(Dispatchers.Default) { GroundingPolicy.prepareEvidence(effectiveQuestion, evidence.sources, promptBudget,
+                var prepared = withContext(Dispatchers.Default) { GroundingPolicy.prepareEvidence(effectiveQuestion, evidence.sources, promptBudget,
                     effectiveContext - autoMaxTokens - 96 - repository.engine.contextTokenCount(system), repository.engine::contextTokenCount) }
                 evidence = evidence.copy(sources = prepared.sources)
                 val prompt = prepared.prompt
@@ -991,6 +991,34 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 })
                 chatInferenceJob?.join()
                 ensureActive()
+                if (error == null && AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(route, result)) {
+                    // The same local model can expose a missed freshness requirement.
+                    // Do not run a second classifier for every message or retry recursively.
+                    _chatStatus.value = "Checking current information"
+                    val currentRoute = route.copy(path = AnswerPath.WEB_GROUNDED, requiresLive = true)
+                    val researched = grounding.retrieve(route.question, allowed, GroundingMode.ON, SearchProviderId.WEB) {
+                        stage -> _chatStatus.value = stage.label
+                    }
+                    if (researched.sources.isEmpty()) {
+                        val recovery = AnswerRoutingPolicy.recover(currentRoute, researched.failure)
+                        evidence = researched.copy(status = recovery.status)
+                        result = recovery.notice
+                    } else {
+                        evidence = researched
+                        _streamingChatText.value = ""
+                        system = com.example.engine.ChatAnswerPolicy.system(generationQuestion, true, effectiveContext, params.systemPrompt) +
+                            if (summary.isNotBlank()) "\nOlder unverified context from this chat, not web evidence:\n$summary\n" else ""
+                        val retryBudget = ((effectiveContext - autoMaxTokens - 96) * 2 - system.toByteArray(Charsets.UTF_8).size).coerceAtLeast(0)
+                        prepared = withContext(Dispatchers.Default) { GroundingPolicy.prepareEvidence(route.question, evidence.sources, retryBudget,
+                            effectiveContext - autoMaxTokens - 96 - repository.engine.contextTokenCount(system), repository.engine::contextTokenCount) }
+                        evidence = evidence.copy(sources = prepared.sources)
+                        _chatStatus.value = "Answering from sources"
+                        result = repository.engine.generateSync(prepared.prompt, GenerationParams(temperature = 0f, topK = 1, topP = 1f,
+                            maxTokens = autoMaxTokens, contextSize = effectiveContext, threads = params.threads, systemPrompt = system,
+                            history = ConversationContext.history(com.example.engine.ChatAnswerPolicy.history(previous.map { ChatTurn(it.role, it.content) }, true),
+                                prepared.prompt, system, effectiveContext, autoMaxTokens, repository.engine::contextTokenCount)))
+                    }
+                }
                 promptTokens = repository.engine.telemetry.value.promptTokens
                 outputTokens = repository.engine.telemetry.value.completionTokens
                 reachedOutputLimit = outputTokens >= autoMaxTokens

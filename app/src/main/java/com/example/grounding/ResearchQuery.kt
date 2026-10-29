@@ -90,11 +90,12 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             runCatching { LocalDate.parse(value.trim(), format) }.getOrNull()
         }
     }
-    private val plain = question.replace(Regex("(?i)\\bwho['’]s\\b"), "who is").replace(Regex("https?://\\S+"), " ")
+    private val plain = NewsIntent.topicQuestion(question).replace(Regex("(?i)\\b(who|what|where|when|how)['’]s\\b"), "\$1 is")
+        .replace(Regex("(?i)\\bwhats\\b"), "what is").replace(Regex("https?://\\S+"), " ")
     private val userPlain = plain.substringBefore("(Public source topic:")
     val years = Regex("\\b(?:19|20)\\d{2}\\b").findAll(userPlain).map { it.value }.toSet()
     private val rawTerms = wordPattern.findAll(normalizedModels(plain.lowercase())).map { it.value }
-        .filter { stem(it) !in normalizedStop && it !in years &&
+        .filter { it != "s" && stem(it) !in normalizedStop && it !in years &&
             (!FactualResearch.isCasting(userPlain) || it !in setOf("playing", "plays", "played", "play", "portraying", "portrays", "portrayed", "voicing", "voices", "voiced")) }.take(14).toList()
     private val expandedSearchTerms = rawTerms.flatMap { token ->
         phraseAbbreviations.firstOrNull { it.first == token }?.second ?: listOf(token)
@@ -102,7 +103,9 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
     val terms = rawTerms.map(::stem).toSet()
     private val lower = plain.lowercase()
     private fun has(phrase: String) = Regex("(?<![\\p{L}\\p{M}])${Regex.escape(phrase)}(?![\\p{L}\\p{M}])").containsMatchIn(lower)
-    val relative = listOf("latest", "recent", "recently", "current", "currently", "today", "yesterday", "this week", "this month", "now", "who won", "ഇന്ന്", "ഇപ്പോൾ").any(::has)
+    val relative = NewsIntent.isLiveRequest(question) || listOf("latest", "recent", "recently", "current", "currently", "today", "yesterday", "this week", "this month", "now", "who won", "ഇന്ന്", "ഇപ്പോൾ").any(::has)
+    // Provider-neutral original terms: no generated actor/cast synonyms or inferred year.
+    val topicSearchText = (expandedSearchTerms + years).distinct().joinToString(" ").take(400)
     // A maintained office-holder page may have been published years ago.
     // Ask for the incumbent, not exclusively for news published this month.
     private val currentRoleLookup = (isCurrentIncumbentQuery(userPlain) || FactualResearch.isCasting(userPlain)) &&
@@ -115,6 +118,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         currentRoleLookup -> null
         has("today") || has("ഇന്ന്") -> today
         has("yesterday") -> today.minusDays(1)
+        NewsIntent.isNewsSearch(question) && relative -> today.minusDays(2)
         listOf("latest", "recent", "recently", "current", "currently", "now", "this week", "this month", "ഇപ്പോൾ").any(::has) -> today.minusDays(30)
         else -> null
     }

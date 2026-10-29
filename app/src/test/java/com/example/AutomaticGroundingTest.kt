@@ -72,8 +72,8 @@ class AutomaticGroundingTest {
         assertEquals("Untrusted search snippet", MwmblDiscovery.candidates(json).first().routingHint)
         assertEquals("https://unsafe.example/", MwmblDiscovery.candidates(json).last().url)
         assertEquals("doom avengers doomsday", MwmblDiscovery.searchText(ResearchQuery(question)))
-        assertEquals("cast away actor", MwmblDiscovery.searchText(ResearchQuery("Who plays in Cast Away?")))
-        assertEquals("actor cast", MwmblDiscovery.searchText(ResearchQuery("Who plays in The Actor?")))
+        assertEquals("cast away", MwmblDiscovery.searchText(ResearchQuery("Who plays in Cast Away?")))
+        assertEquals("actor", MwmblDiscovery.searchText(ResearchQuery("Who plays in The Actor?")))
     }
 
     @Test fun liteHandlesUnknownMarkupButDoesNotRetryAChallenge() = runBlocking {

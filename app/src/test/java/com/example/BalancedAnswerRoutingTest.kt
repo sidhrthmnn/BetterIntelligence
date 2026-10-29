@@ -134,7 +134,7 @@ class BalancedAnswerRoutingTest {
         var time = 1_000L; var calls = 0; var healthy = false
         val circuit = DiscoveryCircuit { time }
         val discovery = FreeSearchDiscovery(DiscoveryProvider { _, _ -> calls++; DiscoveryResult(emptyList(), if (healthy) DiscoveryState.EMPTY else DiscoveryState.UNAVAILABLE) },
-            DiscoveryProvider { _, _ -> error("Backup requires consent") }, circuit, { false })
+            DiscoveryProvider { _, _ -> error("Backup requires consent") }, circuit, backupAllowed = { false })
         repeat(5) { discovery.discover(ResearchQuery("Orion"), false) }; assertEquals(2, calls)
         time += 60_001; healthy = true
         discovery.discover(ResearchQuery("Orion"), false); assertEquals(3, calls)

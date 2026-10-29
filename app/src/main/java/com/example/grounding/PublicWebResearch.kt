@@ -38,6 +38,8 @@ object PublicWebDns : Dns {
 data class WebDocument(val url: String, val text: String, val contentType: String, val robotsTag: String = "")
 fun interface WebFetcher {
     suspend fun fetch(url: String): WebDocument
+    suspend fun postJson(url: String, json: String, permitted: suspend (String) -> Boolean): WebDocument =
+        throw UnsupportedOperationException("JSON POST is not available on this transport")
     fun session(maxRequests: Int): WebFetcher = this
     // Production transport invokes the guard BEFORE every redirect target is read.
     suspend fun fetchPage(url: String, permitted: suspend (String) -> Boolean): WebDocument {
@@ -46,13 +48,14 @@ fun interface WebFetcher {
     }
 }
 
-/** Bounded local page reading with Mwmbl-only anonymous link discovery.
+/** Bounded local page reading with anonymous discovery and real publisher evidence.
  * No cloud model, API key, proxy, account, scripts, cookies or background crawling.
  */
 class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private val discoveryOverride: DiscoveryProvider? = null,
     private val discoveryAllowed: suspend () -> Boolean = { true }) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
     private val discoveryCircuit = DiscoveryCircuit()
+    private val exaCircuit = DiscoveryCircuit()
     companion object {
         fun candidates(html: String): List<String> = HtmlDiscovery.links(WebDocument(
             "https://html.duckduckgo.com/html/", html, "text/html")).map { it.url }
@@ -69,16 +72,29 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val permitted: suspend (String) -> Boolean = { robots.allowed(it, transport) }
         val explicit = plan.explicitUrls
         val query = ResearchQuery(question)
-        val discovery = discoveryOverride ?: MwmblDiscovery(transport, permitted)
+        var providerCalls = 0
+        val discovered = mutableMapOf<String, DiscoveryResult>()
+        fun bounded(name: String, provider: DiscoveryProvider): DiscoveryProvider = DiscoveryProvider { request, broad ->
+            val key = if (name == "Mwmbl") "$name:${MwmblDiscovery.searchText(request, broad)}" else "$name:${request.question}:${request.searchText}"
+            discovered[key] ?: if (providerCalls >= 3) DiscoveryResult(emptyList(), DiscoveryState.EMPTY) else {
+                providerCalls++
+                provider.discover(request, broad).also { discovered[key] = it }
+            }
+        }
+        val discovery = discoveryOverride ?: FreeSearchDiscovery(
+            bounded("Exa", ExaDiscovery(transport, permitted)), bounded("Mwmbl", MwmblDiscovery(transport, permitted)),
+            exaCircuit, primaryTimeoutMs = 6_500, backupAllowed = discoveryAllowed)
         var discoveryFailed = false
         var blocked = false
         var discoveryTimedOut = false
         val readTimeouts = java.util.concurrent.atomic.AtomicInteger()
         val failedReads = java.util.concurrent.atomic.AtomicInteger()
+        var rounds = 0
         suspend fun discover(search: String, broad: Boolean): List<ResearchCandidate>? {
             if (discoveryOverride == null && !discoveryAllowed()) { discoveryFailed = true; return null }
+            if (rounds++ >= 3) return emptyList()
             val paused = discoveryCircuit.unavailable()
-            val result = if (paused != null) DiscoveryResult(emptyList(), paused) else withTimeoutOrNull(5_000) {
+            val result = if (paused != null) DiscoveryResult(emptyList(), paused) else withTimeoutOrNull(10_000) {
                 try { discovery.discover(ResearchQuery(question, searchOverride = search), broad) }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
@@ -114,7 +130,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val attempted = mutableSetOf<String>()
         val domains = mutableMapOf<String, Int>()
         val reads = Semaphore(2)
-        val childReads = java.util.concurrent.atomic.AtomicInteger(1)
+        val childReads = java.util.concurrent.atomic.AtomicInteger(2)
         val sources = mutableListOf<EvidenceSource>()
         var readCount = 0
         fun enough(): Boolean {
@@ -145,14 +161,17 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                     val result = withTimeoutOrNull(7_000) {
                         try {
                             val page = transport.fetchPage(candidate.url, permitted)
-                            val source = article(page, 0, question)
+                            val source = article(page, 0, question)?.copy(discoveryProvider = candidate.provider)
                             fun acceptable(value: EvidenceSource) = EvidenceRanking.acceptable(value, plan)
                             if (source != null && acceptable(source)) source
-                            else if (childReads.getAndDecrement() > 0) {
+                            else {
                                 // A landing/hub page may link to the actual article or benchmark sub-page.
                                 val child = WebPageExtractor.relevantLinks(page, question).firstOrNull()
-                                child?.let { article(transport.fetchPage(it.url, permitted), 0, question)?.takeIf(::acceptable) }
-                            } else null
+                                if (child != null && childReads.getAndDecrement() > 0)
+                                    article(transport.fetchPage(child.url, permitted), 0, question)
+                                        ?.copy(discoveryProvider = candidate.provider)?.takeIf(::acceptable)
+                                else null
+                            }
                         } catch (e: CancellationException) { throw e } catch (_: Exception) { failedReads.incrementAndGet(); null }
                         .also { finished = true }
                     }
@@ -165,6 +184,17 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         }
         }
         readCandidates(links)
+        // A good-looking search hit may be unreadable or fail evidence checks.
+        // Try the independent keyword index once before repeating the primary.
+        if (!enough() && explicit.isEmpty() && discovery is FreeSearchDiscovery && !discovery.backupUsed &&
+            readCount < 8 && providerCalls < 3 && discoveryAllowed()) {
+            progress(ResearchStage.SEARCHING)
+            val alternative = withTimeoutOrNull(5_000) { discovery.discoverBackup(query, true) }
+            readCandidates(alternative?.candidates.orEmpty().filter {
+                query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) &&
+                    !FactualResearch.speculativeCasting(question, it.title)
+            })
+        }
         // Expand only after actual passages fail to cover the requested facets.
         if (explicit.isEmpty() && !enough() && !blocked && !discoveryFailed && !discoveryTimedOut) {
             for (search in plan.searches.drop(1)) {
