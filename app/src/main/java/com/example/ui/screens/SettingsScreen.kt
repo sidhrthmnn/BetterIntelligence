@@ -120,7 +120,6 @@ fun AppearanceScreen(viewModel: AiCoreViewModel) {
 @Composable
 fun WebSettingsScreen(viewModel: AiCoreViewModel) {
     val allowed by viewModel.webAllowed.collectAsState()
-    val backupAllowed by viewModel.freeSearchBackupAllowed.collectAsState()
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -128,13 +127,12 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
                 Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Research sends focused searches from your current factual question to DuckDuckGo's public HTML/Lite pages and, when enabled, Mwmbl's anonymous free search service. BI then reads public websites directly. A follow-up can include already retrieved public source titles. These sites receive your query and ordinary connection information, including your IP address. Stored private chat history, memories and connected-app requests are not sent. Do not include secrets or sensitive information in a web-enabled question.")
-            if (allowed && !backupAllowed) TextButton(onClick = { viewModel.setWebAllowed(true) }) { Text("Enable free Mwmbl backup search") }
+            Text("Research sends focused searches from your current factual question only to Mwmbl's anonymous free search service. BI then reads public websites directly. A follow-up can include already retrieved public source titles. These sites receive your query and ordinary connection information, including your IP address. Stored private chat history, memories and connected-app requests are not sent. Do not include secrets or sensitive information in a web-enabled question.")
         }
         item {
             Text("Always automatic", style = MaterialTheme.typography.titleMedium)
             Text("Answers use the on-device model by default. Automatic research checks current facts, compatibility and explicit source requests. Definitions, established history, reasoning, writing and personal conversation stay local. If research is unavailable, useful local answers remain available; live facts are never guessed. The switch above controls web permission.", style = MaterialTheme.typography.bodySmall)
-            Text("No API key, account or payment is needed. Mwmbl's anonymous backup currently allows 1,000 searches per month per public IP and about one request per second. Shared networks share that quota. Limits or outages do not trigger paid access; use DuckDuckGo or provide a public HTTPS page.", style = MaterialTheme.typography.bodySmall)
+            Text("No API key, account or payment is needed. Mwmbl currently allows 1,000 searches per month per public IP and about one request per second. Shared networks share that quota. If search is unavailable, BI can still answer locally where useful or read a public HTTPS page you provide.", style = MaterialTheme.typography.bodySmall)
         }
         item {
             Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
@@ -187,7 +185,7 @@ fun PrivacyScreen(viewModel: AiCoreViewModel) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { Text("You control your data", style = MaterialTheme.typography.headlineSmall) }
         item { Text("Conversations, drafts, model files and app approvals are stored locally. Android backup may include settings and conversations according to your system backup preferences; model files and provider credentials are excluded.") }
-        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses DuckDuckGo and an explicitly enabled anonymous Mwmbl backup, then reads publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
+        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses only anonymous Mwmbl search, then reads publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
         item { Text("Deleting a model frees its storage and leaves your conversations intact. Revoking app access prevents new requests. Personal memory sharing has separate app permissions.") }
         item { TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Manage model storage") }
             TextButton(onClick = { viewModel.selectTab(AppTab.CONNECT) }) { Text("Manage app access") }

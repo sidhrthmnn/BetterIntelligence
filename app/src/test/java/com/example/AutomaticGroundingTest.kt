@@ -11,6 +11,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class AutomaticGroundingTest {
+    @org.junit.After fun clearSyntheticQuota() { MwmblDiscovery.resetForTests() }
     private val question = "Who is playing doom in avengers doomsday"
     private val confirmed = EvidenceSource(1, "Marvel Studios announces Avengers: Doomsday", "https://thewaltdisneycompany.com/news/cast/",
         "Marvel Studios announces Avengers: Doomsday\nRobert Downey Jr. returns in a new role as Doctor Doom in Avengers: Doomsday.", 1)
@@ -67,8 +68,12 @@ class AutomaticGroundingTest {
         assertEquals(DiscoveryState.FOUND, FreeSearchDiscovery(primary, backup) { true }.discover(ResearchQuery(question), false).state)
         assertEquals(2, primaryCalls); assertEquals(1, backupCalls)
         val json = """{"results":[{"url":"${confirmed.url}","title":"Actual publisher","content":"Untrusted search snippet"},{"url":"http://unsafe.example/","title":"Unsafe"},{"url":"https://127.0.0.1/private"}]}"""
-        assertEquals(1, MwmblDiscovery.candidates(json).size)
-        assertEquals("Untrusted search snippet", MwmblDiscovery.candidates(json).single().routingHint)
+        assertEquals(2, MwmblDiscovery.candidates(json).size)
+        assertEquals("Untrusted search snippet", MwmblDiscovery.candidates(json).first().routingHint)
+        assertEquals("https://unsafe.example/", MwmblDiscovery.candidates(json).last().url)
+        assertEquals("doom avengers doomsday", MwmblDiscovery.searchText(ResearchQuery(question)))
+        assertEquals("cast away actor", MwmblDiscovery.searchText(ResearchQuery("Who plays in Cast Away?")))
+        assertEquals("actor cast", MwmblDiscovery.searchText(ResearchQuery("Who plays in The Actor?")))
     }
 
     @Test fun liteHandlesUnknownMarkupButDoesNotRetryAChallenge() = runBlocking {

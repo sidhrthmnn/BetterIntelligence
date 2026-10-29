@@ -46,13 +46,13 @@ fun interface WebFetcher {
     }
 }
 
-/** Bounded local page reading with HTML and optional anonymous link discovery.
+/** Bounded local page reading with Mwmbl-only anonymous link discovery.
  * No cloud model, API key, proxy, account, scripts, cookies or background crawling.
  */
 class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private val discoveryOverride: DiscoveryProvider? = null,
-    private val backupAllowed: suspend () -> Boolean = { false }) : SearchProvider {
+    private val discoveryAllowed: suspend () -> Boolean = { true }) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
-    private val htmlCircuit = DiscoveryCircuit()
+    private val discoveryCircuit = DiscoveryCircuit()
     companion object {
         fun candidates(html: String): List<String> = HtmlDiscovery.links(WebDocument(
             "https://html.duckduckgo.com/html/", html, "text/html")).map { it.url }
@@ -69,18 +69,21 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val permitted: suspend (String) -> Boolean = { robots.allowed(it, transport) }
         val explicit = plan.explicitUrls
         val query = ResearchQuery(question)
-        val discovery = discoveryOverride ?: FreeSearchDiscovery(HtmlSearchDiscovery(transport, permitted), MwmblDiscovery(transport, permitted), htmlCircuit, backupAllowed)
+        val discovery = discoveryOverride ?: MwmblDiscovery(transport, permitted)
         var discoveryFailed = false
         var blocked = false
         var discoveryTimedOut = false
         val readTimeouts = java.util.concurrent.atomic.AtomicInteger()
         val failedReads = java.util.concurrent.atomic.AtomicInteger()
         suspend fun discover(search: String, broad: Boolean): List<ResearchCandidate>? {
-            val result = withTimeoutOrNull(5_000) {
+            if (discoveryOverride == null && !discoveryAllowed()) { discoveryFailed = true; return null }
+            val paused = discoveryCircuit.unavailable()
+            val result = if (paused != null) DiscoveryResult(emptyList(), paused) else withTimeoutOrNull(5_000) {
                 try { discovery.discover(ResearchQuery(question, searchOverride = search), broad) }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
-            } ?: run { discoveryTimedOut = true; return null }
+            } ?: DiscoveryResult(emptyList(), DiscoveryState.TIMEOUT)
+            if (paused == null) discoveryCircuit.record(result.state)
             if (result.state == DiscoveryState.TIMEOUT) { discoveryTimedOut = true; return null }
             if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
                 discoveryFailed = true; blocked = result.state == DiscoveryState.BLOCKED; return null

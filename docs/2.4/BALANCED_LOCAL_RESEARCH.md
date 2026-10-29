@@ -1,7 +1,8 @@
-# Balanced local answers and optional research (unreleased)
+# Balanced local answers and Mwmbl-only research — 2.4.0-beta1
 
-This work changes source behavior on main; it is not a Play release. No model,
-runtime or search-provider dependency is upgraded and no model is downloaded
+This work was initially source-only. The user subsequently requested Mwmbl-only
+research and authorized a closed-beta release: version 21 / 2.4.0-beta1. No model
+or inference-runtime dependency is upgraded and no model is downloaded
 automatically. Existing chats and Binder/AIDL contracts remain intact.
 
 ## Root causes
@@ -39,6 +40,15 @@ inaccessible pages and insufficient passages. A per-provider-instance circuit
 skips repeated outages for one minute and explicit denial for five; the existing
 Mwmbl quota backoff remains. No captcha solving, identity rotation or paid fallback.
 Direct public HTTPS reads remain independent of discovery.
+
+Following the user's final provider choice, Mwmbl is the only production discovery
+provider. DuckDuckGo is absent from settings and the production search path,
+including outages. Legacy parsers/frozen fixtures do not authorize network calls.
+Existing consent 3 already included Mwmbl and remains valid; older consent 2 must
+be re-enabled under the current disclosure. The redundant backup setting is gone.
+Older HTTP links in the index are tried only as HTTPS, with public DNS, publisher
+policies, TLS and redirect checks unchanged. Anonymous quotas remain per public
+IP; no paid access or additional provider is attempted.
 
 Ordinary requests start with one query. Extra planned queries run only when read
 passages leave gaps. Reads use waves of two with the existing eight-page,
@@ -176,6 +186,8 @@ Two alternating path comparisons used Gemma 4 E2B CPU, four threads, 1024 contex
 | Explain recursion in one sentence | 6.387 s | 1.635 s | 6 versus 0 |
 | Capital of France, city only | 8.716 s; refused verification | 0.697 s; Paris | 6 versus 0 |
 
+These measurements preceded the final Mwmbl-only provider change and are retained
+as a routing/path comparison, not a benchmark of Mwmbl search performance.
 The former path reproduces beta5's broad AUTO routing for these questions; it is
 not a bit-identical old APK benchmark. One pair per question, uncontrolled live
 network and short outputs do not establish general accuracy or sustained speed.
@@ -243,10 +255,21 @@ Binder and Android text actions return the model output without post-validation
 or rewriting. Existing request limits, local permissions, hardware compatibility,
 RAM admission and native lifecycle remain. The correction preview remains.
 
-Final local checks pass: 208 JVM tests, zero failures/errors, fresh debug/release
+Final local checks pass: 209 JVM tests, zero failures/errors, fresh debug/release
 Kotlin compilation, debug APK, instrumentation APK and release lint. Five obsolete
 output-rejection tests were removed with the checks at the user's request; the
-earlier 213-test run passed before that requested change.
+earlier 213-test run passed before that requested change. One additional Mwmbl
+consent/quota regression was added after removing the five obsolete guard tests.
+
+The Mwmbl-only physical check passes on the same phone. Discovery requests went
+only to Mwmbl; source pages were read directly. The initial Doom query with
+generated actor/cast terms returned no results. Removing only unambiguously
+generated suffixes retrieved the Robert Downey Jr. announcement page and another
+related page in 4.288 s. User-supplied Actor/Cast terms are retained. Kotlin
+research read a JetBrains page in 18.624 s. Vulkan research had insufficient
+evidence after 4.140 s and remained SEARCH_FAILED. These are retrieval checks,
+not newly measured model-generated answer accuracy. Mwmbl's coverage remains a
+limitation; no other discovery service was used. See [mwmbl-device.json](mwmbl-device.json).
 
 The final physical Binder integration passes with eight semantic fixtures:
 English grammar, negation, package identifier, URL/time, two emails, Malayalam,
@@ -263,7 +286,8 @@ the user unloaded the production model it completed. NPU/MTP and E4B GPU are
 explicit remaining validation limits, not passing hardware results.
 
 See [validation-summary.json](validation-summary.json) for the result index.
-No Play release is created by this task.
+The final Mwmbl-only build is prepared for the user-authorized closed beta;
+publication/review status is verified separately in Play Console.
 
 ## Files changed
 
@@ -271,11 +295,11 @@ No Play release is created by this task.
 | --- | --- |
 | Central routing/recovery | `AnswerRoutingPolicy.kt`, `ResearchRouting.kt`, `FactualResearch.kt`, `ChatAnswerPolicy.kt`, `AiCoreViewModel.kt`, `ConversationalResearch.kt` |
 | Bounded research/cache/status | `Grounding.kt`, `DiscoveryCircuit.kt`, `FreeSearchDiscovery.kt`, `HtmlDiscovery.kt`, `PublicWebResearch.kt`, `AnswerSourceStatus.kt` |
-| UI | `ChatScreen.kt`, `SettingsScreen.kt` |
+| UI/preferences | `ChatScreen.kt`, `SettingsScreen.kt`, `SettingsPreferencesRepository.kt` |
 | Backend/resource lifecycle | `InferenceEngine.kt`, `SmartBackendSelector.kt`, `BackendValidation.kt`, `LiteRtSession.kt`, `ModelLibrary.kt`, `ModelMemoryPlanner.kt` |
 | IPC/polish | `LocalAiAccess.kt`, `BrainTextActionActivity.kt` (language-specific instructions, raw output; AIDL unchanged) |
 | JVM regressions | `BalancedAnswerRoutingTest.kt`, frozen `balancedbaseline` sources, `answer-routing-corpus.tsv`, `BackendValidationTest.kt`, `AccelerationTest.kt`, `PolishTextTest.kt`, updated routing/evidence expectations in five existing test files |
-| Physical protocols | `BalancedLocalDeviceTest.kt`, `BalancedLatencyDeviceTest.kt`, `BalancedBackendDeviceTest.kt`, `LiteRtGpuProbeDeviceTest.kt`, extended `LiteRtIntegrationDeviceTest.kt`, updated `AutomaticGroundingDeviceTest.kt` |
+| Physical protocols | `BalancedLocalDeviceTest.kt`, `BalancedLatencyDeviceTest.kt`, `BalancedBackendDeviceTest.kt`, `LiteRtGpuProbeDeviceTest.kt`, `MwmblOnlyDeviceTest.kt`, extended `LiteRtIntegrationDeviceTest.kt`, updated `AutomaticGroundingDeviceTest.kt` |
 | Documentation | `README.md`, `PRIVACY.md`, `docs/2.3/AUTOMATIC_RESEARCH.md`, this report and synthetic measurement JSON |
 
 Remaining limits: deterministic routing can misread unfamiliar wording; public

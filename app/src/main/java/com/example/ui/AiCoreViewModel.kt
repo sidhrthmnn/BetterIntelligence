@@ -143,9 +143,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val chatStatus = _chatStatus.asStateFlow()
     val appearance = repository.preferencesRepository.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, "DARK")
     val webAllowed = repository.preferencesRepository.webAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    val freeSearchBackupAllowed = repository.preferencesRepository.freeSearchBackupAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     private var grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(
-        backupAllowed = { repository.preferencesRepository.freeSearchBackupAllowed.first() })))
+        discoveryAllowed = { repository.preferencesRepository.webAllowed.first() })))
     @androidx.annotation.VisibleForTesting
     internal fun useSearchProviderForTesting(provider: SearchProvider) {
         check(!_isChatGenerating.value)

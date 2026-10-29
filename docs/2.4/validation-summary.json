@@ -1,14 +1,14 @@
 {
   "dateUtc": "2026-10-29",
   "sourceBaseline": "81253eee23b2e9ebf96eb813f5339f8d623d7032",
-  "publication": "Unreleased; no Play Console changes",
+  "publication": "Version 21 / 2.4.0-beta1 prepared for user-authorized closed beta",
   "build": {
     "freshDebugCompile": "PASS",
     "freshReleaseCompile": "PASS",
     "debugApk": "PASS",
     "instrumentationApk": "PASS",
     "releaseLint": "PASS",
-    "jvmTests": 208,
+    "jvmTests": 209,
     "jvmFailures": 0,
     "jvmErrors": 0
   },
@@ -31,7 +31,8 @@
     "pairedLatency": "PASS: two public questions, one alternating pair each",
     "finalBinderPolish": "PASS: unchanged AIDL, eight English/Malayalam/Manglish fixtures, raw model output, shared model, cancellation, switching and mapping cleanup",
     "npu": "NOT EXECUTED; production disabled",
-    "mtp": "NOT EXECUTED; production disabled"
+    "mtp": "NOT EXECUTED; production disabled",
+    "mwmblOnly": "PASS: only Mwmbl discovery, actual page reads for Doom and Kotlin; Vulkan insufficient, no unsupported answer"
   },
   "limitations": [
     "No general accuracy percentage",

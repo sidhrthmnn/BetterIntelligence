@@ -67,13 +67,14 @@ class DirectWebResearchTest {
             requests += url
             when {
                 url.endsWith("/robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-                "duckduckgo.com" in url -> WebDocument(url, """<div class="result"><a class="result__a" href="https://publisher.example/report">Android Vulkan graphics</a></div>""", "text/html")
+                "api.mwmbl.org" in url -> mwmblFixture(url, """<div class="result"><a class="result__a" href="https://publisher.example/report">Android Vulkan graphics</a></div>""")
                 else -> page("<title>Android Vulkan graphics</title><article><p>Android Vulkan graphics provides explicit access to compatible GPU devices for rendering and compute workloads.</p></article>")
             }
         })
         assertEquals(1, reader.search("Android Vulkan graphics").size)
-        assertTrue(requests.first().endsWith("duckduckgo.com/robots.txt"))
-        assertFalse(requests.any { "api." in it || "format=rss" in it || "bing.com" in it || "open-meteo" in it })
+        assertEquals("https://api.mwmbl.org/robots.txt", requests.first())
+        assertTrue(requests.any { it.startsWith("https://api.mwmbl.org/api/v2/search/?q=") })
+        assertFalse(requests.any { "duckduckgo.com" in it || "format=rss" in it || "bing.com" in it || "open-meteo" in it || "api_key" in it })
     }
     @Test fun challengeDoesNotCauseBroaderRetryOrPublisherReads() = runBlocking {
         val requests = mutableListOf<String>()

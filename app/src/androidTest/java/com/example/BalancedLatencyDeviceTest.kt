@@ -41,7 +41,7 @@ class BalancedLatencyDeviceTest {
             for ((index, q) in listOf("Explain recursion in one sentence.", "What is the capital of France? Give only the city.").withIndex()) {
                 for (legacy in if (index == 0) listOf(true, false) else listOf(false, true)) {
                     val calls = AtomicInteger()
-                    val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(SearchHttp(onRequest = { calls.incrementAndGet() }), backupAllowed = { true })))
+                    val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(SearchHttp(onRequest = { calls.incrementAndGet() }))))
                     val start = SystemClock.elapsedRealtime()
                     val evidence = coordinator.retrieve(q, true, if (legacy) GroundingMode.ON else GroundingMode.AUTO, SearchProviderId.WEB)
                     val retrieval = SystemClock.elapsedRealtime() - start
