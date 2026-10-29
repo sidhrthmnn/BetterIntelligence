@@ -51,7 +51,9 @@ object AnswerRoutingPolicy {
             product.containsMatchIn(signals) && (compatibility.containsMatchIn(signals) || Regex("(?i)\\b(?:costs?|prices?)\\b").containsMatchIn(signals)) ||
             Regex("(?i)\\b(?:what(?:['’]s| is)? (?:the )?(?:price|cost)|how much (?:is|does|for)|(?:movie|film|series|game|album).{0,35}(?:releas\\w*|review)|(?:releas\\w*|review).{0,35}(?:movie|film|series|game|album)|how is .{1,70}(?:movie|film)|when .{0,80}releas\\w*)\\b").containsMatchIn(signals))
         val localPart = if (live && !verify) mixedLocalPart(q) else null
-        val wantsWeb = explicit || live || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
+        val publicFacetFollowUp = followUp.containsMatchIn(q) && resolved.contains("(Public source topic:") &&
+            Regex("(?i)\\b(?:prices?|costs?|temperature|forecast|actors?|cast|releas\\w*|elections?|results?|votes?|seats?|counts?|compatibility|supported)\\b").containsMatchIn(q)
+        val wantsWeb = explicit || live || publicFacetFollowUp || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
         val canSearch = allowed && mode != GroundingMode.OFF && !localOnly(q) && !privateInput && !personalContext && (!transform || mode == GroundingMode.ON) && !calculation
         if (history.none { it.role == "user" } && ConversationalResearch.needsSubject(q))
             return AnswerRoute(AnswerPath.CLARIFICATION, q, "Missing subject", clarification = ConversationalResearch.askSubject)

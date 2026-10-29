@@ -4,6 +4,17 @@ import java.util.Locale
 
 /** Implicit current-event questions, without turning conceptual explanations into news. */
 object NewsIntent {
+    /** App-authored provenance from read-page metadata, never model timestamps. */
+    fun withReportTimes(question: String, answer: String, sources: List<EvidenceSource>): String {
+        if (!isNewsSearch(question)) return answer
+        val marker = Regex("\\[(\\d+(?:,\\s*\\d+)*)]")
+        if (!marker.replace(answer, "").any(Char::isDigit)) return answer
+        val cited = marker.findAll(answer).flatMap { it.groupValues[1].split(',').map(String::trim).mapNotNull(String::toIntOrNull) }.toSet()
+        val dates = sources.filter { it.id in cited && it.kind == "WEB_PAGE" && it.dateKind in setOf("PUBLISHED", "MODIFIED", "DOCUMENT_REPORTED") && it.updatedAt.isNotBlank() }
+            .map { source -> "[${source.id}] " + when (source.dateKind) { "MODIFIED" -> "Updated "; "DOCUMENT_REPORTED" -> "Document date "; else -> "Published " } + source.updatedAt.take(40) }
+        return if (dates.isEmpty()) answer + "\n\nFigures are reported snapshots; the pages did not provide a usable report time. This is not a live count."
+            else answer + "\n\nFigures reflect these reports, rather than a live count:\n" + dates.joinToString("\n")
+    }
     private val countries by lazy {
         (Locale.getISOCountries().map { Locale.Builder().setRegion(it).build().getDisplayCountry(Locale.ENGLISH) } +
             listOf("UK", "USA", "UAE", "Gaza", "Palestine", "Britain", "United States"))

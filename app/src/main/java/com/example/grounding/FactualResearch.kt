@@ -36,6 +36,12 @@ object FactualResearch {
     fun headlineOnly(text: String, title: String): Boolean {
         val clean = text.trim()
         if (clean.isBlank()) return true
+        val utility = Regex("(?i)^(?:you(?: are)? logged in|loading[. …]*|you (?:do not|don't|don’t) have(?: any)?(?: active)? subscription[.!]?|save|share|listen(?:\\s*\\([^)]*\\))?|news\\s*[|›].*|(?:subscribe|sign in|log in)(?: to.*)?)$")
+        val bodies = clean.split(Regex("\\n\\s*\\n")).map { block ->
+            block.lines().dropWhile { it.trim() == title.trim() || it.trim().startsWith("${title.trim()} ›") }
+                .map(String::trim).filter { it.isNotBlank() && !utility.matches(it) }.joinToString(" ")
+        }.filter(String::isNotBlank)
+        if (bodies.isEmpty()) return true
         val words = ResearchQuery.words(clean)
         return title.isNotBlank() && words.isNotEmpty() && (words - ResearchQuery.words(title)).isEmpty()
     }

@@ -1083,7 +1083,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                             AnswerSupport.INSUFFICIENT -> "INSUFFICIENT_EVIDENCE"
                         }
                         val invalid = error == com.example.engine.InvalidModelOutputException().message
-                        val content = if (invalid) error!! else (checked?.text ?: result).ifBlank { if (cancelled) "Response stopped." else error ?: "No response." }
+                        val content = if (invalid) error!! else NewsIntent.withReportTimes(researchQuestion,
+                            (checked?.text ?: result).ifBlank { if (cancelled) "Response stopped." else error ?: "No response." }, evidence.sources)
                         repository.updateChatMessage(ChatMessageEntity(id = pendingId!!, role = "assistant", content = content,
                             conversationId = conversation, modelName = model, latencyMs = latency, tokensPerSec = speed,
                             promptTokens = promptTokens, completionTokens = outputTokens,

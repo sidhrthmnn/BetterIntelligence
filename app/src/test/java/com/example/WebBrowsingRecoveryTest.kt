@@ -97,10 +97,13 @@ class WebBrowsingRecoveryTest {
         val source = EvidenceSource(1, "Pret menu", "https://publisher.example/pret", "Menu text", 1,
             discoveryProvider = "Exa", publicQuery = "price latte pret manger")
         val history = listOf(ChatMessageEntity(role = "user", content = "Private unsent project note", conversationId = 9),
-            ChatMessageEntity(role = "assistant", content = "Background", conversationId = 9, sourcesJson = GroundingResult(sources = listOf(source)).json()))
+            ChatMessageEntity(role = "assistant", content = "Background", conversationId = 9, groundingStatus = "SOURCE_EXCERPTS", sourcesJson = GroundingResult(sources = listOf(source)).json()))
         val question = ConversationalResearch.question("In uk what's the price", history)
         assertTrue(question.contains("price latte pret manger")); assertFalse(question.contains("Private"))
         assertEquals(AnswerPath.WEB_GROUNDED, AnswerRoutingPolicy.decide("In uk what's the price", history = history).path)
+        val followUp = AnswerRoutingPolicy.decide("Is that the latte price in the UK?", history = history, now = 2_000)
+        assertEquals(AnswerPath.WEB_GROUNDED, followUp.path)
+        assertEquals(listOf(source), followUp.reusedSources)
         assertEquals(source, GroundingResult.sources(GroundingResult(sources = listOf(source)).json()).single())
         assertEquals("In uk what's the price", ConversationalResearch.question("In uk what's the price", emptyList()))
         assertFalse(ConversationalResearch.validPublicQuery("api_key: private-value"))
@@ -151,5 +154,23 @@ class WebBrowsingRecoveryTest {
         val docs = election.copy(title = "Coroutines | Kotlin Documentation", url = "https://kotlinlang.org/docs/coroutines-overview.html",
             excerpt = "Kotlin coroutines simplify asynchronous programming. A coroutine can suspend execution and resume later without blocking a thread.", updatedAt = "")
         assertTrue(EvidenceRanking.acceptable(docs, ResearchPlanner.plan(technical)))
+    }
+
+    @Test fun subscriptionAndPlayerControlsAreNotArticleEvidence() {
+        val title = "Jailer 2 movie review"
+        assertTrue(FactualResearch.headlineOnly("$title\nYou are logged in\n\n$title\nLoading...\n\n$title\nYou don’t have any Active Subscription.", title))
+        val headline = "No clear winner in Israel election with nearly 90 percent of votes counted"
+        assertTrue(FactualResearch.headlineOnly("$headline\nNews|Israel Election 2026\n\n$headline\nListen (4 mins)\n\n$headline\nSave", headline))
+        assertFalse(FactualResearch.headlineOnly("$title\nThe critic rated Jailer 2 at 2.5 stars, praising the leading performance but criticising the screenplay.", title))
+    }
+
+    @Test fun changingNewsCountsRetainTheActualCitedReportTimes() {
+        val source = EvidenceSource(1, "Election report", "https://publisher.example/report", "Partial count was 90%.", 1,
+            "2026-10-29T00:01:07Z", "WEB_PAGE", "PUBLISHED")
+        val answer = "The partial count was 90% [1]."
+        val labelled = NewsIntent.withReportTimes("How is the election going on in Israel?", answer, listOf(source))
+        assertTrue(labelled.contains(source.updatedAt)); assertTrue(labelled.contains("rather than a live count"))
+        assertEquals(answer, NewsIntent.withReportTimes("Explain elections", answer, listOf(source)))
+        assertFalse(NewsIntent.withReportTimes("How is the election going on in Israel?", "No clear winner [1].", listOf(source)).contains(source.updatedAt))
     }
 }
