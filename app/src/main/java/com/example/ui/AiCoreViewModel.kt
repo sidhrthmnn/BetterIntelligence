@@ -1080,7 +1080,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                         repository.updateChatMessage(ChatMessageEntity(id = pendingId!!, role = "assistant", content = content,
                             conversationId = conversation, modelName = model, latencyMs = latency, tokensPerSec = speed,
                             promptTokens = promptTokens, completionTokens = outputTokens,
-                            sourcesJson = evidence.json(), groundingStatus = status,
+                            sourcesJson = evidence.json(), groundingStatus = com.example.grounding.AnswerSourceStatus.forEvidence(status, evidence.sources),
                             messageState = if (cancelled) "STOPPED" else if (error != null) "ERROR" else if (reachedOutputLimit) "LENGTH_LIMIT" else "COMPLETE"))
                     } else if (error != null) { _userMessage.value = error; if (_draft.value.isBlank()) updateDraft(text) }
                     } finally { _streamingChatText.value = ""; _chatStatus.value = ""; _isChatGenerating.value = false }

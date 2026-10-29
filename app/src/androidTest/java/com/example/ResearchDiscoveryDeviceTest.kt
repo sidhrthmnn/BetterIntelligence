@@ -15,16 +15,16 @@ import java.io.File
 /** Opt-in public fixtures. Uses Android's real transport and publisher reader;
  * no model allocation or access to the installed application's conversations. */
 class ResearchDiscoveryDeviceTest {
-    @Test fun realDiscoveryAndPublisherEvidenceAcrossNineEnglishQuestions() = runBlocking {
+    @Test fun realDiscoveryAndPublisherEvidenceAcrossElevenEnglishQuestions() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("researchDiscovery") == "true")
         val context = ApplicationProvider.getApplicationContext<Context>()
         check(context.packageName.endsWith(".validation"))
         val rows = JSONArray()
-        val output = File(context.filesDir, "research-discovery-device.json")
+        val output = File(context.filesDir, "duckduckgo-only-device.json")
         val questions = listOf("What's happening in France now", "What's happening in France?",
             "Who is playing Doctor Doom in Avengers Doomsday?", "Who is the current UK prime minister?",
             "What is the weather in London today?", "Search for Android Vulkan documentation",
-            "Search for Kotlin coroutines documentation", "Search for photosynthesis", "What is the latest Android version?")
+            "Search for Kotlin coroutines documentation", "Search for photosynthesis", "Search for Paris", "Search for Jane Austen", "What is the latest Android version?")
         for (question in questions) {
             val requests = java.util.Collections.synchronizedList(mutableListOf<String>())
             val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to
@@ -38,15 +38,16 @@ class ResearchDiscoveryDeviceTest {
                 .put("requests", JSONArray(requests.toList())).put("sources", JSONArray(result.json())))
             output.writeText(rows.toString(2))
             assertEquals(question, AnswerPath.WEB_GROUNDED, route.path)
-            assertTrue(result.sources.all { it.kind == "WEB_PAGE" && it.discoveryProvider in setOf("Exa", "Mwmbl") })
+            assertTrue(result.sources.all { it.kind in setOf("WEB_PAGE", "INSTANT_ANSWER") && it.discoveryProvider == "DuckDuckGo" })
+            if (route.requiresLive || route.requiresVerification) assertTrue(result.sources.none { it.kind == "INSTANT_ANSWER" })
             assertTrue("Publisher text only", result.sources.all {
-                !it.url.contains("mcp.exa.ai") && !it.url.contains("mwmbl.org") && it.excerpt.isNotBlank()
+                !it.url.contains("api.duckduckgo.com") && it.excerpt.isNotBlank()
             })
             assertFalse("No HTML search scraping", requests.any {
-                it.contains("duckduckgo.com") || it.contains("bing.com/search") || it.contains("google.com/search")
+                it.contains("html.duckduckgo.com") || it.contains("lite.duckduckgo.com") || it.contains("mwmbl.org") || it.contains("exa.ai") || it.contains("bing.com") || it.contains("google.com/search")
             })
         }
-        assertTrue("Read actual publisher evidence, not just search hits", (0 until rows.length()).any {
+        assertTrue("Retrieve actual publisher evidence or a labelled API topic summary", (0 until rows.length()).any {
             rows.getJSONObject(it).getJSONArray("sources").length() > 0
         })
     }

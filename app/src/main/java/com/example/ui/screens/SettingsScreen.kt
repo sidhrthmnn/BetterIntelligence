@@ -127,16 +127,16 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
                 Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Research sends focused public questions to Exa's anonymous search service and can try Mwmbl's independent index when more evidence is needed. BI reads publisher pages directly before citing them. These services receive your question and connection information, including your IP address. Stored private history, memories and connected-app requests are not sent. Do not include secrets or sensitive information in a web-enabled question. Updated search services require enabling this permission once.")
+            Text("Research sends focused public topics only to DuckDuckGo's official Instant Answer API. BI tries reading linked publisher pages. For stable knowledge, an API topic summary can be used with a clear label if its publisher page cannot be checked. DuckDuckGo and visited sites receive your topic or requested URL and connection information, including your IP address. Stored private history, memories and connected-app requests are not sent. Do not include secrets or sensitive information in a web-enabled question. Enable this permission once after reading the updated disclosure.")
         }
         item {
             Text("Always automatic", style = MaterialTheme.typography.titleMedium)
             Text("Answers use the on-device model by default. Automatic research checks current facts, compatibility and explicit source requests. Definitions, established history, reasoning, writing and personal conversation stay local. If research is unavailable, useful local answers remain available; live facts are never guessed. The switch above controls web permission.", style = MaterialTheme.typography.bodySmall)
-            Text("No API key, account or payment is needed. Exa's anonymous service is rate-limited; Mwmbl currently allows 1,000 searches per month per public IP and about one request per second. Shared networks share limits. BI never upgrades to paid access. When research is unavailable, useful local answers and direct public HTTPS reading remain available.", style = MaterialTheme.typography.bodySmall)
+            Text("Free, with no API key or account. Instant Answer supplies topic references, not full web-search results. News, weather and detailed questions may have no usable result. BI uses no other search engine, HTML search scraping or paid fallback. You can provide a public HTTPS source to read directly.", style = MaterialTheme.typography.bodySmall)
         }
         item {
             Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
-            Text("BI extracts and ranks page passages on this device, checks publisher restrictions and reported dates, and supplies evidence to your local model. Search snippets and matching headlines are not answers. The optional Mwmbl service only discovers links; no cloud model or weather API is used. Public sites can block access. Paste a public HTTPS link to read it directly.")
+            Text("BI distinguishes retrieved publisher pages from DuckDuckGo topic summaries. Summaries show that the publisher page was not independently verified and its source date is unknown. They cannot establish live news, weather, casting, current officeholders or explicitly verified claims. No cloud answer model or weather API is used. Public sites can block access.")
             Text("Search can be blocked or unavailable. Pages requiring sign-in, scripts, CAPTCHA or unsupported file formats are skipped. Sources can be incomplete or wrong; citations show where text came from, not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
         }
         item {
@@ -185,7 +185,7 @@ fun PrivacyScreen(viewModel: AiCoreViewModel) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { Text("You control your data", style = MaterialTheme.typography.headlineSmall) }
         item { Text("Conversations, drafts, model files and app approvals are stored locally. Android backup may include settings and conversations according to your system backup preferences; model files and provider credentials are excluded.") }
-        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses anonymous Exa and Mwmbl discovery, then reads publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
+        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses only DuckDuckGo's official Instant Answer API, then reads linked publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
         item { Text("Deleting a model frees its storage and leaves your conversations intact. Revoking app access prevents new requests. Personal memory sharing has separate app permissions.") }
         item { TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Manage model storage") }
             TextButton(onClick = { viewModel.selectTab(AppTab.CONNECT) }) { Text("Manage app access") }

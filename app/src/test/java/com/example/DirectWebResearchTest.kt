@@ -31,8 +31,8 @@ class DirectWebResearchTest {
             <div class="result"><a class="result__a" href="https://duckduckgo.com/l/?uddg=https%3A%2F%2Fpublisher.example%2Freport%3Fid%3D7%26utm_source%3Dsearch%23top">Report</a></div>
             <div class="result"><a class="result__a" href="https://publisher.example/report?id=7">Duplicate</a></div>
             <div class="result"><a class="result__a" href="https://127.0.0.1/private">Private</a></div>"""
-        assertEquals(listOf("https://publisher.example/report?id=7"), PublicWebResearch.candidates(html))
-        assertTrue(PublicWebResearch.candidates("<form id='challenge-form'></form>$html").isEmpty())
+        assertEquals(listOf("https://publisher.example/report?id=7"), fixtureLinks(html))
+        assertTrue(fixtureLinks("<form id='challenge-form'></form>$html").isEmpty())
     }
     @Test fun passagesKeepSubjectNegationAndValuesInPublisherOrder() {
         val source = WebPageExtractor.article(page("""<title>Battery test</title><main><article><header><h1>Device Orion battery result</h1></header>
@@ -67,20 +67,20 @@ class DirectWebResearchTest {
             requests += url
             when {
                 url.endsWith("/robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-                "api.mwmbl.org" in url -> mwmblFixture(url, """<div class="result"><a class="result__a" href="https://publisher.example/report">Android Vulkan graphics</a></div>""")
+                "api.duckduckgo.com" in url -> ddgFixture(url, """<div class="result"><a class="result__a" href="https://publisher.example/report">Android Vulkan graphics</a></div>""")
                 else -> page("<title>Android Vulkan graphics</title><article><p>Android Vulkan graphics provides explicit access to compatible GPU devices for rendering and compute workloads.</p></article>")
             }
         })
         assertEquals(1, reader.search("Android Vulkan graphics").size)
-        assertEquals("https://api.mwmbl.org/robots.txt", requests.first())
-        assertTrue(requests.any { it.startsWith("https://api.mwmbl.org/api/v2/search/?q=") })
-        assertFalse(requests.any { "duckduckgo.com" in it || "format=rss" in it || "bing.com" in it || "open-meteo" in it || "api_key" in it })
+        assertTrue(requests.first().startsWith(DuckDuckGoDiscovery.endpoint))
+        assertTrue(requests.any { it.startsWith("https://api.duckduckgo.com/?q=") })
+        assertFalse(requests.any { "html.duckduckgo.com" in it || "lite.duckduckgo.com" in it || "format=rss" in it || "bing.com" in it || "open-meteo" in it || "api_key" in it })
     }
     @Test fun challengeDoesNotCauseBroaderRetryOrPublisherReads() = runBlocking {
         val requests = mutableListOf<String>()
         val reader = PublicWebResearch(WebFetcher { url -> requests += url; WebDocument(url,
             if (url.endsWith("robots.txt")) "User-agent: *\nAllow: /" else "<form id='challenge-form'></form>", "text/html") })
-        assertTrue(reader.search("Latest Android updates").isEmpty()); assertEquals(2, requests.size)
+        assertTrue(reader.search("Latest Android updates").isEmpty()); assertEquals(1, requests.size)
     }
     @Test fun samePublisherPoliciesAreFetchedOnlyOnceEvenWithConcurrentReads() = runBlocking {
         var calls = 0

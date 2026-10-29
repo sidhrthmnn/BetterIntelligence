@@ -12,7 +12,6 @@ import java.net.InetAddress
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class PublicWebResearchTest {
-    @org.junit.After fun clearSyntheticQuota() { MwmblDiscovery.resetForTests() }
     @Test fun disabledDiscoveryMakesNoRequestAndQuotaDoesNotFallBackToAnotherEngine() = runBlocking {
         val requests = mutableListOf<String>()
         val fetcher = WebFetcher { url ->
@@ -24,9 +23,9 @@ class PublicWebResearchTest {
             PublicWebResearch(fetcher, discoveryAllowed = { false }).research("Search Orion memory") {}.failure)
         assertTrue(requests.isEmpty())
         val reader = PublicWebResearch(fetcher)
-        repeat(2) { assertEquals(ResearchFailure.DISCOVERY_UNAVAILABLE, reader.research("Search Orion memory") {}.failure) }
-        assertEquals(1, requests.count { "/api/v2/search/" in it })
-        assertTrue(requests.all { it.startsWith("https://api.mwmbl.org/") })
+        repeat(2) { assertEquals(ResearchFailure.BLOCKED, reader.research("Search Orion memory") {}.failure) }
+        assertEquals(1, requests.count { it.startsWith(DuckDuckGoDiscovery.endpoint) })
+        assertTrue(requests.all { it.startsWith("https://api.duckduckgo.com/") })
     }
 
     @Test fun citationsRequireReadPagesNotSearchSnippets() = runBlocking {
@@ -34,7 +33,7 @@ class PublicWebResearchTest {
         val fetcher = WebFetcher { url ->
             synchronized(requests) { requests += url }
             if (url.endsWith("/robots.txt")) WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-            else if ("api.mwmbl.org" in url) mwmblFixture(url, """<div class="result"><a class="result__a" href="https://one.example/article">Android Vulkan</a><div class="result__snippet">Never cite this snippet</div></div>
+            else if ("api.duckduckgo.com" in url) ddgFixture(url, """<div class="result"><a class="result__a" href="https://one.example/article">Android Vulkan</a><div class="result__snippet">Never cite this snippet</div></div>
                 <div class="result"><a class="result__a" href="http://unsafe.example/article">Android Vulkan</a></div>
                 <div class="result"><a class="result__a" href="https://two.example/article">Android Vulkan</a></div>""")
             else if ("two.example" in url) error("A login wall")
@@ -48,8 +47,8 @@ class PublicWebResearchTest {
         assertTrue(sources.single().excerpt.contains("fetched page"))
         assertFalse(sources.single().excerpt.contains("secret"))
         assertFalse(sources.single().excerpt.contains("snippet</"))
-        assertEquals(6, requests.size) // Discovery policy/page, two publisher policies and two attempted pages.
-        assertFalse(requests.any { "duckduckgo.com" in it })
+        assertEquals(5, requests.size) // One API call, two publisher policies and two attempted pages.
+        assertFalse(requests.any { "html.duckduckgo.com" in it || "lite.duckduckgo.com" in it })
     }
 
     @Test fun explicitLinkReadsItWithoutSendingQuestionToSearch() = runBlocking {

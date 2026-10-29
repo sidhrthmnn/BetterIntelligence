@@ -1,5 +1,6 @@
 # Search discovery and relevance — version 22 / 2.4.0-beta2
 
+> Historical version 22 evaluation. Version 23 uses [DuckDuckGo Instant Answer only](DUCKDUCKGO_ONLY.md) at the user's request; the provider selection below describes the earlier build.
 Measured 29 October 2026. Public synthetic questions only; no private phone
 conversation export, credentials or production data is included in this report.
 

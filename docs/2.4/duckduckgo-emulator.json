@@ -1,0 +1,195 @@
+[
+  {
+    "question": "What's happening in France now",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "INACCESSIBLE",
+    "wallMs": 9006,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=france&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/www.france.fr\/robots.txt",
+      "https:\/\/www.france.fr\/en",
+      "https:\/\/www.france.fr\/en\/"
+    ],
+    "sources": []
+  },
+  {
+    "question": "What's happening in France?",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "INACCESSIBLE",
+    "wallMs": 5214,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=france&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/www.france.fr\/robots.txt",
+      "https:\/\/www.france.fr\/en",
+      "https:\/\/www.france.fr\/en\/"
+    ],
+    "sources": []
+  },
+  {
+    "question": "Who is playing Doctor Doom in Avengers Doomsday?",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "INSUFFICIENT",
+    "wallMs": 18058,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=doctor%20doom%20avengers%20doomsday&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/api.duckduckgo.com\/?q=Avengers%20Doomsday&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/www.marvel.com\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Avengers%3A_Doomsday"
+    ],
+    "sources": []
+  },
+  {
+    "question": "Who is the current UK prime minister?",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "TIMEOUT",
+    "wallMs": 29054,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=united%20kingdom%20prime%20minister&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/gov.uk\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Prime_Minister_of_the_United_Kingdom",
+      "https:\/\/www.gov.uk\/robots.txt",
+      "https:\/\/www.gov.uk\/robots.txt",
+      "https:\/\/www.gov.uk\/government\/organisations\/prime-ministers-office-10-downing-street"
+    ],
+    "sources": []
+  },
+  {
+    "question": "What is the weather in London today?",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "INSUFFICIENT",
+    "wallMs": 15281,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=weather%20london&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/api.duckduckgo.com\/?q=London&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/london.gov.uk\/robots.txt",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/London",
+      "https:\/\/www.london.gov.uk\/robots.txt",
+      "https:\/\/www.london.gov.uk\/robots.txt",
+      "https:\/\/www.london.gov.uk\/"
+    ],
+    "sources": []
+  },
+  {
+    "question": "Search for Android Vulkan documentation",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "INSUFFICIENT",
+    "wallMs": 1508,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=android%20vulkan%20documentation&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/api.duckduckgo.com\/?q=Android&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence"
+    ],
+    "sources": []
+  },
+  {
+    "question": "Search for Kotlin coroutines documentation",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "INSUFFICIENT",
+    "wallMs": 9704,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=kotlin%20coroutines%20documentation&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/api.duckduckgo.com\/?q=Kotlin&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/kotlinlang.org\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Kotlin",
+      "https:\/\/kotlinlang.org\/"
+    ],
+    "sources": []
+  },
+  {
+    "question": "Search for photosynthesis",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 13526,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=photosynthesis&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Photosynthesis"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "Photosynthesis · Wikipedia",
+        "url": "https:\/\/en.wikipedia.org\/wiki\/Photosynthesis",
+        "excerpt": "Photosynthesis is a system of biological processes by which photopigment-bearing autotrophic organisms, such as most plants, algae and cyanobacteria, convert light energy—typically from sunlight—into the chemical energy necessary to fuel their metabolism. The term photosynthesis usually refers to oxygenic photosynthesis, a process that releases oxygen as a byproduct of water splitting. Photosynthetic organisms store the converted chemical energy within the bonds of intracellular organic compounds, typically carbohydrates like sugars, starches, phytoglycogen and cellulose. When needing to use this stored energy, an organism's cells then metabolize the organic compounds through cellular respiration. Photosynthesis plays a critical role in producing and maintaining the oxygen content of the Earth's atmosphere, and it supplies most of the biological energy necessary for complex life on Earth. Some organisms also perform anoxygenic photosynthesis, which does not produce oxygen.",
+        "retrievedAt": 1793281699237,
+        "updatedAt": "",
+        "kind": "INSTANT_ANSWER",
+        "dateKind": "API_SUMMARY",
+        "discoveryProvider": "DuckDuckGo"
+      }
+    ]
+  },
+  {
+    "question": "Search for Paris",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 5521,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=paris&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Paris"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "Paris · Wikipedia",
+        "url": "https:\/\/en.wikipedia.org\/wiki\/Paris",
+        "excerpt": "Paris is the capital and largest city of France, with an estimated city population of 2.04 million in an area of 105.4 km², as of January 2026, and a metropolitan population of 13.3 million. Located on the Seine in the centre of the Île-de-France region, it is the largest metropolitan area and fourth-most populous city in the European Union. Paris is nicknamed the \"City of Light\" mainly due to its leading role in the Age of Enlightenment. Administratively, Paris is divided into twenty arrondissements, each with their own cultural identity. Haussmann's renovation of Paris, which created new boulevards, parks, and public works, gave birth to a modern city known as the \"capital of the 19th century\". Paris is a major railway, motorway, and air-transport hub; in 2024 Charles de Gaulle Airport was the EU's busiest airport. Paris has one of the most sustainable transportation systems in the world and is one of only two cities that have received the Sustainable Transport Award twice.",
+        "retrievedAt": 1793281712996,
+        "updatedAt": "",
+        "kind": "INSTANT_ANSWER",
+        "dateKind": "API_SUMMARY",
+        "discoveryProvider": "DuckDuckGo"
+      }
+    ]
+  },
+  {
+    "question": "Search for Jane Austen",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 25550,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=jane%20austen&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Jane_Austen"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "Jane Austen · Wikipedia",
+        "url": "https:\/\/en.wikipedia.org\/wiki\/Jane_Austen",
+        "excerpt": "Jane Austen was an English writer known primarily for her six novels, which implicitly interpret, critique, and comment on the English landed gentry at the end of the 18th century. Austen's plots often explore the dependence of women on marriage for the pursuit of favourable social standing and economic security. Her works are implicit critiques of the novels of sensibility of the second half of the 18th century and are part of the transition to 19th-century literary realism. Her use of social commentary, realism, wit, and irony have earned her acclaim amongst critics and scholars. Austen wrote major novels before the age of 22, but she was not published until she was 35. The anonymously published Sense and Sensibility, Pride and Prejudice, Mansfield Park, and Emma were moderate successes, but they did not bring her public fame in her lifetime.",
+        "retrievedAt": 1793281717713,
+        "updatedAt": "",
+        "kind": "INSTANT_ANSWER",
+        "dateKind": "API_SUMMARY",
+        "discoveryProvider": "DuckDuckGo"
+      }
+    ]
+  },
+  {
+    "question": "What is the latest Android version?",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "INSUFFICIENT",
+    "wallMs": 5072,
+    "requests": [
+      "https:\/\/api.duckduckgo.com\/?q=android%20version&format=json&no_html=1&no_redirect=1&skip_disambig=1&t=betterintelligence",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/www.android.com\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Android_version_history",
+      "https:\/\/www.android.com\/"
+    ],
+    "sources": []
+  }
+]

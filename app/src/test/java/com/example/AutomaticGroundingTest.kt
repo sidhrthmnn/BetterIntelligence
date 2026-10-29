@@ -1,6 +1,7 @@
 package com.example
 
 import com.example.grounding.*
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -11,7 +12,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class AutomaticGroundingTest {
-    @org.junit.After fun clearSyntheticQuota() { MwmblDiscovery.resetForTests() }
     private val question = "Who is playing doom in avengers doomsday"
     private val confirmed = EvidenceSource(1, "Marvel Studios announces Avengers: Doomsday", "https://thewaltdisneycompany.com/news/cast/",
         "Marvel Studios announces Avengers: Doomsday\nRobert Downey Jr. returns in a new role as Doctor Doom in Avengers: Doomsday.", 1)
@@ -59,53 +59,35 @@ class AutomaticGroundingTest {
         assertFalse(EvidenceAnswer.resolve("Unknown", listOf(confirmed.copy(excerpt = confirmed.title)), question).sourceExtract)
     }
 
-    @Test fun discoveryUsesOnlyAllowedBackupAndNeverTurnsSnippetsIntoEvidence() = runBlocking {
-        var primaryCalls = 0; var backupCalls = 0
-        val primary = DiscoveryProvider { _, _ -> primaryCalls++; DiscoveryResult(emptyList(), DiscoveryState.BLOCKED) }
-        val backup = DiscoveryProvider { _, _ -> backupCalls++; DiscoveryResult(listOf(ResearchCandidate(confirmed.url, confirmed.title)), DiscoveryState.FOUND) }
-        assertEquals(DiscoveryState.BLOCKED, FreeSearchDiscovery(primary, backup) { false }.discover(ResearchQuery(question), false).state)
-        assertEquals(0, backupCalls)
-        assertEquals(DiscoveryState.FOUND, FreeSearchDiscovery(primary, backup) { true }.discover(ResearchQuery(question), false).state)
-        assertEquals(2, primaryCalls); assertEquals(1, backupCalls)
-        val json = """{"results":[{"url":"${confirmed.url}","title":"Actual publisher","content":"Untrusted search snippet"},{"url":"http://unsafe.example/","title":"Unsafe"},{"url":"https://127.0.0.1/private"}]}"""
-        assertEquals(2, MwmblDiscovery.candidates(json).size)
-        assertEquals("Untrusted search snippet", MwmblDiscovery.candidates(json).first().routingHint)
-        assertEquals("https://unsafe.example/", MwmblDiscovery.candidates(json).last().url)
-        assertEquals("doom avengers doomsday", MwmblDiscovery.searchText(ResearchQuery(question)))
-        assertEquals("cast away", MwmblDiscovery.searchText(ResearchQuery("Who plays in Cast Away?")))
-        assertEquals("actor", MwmblDiscovery.searchText(ResearchQuery("Who plays in The Actor?")))
-    }
-
-    @Test fun liteHandlesUnknownMarkupButDoesNotRetryAChallenge() = runBlocking {
+    @Test fun discoveryUsesOnlyTheOfficialApiAndDoesNotScrapeHtml() = runBlocking {
         val calls = mutableListOf<String>()
-        var challenged = false
-        val discovery = HtmlSearchDiscovery(WebFetcher { url ->
-            calls += url
-            WebDocument(url, if (challenged) "<form id='challenge-form'></form>" else if ("lite.duckduckgo" in url)
-                "<a class='result-link' href='${confirmed.url}'>${confirmed.title}</a>" else "<html>Unknown layout</html>", "text/html")
-        }, { true })
-        assertEquals(DiscoveryState.FOUND, discovery.discover(ResearchQuery(question), false).state)
-        assertEquals(2, calls.size)
-        calls.clear(); challenged = true
-        assertEquals(DiscoveryState.BLOCKED, discovery.discover(ResearchQuery(question), false).state)
+        val discovery = DuckDuckGoDiscovery(WebFetcher { url ->
+            calls += url; WebDocument(url, "<html>Unknown layout</html>", "text/html")
+        })
+        assertEquals(DiscoveryState.UNAVAILABLE, discovery.discover(ResearchQuery(question), false).state)
         assertEquals(1, calls.size)
+        assertTrue(calls.single().startsWith(DuckDuckGoDiscovery.endpoint))
     }
 
-    @Test fun anonymousQuotaFailureBacksOffWithoutKeysOrPaidRequests() = runBlocking {
+    @Test fun apiPermissionIsCheckedBeforeAnyRequest() = runBlocking {
+        var calls = 0
+        val discovery = DuckDuckGoDiscovery(WebFetcher { calls++; error("No permission") }) { false }
+        assertEquals(DiscoveryState.UNAVAILABLE, discovery.discover(ResearchQuery(question), false).state)
+        assertEquals(0, calls)
+    }
+
+    @Test fun officialApiUsesNoKeysCallbacksOrBangRedirects() = runBlocking {
         val calls = mutableListOf<String>()
-        var quota = false
-        val fetcher = WebFetcher { url ->
-            calls += url
-            if (quota) error("Website unavailable (HTTP 429)")
-            WebDocument(url, """{"results":[{"url":"${confirmed.url}","title":"${confirmed.title}"}]}""", "application/json")
-        }
-        val reader = MwmblDiscovery(fetcher) { true }
-        assertEquals(DiscoveryState.FOUND, reader.discover(ResearchQuery(question), false).state)
-        quota = true
-        assertEquals(DiscoveryState.UNAVAILABLE, reader.discover(ResearchQuery(question), false).state)
-        assertEquals(DiscoveryState.UNAVAILABLE, MwmblDiscovery(fetcher) { true }.discover(ResearchQuery(question), false).state)
-        assertEquals(2, calls.size)
-        assertTrue(calls.all { "api_key" !in it && it.startsWith("https://api.mwmbl.org/api/v2/search/?q=") })
+        val provider = DuckDuckGoDiscovery(WebFetcher { url ->
+            calls += url; WebDocument(url, "{}", "application/x-javascript")
+        })
+        assertEquals(DiscoveryState.EMPTY, provider.discover(ResearchQuery(question), false).state)
+        val url = calls.single().toHttpUrl()
+        assertEquals("api.duckduckgo.com", url.host)
+        assertEquals("json", url.queryParameter("format"))
+        assertEquals("1", url.queryParameter("no_redirect"))
+        assertEquals("betterintelligence", url.queryParameter("t"))
+        assertFalse(url.queryParameterNames.any { it in setOf("api_key", "key", "callback") })
     }
 
     @Test fun headlineResultCannotSuppressAnActualPublisherPage() = runBlocking {
@@ -193,10 +175,8 @@ class AutomaticGroundingTest {
         val wrong = EvidenceSource(1, "Capital punishment in France", "https://country.example/law", "Capital punishment in France has a long history.", 1)
         assertFalse(EvidenceRanking.acceptable(wrong, ResearchPlanner.plan(query)))
         assertTrue(EvidenceRanking.acceptable(wrong, ResearchPlanner.plan("What is capital punishment in France?")))
-        val primary = DiscoveryProvider { _, _ -> DiscoveryResult(listOf(ResearchCandidate(wrong.url, wrong.title)), DiscoveryState.FOUND) }
-        var fallbackCalls = 0
-        val backup = DiscoveryProvider { _, _ -> fallbackCalls++; DiscoveryResult(listOf(ResearchCandidate("https://country.example/capital", "Capital city of France")), DiscoveryState.FOUND) }
-        assertEquals("https://country.example/capital", FreeSearchDiscovery(primary, backup) { true }.discover(ResearchQuery(query), false).candidates.single().url)
-        assertEquals(1, fallbackCalls)
+        val json = """{"Results":[{"FirstURL":"https://country.example/law","Text":"Capital punishment in France"},{"FirstURL":"https://country.example/capital","Text":"Capital city of France"}]}"""
+        val provider = DuckDuckGoDiscovery(WebFetcher { WebDocument(it, json, "application/json") })
+        assertEquals("https://country.example/capital", provider.discover(ResearchQuery(query), false).candidates.single().url)
     }
 }
