@@ -20,6 +20,7 @@ object NewsIntent {
             listOf("UK", "USA", "UAE", "Gaza", "Palestine", "Britain", "United States"))
             .filter { it.isNotBlank() }.joinToString("|", "(?i)\\b(?:", ")\\b") { Regex.escape(it) }.toRegex()
     }
+    fun countriesIn(question: String): List<String> = countries.findAll(question).map { it.value }.distinctBy { it.lowercase(Locale.ROOT) }.toList()
     fun isLiveRequest(question: String): Boolean {
         val direct = Regex("(?i)^\\s*what(?:['’]s|s| is)\\s+(?:happening|going on)\\b").containsMatchIn(question)
         val unfolding = Regex("(?i)\\b(?:how (?:is|are|was).{0,55}(?:elections?|vote|war|conflict|talks)|(?:elections?|vote|war|conflict|talks).{0,40}(?:going|ongoing|progress|results|updates|status))\\b").containsMatchIn(question) &&

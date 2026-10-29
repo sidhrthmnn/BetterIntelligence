@@ -72,7 +72,7 @@ class ExaAnswerDeviceTest {
             }
             val doom = ask("Who is acting as Doom in Avengers Doomsday?")
             verify(doom.content.contains("Robert Downey", true), "Actor missing: ${doom.content}")
-            val election = ask("How is the election going on in Israel?")
+            val election = ask("How is the election going on in israel?")
             verify(Regex("(?i)Israel|Netanyahu|Eisenkot").containsMatchIn(election.content), "Election subject lost: ${election.content}")
             verify(Regex("(?i)seats?|majority|votes?|count|bloc").containsMatchIn(election.content), "Election result missing: ${election.content}")
             verify(FactualResearch.answerFocusScore(election.content, "How is the election going on in Israel?") >= 65, "Election count/status not answered: ${election.content}")

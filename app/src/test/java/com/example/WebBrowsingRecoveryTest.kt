@@ -231,6 +231,7 @@ class WebBrowsingRecoveryTest {
         val resolved = EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), q)
         assertTrue(resolved.text, resolved.sourceExtract)
         assertTrue(resolved.text.contains(source.title)); assertTrue(resolved.text.contains("53 seats"))
+        assertTrue(EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), q.lowercase()).sourceExtract)
         assertFalse(EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), "How is the election going on in France?").sourceExtract)
         assertTrue(FactualResearch.headlineOnly("Live Israel election › Updates › Political parties discuss the next step", "Israel election"))
     }

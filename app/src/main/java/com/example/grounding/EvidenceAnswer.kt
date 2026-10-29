@@ -34,7 +34,7 @@ object EvidenceAnswer {
             // A transcript can discuss the count without repeating the country
             // in every paragraph. Preserve the read article's title as visible
             // quotation context for one requested news subject, never as a value.
-            val requestedSubjects = ResearchPlanner.subjects(question)
+            val requestedSubjects = ResearchPlanner.subjects(question).ifEmpty { if (NewsIntent.isLiveRequest(question)) NewsIntent.countriesIn(question) else emptyList() }
             val newsContext = NewsIntent.isLiveRequest(question) && requestedSubjects.size == 1 &&
                 FactualResearch.answerFocusScore(text, question) >= 65 &&
                 requestedSubjects.all { entity -> ResearchQuery.words(entity).all { it in titleWords } }
