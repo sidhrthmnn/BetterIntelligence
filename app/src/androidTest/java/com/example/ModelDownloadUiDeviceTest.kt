@@ -32,6 +32,8 @@ class ModelDownloadUiDeviceTest {
         compose.runOnUiThread { vm.selectTab(AppTab.MODELS) }
         compose.onNodeWithTag("model_ram_summary").assertExists()
         if (!model.isInstalled) {
+            compose.onNodeWithTag("models_list").performScrollToNode(hasText("Other models"))
+            compose.onNodeWithText("Other models").performClick()
             compose.onNodeWithTag("models_list").performScrollToNode(hasTestTag("download_model_${model.id}"))
             compose.onNodeWithTag("download_model_${model.id}").performClick()
             compose.waitUntil(15_000) { vm.allModels.value.any { it.id == model.id && (it.downloadState == "DOWNLOADING" || it.isInstalled) } }
