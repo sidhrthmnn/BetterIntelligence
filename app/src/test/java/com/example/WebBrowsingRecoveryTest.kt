@@ -222,4 +222,16 @@ class WebBrowsingRecoveryTest {
         assertFalse(result.text.contains("Instructions and Guides"))
         assertFalse(EvidenceAnswer.resolve("An unsupported uncited summary.", listOf(source), "What is this site's owner?").sourceExtract)
     }
+
+    @Test fun transcriptCountsKeepTheirCountryFromTheReadArticleTitle() {
+        val source = EvidenceSource(1, "What's next for Israel after election produces political gridlock", "https://publisher.example/transcript",
+            "Read the Full Transcript\nWith the vast majority of votes counted, the leading bloc has 53 seats, short of the 61 needed for a majority. Coalition talks continue.", 1,
+            java.time.LocalDate.now().toString(), "WEB_PAGE", "MODIFIED")
+        val q = "How is the election going on in Israel?"
+        val resolved = EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), q)
+        assertTrue(resolved.text, resolved.sourceExtract)
+        assertTrue(resolved.text.contains(source.title)); assertTrue(resolved.text.contains("53 seats"))
+        assertFalse(EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), "How is the election going on in France?").sourceExtract)
+        assertTrue(FactualResearch.headlineOnly("Live Israel election › Updates › Political parties discuss the next step", "Israel election"))
+    }
 }

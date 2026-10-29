@@ -31,7 +31,14 @@ object EvidenceAnswer {
             val activeOffice = Regex("(?i)\\b(incumbent|current|present|serving|in office|leads|is (?:the )?(?:chief minister|prime minister|president|governor|mayor|ceo))\\b").containsMatchIn(text)
             val titleWords = ResearchQuery.words(source.title)
             val roleContext = office && activeOffice && ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in titleWords } }
-            val contextual = (if (roleContext) found + titleWords else found) + EvidenceRanking.localeWords(source.url)
+            // A transcript can discuss the count without repeating the country
+            // in every paragraph. Preserve the read article's title as visible
+            // quotation context for one requested news subject, never as a value.
+            val requestedSubjects = ResearchPlanner.subjects(question)
+            val newsContext = NewsIntent.isLiveRequest(question) && requestedSubjects.size == 1 &&
+                FactualResearch.answerFocusScore(text, question) >= 65 &&
+                requestedSubjects.all { entity -> ResearchQuery.words(entity).all { it in titleWords } }
+            val contextual = (if (roleContext || newsContext) found + titleWords else found) + EvidenceRanking.localeWords(source.url)
             val subject = ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in contextual } }
             val directSummary = plan.explicitUrls.isNotEmpty() && query.terms.isEmpty() && ResearchQuery.words(body).size >= 6
             val topical = directSummary || query.terms.isNotEmpty() && query.terms.count { it in contextual } >= kotlin.math.ceil(query.terms.size * .65).toInt()
@@ -48,7 +55,8 @@ object EvidenceAnswer {
                 (!labelledWeather || Regex("(?i)observed temperature:|(?:today|tonight) forecast: (?:high|low)").containsMatchIn(text))
             if (text.length !in 25..700 || !subject || !topical || boilerplate || wrongRole || !current || !weatherEvidence ||
                 EvidenceRanking.contextOnly(source, plan)) null
-            else Extract(source, text, query.score(text) + (if (directSummary) minOf(30, body.length / 20) else 0) + FactualResearch.definitionQuality(body, question) + (if (hasTemperature(text)) 35 else 0) +
+            else Extract(source, if (newsContext && !text.contains(source.title)) "${source.title}\n$text" else text,
+                query.score(text) + (if (directSummary) minOf(30, body.length / 20) else 0) + FactualResearch.definitionQuality(body, question) + (if (hasTemperature(text)) 35 else 0) +
                 (if (Regex("(?i)observed temperature").containsMatchIn(text)) 30 else 0) + FactualResearch.answerFocusScore(text, question))
         } }.sortedByDescending { it.score }.distinctBy { it.text.lowercase() }.take(if (weather) 2 else 1)
         if (extracts.isEmpty()) {

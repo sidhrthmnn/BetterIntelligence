@@ -53,6 +53,9 @@ object FactualResearch {
     fun headlineOnly(text: String, title: String): Boolean {
         val clean = text.trim()
         if (clean.isBlank()) return true
+        // Context fitting can leave only a hierarchical heading when its body
+        // does not fit. A longer section heading is still not article evidence.
+        if ('\n' !in clean && " › " in clean) return true
         val utility = Regex("(?i)^(?:you(?: are)? logged in|loading[. …]*|you (?:do not|don't|don’t) have(?: any)?(?: active)? subscription[.!]?|save|share|listen(?:\\s*\\([^)]*\\))?|news\\s*[|›].*|(?:subscribe|sign in|log in)(?: to.*)?)$")
         val bodies = clean.split(Regex("\\n\\s*\\n")).map { block ->
             block.lines().dropWhile { it.trim() == title.trim() || it.trim().startsWith("${title.trim()} ›") }
