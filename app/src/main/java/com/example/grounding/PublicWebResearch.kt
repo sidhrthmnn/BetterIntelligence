@@ -136,7 +136,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         fun enough(): Boolean {
             val selected = EvidenceRanking.select(sources, plan)
             val covered = selected.flatMap { plan.coverage(it.excerpt) }.toSet()
-            return covered.size == plan.focuses.size && (selected.size >= 2 || selected.size == 1 &&
+            return (!FactualResearch.needsAnswerFocus(question) || selected.any { FactualResearch.answerFocusScore(it.excerpt, question) >= 65 }) &&
+                covered.size == plan.focuses.size && (selected.size >= 2 || selected.size == 1 &&
                 (explicit.isNotEmpty() || EvidenceRanking.primaryRelevance(selected.single().url, question) > 0)) && EvidenceRanking.conflicts(selected).isEmpty()
         }
         suspend fun readCandidates(candidates: List<ResearchCandidate>) {
@@ -149,7 +150,10 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 val combined = "${it.title} ${it.routingHint}".trim()
                 plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question)
             })
-            .filter { domains.getOrDefault(domain(it.url), 0) < 2 }.take((8 - readCount).coerceAtLeast(0))
+            .filter { domains.getOrDefault(domain(it.url), 0) < 2 }
+            // Reserve reads for one focused reformulation when broad election
+            // coverage has not yet supplied the count/status the question needs.
+            .take(minOf((8 - readCount).coerceAtLeast(0), if (readCount == 0 && FactualResearch.needsAnswerFocus(question) && plan.searches.size > 1) 4 else 8))
         if (ordered.isNotEmpty()) progress(ResearchStage.READING)
         // Read in waves: stop after enough evidence instead of fetching every result.
         for (wave in ordered.chunked(2)) {

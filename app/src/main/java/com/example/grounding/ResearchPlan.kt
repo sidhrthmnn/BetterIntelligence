@@ -59,6 +59,8 @@ object ResearchPlanner {
         val searches = when {
             urls.isNotEmpty() -> emptyList()
             FactualResearch.isCasting(plain) -> listOf(query.searchText)
+            NewsIntent.isLiveRequest(plain) && Regex("(?i)\\belections?\\b").containsMatchIn(plain) ->
+                listOf(query.searchText, "${query.topicSearchText} election results vote count seats")
             technicalComparison -> listOf("$subject Android runtime GPU compatibility", "$subject memory RAM quantization", "$subject Android benchmark device context tokens latency")
             parts.size > 1 -> parts.map { part ->
                 val q = ResearchQuery(part, today).searchText

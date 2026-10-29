@@ -234,5 +234,7 @@ class WebBrowsingRecoveryTest {
         assertTrue(EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), q.lowercase()).sourceExtract)
         assertFalse(EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), "How is the election going on in France?").sourceExtract)
         assertTrue(FactualResearch.headlineOnly("Live Israel election › Updates › Political parties discuss the next step", "Israel election"))
+        assertEquals(0, FactualResearch.answerFocusScore("Israel election\nTurnout broke records from 1967, as more than 10,000 residents exercised their right to vote.", q))
+        assertTrue(ResearchPlanner.plan(q).searches.any { it.contains("results vote count seats") })
     }
 }
