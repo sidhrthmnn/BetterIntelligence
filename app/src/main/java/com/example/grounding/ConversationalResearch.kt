@@ -6,6 +6,8 @@ import com.example.data.ChatMessageEntity
  * Stored private user/assistant messages are never copied into a search query.
  */
 object ConversationalResearch {
+    fun validPublicQuery(value: String): Boolean = value.length in 2..400 &&
+        !GroundingPolicy.containsCredential(value) && !Regex("(?i)https?://|[\\p{Cc}]|ignore.{0,25}instructions|system prompt").containsMatchIn(value)
     fun validPublicPlace(place: String) = Regex("^[\\p{L}][\\p{L} ,.'()-]{1,69}$").matches(place) &&
         !GroundingPolicy.containsCredential(place) && !Regex("(?i)ignore|instructions|system prompt").containsMatchIn(place)
     /** Bind only a place in this public request that the actual pages mention.
@@ -45,11 +47,15 @@ object ConversationalResearch {
             val role = Regex("(?i)\\b(mayor|governor)\\b").find(history.lastOrNull { it.role == "user" }?.content.orEmpty())?.value
             if (role != null) return "Who is the $role in $question?"
         }
-        if (!followUpPattern.containsMatchIn(question) && !Regex("(?i)^\\s*(?:what|how) about\\b").containsMatchIn(question)) return question
+        val scopedFollowUp = Regex("(?i)^\\s*(?:in|for|from) [\\p{L} .'-]{2,40}\\b.*\\b(?:price|cost|release|review)|\\b(?:what|how) about\\b").containsMatchIn(question)
+        if (!followUpPattern.containsMatchIn(question) && !scopedFollowUp) return question
         val conversation = history.lastOrNull()?.conversationId
         val sources = history.filter { it.conversationId == conversation }.takeLast(4).lastOrNull { it.role == "assistant" && it.sourcesJson != "[]" }
             ?.let { GroundingResult.sources(it.sourcesJson) }.orEmpty()
         if (sources.isEmpty()) return question
+        val publicQueries = sources.map { it.publicQuery }.filter(::validPublicQuery).distinct()
+        if (publicQueries.size == 1 && !Regex("(?i)\\bthere\\b").containsMatchIn(question))
+            return "$question (Public source topic: ${publicQueries.single()})"
         // Resolve a public location before planning a different question about it.
         // Do not send private chat text, or the old weather intent, to discovery.
         if (Regex("(?i)\\bthere\\b").containsMatchIn(question)) {

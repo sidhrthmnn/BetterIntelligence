@@ -11,7 +11,9 @@ object NewsIntent {
     }
     fun isLiveRequest(question: String): Boolean {
         val direct = Regex("(?i)^\\s*what(?:['’]s|s| is)\\s+(?:happening|going on)\\b").containsMatchIn(question)
-        return direct && countries.containsMatchIn(question) ||
+        val unfolding = Regex("(?i)\\b(?:how (?:is|are|was).{0,55}(?:elections?|vote|war|conflict|talks)|(?:elections?|vote|war|conflict|talks).{0,40}(?:going|ongoing|progress|results|updates|status))\\b").containsMatchIn(question) &&
+            !Regex("(?i)\\b(?:history|historical|how (?:does|do)|what (?:is|are) an? |19\\d{2}|20[01]\\d)\\b").containsMatchIn(question)
+        return direct && countries.containsMatchIn(question) || unfolding ||
             Regex("(?i)^\\s*what(?:['’]s|s| is) new (?:in|with|for)\\b").containsMatchIn(question)
     }
     fun isNewsSearch(question: String) = isLiveRequest(question) ||

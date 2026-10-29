@@ -12,6 +12,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class DuckDuckGoDiscoveryTest {
+    private fun apiResearch(fetcher: WebFetcher) = PublicWebResearch(fetcher, DuckDuckGoDiscovery(fetcher))
     private fun document(json: String, mime: String = "application/x-javascript") =
         WebDocument(DuckDuckGoDiscovery.endpoint, json, mime)
 
@@ -56,9 +57,9 @@ class DuckDuckGoDiscoveryTest {
         assertEquals(DiscoveryState.EMPTY, DuckDuckGoDiscovery.candidates(document("""{"Heading":"Paris","Type":"D","AbstractURL":"https://en.wikipedia.org/wiki/Paris_(disambiguation)"}""")).state)
     }
 
-    @Test fun defaultResearchUsesOnlyTheApiThenActualPublisherText() = runBlocking {
+    @Test fun apiResearchPrefersActualPublisherText() = runBlocking {
         val requests = mutableListOf<String>()
-        val sources = PublicWebResearch(WebFetcher { url ->
+        val sources = apiResearch(WebFetcher { url ->
             requests += url
             when {
                 url.startsWith(DuckDuckGoDiscovery.endpoint) -> document("""{"Heading":"Orion memory","AbstractURL":"https://publisher.example/orion","AbstractText":"Orion needs 99 GB for its documented configuration. The summary describes a different configuration and is not the actual publisher page.","Answer":"99 GB"}""")
@@ -75,17 +76,12 @@ class DuckDuckGoDiscoveryTest {
         assertFalse(requests.any { it == "https://api.duckduckgo.com/robots.txt" })
     }
 
-    @Test fun emptyResultsStayOnTheSameApiAndDuplicateTopicsAreNotRetried() = runBlocking {
-        val requests = mutableListOf<String>()
-        val result = PublicWebResearch(WebFetcher { url -> requests += url; document("{}") })
-            .research("What's happening in France now") {}
-        assertTrue(result.sources.isEmpty())
-        assertEquals(1, requests.size)
-        assertTrue(requests.single().startsWith(DuckDuckGoDiscovery.endpoint))
+    @Test fun emptyLegacyApiPayloadProvidesNoSource() {
+        assertTrue(DuckDuckGoDiscovery.candidates(document("{}")).candidates.isEmpty())
     }
 
     @Test fun stableTopicSummaryRemainsExplicitApiEvidenceWhenPublisherCannotBeRead() = runBlocking {
-        val sources = PublicWebResearch(WebFetcher { url ->
+        val sources = apiResearch(WebFetcher { url ->
             if (url.startsWith(DuckDuckGoDiscovery.endpoint)) document("""{"Heading":"Photosynthesis","AbstractURL":"https://publisher.example/photosynthesis","AbstractSource":"Science reference","AbstractText":"Photosynthesis is a process in which plants convert light energy into chemical energy stored in sugars. Plants use chlorophyll to absorb light."}""")
             else error("HTTP 403")
         }).search("Search for photosynthesis")

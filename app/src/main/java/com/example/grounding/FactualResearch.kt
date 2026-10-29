@@ -4,7 +4,8 @@ package com.example.grounding
 object FactualResearch {
     private val casting = Regex("(?i)\\b(?:who(?:['’]s|\\s+(?:is|was|will be|has been|was announced as))?\\s+(?:(?:currently|now|actually|really)\\s+)?(?:(?:going to|set to)\\s+)?(?:play(?:s|ed|ing)?|portray(?:s|ed|ing)?|voic(?:e|es|ed|ing)|cast)|(?:which|what)\\s+(?:actor|actress)|(?:actor|actress)\\s+(?:playing|portraying)|who\\s+(?:is|was)\\s+.*\\bcast\\s+as)\\b")
     private val speculative = Regex("(?i)\\b(?:fan theories|fan theory|theory|theories|rumou?rs?|speculat(?:ion|ive)|unconfirmed|fan[- ]?casting|predictions?|might|could|allegedly|reportedly)\\b")
-    fun isCasting(question: String) = casting.containsMatchIn(question)
+    fun isCasting(question: String) = casting.containsMatchIn(question) ||
+        Regex("(?i)\\bwho (?:is |was )?(?:acting|acts?) as\\b").containsMatchIn(question)
     fun speculationRequested(question: String) = Regex("(?i)\\b(?:theories|theory|rumou?rs?|speculation|fan[- ]?casting)\\b").containsMatchIn(question)
     fun speculativeCasting(question: String, text: String) = isCasting(question) && !speculationRequested(question) && speculative.containsMatchIn(text)
     fun definitionTopic(question: String): String? {

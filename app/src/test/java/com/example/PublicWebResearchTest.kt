@@ -12,7 +12,7 @@ import java.net.InetAddress
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class PublicWebResearchTest {
-    @Test fun disabledDiscoveryMakesNoRequestAndQuotaDoesNotFallBackToAnotherEngine() = runBlocking {
+    @Test fun disabledDiscoveryMakesNoRequestAndFeedDenialsBackOff() = runBlocking {
         val requests = mutableListOf<String>()
         val fetcher = WebFetcher { url ->
             requests += url
@@ -23,9 +23,9 @@ class PublicWebResearchTest {
             PublicWebResearch(fetcher, discoveryAllowed = { false }).research("Search Orion memory") {}.failure)
         assertTrue(requests.isEmpty())
         val reader = PublicWebResearch(fetcher)
-        repeat(2) { assertEquals(ResearchFailure.BLOCKED, reader.research("Search Orion memory") {}.failure) }
-        assertEquals(1, requests.count { it.startsWith(DuckDuckGoDiscovery.endpoint) })
-        assertTrue(requests.all { it.startsWith("https://api.duckduckgo.com/") })
+        repeat(2) { assertEquals(ResearchFailure.BLOCKED, reader.research("Latest Orion memory") {}.failure) }
+        assertEquals(1, requests.count { it.startsWith(ExaDiscovery.endpoint) })
+        assertTrue(requests.all { it.startsWith(ExaDiscovery.endpoint) })
     }
 
     @Test fun citationsRequireReadPagesNotSearchSnippets() = runBlocking {
@@ -33,7 +33,7 @@ class PublicWebResearchTest {
         val fetcher = WebFetcher { url ->
             synchronized(requests) { requests += url }
             if (url.endsWith("/robots.txt")) WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-            else if ("api.duckduckgo.com" in url) ddgFixture(url, """<div class="result"><a class="result__a" href="https://one.example/article">Android Vulkan</a><div class="result__snippet">Never cite this snippet</div></div>
+            else if (url == ExaDiscovery.endpoint) ddgFixture(url, """<div class="result"><a class="result__a" href="https://one.example/article">Android Vulkan</a><div class="result__snippet">Never cite this snippet</div></div>
                 <div class="result"><a class="result__a" href="http://unsafe.example/article">Android Vulkan</a></div>
                 <div class="result"><a class="result__a" href="https://two.example/article">Android Vulkan</a></div>""")
             else if ("two.example" in url) error("A login wall")

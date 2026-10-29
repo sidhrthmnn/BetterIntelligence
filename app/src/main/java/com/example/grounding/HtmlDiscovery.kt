@@ -10,7 +10,7 @@ fun interface DiscoveryProvider {
     suspend fun discover(query: ResearchQuery, broad: Boolean): DiscoveryResult
 }
 
-/** Shared canonicalization; discovery is provided only by the official Instant Answer API. */
+/** Shared URL canonicalization for discovery and publisher reading. */
 object HtmlDiscovery {
     /** Only remove well-known tracking keys. Article IDs and pagination remain intact. */
     fun canonicalUrl(value: String): String {

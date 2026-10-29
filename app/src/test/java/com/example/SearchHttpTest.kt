@@ -17,6 +17,29 @@ import kotlin.concurrent.thread
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SearchHttpTest {
+    @Test fun searchPostIsJsonAndNeverReplayedToARedirect() = runBlocking {
+        ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
+            var firstLine = ""
+            var headers = ""
+            val responder = thread(isDaemon = true) {
+                server.accept().use { socket ->
+                    val input = socket.getInputStream().bufferedReader()
+                    firstLine = input.readLine()
+                    val lines = mutableListOf<String>()
+                    while (true) { val line = input.readLine(); if (line.isNullOrEmpty()) break; lines += line }
+                    headers = lines.joinToString("\n")
+                    socket.getOutputStream().write("HTTP/1.1 307 Temporary Redirect\r\nLocation: /do-not-replay\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray())
+                }
+            }
+            val result = runCatching { SearchHttp(okhttp3.OkHttpClient.Builder().followRedirects(false).build(), true)
+                .postJson("http://localhost:${server.localPort}/search", "{\"query\":\"public topic\"}") { true } }
+            responder.join(3000)
+            assertTrue(result.isFailure); assertEquals("POST /search HTTP/1.1", firstLine)
+            assertTrue(headers.contains("application/json")); assertFalse(headers.contains("Authorization:"))
+            server.soTimeout = 200
+            assertTrue("Question was replayed", runCatching { server.accept().close() }.isFailure)
+        }
+    }
     @Test fun sessionBudgetIncludesRedirectRequestsAndFailsBeforeSendingTheNextOne() = runBlocking {
         ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
             val responder = thread(isDaemon = true) {
