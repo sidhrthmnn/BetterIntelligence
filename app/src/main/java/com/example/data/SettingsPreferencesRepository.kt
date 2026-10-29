@@ -38,6 +38,7 @@ class SettingsPreferencesRepository(private val context: Context) {
         private val KEY_PRIMARY_MODEL_ID = stringPreferencesKey("primary_model_id")
         private val KEY_SECONDARY_MODEL_ID = stringPreferencesKey("secondary_model_id")
         private val KEY_AUTO_RAM_FALLBACK = stringPreferencesKey("auto_ram_fallback")
+        internal fun webConsentAccepted(allowed: String?, consent: String?) = allowed == "true" && consent == "4"
     }
 
     val selectedEngineFlow: Flow<SupportedEngine> = context.dataStore.data
@@ -73,8 +74,8 @@ class SettingsPreferencesRepository(private val context: Context) {
 
     private val preferences = context.dataStore.data.catch { if (it is IOException) emit(emptyPreferences()) else throw it }
     val appearance = preferences.map { it[KEY_APPEARANCE] ?: if (it[KEY_DARK_THEME] == "false") "LIGHT" else "DARK" }
-    // Consent 3 already disclosed Mwmbl. Legacy consent 2 did not authorize it.
-    val webAllowed = preferences.map { it[KEY_WEB_ALLOWED] == "true" && it[KEY_WEB_RESEARCH_CONSENT] == "3" }
+    // A new search destination needs a new disclosure; never expand an old consent silently.
+    val webAllowed = preferences.map { webConsentAccepted(it[KEY_WEB_ALLOWED], it[KEY_WEB_RESEARCH_CONSENT]) }
     val webMode = preferences.map { it[KEY_WEB_MODE] ?: "OFF" }
     val activeConversation = preferences.map { it[KEY_CONVERSATION]?.toLongOrNull() ?: 0L }
     val memoryEnabled = preferences.map { it[KEY_MEMORY] == "true" }
@@ -97,7 +98,7 @@ class SettingsPreferencesRepository(private val context: Context) {
         require(value in setOf("LIGHT", "DARK", "AMOLED"))
         context.dataStore.edit { it[KEY_APPEARANCE] = value; it[KEY_DARK_THEME] = (value != "LIGHT").toString() }
     }
-    suspend fun saveWebAllowed(value: Boolean) { context.dataStore.edit { it[KEY_WEB_ALLOWED] = value.toString(); it[KEY_WEB_RESEARCH_CONSENT] = "3" } }
+    suspend fun saveWebAllowed(value: Boolean) { context.dataStore.edit { it[KEY_WEB_ALLOWED] = value.toString(); it[KEY_WEB_RESEARCH_CONSENT] = "4" } }
     suspend fun saveWebMode(value: String) { require(value in setOf("OFF", "AUTO", "ON")); context.dataStore.edit { it[KEY_WEB_MODE] = value } }
     suspend fun saveActiveConversation(id: Long) { context.dataStore.edit { it[KEY_CONVERSATION] = id.toString() } }
     suspend fun saveMemoryEnabled(enabled: Boolean) { context.dataStore.edit { it[KEY_MEMORY] = enabled.toString() } }

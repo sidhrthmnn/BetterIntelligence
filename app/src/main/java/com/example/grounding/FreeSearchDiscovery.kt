@@ -19,9 +19,14 @@ class MwmblDiscovery(private val fetcher: WebFetcher, private val permitted: sus
         /** Isolate synthetic quota failures between tests; never called by app code. */
         @androidx.annotation.VisibleForTesting
         internal fun resetForTests() { nextRequest = 0L; unavailableUntil = 0L }
-        internal fun searchText(query: ResearchQuery): String = if (FactualResearch.isCasting(query.question) &&
-            query.terms.none { it == "actor" || it == "cast" })
-            query.searchText.removeSuffix(" official cast").removeSuffix(" actor cast") else query.searchText
+        internal fun searchText(query: ResearchQuery, broad: Boolean = false): String {
+            val noise = if (broad) "happening|happen|happened|going|information|documentation|official" else "happening|happen|happened|going"
+            var topic = query.topicSearchText.replace(Regex("(?i)\\b(?:$noise)\\b"), " ").replace(Regex("\\s+"), " ").trim()
+            val words = topic.split(' ').filter { it.isNotBlank() }
+            if ("android" in words) topic = (listOf("android") + words.filter { it != "android" }).joinToString(" ")
+            if (NewsIntent.isNewsSearch(query.question) && !Regex("(?i)\\bnews\\b").containsMatchIn(topic)) topic += " news"
+            return topic.ifBlank { query.searchText }.take(400)
+        }
         fun candidates(json: String): List<ResearchCandidate> {
             val rows = JSONObject(json).optJSONArray("results") ?: return emptyList()
             return (0 until minOf(rows.length(), 16)).mapNotNull { i ->
@@ -31,7 +36,9 @@ class MwmblDiscovery(private val fetcher: WebFetcher, private val permitted: sus
                 val raw = row.optString("url")
                 val url = (if (raw.startsWith("http://", true)) "https://" + raw.drop(7) else raw)
                     .takeIf(GroundingPolicy::publicHttpsUrl) ?: return@mapNotNull null
-                ResearchCandidate(HtmlDiscovery.canonicalUrl(url), row.optString("title").take(200), row.optString("content").take(240))
+                val path = url.toHttpUrl().pathSegments.joinToString(" ") { it.replace('-', ' ').replace('_', ' ') }
+                ResearchCandidate(HtmlDiscovery.canonicalUrl(url), row.optString("title").take(200),
+                    row.optString("content").ifBlank { path }.take(240), "Mwmbl")
             }.distinctBy { it.url }
         }
     }
@@ -40,7 +47,7 @@ class MwmblDiscovery(private val fetcher: WebFetcher, private val permitted: sus
         delay((nextRequest - now()).coerceAtLeast(0))
         nextRequest = now() + 1_100
         try {
-            val url = "https://api.mwmbl.org/api/v2/search/".toHttpUrl().newBuilder().addQueryParameter("q", searchText(query)).build().toString()
+            val url = "https://api.mwmbl.org/api/v2/search/".toHttpUrl().newBuilder().addQueryParameter("q", searchText(query, broad)).build().toString()
             val page = fetcher.fetchPage(url, permitted)
             if (!page.contentType.startsWith("application/json", true)) return@withLock DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE)
             val found = candidates(page.text)
@@ -55,16 +62,23 @@ class MwmblDiscovery(private val fetcher: WebFetcher, private val permitted: sus
 }
 
 class FreeSearchDiscovery(private val primary: DiscoveryProvider, private val backup: DiscoveryProvider,
-    private val primaryCircuit: DiscoveryCircuit? = null, private val backupAllowed: suspend () -> Boolean) : DiscoveryProvider {
-    override suspend fun discover(query: ResearchQuery, broad: Boolean): DiscoveryResult {
-        fun relevant(result: DiscoveryResult): DiscoveryResult {
+    private val primaryCircuit: DiscoveryCircuit? = null, private val primaryTimeoutMs: Long = 2_500,
+    private val backupAllowed: suspend () -> Boolean) : DiscoveryProvider {
+    var backupUsed = false; private set
+    private fun relevant(query: ResearchQuery, result: DiscoveryResult): DiscoveryResult {
             val found = result.candidates.filter { query.candidateRelevant(it.title, it.routingHint) &&
                 !query.isPrediction(it.title) && !FactualResearch.speculativeCasting(query.question, it.title) &&
                 (FactualResearch.capitalPlace(query.question) == null || !Regex("(?i)\\bcapital punishment\\b").containsMatchIn(it.title)) }
             return result.copy(candidates = found, state = if (result.state == DiscoveryState.FOUND && found.isEmpty()) DiscoveryState.EMPTY else result.state)
-        }
+    }
+    suspend fun discoverBackup(query: ResearchQuery, broad: Boolean): DiscoveryResult {
+        if (!backupAllowed()) return DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE)
+        backupUsed = true
+        return relevant(query, backup.discover(query, broad))
+    }
+    override suspend fun discover(query: ResearchQuery, broad: Boolean): DiscoveryResult {
         val paused = primaryCircuit?.unavailable()
-        val first = if (paused != null) DiscoveryResult(emptyList(), paused) else try { withTimeoutOrNull(2_500) { relevant(primary.discover(query, broad)) }
+        val first = if (paused != null) DiscoveryResult(emptyList(), paused) else try { withTimeoutOrNull(primaryTimeoutMs) { relevant(query, primary.discover(query, broad)) }
             ?: DiscoveryResult(emptyList(), DiscoveryState.TIMEOUT) }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
@@ -72,7 +86,7 @@ class FreeSearchDiscovery(private val primary: DiscoveryProvider, private val ba
         if (first.state == DiscoveryState.FOUND || !backupAllowed()) return first
         // A primary challenge ends requests to that service. The independent,
         // explicitly allowed backup does not solve or bypass its challenge.
-        val second = relevant(backup.discover(query, broad))
+        val second = discoverBackup(query, broad)
         return if (second.state == DiscoveryState.FOUND) second else first
     }
 }

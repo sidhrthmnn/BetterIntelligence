@@ -1,0 +1,356 @@
+[
+  {
+    "question": "What's happening in France now",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 11254,
+    "requests": [
+      "https:\/\/mcp.exa.ai\/robots.txt",
+      "https:\/\/mcp.exa.ai\/mcp",
+      "https:\/\/www.bbc.com\/robots.txt",
+      "https:\/\/www.france24.com\/robots.txt",
+      "https:\/\/www.bbc.com\/news\/topics\/c302m85qenyt",
+      "https:\/\/www.france24.com\/en\/france\/20261026-live-france-will-maintain-order-without-state-of-emergency-but-it-s-not-off-the-table-macron-says",
+      "https:\/\/www.bbc.com\/news\/articles\/c95ynd587ynzo",
+      "https:\/\/www.rfi.fr\/robots.txt",
+      "https:\/\/www.reuters.com\/robots.txt",
+      "https:\/\/www.rfi.fr\/en\/france\/",
+      "https:\/\/www.rfi.fr\/en\/france\/20261029-us-judge-narrows-macrons-defamation-lawsuit-against-american-podcaster",
+      "https:\/\/www.euronews.com\/robots.txt",
+      "https:\/\/www.france24.com\/en\/france\/",
+      "https:\/\/www.euronews.com\/location\/europe\/france",
+      "https:\/\/api.mwmbl.org\/robots.txt",
+      "https:\/\/api.mwmbl.org\/api\/v2\/search\/?q=france%20news",
+      "https:\/\/abcnews.go.com\/robots.txt",
+      "https:\/\/7news.com.au\/robots.txt",
+      "https:\/\/abcnews.go.com\/alerts\/France",
+      "https:\/\/abcnews.com\/robots.txt",
+      "https:\/\/abcnews.com\/alerts\/France",
+      "https:\/\/7news.com.au\/news\/france"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "US judge narrows Macrons' defamation lawsuit against American podcaster",
+        "url": "https:\/\/www.rfi.fr\/en\/france\/20261029-us-judge-narrows-macrons-defamation-lawsuit-against-american-podcaster",
+        "excerpt": "US judge narrows Macrons' defamation lawsuit against American podcaster\nIssued on: 29\/10\/2026 - 09:59\n\nUS judge narrows Macrons' defamation lawsuit against American podcaster › Damages to Brigitte Macron\nBrigitte Macron, 72, has taken to the courts in France to combat claims she was born a man.",
+        "retrievedAt": 1793266111819,
+        "updatedAt": "2026-10-29T08:59:59+00:00",
+        "kind": "WEB_PAGE",
+        "dateKind": "PUBLISHED",
+        "discoveryProvider": "Exa"
+      }
+    ]
+  },
+  {
+    "question": "What's happening in France?",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "INSUFFICIENT",
+    "wallMs": 7539,
+    "requests": [
+      "https:\/\/mcp.exa.ai\/robots.txt",
+      "https:\/\/mcp.exa.ai\/mcp",
+      "https:\/\/www.bbc.co.uk\/robots.txt",
+      "https:\/\/www.euronews.com\/robots.txt",
+      "https:\/\/www.euronews.com\/location\/europe\/france",
+      "https:\/\/www.bbc.co.uk\/news\/topics\/c302m85qenyt",
+      "https:\/\/www.bbc.co.uk\/sounds\/play\/w3ct98st",
+      "https:\/\/www.euronews.com\/video\/2026\/10\/24\/euronews-on-the-ground-as-hundreds-of-thousands-take-to-the-streets-of-paris",
+      "https:\/\/www.france24.com\/robots.txt",
+      "https:\/\/www.nytimes.com\/robots.txt",
+      "https:\/\/www.nytimes.com\/live\/2026\/10\/24\/world\/france-protests-riots",
+      "https:\/\/www.france24.com\/en\/france\/",
+      "https:\/\/www.rfi.fr\/robots.txt",
+      "https:\/\/apnews.com\/robots.txt",
+      "https:\/\/apnews.com\/hub\/france",
+      "https:\/\/www.rfi.fr\/en\/france\/",
+      "https:\/\/api.mwmbl.org\/robots.txt",
+      "https:\/\/api.mwmbl.org\/api\/v2\/search\/?q=france%20news",
+      "https:\/\/7news.com.au\/robots.txt",
+      "https:\/\/abcnews.go.com\/robots.txt",
+      "https:\/\/abcnews.go.com\/alerts\/France",
+      "https:\/\/7news.com.au\/news\/france",
+      "https:\/\/abcnews.com\/robots.txt",
+      "https:\/\/abcnews.com\/alerts\/France"
+    ],
+    "sources": []
+  },
+  {
+    "question": "Who is playing Doctor Doom in Avengers Doomsday?",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 5127,
+    "requests": [
+      "https:\/\/mcp.exa.ai\/robots.txt",
+      "https:\/\/mcp.exa.ai\/mcp",
+      "https:\/\/variety.com\/robots.txt",
+      "https:\/\/www.marvel.com\/robots.txt",
+      "https:\/\/thewaltdisneycompany.com\/robots.txt",
+      "https:\/\/movies.disney.com\/robots.txt",
+      "https:\/\/movies.disney.com\/avengers-doomsday",
+      "https:\/\/thewaltdisneycompany.com\/news\/marvel-studios-avengers-doomsday-cast\/",
+      "https:\/\/thewaltdisneycompany.com\/news\/russo-brothers-avengers-endgame-doomsday\/"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "Avengers: Doomsday",
+        "url": "https:\/\/movies.disney.com\/avengers-doomsday",
+        "excerpt": "Avengers: Doomsday\nAvengers: Doomsday Hero v3\n\nAvengers: Doomsday › Videos\nRobert Downey Jr. as Victor von Doom \/ Doctor Doom in Avengers: Doomsday. Photo courtesy of Marvel. © 2026 Marvel. All Rights Reserved.\n\nAvengers: Doomsday › Videos\nVictor von Doom\/Doctor Doom (Robert Downey Jr.) in Marvel's AVENGERS: DOOMSDAY. Photo courtesy of Marvel. © 2026 Marvel. All Rights Reserved.\n\nAvengers: Doomsday › Recommended Movies\nMarvel Studios' Ant-Man and The Wasp: Quantumania Marvel Studios’ Black Panther: Wakanda Forever Marvel Studios | Thor: Love and Thunder | movie poster Marvel Studios’ Thor: Love and Thunder Marvel Studios' Doctor Strange in the Multiverse of Madness",
+        "retrievedAt": 1793266125940,
+        "updatedAt": "",
+        "kind": "WEB_PAGE",
+        "dateKind": "",
+        "discoveryProvider": "Exa"
+      }
+    ]
+  },
+  {
+    "question": "Who is the current UK prime minister?",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 2646,
+    "requests": [
+      "https:\/\/mcp.exa.ai\/robots.txt",
+      "https:\/\/mcp.exa.ai\/mcp",
+      "https:\/\/www.gov.uk\/robots.txt",
+      "https:\/\/www.gov.uk\/government\/organisations\/prime-ministers-office-10-downing-street",
+      "https:\/\/www.gov.uk\/government\/ministers\/prime-minister"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "Prime Minister - GOV.UK",
+        "url": "https:\/\/www.gov.uk\/government\/ministers\/prime-minister",
+        "excerpt": "Prime Minister\nCurrent role holder: The Rt Hon Andy Burnham MP\n\nPrime Minister › Current role holder › The Rt Hon Andy Burnham MP\nAndy Burnham became Prime Minister on 20 July 2026.\n\nPrime Minister › Current role holder › The Rt Hon Andy Burnham MP\nAndy was elected Mayor of Greater Manchester in May 2017, and re-elected in 2021 and 2024. As Mayor, he brought the bus network back under public control and oversaw Manchester becoming the fastest growing city-region in the UK.\n\nPrime Minister › Current role holder › The Rt Hon Andy Burnham MP\nAndy is married and has three children.\n\nPrime Minister › Current role holder › The Rt Hon Andy Burnham MP\nMore about this person",
+        "retrievedAt": 1793266130755,
+        "updatedAt": "",
+        "kind": "WEB_PAGE",
+        "dateKind": "",
+        "discoveryProvider": "Exa"
+      },
+      {
+        "id": 2,
+        "title": "Prime Minister's Office, 10 Downing Street",
+        "url": "https:\/\/www.gov.uk\/government\/organisations\/prime-ministers-office-10-downing-street",
+        "excerpt": "Prime Minister's Office, 10 Downing Street\nPrime Minister's Office 10 Downing Street\n\nPrime Minister's Office, 10 Downing Street › Meet the Prime Minister\nAndy Burnham became Prime Minister on 20 July 2026.\n\nPrime Minister's Office, 10 Downing Street › Meet the Prime Minister\nRead his biography · Contact the Prime Minister's Office · Read about what we do\n\nPrime Minister's Office, 10 Downing Street › Contact Number 10 › Lessons at 10\nThe government is on a mission to break down barriers to opportunity and ensure all children get the best start in life. Lessons at 10 is designed to inspire children and encourage a love of learning by bringing schools from across the UK into Downing Street for a unique class experience.",
+        "retrievedAt": 1793266130732,
+        "updatedAt": "",
+        "kind": "WEB_PAGE",
+        "dateKind": "",
+        "discoveryProvider": "Exa"
+      }
+    ]
+  },
+  {
+    "question": "What is the weather in London today?",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 11733,
+    "requests": [
+      "https:\/\/mcp.exa.ai\/robots.txt",
+      "https:\/\/mcp.exa.ai\/mcp",
+      "https:\/\/www.bbc.com\/robots.txt",
+      "https:\/\/weather.metoffice.gov.uk\/robots.txt",
+      "https:\/\/weather.metoffice.gov.uk\/forecast\/gcpvj0v07",
+      "https:\/\/www.bbc.com\/weather\/2643743",
+      "https:\/\/weather.metoffice.gov.uk\/guides\/what-does-this-forecast-mean",
+      "https:\/\/www.wunderground.com\/robots.txt",
+      "https:\/\/exa.ai\/robots.txt",
+      "https:\/\/www.wunderground.com\/hourly\/gb\/london\/ILONDON832\/date\/2026-10-29",
+      "https:\/\/www.london-now.co.uk\/robots.txt",
+      "https:\/\/www.accuweather.com\/robots.txt",
+      "https:\/\/www.london-now.co.uk\/news\/26678612.london-weather-thursday---met-office-forecasts-16c-highs\/"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "London - BBC Weather",
+        "url": "https:\/\/www.bbc.com\/weather\/2643743",
+        "excerpt": "London - BBC Weather\nObservations for St. James's ParkObservations Observed at, 08:00 GMT Thursday 29 OctoberObserved at:08:00 (GMT) Thu 29 Oct\nObserved temperature: 12 °C (54 °F).\n\nLondon - BBC Weather\nToday forecast: high 16 °C; low 8 °C.\n\nLondon - Weather warnings issued › To play this video you need to enable JavaScript in your browser. › Latest forecast for London\nThis afternoon will be mostly dry with sunny spells and a few areas of cloud at times. Small chance of a light shower drifting in from the south.\n\nLondon - Weather warnings issued › To play this video you need to enable JavaScript in your browser. › Latest forecast for London\nTonight is expected to remain dry with plenty of clear spells and a few patches of cloud. In the early hours, patchy mist and fog is set to develop.",
+        "retrievedAt": 1793266134048,
+        "updatedAt": "",
+        "kind": "WEB_PAGE",
+        "dateKind": "",
+        "publicPlace": "London",
+        "discoveryProvider": "Exa"
+      },
+      {
+        "id": 2,
+        "title": "Londoners can look forward to sunshine and almost no rain today",
+        "url": "https:\/\/www.london-now.co.uk\/news\/26678612.london-weather-thursday---met-office-forecasts-16c-highs\/",
+        "excerpt": "London weather Thursday - Met Office forecasts 16C highs\nLondoners can expect sunny spells and temperatures reaching 16C on Thursday (Image: NQ staff)\n\nLondon weather Thursday - Met Office forecasts 16C highs\nLondoners can look forward to a largely dry and bright day on Thursday (October 29), with the Met Office forecasting sunny spells and temperatures reaching highs of 16C.\n\nLondon weather Thursday - Met Office forecasts 16C highs\nAfter a cloudy start, the capital is expected to enjoy brighter conditions as the morning progresses, with sunshine developing and temperatures climbing from around 10C to 16C in the early afternoon.\n\nLondon weather Thursday - Met Office forecasts 16C highs\nThe Met Office has predicted that rain is unlikely for most of the day, with the chance of precipitation remaining below five per cent throughout the day.",
+        "retrievedAt": 1793266142445,
+        "updatedAt": "2026-10-29 05:00:00",
+        "kind": "WEB_PAGE",
+        "dateKind": "PUBLISHED",
+        "publicPlace": "London",
+        "discoveryProvider": "Exa"
+      }
+    ]
+  },
+  {
+    "question": "Search for Android Vulkan documentation",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 19344,
+    "requests": [
+      "https:\/\/mcp.exa.ai\/robots.txt",
+      "https:\/\/mcp.exa.ai\/mcp",
+      "https:\/\/docs.vulkan.org\/robots.txt",
+      "https:\/\/developer.android.com\/robots.txt",
+      "https:\/\/docs.vulkan.org\/tutorial\/latest\/14_Android.html",
+      "https:\/\/developer.android.com\/ndk\/guides\/graphics",
+      "https:\/\/developer.android.com\/codelabs\/beginning-vulkan-on-android",
+      "https:\/\/api.mwmbl.org\/robots.txt",
+      "https:\/\/api.mwmbl.org\/api\/v2\/search\/?q=android%20vulkan",
+      "https:\/\/www.cnx-software.com\/robots.txt",
+      "https:\/\/openxr-tutorial.com\/robots.txt",
+      "https:\/\/www.cnx-software.com\/2022\/08\/09\/raspberry-pi-4-vulkan-1-2-conformance-android-vulkan\/?amp=1",
+      "https:\/\/openxr-tutorial.com\/android\/vulkan\/3-graphics.html",
+      "https:\/\/invent.kde.org\/robots.txt",
+      "https:\/\/docs.unrealengine.com\/robots.txt",
+      "https:\/\/docs.unrealengine.com\/en-us\/Platforms\/Android\/VulkanMobileRenderer",
+      "https:\/\/docs.unrealengine.com\/5.6\/en-US\/Platforms\/Mobile\/Android\/VulkanMobileRenderer",
+      "https:\/\/docs.unrealengine.com\/5.6\/en-US\/SharingAndReleasing\/Mobile\/Android\/VulkanMobileRenderer\/",
+      "https:\/\/docs.unrealengine.com\/5.6\/en-US\/using-the-android-vulkan-mobile-renderer-in-unreal-engine\/",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Android_(operating_system)"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "Android: Taking Your Vulkan App Mobile :: Vulkan Documentation Project",
+        "url": "https:\/\/docs.vulkan.org\/tutorial\/latest\/14_Android.html",
+        "excerpt": "Android: Taking Your Vulkan App Mobile › Introduction\nIn the previous chapter, we explored how Vulkan profiles can simplify feature detection and make your code more maintainable.\nNow, let’s take our Vulkan knowledge a step further by bringing our application to the mobile world with Android.\n\nAndroid: Taking Your Vulkan App Mobile › Project Setup › Prerequisites\nAndroid Studio: The official IDE for Android development · Android NDK (Native Development Kit): Enables native C++ development on Android · Android SDK: With a recent API level (24+, which corresponds to Android 7.0 or higher) for Vulkan support · CMake and Ninja build tools: For building native code (these can be installed through Android Studio)\n\nAndroid: Taking Your Vulkan App Mobile › Project Setup › Prerequisites\nVulkan SDK: For shader compilation tools and validation layers\n\nAndroid: Taking Your Vulkan App Mobile › Setting Up the Android Project\nWith our project structure in place, let’s dive into the key components of our Android Vulkan application.\nWe’ll start with the essential configuration files and then move on to the native code implementation.\n\nAndroid: Taking Your Vulkan App Mobile › Setting Up the Android Project › The Manifest File\nWe specify a minimum SDK version of 24 (Android 7.0), which is required for Vulkan support. · We declare that our app uses Vulkan with specific version requirements. · We set up our main activity (VulkanActivity) as the entry point for our application.\n\nAndroid: Taking Your Vulkan App Mobile › Setting Up the Android Project › Java Activity\npackage com.vulkan.tutorial;\n\nimport android.os.Bundle;\nimport android.view.WindowManager;\nimport com.google.androidgamesdk.GameActivity;\n\npublic class VulkanActivity extends GameActivity {\n @Override\n protected void onCreate(Bundle savedInstanceState) {\n super.onCreate(savedInstanceState);\n\n \/\/ Keep the screen on while the app is running\n getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\n }\n\n \/\/ Load the native library\n static {\n System.loadLibrary(\"vulkan_tutorial_android\");\n }\n}",
+        "retrievedAt": 1793266147099,
+        "updatedAt": "",
+        "kind": "WEB_PAGE",
+        "dateKind": "",
+        "discoveryProvider": "Exa"
+      },
+      {
+        "id": 2,
+        "title": "3 Graphics — OpenXR Tutorial documentation",
+        "url": "https:\/\/openxr-tutorial.com\/android\/vulkan\/3-graphics.html",
+        "excerpt": "3 Graphics¶\nFor Android, you will also need to change all references to OpenXRTutorialChapter2 to OpenXRTutorialChapter3 in app\/build.gradle, settings.gradle and app\/src\/main\/AndroidManifest.xml. Refer to Chapter 1.4.1 for a refresher on the Android build files.\n\n3 Graphics¶\nLoad your new project in Android Studio.\n\n3 Graphics¶ › 3.1 Creating Swapchains¶ › 3.1.3 Create the Swapchains¶\nVulkan\n\n3 Graphics¶ › 3.1 Creating Swapchains¶ › 3.1.3 Create the Swapchains¶\nXrSwapchainUsageFlagBits | Corresponding Vulkan flag bit\n\n3 Graphics¶ › 3.1 Creating Swapchains¶ › 3.1.4 Enumerate Swapchain Images¶\nVulkan\n\n3 Graphics¶ › 3.1 Creating Swapchains¶ › 3.1.5 Create the Swapchain Image Views¶\nVulkan\n\n3 Graphics¶ › 3.1 Creating Swapchains¶ › 3.1.5 Create the Swapchain Image Views¶\nFor Vulkan, the VkImage returned has all of its subresource states in VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL for color and VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL for depth. This is a requirement of the OpenXR 1.0 Vulkan extension. See: 12.20. XR_KHR_vulkan_enable.",
+        "retrievedAt": 1793266159944,
+        "updatedAt": "",
+        "kind": "WEB_PAGE",
+        "dateKind": "",
+        "discoveryProvider": "Mwmbl"
+      }
+    ]
+  },
+  {
+    "question": "Search for Kotlin coroutines documentation",
+    "route": "WEB_GROUNDED",
+    "status": "SEARCH_FAILED",
+    "failure": "TIMEOUT",
+    "wallMs": 48661,
+    "requests": [
+      "https:\/\/mcp.exa.ai\/robots.txt",
+      "https:\/\/mcp.exa.ai\/mcp",
+      "https:\/\/kotlinlang.org\/robots.txt",
+      "https:\/\/github.com\/robots.txt",
+      "https:\/\/kotlinlang.org\/docs\/coroutines-overview.html",
+      "https:\/\/kotlinlang.org\/docs\/coroutines-and-channels.html"
+    ],
+    "sources": []
+  },
+  {
+    "question": "Search for photosynthesis",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 6238,
+    "requests": [
+      "https:\/\/mcp.exa.ai\/robots.txt",
+      "https:\/\/mcp.exa.ai\/mcp",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/ncbi.nlm.nih.gov\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Photosynthesis",
+      "https:\/\/education.nationalgeographic.org\/robots.txt",
+      "https:\/\/openstax.org\/robots.txt",
+      "https:\/\/education.nationalgeographic.org\/resource\/photosynthesis\/",
+      "https:\/\/openstax.org\/books\/biology-2e\/pages\/8-1-overview-of-photosynthesis"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "Photosynthesis - Wikipedia",
+        "url": "https:\/\/en.wikipedia.org\/wiki\/Photosynthesis",
+        "excerpt": "For other uses, see Photosynthesis (disambiguation).\n\nSome organisms also perform anoxygenic photosynthesis, which does not produce oxygen. Some bacteria (e.g. purple bacteria) use bacteriochlorophyll to split hydrogen sulfide as a reductant instead of water, releasing sulfur instead of oxygen, which was a dominant form of photosynthesis in the euxinic Canfield oceans during the Boring Billion.[3][4] Archaea such as Halobacterium also perform a type of non-carbon-fixing anoxygenic photosynthesis, where the simpler photopigment retinal and its microbial rhodopsin derivatives are used to absorb green light and produce a proton (hydron) gradient across the cell membrane, and the subsequent ion movement powers transmembrane proton pumps to directly synthesize adenosine triphosphate (ATP), the \"energy currency\" of cells. Such archaeal photosynthesis might have been the earliest form of photosynthesis that evolved on Earth, as far back as the Paleoarchean, preceding that of cyanobacteria (see Purple Earth hypothesis).[5]\n\nExternal links\nA collection of photosynthesis pages for all levels from a renowned expert (Govindjee) · In depth, advanced treatment of photosynthesis, also from Govindjee · Science Aid: Photosynthesis Article appropriate for high school science · Metabolism, Cellular Respiration and Photosynthesis – The Virtual Library of Biochemistry and Cell Biology\n\nExternal links\nOverall examination of Photosynthesis at an intermediate level · Overall Energetics of Photosynthesis · The source of oxygen produced by photosynthesis Interactive animation, a textbook tutorial",
+        "retrievedAt": 1793266214931,
+        "updatedAt": "2001-11-02T21:22:29Z",
+        "kind": "WEB_PAGE",
+        "dateKind": "PUBLISHED",
+        "discoveryProvider": "Exa"
+      },
+      {
+        "id": 2,
+        "title": "8.1 Overview of Photosynthesis - Biology 2e | OpenStax",
+        "url": "https:\/\/openstax.org\/books\/biology-2e\/pages\/8-1-overview-of-photosynthesis",
+        "excerpt": "8.1 Overview of Photosynthesis › Learning Objectives\nExplain the significance of photosynthesis to other living organisms · Describe the main structures involved in photosynthesis · Identify the substrates and products of photosynthesis\n\n8.1 Overview of Photosynthesis › Learning Objectives\nThe importance of photosynthesis is not just that it can capture sunlight’s energy. After all, a lizard sunning itself on a cold day can use the sun’s energy to warm up in a process called behavioral thermoregulation. In contrast, photosynthesis is vital because it evolved as a way to store the energy from solar radiation (the “photo-” part) to energy in the carbon-carbon bonds of carbohydrate molecules (the “-synthesis” part). Those carbohydrates are the energy source that heterotrophs use to power the synthesis of ATP via respiration. Therefore, photosynthesis powers 99 percent of Earth’s ecosystems. When a top predator, such as a wolf, preys on a deer (Figure 8.3), the wolf is at the end of an energy path that went from nuclear reactions on the surface of the sun, to visible light, to photosynthesis, to vegetation, to deer, and finally to the wolf.\n\n8.1 Overview of Photosynthesis › Learning Objectives\nFigure 8.3 The energy stored in carbohydrate molecules from photosynthesis passes through the food chain. The predator that eats these deer receives a portion of the energy that originated in the photosynthetic vegetation that the deer consumed. (credit: modification of work by Steve VanRiper, U.S. Fish and Wildlife Service)",
+        "retrievedAt": 1793266215559,
+        "updatedAt": "",
+        "kind": "WEB_PAGE",
+        "dateKind": "",
+        "discoveryProvider": "Exa"
+      },
+      {
+        "id": 3,
+        "title": "Photosynthesis",
+        "url": "https:\/\/education.nationalgeographic.org\/resource\/photosynthesis\/",
+        "excerpt": "Photosynthesis\nOpen Educational Resource\n\nPhotosynthesis › Grades\n5 - 8\n\nPhotosynthesis › Subjects\nBiology\n\nPhotosynthesis › Subjects\nNGS Resource Carousel Loading Logo Loading ...\n\nPhotosynthesis › Subjects\nShare on Twitter\n\nPhotosynthesis › Subjects\nShare on Facebook\n\nPhotosynthesis › Subjects\nShare on Pinterest",
+        "retrievedAt": 1793266216197,
+        "updatedAt": "",
+        "kind": "WEB_PAGE",
+        "dateKind": "",
+        "discoveryProvider": "Exa"
+      }
+    ]
+  },
+  {
+    "question": "What is the latest Android version?",
+    "route": "WEB_GROUNDED",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 10094,
+    "requests": [
+      "https:\/\/mcp.exa.ai\/robots.txt",
+      "https:\/\/mcp.exa.ai\/mcp",
+      "https:\/\/en.wikipedia.org\/robots.txt",
+      "https:\/\/www.technerdiness.com\/robots.txt",
+      "https:\/\/en.wikipedia.org\/wiki\/Android_version_history",
+      "https:\/\/www.technerdiness.com\/android\/latest-android-version\/",
+      "https:\/\/www.androidupdatetracker.com\/robots.txt",
+      "https:\/\/www.android.com\/robots.txt",
+      "https:\/\/www.androidupdatetracker.com\/",
+      "https:\/\/www.android.com\/new-features-on-android\/featured\/",
+      "https:\/\/developer.android.com\/robots.txt",
+      "https:\/\/developer.android.com\/latest-updates",
+      "https:\/\/developer.android.com\/about\/versions\/17",
+      "https:\/\/api.mwmbl.org\/robots.txt",
+      "https:\/\/api.mwmbl.org\/api\/v2\/search\/?q=android%20version",
+      "https:\/\/github.com\/robots.txt",
+      "https:\/\/support.google.com\/robots.txt",
+      "https:\/\/support.google.com\/android\/answer\/7680439",
+      "https:\/\/github.com\/AICTE\/upm-android",
+      "https:\/\/support.mozilla.org\/robots.txt",
+      "https:\/\/support.mozilla.org\/tr\/questions\/967011"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "What is the current Android version? Android 17 explained - Tech Nerdiness",
+        "url": "https:\/\/www.technerdiness.com\/android\/latest-android-version\/",
+        "excerpt": "Last updated: October 6, 2026 1:13 am\n\nWhat is the current Android version? Android 17 explained\nWhat’s the Latest Version of Android\n\nWhat is the current Android version? Android 17 explained › How do I check my Android version?\nOn a Samsung Galaxy, go to Settings > About phone > Software information. You’ll see both the Android version and the One UI version. One UI 9 means Android 17. Other brands use similar menus, sometimes called “Software version” or “System.”\n\nWhat is the current Android version? Android 17 explained › How do I check my Android version?\nCheck Android Version\n\nWhat is the current Android version? Android 17 explained › A brief history of Android versions\nVersion: 1.0 | Name: (none) | Released: 2008 | Notable change: First public release",
+        "retrievedAt": 1793266220556,
+        "updatedAt": "2026-10-06",
+        "kind": "WEB_PAGE",
+        "dateKind": "MODIFIED",
+        "discoveryProvider": "Exa"
+      }
+    ]
+  }
+]

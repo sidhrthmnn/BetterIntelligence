@@ -307,6 +307,8 @@ object WebPageExtractor {
             val url = base.resolve(link.attr("href")) ?: return@mapNotNull null
             if (url.host != base.host || !GroundingPolicy.publicHttpsUrl(url.toString()) || url.encodedPath == base.encodedPath ||
                 Regex("(?i)\\.(?:pdf|zip|png|jpg|mp4|xml)$").containsMatchIn(url.encodedPath)) return@mapNotNull null
+            // A matching country in an author/tag URL does not make it a news article.
+            if (url.pathSegments.any { it.lowercase() in setOf("author", "authors", "tag", "tags", "topics", "category", "categories", "privacy", "contact") }) return@mapNotNull null
             val title = link.text().trim()
             if (title.length < 8) return@mapNotNull null
             val pathText = url.pathSegments.joinToString(" ") { it.replace('-', ' ').replace('_', ' ') }

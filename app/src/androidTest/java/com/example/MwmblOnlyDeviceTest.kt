@@ -23,7 +23,10 @@ class MwmblOnlyDeviceTest {
         for (question in listOf("Who is playing Doctor Doom in Avengers Doomsday?",
             "Search for Kotlin coroutines documentation", "Search for Vulkan Android documentation")) {
             val requests = java.util.Collections.synchronizedList(mutableListOf<String>())
-            val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(SearchHttp(onRequest = { requests += it }))))
+            val transport = SearchHttp(onRequest = { requests += it })
+            val robots = ResearchRobots(transport)
+            val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(transport,
+                MwmblDiscovery(transport) { robots.allowed(it) })))
             val start = android.os.SystemClock.elapsedRealtime()
             val result = coordinator.retrieve(question, true, GroundingMode.AUTO, SearchProviderId.WEB)
             val row = JSONObject().put("question", question).put("status", result.status).put("failure", result.failure?.name)

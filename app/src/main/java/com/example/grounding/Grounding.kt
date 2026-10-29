@@ -10,6 +10,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
@@ -34,7 +36,7 @@ data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: Resea
 
 data class EvidenceSource(val id: Int, val title: String, val url: String, val excerpt: String,
     val retrievedAt: Long, val updatedAt: String = "", val kind: String = "ARTICLE_SUMMARY", val dateKind: String = "",
-    val publicPlace: String = "")
+    val publicPlace: String = "", val discoveryProvider: String = "")
 
 data class PreparedEvidence(val prompt: String, val sources: List<EvidenceSource>)
 
@@ -42,7 +44,8 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
     fun json(): String = JSONArray().apply { sources.forEach { source -> put(JSONObject()
         .put("id", source.id).put("title", source.title).put("url", source.url).put("excerpt", source.excerpt)
         .put("retrievedAt", source.retrievedAt).put("updatedAt", source.updatedAt).put("kind", source.kind).put("dateKind", source.dateKind)
-        .apply { if (source.publicPlace.isNotBlank()) put("publicPlace", source.publicPlace) }) } }.toString()
+        .apply { if (source.publicPlace.isNotBlank()) put("publicPlace", source.publicPlace)
+            if (source.discoveryProvider.isNotBlank()) put("discoveryProvider", source.discoveryProvider) }) } }.toString()
     companion object {
         fun sources(json: String): List<EvidenceSource> = runCatching {
             val array = JSONArray(json)
@@ -51,7 +54,8 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
                 item.optString("url").takeIf(GroundingPolicy::publicHttpsUrl)?.let { url ->
                     EvidenceSource(item.getInt("id"), item.getString("title"), url, item.optString("excerpt"),
                         item.optLong("retrievedAt"), item.optString("updatedAt"), item.optString("kind"), item.optString("dateKind"),
-                        item.optString("publicPlace").takeIf(ConversationalResearch::validPublicPlace).orEmpty())
+                        item.optString("publicPlace").takeIf(ConversationalResearch::validPublicPlace).orEmpty(),
+                        item.optString("discoveryProvider").takeIf { it in setOf("Exa", "Mwmbl") }.orEmpty())
                 }
             }
         }.getOrDefault(emptyList())
@@ -201,6 +205,18 @@ class SearchHttp internal constructor(
     private data class Reply(val code: Int, val location: String?, val page: WebDocument)
     override suspend fun fetch(url: String): WebDocument = fetchChecked(url, null)
     override suspend fun fetchPage(url: String, permitted: suspend (String) -> Boolean): WebDocument = fetchChecked(url, permitted)
+    override suspend fun postJson(url: String, json: String, permitted: suspend (String) -> Boolean): WebDocument {
+        require(allowTestUrls || GroundingPolicy.publicHttpsUrl(url)) { "A public HTTPS endpoint is required" }
+        require(json.toByteArray(Charsets.UTF_8).size <= 16_384) { "Search request is too large" }
+        check(permitted(url)) { "Search endpoint does not permit this request" }
+        val reply = request(Request.Builder().url(url)
+            .header("User-Agent", "BetterIntelligence/2.4 (+https://github.com/sidhrthmnn/BetterIntelligence)")
+            .header("Accept", "application/json, text/event-stream")
+            .post(json.toRequestBody("application/json; charset=utf-8".toMediaType())).build())
+        // A search POST is never replayed to a redirect destination.
+        check(reply.code == 200) { "Search endpoint unavailable (HTTP ${reply.code})" }
+        return reply.page
+    }
     private suspend fun fetchChecked(url: String, permitted: (suspend (String) -> Boolean)?): WebDocument {
         var current = url
         repeat(4) { hop ->

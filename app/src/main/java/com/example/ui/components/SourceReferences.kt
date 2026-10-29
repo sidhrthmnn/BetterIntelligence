@@ -64,6 +64,7 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                         Text("[${source.id}] ${source.title}", style = MaterialTheme.typography.bodyMedium)
                         Text(source.url.toHttpUrl().host, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (source.discoveryProvider.isNotBlank()) Text("Found via ${source.discoveryProvider}", style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -78,6 +79,7 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
                 Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(source.url.toHttpUrl().host, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                     Text(source.url, style = MaterialTheme.typography.bodySmall)
+                    if (source.discoveryProvider.isNotBlank()) Text("Found via ${source.discoveryProvider}; publisher page read by BI", style = MaterialTheme.typography.bodySmall)
                     if (source.updatedAt.isNotBlank()) Text(when (source.dateKind) {
                         "PUBLISHED" -> "Page-reported publication: ${source.updatedAt.take(10)}"
                         "MODIFIED" -> "Page-reported update: ${source.updatedAt.take(10)}"

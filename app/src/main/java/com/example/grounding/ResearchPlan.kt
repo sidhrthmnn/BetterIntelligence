@@ -93,7 +93,7 @@ object ResearchPlanner {
                     .filter { token -> token.lowercase() !in setOf("of", "the", "in", "for", "to", "on", "at", "by", "with", "from", "is", "are", "who", "what", "where", "when", "why", "how", "cm", "pm", "ceo", "current", "incumbent", "list", "all") }
                     .joinToString(" ")
             }
-            .filter { it.length >= 2 && it.lowercase() !in setOf("is", "are", "when", "what", "who", "where", "how", "why", "compare", "explain", "does", "can", "tell", "read", "which", "public", "source", "topic") }
+            .filter { it.length >= 2 && it.lowercase() !in setOf("is", "are", "when", "what", "who", "where", "how", "why", "compare", "explain", "does", "can", "tell", "read", "search", "research", "find", "which", "public", "source", "topic") }
         val locations = Regex("\\b(?:in|near|for|of)\\s+([A-Z][\\p{L}]+(?:[, ]+[A-Z][\\p{L}]+){0,2})").findAll(text).map { it.groupValues[1] }
         val weatherLocations = if (Regex("(?i)\\b(weather|temperature|forecast|rain|wind|humidity)\\b").containsMatchIn(text)) {
             Regex("(?i)\\b(?:in|near|for|at)\\s+([\\p{L}][\\p{L}-]{2,}(?:\\s+[\\p{L}][\\p{L}-]{2,}){0,2}?)(?=\\s*(?:today|tonight|now|right now|currently|tomorrow|this week|\\?|$))")

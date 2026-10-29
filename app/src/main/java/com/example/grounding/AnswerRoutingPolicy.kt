@@ -7,7 +7,8 @@ enum class AnswerPath { LOCAL, WEB_GROUNDED, CLARIFICATION }
 data class AnswerRoute(val path: AnswerPath, val question: String, val reason: String,
     val requiresLive: Boolean = false, val requiresVerification: Boolean = false,
     val clarification: String = "", val localPart: String? = null,
-    val reusedSources: List<EvidenceSource> = emptyList(), val privacyBlocked: Boolean = false)
+    val reusedSources: List<EvidenceSource> = emptyList(), val privacyBlocked: Boolean = false,
+    val researchAllowed: Boolean = false, val webDisabled: Boolean = false)
 data class AnswerRecovery(val localQuestion: String?, val notice: String, val status: String)
 
 /** Chat-only intent routing. No additional model run; private history stays on device. */
@@ -39,7 +40,7 @@ object AnswerRoutingPolicy {
         val signals = publicQuestion.substringBefore('\n').replace(technicalContext, "task context")
         val personalContext = !explicit && Regex("(?i)\\b(?:my|our|I|we)\\b|എന്റെ|ഞാൻ|നമ്മുടെ").containsMatchIn(instruction) &&
             !changing.containsMatchIn(signals) && !product.containsMatchIn(signals) && !ResearchQuery.isCurrentIncumbentQuery(signals)
-        val current = fresh.containsMatchIn(signals)
+        val current = fresh.containsMatchIn(signals) || NewsIntent.isLiveRequest(signals)
         val general = explanation.containsMatchIn(signals) && !current && (concept.containsMatchIn(signals) ||
             Regex("(?i)^\\s*(?:explain|define|describe|how (?:does|do|to)|why)\\b|വിശദീകരി|എങ്ങനെ|എന്താണ്").containsMatchIn(signals))
         val historic = !current && (Regex("(?i)\\b(?:history|historical|who was|when did|what year did)\\b").containsMatchIn(signals) ||
@@ -64,7 +65,7 @@ object AnswerRoutingPolicy {
             }
             if (clarification.isNotBlank()) return AnswerRoute(AnswerPath.CLARIFICATION, resolved, "Missing public subject or place", live, verify, clarification)
             val reuse = if (!explicit && !current && followUp.containsMatchIn(q)) reusableEvidence(resolved, history, now) else emptyList()
-            return AnswerRoute(AnswerPath.WEB_GROUNDED, resolved, if (explicit) "Requested external evidence" else "Changing facts or runtime compatibility", live, verify, localPart = localPart, reusedSources = reuse)
+            return AnswerRoute(AnswerPath.WEB_GROUNDED, resolved, if (explicit) "Requested external evidence" else "Changing facts or runtime compatibility", live, verify, localPart = localPart, reusedSources = reuse, researchAllowed = true)
         }
         return AnswerRoute(AnswerPath.LOCAL, q, when {
             privateInput -> "Possible credentials stay on device"
@@ -72,8 +73,16 @@ object AnswerRoutingPolicy {
             transform -> "Writing or supplied-text task"
             calculation -> "Local calculation"
             else -> "Established knowledge, reasoning or conversation"
-        }, live, verify, localPart = localPart, privacyBlocked = GroundingPolicy.containsCredential(q))
+        }, live, verify, localPart = localPart, privacyBlocked = GroundingPolicy.containsCredential(q),
+            researchAllowed = canSearch, webDisabled = !allowed || mode == GroundingMode.OFF)
     }
+
+    /** One recovery search only when a public factual answer itself needs current data.
+     * Eligibility is fixed before inference: model text cannot override privacy/offline choices. */
+    fun shouldResearchAfterLocalAnswer(route: AnswerRoute, answer: String): Boolean =
+        route.path == AnswerPath.LOCAL && route.researchAllowed && !route.privacyBlocked &&
+            Regex("(?i)^\\s*(?:who|what|whats|when|where|which|how much|tell me about)\\b").containsMatchIn(route.question) &&
+            Regex("(?is)\\b(?:do not|don't|don’t|cannot|can't|can’t)\\s+(?:currently\\s+)?(?:have|access|provide)\\b.{0,75}\\b(?:real[- ]?time|up[- ]to[- ]date|current (?:information|events|data)|internet access)\\b|തത്സമയ വിവരങ്ങൾ.{0,30}(?:ലഭ്യമല്ല|അറിയില്ല)").containsMatchIn(answer)
 
     private fun mixedLocalPart(question: String): String? {
         val parts = question.split(Regex("(?i),?\\s+and\\s+(?=what|which|who|when|where)|;\\s*|\\s+കൂടാതെ\\s+"), limit = 2)
@@ -86,6 +95,9 @@ object AnswerRoutingPolicy {
     /** Failure recovery never manufactures evidence or current observations. */
     fun recover(route: AnswerRoute, failure: ResearchFailure? = null): AnswerRecovery {
         val ml = Regex("[\\u0D00-\\u0D7F]").containsMatchIn(route.question)
+        if (route.webDisabled && (route.requiresLive || route.requiresVerification)) return AnswerRecovery(route.localPart,
+            if (ml) "വെബ് ഗവേഷണം ഓഫാണ്. ക്രമീകരണങ്ങളിൽ അത് പ്രവർത്തനക്ഷമമാക്കാം." else
+                "Web research is off. Enable it in Web & grounding to check current sources.", "WEB_DISABLED")
         val liveNotice = if (ml) "തത്സമയ വിവരങ്ങൾ ഇപ്പോൾ പരിശോധിക്കാൻ കഴിഞ്ഞില്ല." else if (ConversationalResearch.isWeather(route.question))
             "I couldn't check the live weather or temperature right now." else "I couldn't check the current information right now."
         if (route.requiresVerification) return AnswerRecovery(null, if (ml) "ആവശ്യപ്പെട്ട സ്രോതസ്സുകൾ പരിശോധിച്ച് ഉറപ്പിക്കാൻ കഴിഞ്ഞില്ല." else
