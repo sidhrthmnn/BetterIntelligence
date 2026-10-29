@@ -38,8 +38,6 @@ object PublicWebDns : Dns {
 data class WebDocument(val url: String, val text: String, val contentType: String, val robotsTag: String = "")
 fun interface WebFetcher {
     suspend fun fetch(url: String): WebDocument
-    suspend fun postJson(url: String, json: String, permitted: suspend (String) -> Boolean): WebDocument =
-        throw UnsupportedOperationException("JSON POST is not available on this transport")
     fun session(maxRequests: Int): WebFetcher = this
     // Production transport invokes the guard BEFORE every redirect target is read.
     suspend fun fetchPage(url: String, permitted: suspend (String) -> Boolean): WebDocument {
@@ -55,10 +53,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
     private val discoveryAllowed: suspend () -> Boolean = { true }) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
     private val discoveryCircuit = DiscoveryCircuit()
-    private val exaCircuit = DiscoveryCircuit()
     companion object {
-        fun candidates(html: String): List<String> = HtmlDiscovery.links(WebDocument(
-            "https://html.duckduckgo.com/html/", html, "text/html")).map { it.url }
         fun article(page: WebDocument, id: Int, question: String): EvidenceSource? = WebPageExtractor.article(page, id, question)
     }
 
@@ -74,16 +69,14 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val query = ResearchQuery(question)
         var providerCalls = 0
         val discovered = mutableMapOf<String, DiscoveryResult>()
-        fun bounded(name: String, provider: DiscoveryProvider): DiscoveryProvider = DiscoveryProvider { request, broad ->
-            val key = if (name == "Mwmbl") "$name:${MwmblDiscovery.searchText(request, broad)}" else "$name:${request.question}:${request.searchText}"
+        fun bounded(provider: DiscoveryProvider): DiscoveryProvider = DiscoveryProvider { request, broad ->
+            val key = DuckDuckGoDiscovery.searchText(request, broad).lowercase(java.util.Locale.ROOT)
             discovered[key] ?: if (providerCalls >= 3) DiscoveryResult(emptyList(), DiscoveryState.EMPTY) else {
                 providerCalls++
                 provider.discover(request, broad).also { discovered[key] = it }
             }
         }
-        val discovery = discoveryOverride ?: FreeSearchDiscovery(
-            bounded("Exa", ExaDiscovery(transport, permitted)), bounded("Mwmbl", MwmblDiscovery(transport, permitted)),
-            exaCircuit, primaryTimeoutMs = 6_500, backupAllowed = discoveryAllowed)
+        val discovery = discoveryOverride ?: bounded(DuckDuckGoDiscovery(transport, discoveryAllowed))
         var discoveryFailed = false
         var blocked = false
         var discoveryTimedOut = false
@@ -120,9 +113,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 if (result == null || blocked) break
             }
             if (candidates.isEmpty() && !blocked && !discoveryFailed && searches < 3) {
-                val reformulated = if (query.freshnessFilter != null) plan.searches.first()
-                    else if (FactualResearch.isCasting(question)) "${plan.searches.first()} official cast" else "${plan.searches.first()} documentation"
-                candidates += discover(reformulated, query.freshnessFilter != null).orEmpty()
+                candidates += discover(plan.searches.first(), true).orEmpty()
             }
             candidates
         }
@@ -176,7 +167,9 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                         .also { finished = true }
                     }
                     if (!finished) readTimeouts.incrementAndGet()
-                    result
+                    result ?: candidate.instantAnswer?.takeIf {
+                        DuckDuckGoDiscovery.summaryAllowed(question) && EvidenceRanking.acceptable(it, plan)
+                    }
                 }
             } }.awaitAll().filterNotNull()
             fetched.forEach { if (seen.add(it.url)) sources += it }
@@ -184,17 +177,6 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         }
         }
         readCandidates(links)
-        // A good-looking search hit may be unreadable or fail evidence checks.
-        // Try the independent keyword index once before repeating the primary.
-        if (!enough() && explicit.isEmpty() && discovery is FreeSearchDiscovery && !discovery.backupUsed &&
-            readCount < 8 && providerCalls < 3 && discoveryAllowed()) {
-            progress(ResearchStage.SEARCHING)
-            val alternative = withTimeoutOrNull(5_000) { discovery.discoverBackup(query, true) }
-            readCandidates(alternative?.candidates.orEmpty().filter {
-                query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) &&
-                    !FactualResearch.speculativeCasting(question, it.title)
-            })
-        }
         // Expand only after actual passages fail to cover the requested facets.
         if (explicit.isEmpty() && !enough() && !blocked && !discoveryFailed && !discoveryTimedOut) {
             for (search in plan.searches.drop(1)) {

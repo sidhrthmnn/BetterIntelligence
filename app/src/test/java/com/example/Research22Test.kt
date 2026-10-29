@@ -154,7 +154,7 @@ class Research22Test {
                 <a class="result__snippet">Complete documentation index for Orion 2 memory requirements and benchmarks.</a>
             </div>
         """.trimIndent()
-        val candidates = HtmlDiscovery.links(WebDocument("https://html.duckduckgo.com/html/", discoveryHtml, "text/html"))
+        val candidates = HtmlFixtureParser.links(WebDocument("https://html.duckduckgo.com/html/", discoveryHtml, "text/html"))
         assertEquals(1, candidates.size)
         assertTrue(candidates.single().routingHint.contains("memory requirements"))
 

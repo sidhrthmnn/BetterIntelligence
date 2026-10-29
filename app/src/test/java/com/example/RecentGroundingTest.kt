@@ -52,7 +52,7 @@ class RecentGroundingTest {
         val html = result("https://duckduckgo.com/l/?uddg=https%3A%2F%2Fpublisher.example%2Fnews", "News") +
             result("https://duckduckgo.com/l/?uddg=http%3A%2F%2Fpublisher.example%2Finsecure", "Insecure") +
             result("https://duckduckgo.com/l/?uddg=https%3A%2F%2F127.0.0.1%2Fprivate", "Private")
-        assertEquals(listOf("https://publisher.example/news"), PublicWebResearch.candidates(html))
+        assertEquals(listOf("https://publisher.example/news"), fixtureLinks(html))
     }
 
     @Test fun fetchesBeyondBlockedTopThreeAndFiltersWrongYearAndTopic() = runBlocking {
@@ -60,7 +60,7 @@ class RecentGroundingTest {
         val sources = PublicWebResearch(WebFetcher { url ->
             requested += url
             if (url.endsWith("/robots.txt")) WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-            else if ("api.mwmbl.org" in url) mwmblFixture(url, (1..6).joinToString("") {
+            else if ("api.duckduckgo.com" in url) ddgFixture(url, (1..6).joinToString("") {
                 result("https://p$it.example/news", "Physics Nobel Prize 2026")
             })
             else when {
@@ -80,8 +80,8 @@ class RecentGroundingTest {
         var pages = 0
         val result = PublicWebResearch(WebFetcher { url ->
             if (url.endsWith("/robots.txt")) return@WebFetcher WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-            if ("api.mwmbl.org" !in url) { pages++; error("Do not read irrelevant result") }
-            mwmblFixture(url, result("https://dictionary.example/won", "WON dictionary"))
+            if ("api.duckduckgo.com" !in url) { pages++; error("Do not read irrelevant result") }
+            ddgFixture(url, result("https://dictionary.example/won", "WON dictionary"))
         }).search(question)
         assertTrue(result.isEmpty()); assertEquals(0, pages)
     }
@@ -92,7 +92,7 @@ class RecentGroundingTest {
             requested += url
             when {
                 url.endsWith("/robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-                "api.mwmbl.org" in url -> mwmblFixture(url, (1..10).joinToString("") {
+                "api.duckduckgo.com" in url -> ddgFixture(url, (1..10).joinToString("") {
                     result("https://weak$it.example/article", "Android phone")
                 } + result("https://strong.example/article", "Android Vulkan graphics explained"))
                 "strong.example" in url -> WebDocument(url, "<title>Android Vulkan graphics</title><article><p>Android uses Vulkan graphics to provide explicit access to a GPU and its compute and rendering capabilities.</p></article>", "text/html")
@@ -100,7 +100,7 @@ class RecentGroundingTest {
             }
         }).search("Android Vulkan graphics")
         assertEquals("https://strong.example/article", sources.single().url)
-        assertTrue(requested.count { "api.mwmbl.org" !in it && !it.endsWith("/robots.txt") } <= 8)
+        assertTrue(requested.count { "api.duckduckgo.com" !in it && !it.endsWith("/robots.txt") } <= 8)
     }
 
     @Test fun compactEvidenceKeepsUsefulTextAndOnlyAdvertisesIncludedSources() {

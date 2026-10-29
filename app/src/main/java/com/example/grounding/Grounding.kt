@@ -10,8 +10,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
@@ -55,7 +53,7 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
                     EvidenceSource(item.getInt("id"), item.getString("title"), url, item.optString("excerpt"),
                         item.optLong("retrievedAt"), item.optString("updatedAt"), item.optString("kind"), item.optString("dateKind"),
                         item.optString("publicPlace").takeIf(ConversationalResearch::validPublicPlace).orEmpty(),
-                        item.optString("discoveryProvider").takeIf { it in setOf("Exa", "Mwmbl") }.orEmpty())
+                        item.optString("discoveryProvider").takeIf { it in setOf("DuckDuckGo", "Exa", "Mwmbl") }.orEmpty())
                 }
             }
         }.getOrDefault(emptyList())
@@ -148,6 +146,7 @@ object GroundingPolicy {
             val evidence = JSONArray().apply { included.forEach { source -> put(JSONObject()
                 .put("id", source.id).put("title", bounded(source.title, 120))
                 .put("publisher", source.url.toHttpUrl().host)
+                .apply { if (source.kind == "INSTANT_ANSWER") put("provenance", "DuckDuckGo API topic summary; publisher page not independently read") }
                 .apply { if (source.updatedAt.isNotBlank()) {
                     put("sourceDate", source.updatedAt.take(40))
                     put("dateKind", source.dateKind.ifBlank { "unknown" })
@@ -156,7 +155,8 @@ object GroundingPolicy {
             val packets = included.map { EvidencePacket.from(it, researchPlan) }
             val gaps = researchPlan.focuses.map { it.question }.filter { focus -> packets.none { focus in it.objectives } }
             val ageWarning = if (included.any { EvidenceRanking.contextOnly(it, researchPlan) }) listOf("Older/undated reference material supplies background only. Do not claim a recent release or newly added capability.") else emptyList()
-            val warnings = (EvidenceRanking.conflicts(included) + ageWarning + if (gaps.isEmpty()) emptyList() else listOf("Evidence may not cover: ${gaps.joinToString("; ")}. State missing evidence, do not guess.")).joinToString("\n").take(450)
+            val apiWarning = if (included.any { it.kind == "INSTANT_ANSWER" }) listOf("DuckDuckGo topic summaries have unknown source dates and are not independently read publisher pages. Do not claim live or independent verification.") else emptyList()
+            val warnings = (apiWarning + EvidenceRanking.conflicts(included) + ageWarning + if (gaps.isEmpty()) emptyList() else listOf("Evidence may not cover: ${gaps.joinToString("; ")}. State missing evidence, do not guess.")).joinToString("\n").take(450)
             val clock = if (ResearchQuery(question).earliest != null) "\nAs of ${java.time.LocalDate.now()} for interpreting relative question dates only; this is NOT a source date." else ""
             val weatherRule = if (ConversationalResearch.isWeather(question))
                 " For weather, lead with temperature and units, place and reported observation time. Distinguish observed temperature from forecast highs/lows. If temperature is missing, say so; never use photo-gallery readings or infer units." else ""
@@ -205,18 +205,6 @@ class SearchHttp internal constructor(
     private data class Reply(val code: Int, val location: String?, val page: WebDocument)
     override suspend fun fetch(url: String): WebDocument = fetchChecked(url, null)
     override suspend fun fetchPage(url: String, permitted: suspend (String) -> Boolean): WebDocument = fetchChecked(url, permitted)
-    override suspend fun postJson(url: String, json: String, permitted: suspend (String) -> Boolean): WebDocument {
-        require(allowTestUrls || GroundingPolicy.publicHttpsUrl(url)) { "A public HTTPS endpoint is required" }
-        require(json.toByteArray(Charsets.UTF_8).size <= 16_384) { "Search request is too large" }
-        check(permitted(url)) { "Search endpoint does not permit this request" }
-        val reply = request(Request.Builder().url(url)
-            .header("User-Agent", "BetterIntelligence/2.4 (+https://github.com/sidhrthmnn/BetterIntelligence)")
-            .header("Accept", "application/json, text/event-stream")
-            .post(json.toRequestBody("application/json; charset=utf-8".toMediaType())).build())
-        // A search POST is never replayed to a redirect destination.
-        check(reply.code == 200) { "Search endpoint unavailable (HTTP ${reply.code})" }
-        return reply.page
-    }
     private suspend fun fetchChecked(url: String, permitted: (suspend (String) -> Boolean)?): WebDocument {
         var current = url
         repeat(4) { hop ->

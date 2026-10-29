@@ -84,7 +84,7 @@ class ResearchQualityEvaluationTest {
                     calls += url
                     when {
                         url.endsWith("/robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-                        "api.mwmbl.org" in url -> mwmblFixture(url, case.searchHtml ?: case.pages.mapIndexed { i, page ->
+                        "api.duckduckgo.com" in url -> ddgFixture(url, case.searchHtml ?: case.pages.mapIndexed { i, page ->
                             "<div class='result'><a class='result__a' href='https://${page.host}/p$i'>${page.title}</a></div>"
                         }.joinToString(""))
                         "duckduckgo.com" in url -> WebDocument(url, case.searchHtml ?: case.pages.mapIndexed { i, page ->

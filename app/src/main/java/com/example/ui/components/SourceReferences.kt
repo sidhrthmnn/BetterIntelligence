@@ -20,6 +20,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.grounding.EvidenceSource
+import com.example.grounding.DuckDuckGoDiscovery
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.text.DateFormat
 import java.util.Date
@@ -37,6 +40,9 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
         modifier = Modifier.testTag("answer_sources")
     ) {
         Text("Sources · ${sources.size} ${if (expanded) "⌃" else "⌄"}", style = MaterialTheme.typography.labelMedium)
+    }
+    sources.firstOrNull { it.discoveryProvider == DuckDuckGoDiscovery.providerName }?.let {
+        DuckDuckGoAttribution(it.title)
     }
     if (sources.any { it.kind == "STRUCTURED_DATA" }) {
         val uri = LocalUriHandler.current
@@ -64,7 +70,8 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                         Text("[${source.id}] ${source.title}", style = MaterialTheme.typography.bodyMedium)
                         Text(source.url.toHttpUrl().host, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (source.discoveryProvider.isNotBlank()) Text("Found via ${source.discoveryProvider}", style = MaterialTheme.typography.labelSmall)
+                        if (source.kind == "INSTANT_ANSWER") Text("DuckDuckGo topic summary · Publisher page not checked", style = MaterialTheme.typography.labelSmall)
+                        else if (source.discoveryProvider.isNotBlank()) Text("Found via ${source.discoveryProvider}", style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -79,7 +86,9 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
                 Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(source.url.toHttpUrl().host, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                     Text(source.url, style = MaterialTheme.typography.bodySmall)
-                    if (source.discoveryProvider.isNotBlank()) Text("Found via ${source.discoveryProvider}; publisher page read by BI", style = MaterialTheme.typography.bodySmall)
+                    if (source.kind == "INSTANT_ANSWER") Text("Summary retrieved from DuckDuckGo's Instant Answer API. The linked publisher page was not independently checked. Source date unknown.", style = MaterialTheme.typography.bodySmall)
+                    else if (source.discoveryProvider.isNotBlank()) Text("Found via ${source.discoveryProvider}; publisher page read by BI", style = MaterialTheme.typography.bodySmall)
+                    if (source.discoveryProvider == DuckDuckGoDiscovery.providerName) DuckDuckGoAttribution(source.title)
                     if (source.updatedAt.isNotBlank()) Text(when (source.dateKind) {
                         "PUBLISHED" -> "Page-reported publication: ${source.updatedAt.take(10)}"
                         "MODIFIED" -> "Page-reported update: ${source.updatedAt.take(10)}"
@@ -88,7 +97,7 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
                         else -> "Reported date: ${source.updatedAt.take(40)}"
                     })
                     Text("Retrieved ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(source.retrievedAt))}")
-                    Text("${if (source.kind == "STRUCTURED_DATA") "Public data response" else "Page text retrieved"}. Check the original source.", style = MaterialTheme.typography.bodySmall)
+                    Text("${when (source.kind) { "STRUCTURED_DATA" -> "Public data response"; "INSTANT_ANSWER" -> "API topic summary"; else -> "Page text retrieved" }}. Check the original source.", style = MaterialTheme.typography.bodySmall)
                     if (source.excerpt.isNotBlank()) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
@@ -103,5 +112,15 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
             confirmButton = { TextButton(onClick = { runCatching { uri.openUri(source.url) } }) { Text("Open source") } },
             dismissButton = { TextButton(onClick = { selected = null; onDismiss() }) { Text("Close") } }
         )
+    }
+}
+
+@Composable
+private fun DuckDuckGoAttribution(topic: String) {
+    val uri = LocalUriHandler.current
+    TextButton(onClick = { runCatching { uri.openUri(DuckDuckGoDiscovery.resultPage(topic)) } }, contentPadding = PaddingValues(0.dp)) {
+        Image(painterResource(com.example.R.drawable.duckduckgo_logo), contentDescription = null, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Results from DuckDuckGo", style = MaterialTheme.typography.labelSmall)
     }
 }

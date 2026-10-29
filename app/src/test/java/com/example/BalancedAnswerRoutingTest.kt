@@ -130,15 +130,13 @@ class BalancedAnswerRoutingTest {
         assertEquals(ResearchFailure.INACCESSIBLE, refused.failure)
     }
 
-    @Test fun circuitSkipsRepeatedFailuresAndRecoversAfterBoundedPause() = runBlocking {
-        var time = 1_000L; var calls = 0; var healthy = false
+    @Test fun circuitSkipsRepeatedFailuresAndRecoversAfterBoundedPause() {
+        var time = 1_000L
         val circuit = DiscoveryCircuit { time }
-        val discovery = FreeSearchDiscovery(DiscoveryProvider { _, _ -> calls++; DiscoveryResult(emptyList(), if (healthy) DiscoveryState.EMPTY else DiscoveryState.UNAVAILABLE) },
-            DiscoveryProvider { _, _ -> error("Backup requires consent") }, circuit, backupAllowed = { false })
-        repeat(5) { discovery.discover(ResearchQuery("Orion"), false) }; assertEquals(2, calls)
-        time += 60_001; healthy = true
-        discovery.discover(ResearchQuery("Orion"), false); assertEquals(3, calls)
-        discovery.discover(ResearchQuery("Orion"), false); assertEquals(4, calls)
+        repeat(2) { circuit.record(DiscoveryState.UNAVAILABLE) }
+        assertEquals(DiscoveryState.UNAVAILABLE, circuit.unavailable())
+        time += 60_001; assertNull(circuit.unavailable())
+        circuit.record(DiscoveryState.EMPTY); assertNull(circuit.unavailable())
         circuit.record(DiscoveryState.BLOCKED); assertEquals(DiscoveryState.BLOCKED, circuit.unavailable())
         time += 300_001; assertNull(circuit.unavailable())
     }
