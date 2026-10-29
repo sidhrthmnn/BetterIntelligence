@@ -1,5 +1,7 @@
 # Automatic factual research (20 / 2.3.0-beta5)
 
+> Historical beta5 behavior. Current main uses [balanced local routing](../2.4/BALANCED_LOCAL_RESEARCH.md).
+
 The casting report exposed two independent failures: Auto's narrow changing-fact
 rules skipped an ordinary factual question, and the extractive fallback accepted
 a matching theory headline when no actual casting passage was available.

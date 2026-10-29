@@ -88,6 +88,11 @@ object ModelLibrary {
     fun canDownload(model: ModelEntity, profile: HardwareProfile): Boolean =
         (model.fileSizeMb * (1f - if (model.downloadState in setOf("PAUSED", "ERROR")) model.downloadProgress.coerceIn(0f, .99f) else 0f)).toLong() + 128 <= profile.internalStorageFreeGb * 1024
 
+    fun configuredContext(model: ModelEntity, requested: Int): Int {
+        val minimum = model.sha256Checksum?.let(::liteRtMinimumContext) ?: 512
+        val maximum = model.sha256Checksum?.let(runtimeContexts::get)
+        return if (maximum != null) requested.coerceIn(minimum, maxOf(minimum, maximum)) else maxOf(requested, minimum)
+    }
     fun memoryEstimate(model: ModelEntity, context: Int = 2048, gpuLayers: Int = 0): ModelMemoryEstimate {
         val liteRt = model.filename.endsWith(".litertlm", true)
         val identity = model.sha256Checksum?.takeIf { it.isNotBlank() }
@@ -95,8 +100,7 @@ object ModelLibrary {
             else identity?.let(identityShapes::get) ?: shapes[model.filename]
         val weights = if (liteRt && identity != null) identityWeights[identity]
             else identity?.let(identityWeights::get) ?: textWeights[model.filename]
-        val minimum = identity?.let(::liteRtMinimumContext) ?: 512
-        val requested = identity?.let(runtimeContexts::get)?.let { minOf(maxOf(context, minimum), it) } ?: maxOf(context, minimum)
+        val requested = configuredContext(model, context)
         val allocation = maxOf(requested, identity?.let(fixedContexts::get) ?: if (liteRt && shape == null) 2048 else 0)
         // Unknown imports get a conservative KV estimate until their header is parsed on load.
         val estimate = ModelMemoryPlanner.estimate(weights ?: (model.fileSizeMb * 1048576), allocation,

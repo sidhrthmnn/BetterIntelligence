@@ -1,0 +1,131 @@
+LOCAL	knowledge	What is artificial intelligence?
+LOCAL	knowledge	What is the capital of France?
+LOCAL	knowledge	Who wrote Pride and Prejudice?
+LOCAL	knowledge	Who directed Inception?
+LOCAL	knowledge	What is photosynthesis?
+LOCAL	knowledge	What are mitochondria?
+LOCAL	knowledge	What is gravity?
+LOCAL	knowledge	What is the water cycle?
+LOCAL	knowledge	Why is the sky blue?
+LOCAL	knowledge	How do lithium batteries work?
+LOCAL	definition	Explain recursion.
+LOCAL	definition	Define entropy.
+LOCAL	definition	Explain probability simply.
+LOCAL	definition	What does CPU stand for?
+LOCAL	definition	What is an algorithm?
+LOCAL	definition	Explain the difference between RAM and storage.
+LOCAL	definition	How does a GPU work?
+LOCAL	definition	Explain NPU inference.
+LOCAL	definition	Explain how temperature is measured.
+LOCAL	definition	What is the role of a prime minister?
+LOCAL	math	What is 15% of 240?
+LOCAL	math	What is 8 multiplied by 7?
+LOCAL	math	Calculate 2 + 3.
+LOCAL	math	Explain the Pythagorean theorem.
+LOCAL	math	How do I solve a quadratic equation?
+LOCAL	reasoning	A train travels 60 km in an hour. Explain its average speed.
+LOCAL	reasoning	If all roses are flowers, are all flowers roses?
+LOCAL	reasoning	Help me reason through this puzzle.
+LOCAL	reasoning	Compare the advantages of arrays and linked lists.
+LOCAL	reasoning	Why can correlation differ from causation?
+LOCAL	creative	Write a birthday message.
+LOCAL	creative	Write a story set on Mars.
+LOCAL	creative	Write a poem about today.
+LOCAL	creative	Draft an email to my colleague.
+LOCAL	creative	Imagine a new game mechanic.
+LOCAL	creative	Help me design a game.
+LOCAL	creative	Brainstorm names for a space game.
+LOCAL	creative	Translate this weather sentence into Malayalam.
+LOCAL	creative	Improve this sentence.
+LOCAL	creative	Summarise this pasted text.
+LOCAL	programming	Explain Android lifecycle.
+LOCAL	programming	Explain binary search.
+LOCAL	programming	How does web search indexing work?
+LOCAL	programming	Explain the code I pasted.
+LOCAL	programming	Explain the current code I pasted.
+LOCAL	programming	How can I make my application faster?
+LOCAL	programming	What does the current flow do?
+LOCAL	programming	Explain my latest function.
+LOCAL	programming	How do I debug a memory leak?
+LOCAL	programming	Write a Kotlin coroutine example.
+LOCAL	technical	Compare GPU and CPU concepts.
+LOCAL	technical	Difference between RAM and storage.
+LOCAL	technical	Explain electric current flow.
+LOCAL	technical	How does Vulkan synchronization work?
+LOCAL	technical	Explain quantization for language models.
+LOCAL	technical	Why does context size affect memory?
+LOCAL	technical	How does a neural network learn?
+LOCAL	technical	What is the difference between CPU and NPU?
+LOCAL	technical	Explain research methods.
+LOCAL	technical	What is fact checking?
+LOCAL	history	Who was UK prime minister in 1945?
+LOCAL	history	How long did British rule India?
+LOCAL	history	Who won the 1901 Nobel Prize in Physics?
+LOCAL	history	When did the first Moon landing happen?
+LOCAL	history	Explain the history of the printing press.
+LOCAL	history	What happened at Waterloo in 1815?
+LOCAL	history	Who was Ada Lovelace?
+LOCAL	history	Why did the Roman Empire decline?
+LOCAL	history	When did World War II end?
+LOCAL	history	Who won the 2018 World Cup?
+LOCAL	followup	What about the previous example?
+LOCAL	followup	Explain it simply.
+LOCAL	followup	What about NPU?
+LOCAL	followup	Make it shorter.
+LOCAL	followup	Can it run Gemma 4?
+LOCAL	followup	Remember our project is Cobalt Lantern.
+LOCAL	followup	What was our project?
+LOCAL	followup	Correct my previous sentence.
+LOCAL	privacy	What did I do today?
+LOCAL	privacy	How was my day today?
+LOCAL	privacy	What is my current password?
+LOCAL	privacy	What did we decide yesterday?
+LOCAL	multilingual	കൃത്രിമ ബുദ്ധി എന്താണ്?
+LOCAL	multilingual	പ്രകാശസംശ്ലേഷണം വിശദീകരിക്കുക.
+LOCAL	multilingual	ഒരു കഥ എഴുതുക.
+LOCAL	multilingual	റാം എന്താണ്?
+LOCAL	multilingual	ഇത് ലളിതമായി വിശദീകരിക്കുക.
+LOCAL	multilingual	Ithu Manglishil explain cheyyu.
+WEB_GROUNDED	weather	What's the weather in London today?
+WEB_GROUNDED	weather	What is the current temperature in London?
+WEB_GROUNDED	weather	Weather forecast for Paris tomorrow.
+WEB_GROUNDED	weather	What is the temperature in Kochi?
+WEB_GROUNDED	current	Who is the current UK Prime Minister?
+WEB_GROUNDED	current	Who is the CEO of Microsoft?
+WEB_GROUNDED	current	What is the population of Tokyo?
+WEB_GROUNDED	current	What is the current exchange rate?
+WEB_GROUNDED	current	Who is the CM of Kerala?
+WEB_GROUNDED	current	Who is playing Doom in Avengers Doomsday?
+WEB_GROUNDED	news	What happened in AI news today?
+WEB_GROUNDED	news	Show me recent space news.
+WEB_GROUNDED	news	What happened in London yesterday?
+WEB_GROUNDED	news	Who won the latest F1 race?
+WEB_GROUNDED	news	Who won the 2026 Nobel Prize in Physics?
+WEB_GROUNDED	versions	What's the latest Android version?
+WEB_GROUNDED	versions	Latest Android security patch?
+WEB_GROUNDED	versions	Compare recent Android AI frameworks.
+WEB_GROUNDED	versions	Does LiteRT-LM support GPU?
+WEB_GROUNDED	versions	Which Android version is currently supported?
+WEB_GROUNDED	products	Compare the latest specifications of these phones.
+WEB_GROUNDED	products	Compare current GPU benchmarks.
+WEB_GROUNDED	products	What is the price of the Pixel 10?
+WEB_GROUNDED	products	Find the current price of this product.
+WEB_GROUNDED	products	Is Gemma 4 compatible with LiteRT on Android?
+WEB_GROUNDED	verification	Verify this claim using official sources.
+WEB_GROUNDED	verification	Search for official Gemma documentation.
+WEB_GROUNDED	verification	Look up Android Vulkan documentation.
+WEB_GROUNDED	verification	Explain recursion with cited sources.
+WEB_GROUNDED	verification	Fact-check the 1969 Moon landing.
+WEB_GROUNDED	verification	Can you search for public information about Gemma?
+WEB_GROUNDED	verification	Read https://www.iana.org/help/example-domains
+WEB_GROUNDED	verification	Verify the current weather in London.
+WEB_GROUNDED	mixed	How does Gemma 4 work, and what's its latest supported Android runtime?
+WEB_GROUNDED	mixed	Explain CPUs; what are the latest GPU benchmarks?
+WEB_GROUNDED	multilingual	ഇന്ന് ലണ്ടനിലെ കാലാവസ്ഥ എന്താണ്?
+WEB_GROUNDED	multilingual	കേരളത്തിന്റെ ഇപ്പോഴത്തെ മുഖ്യമന്ത്രി ആരാണ്?
+WEB_GROUNDED	multilingual	ഏറ്റവും പുതിയ Android പതിപ്പ് ഏതാണ്?
+WEB_GROUNDED	multilingual	വെബിൽ Gemma തിരയുക.
+CLARIFICATION	missing	What is the weather today?
+CLARIFICATION	missing	Who owns it?
+CLARIFICATION	missing	Who is the mayor there?
+CLARIFICATION	missing	Latest news.

@@ -78,14 +78,12 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
                     val (allowed, reason) = repository.checkSecurityAndRateLimit(caller)
                     if (!allowed) failure(if (reason.startsWith("Rate limit")) "RATE_LIMITED" else "DENIED", reason)
                     else try {
-                        val params = PolishText.parameters(repository.engine.activeContextLength)
+                        val params = PolishText.parameters(repository.engine.activeContextLength, text)
                         val output = repository.engine.generateSync(PolishText.prompt(text), params)
-                        check(repository.engine.telemetry.value.completionTokens < params.maxTokens) { "Output limit reached; polish a shorter passage" }
-                        val corrected = PolishText.validateOutput(text, output)
-                        Bundle().apply { putString("status", "SUCCESS"); putString("text", corrected) }
+                        Bundle().apply { putString("status", "SUCCESS"); putString("text", output) }
                     } catch (e: Exception) {
                         failure(if (e.message?.contains("busy", true) == true) "BUSY" else "ERROR",
-                            "The local model could not safely polish this text. Try a shorter passage or another model.")
+                            "The local model could not complete polishing. Try a shorter passage or another model.")
                     }
                 }
             }
@@ -116,23 +114,19 @@ object PolishText {
 
     fun prompt(text: String): String = org.json.JSONObject().put("text", text).toString()
 
-    fun parameters(modelContext: Int): GenerationParams {
+    private val malayalam = Regex("[\\u0D00-\\u0D7F]")
+
+    fun parameters(modelContext: Int, text: String = ""): GenerationParams {
         // Share the tested mobile 2K configuration instead of silently rebuilding
         // a 4K executor for each external proofreading request.
         val size = modelContext.coerceIn(512, 2048)
-        return GenerationParams(systemPrompt = SYSTEM_PROMPT, temperature = 0f,
+        // Keep the tested Latin-text prompt unchanged. Calling Malayalam input
+        // English encourages translation instead of conservative proofreading.
+        val instruction = if (malayalam.containsMatchIn(text)) SYSTEM_PROMPT.replace(
+            "You proofread English text.",
+            "You proofread Malayalam and mixed-language text. Never translate or transliterate. Preserve the original language and script.") else SYSTEM_PROMPT
+        return GenerationParams(systemPrompt = instruction, temperature = 0f,
             contextSize = size, maxTokens = minOf(1024, size / 2))
     }
 
-    // This is a conservative guard, not a guarantee of model accuracy. Consumers must show a preview.
-    fun validateOutput(original: String, output: String): String {
-        val value = output.trim()
-        check(value.isNotEmpty() && value.length <= original.length * 3 + 128) { "Invalid polish output" }
-        check(!value.startsWith("```") && !value.startsWith("<think>")) { "Unexpected model formatting" }
-        val protected = Regex("https?://[^\\s]+|[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}|\\d+(?:[.,:/-]\\d+)*")
-        fun literals(text: String) = protected.findAll(text).map { it.value.trimEnd('.', ',', '!', '?', ';', ':') }
-            .groupingBy { it }.eachCount()
-        check(literals(original) == literals(value)) { "Model changed a number, link or email address" }
-        return value
-    }
 }

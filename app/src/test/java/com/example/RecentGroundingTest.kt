@@ -60,9 +60,9 @@ class RecentGroundingTest {
         val sources = PublicWebResearch(WebFetcher { url ->
             requested += url
             if (url.endsWith("/robots.txt")) WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-            else if ("duckduckgo.com" in url) WebDocument(url, (1..6).joinToString("") {
+            else if ("api.mwmbl.org" in url) mwmblFixture(url, (1..6).joinToString("") {
                 result("https://p$it.example/news", "Physics Nobel Prize 2026")
-            }, "text/html")
+            })
             else when {
                 (1..3).any { "p$it.example" in url } -> error("Publisher blocked")
                 "p4.example" in url -> page(url, "The Nobel Prize in Physics for 2026 was awarded to Example Person after extensive research in science.")
@@ -80,8 +80,8 @@ class RecentGroundingTest {
         var pages = 0
         val result = PublicWebResearch(WebFetcher { url ->
             if (url.endsWith("/robots.txt")) return@WebFetcher WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-            if ("duckduckgo.com" !in url) { pages++; error("Do not read irrelevant result") }
-            WebDocument(url, result("https://dictionary.example/won", "WON dictionary"), "text/html")
+            if ("api.mwmbl.org" !in url) { pages++; error("Do not read irrelevant result") }
+            mwmblFixture(url, result("https://dictionary.example/won", "WON dictionary"))
         }).search(question)
         assertTrue(result.isEmpty()); assertEquals(0, pages)
     }
@@ -92,15 +92,15 @@ class RecentGroundingTest {
             requested += url
             when {
                 url.endsWith("/robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-                "duckduckgo.com" in url -> WebDocument(url, (1..10).joinToString("") {
+                "api.mwmbl.org" in url -> mwmblFixture(url, (1..10).joinToString("") {
                     result("https://weak$it.example/article", "Android phone")
-                } + result("https://strong.example/article", "Android Vulkan graphics explained"), "text/html")
+                } + result("https://strong.example/article", "Android Vulkan graphics explained"))
                 "strong.example" in url -> WebDocument(url, "<title>Android Vulkan graphics</title><article><p>Android uses Vulkan graphics to provide explicit access to a GPU and its compute and rendering capabilities.</p></article>", "text/html")
                 else -> error("Unrelated page")
             }
         }).search("Android Vulkan graphics")
         assertEquals("https://strong.example/article", sources.single().url)
-        assertTrue(requested.count { "duckduckgo.com" !in it && !it.endsWith("/robots.txt") } <= 8)
+        assertTrue(requested.count { "api.mwmbl.org" !in it && !it.endsWith("/robots.txt") } <= 8)
     }
 
     @Test fun compactEvidenceKeepsUsefulTextAndOnlyAdvertisesIncludedSources() {

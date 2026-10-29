@@ -73,11 +73,8 @@ class SettingsPreferencesRepository(private val context: Context) {
 
     private val preferences = context.dataStore.data.catch { if (it is IOException) emit(emptyPreferences()) else throw it }
     val appearance = preferences.map { it[KEY_APPEARANCE] ?: if (it[KEY_DARK_THEME] == "false") "LIGHT" else "DARK" }
-    // The search destination changed from Bing feeds to DuckDuckGo's public HTML.
-    // Ask once for the updated disclosure; never broaden an old consent silently.
-    val webAllowed = preferences.map { it[KEY_WEB_ALLOWED] == "true" && it[KEY_WEB_RESEARCH_CONSENT] in setOf("2", "3") }
-    // Existing consent keeps DuckDuckGo working; the new destination needs an explicit enable.
-    val freeSearchBackupAllowed = preferences.map { it[KEY_WEB_ALLOWED] == "true" && it[KEY_WEB_RESEARCH_CONSENT] == "3" }
+    // Consent 3 already disclosed Mwmbl. Legacy consent 2 did not authorize it.
+    val webAllowed = preferences.map { it[KEY_WEB_ALLOWED] == "true" && it[KEY_WEB_RESEARCH_CONSENT] == "3" }
     val webMode = preferences.map { it[KEY_WEB_MODE] ?: "OFF" }
     val activeConversation = preferences.map { it[KEY_CONVERSATION]?.toLongOrNull() ?: 0L }
     val memoryEnabled = preferences.map { it[KEY_MEMORY] == "true" }

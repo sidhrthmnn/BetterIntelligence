@@ -1,0 +1,66 @@
+[
+  {
+    "input": "i has 2 apples.",
+    "expected": "I have 2 apples.",
+    "status": "SUCCESS",
+    "output": "I have 2 apples.",
+    "latencyMs": 1820,
+    "actualBackend": "CPU"
+  },
+  {
+    "input": "Do not delete the backup.",
+    "expected": "Do not delete the backup.",
+    "status": "SUCCESS",
+    "output": "Do not delete the backup.",
+    "latencyMs": 848,
+    "actualBackend": "CPU"
+  },
+  {
+    "input": "Keep com.example.demo unchanged.",
+    "expected": "Keep com.example.demo unchanged.",
+    "status": "SUCCESS",
+    "output": "Keep com.example.demo unchanged.",
+    "latencyMs": 930,
+    "actualBackend": "CPU"
+  },
+  {
+    "input": "Visit https:\/\/example.com at 09:15.",
+    "expected": "Visit https:\/\/example.com at 09:15.",
+    "status": "SUCCESS",
+    "output": "Visit https:\/\/example.com at 09:15.",
+    "latencyMs": 1585,
+    "actualBackend": "CPU"
+  },
+  {
+    "input": "Email dev@example.com, not user@example.com.",
+    "expected": "Email dev@example.com, not user@example.com.",
+    "status": "SUCCESS",
+    "output": "Email dev@example.com, not user@example.com.",
+    "latencyMs": 1576,
+    "actualBackend": "CPU"
+  },
+  {
+    "input": "ഞാൻ നാളെ ഓഫീസിൽ വരാം.",
+    "expected": "ഞാൻ നാളെ ഓഫീസിൽ വരാം.",
+    "status": "SUCCESS",
+    "output": "ഞാൻ നാളെ ഓഫീസിൽ വരാം.",
+    "latencyMs": 1548,
+    "actualBackend": "CPU"
+  },
+  {
+    "input": "Njan naale office-il varaam.",
+    "expected": "Njan naale office-il varaam.",
+    "status": "SUCCESS",
+    "output": "Njan naale office-il varaam.",
+    "latencyMs": 972,
+    "actualBackend": "CPU"
+  },
+  {
+    "input": "Meeting നാളെ 09:15-ന് ആണ്.",
+    "expected": "Meeting നാളെ 09:15-ന് ആണ്.",
+    "status": "SUCCESS",
+    "output": "Meeting നാളെ 09:15-ന് ആണ്.",
+    "latencyMs": 1585,
+    "actualBackend": "CPU"
+  }
+]

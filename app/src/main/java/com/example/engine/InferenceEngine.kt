@@ -272,6 +272,7 @@ class InferenceEngine internal constructor(private val context: android.content.
             val threads = hardware.threads()
             val resources = hardware.resources()
             val selectionKey = SmartBackendSelector.key(android.os.Build.FINGERPRINT, SmartBackendSelector.LITERT_RUNTIME, key, loadContext, threads)
+            selector.reconsiderResources(selectionKey, (resources.availableMb + (owner?.releasableGpuWeightsMb() ?: 0)).coerceAtMost(resources.totalMb), resources.thermal, resources.lowMemory)
             val cached = selector.cached(selectionKey, candidate.supportsGpu)
             var preferred = if (hardware.mode.value != ProcessingMode.CPU && selector.hasValidatedGpu(selectionKey) &&
                 (hardware.mode.value == ProcessingMode.GPU || cached?.backend == ProcessingMode.GPU)) ProcessingMode.GPU else ProcessingMode.CPU
@@ -398,11 +399,12 @@ class InferenceEngine internal constructor(private val context: android.content.
         val gpuEstimate = liteLibraryModel?.let { ModelLibrary.memoryEstimate(it, allocationContext, Int.MAX_VALUE).totalMb }
             ?: ModelMemoryPlanner.estimate(session.file.length(), allocationContext, 524288L, 1, 1).totalMb
         val reloadAvailable = (state.availableMb + session.releasablePrivateMb).coerceAtMost(state.totalMb)
+        selector.reconsiderResources(key, reloadAvailable, state.thermal, state.lowMemory)
         val gpuBudget = ModelMemoryPlanner.budget(state.totalMb, reloadAvailable)
         val reuseGpu = session.prepared(ProcessingMode.GPU, effective.threads, effective.contextSize)
         val resourceLimited = state.lowMemory || state.thermal >= 3 || (!reuseGpu && (gpuEstimate > gpuBudget || reloadAvailable < selector.minimumAvailableMb(key)))
         _telemetry.value = _telemetry.value.copy(backendStatus = "Selecting processing backend…")
-        val selection = "$key:$mode:$resourceLimited"
+        val selection = "$key:$mode:$resourceLimited:${selector.blocked(key, reloadAvailable)}"
         var decision = when {
             mode == ProcessingMode.CPU -> "CPU Only selected"
             !session.supportsGpu -> session.gpuReason
@@ -434,17 +436,26 @@ class InferenceEngine internal constructor(private val context: android.content.
                             "Memory or thermal pressure after backend initialization; release this graph before generating"
                         }
                         session.generate("Hi", effective.copy(maxTokens = 1, temperature = 0f, history = emptyList(), systemPrompt = null))
-                        val probe = if (session.needsThoughtBudget) "What is 17 multiplied by 6? Give only the number." else "Count from one to fifty, separated by commas."
-                        val result = session.generate(probe, effective.copy(maxTokens = if (session.needsThoughtBudget) 96 else 8,
-                            temperature = 0f, history = emptyList(), systemPrompt = null))
-                        check(result.text.isNotBlank()) { "No visible validation text within the controlled probe budget" }
-                        if (candidate == ProcessingMode.CPU) reference = result.text.trim()
-                        else check(result.text.trim() == reference) { "GPU deterministic decode did not match CPU reference" }
+                        val probes = if (session.needsThoughtBudget) BackendValidation.probes.take(1) else BackendValidation.probes
+                        val results = probes.map { probe ->
+                            session.generate(probe.prompt, effective.copy(maxTokens = if (session.needsThoughtBudget) 96 else 48,
+                                temperature = 0f, topK = 1, topP = 1f, history = emptyList(), systemPrompt = null)).also {
+                                check(BackendValidation.correct(probe, it.text)) { "$candidate returned an incorrect or incomplete controlled arithmetic result" }
+                                check(it.tokensPerSecond.isFinite() && it.tokensPerSecond > 0 && it.firstTokenMs > 0) { "$candidate did not report usable probe timing" }
+                            }
+                        }
+                        val signature = probes.joinToString("|") { it.answer.toString() }
+                        if (candidate == ProcessingMode.CPU) reference = signature
+                        else check(signature == reference) { "GPU validation lacks a successful CPU reference" }
+                        val decoded = results.sumOf { it.outputTokens }
+                        val seconds = results.sumOf { it.outputTokens / it.tokensPerSecond.coerceAtLeast(.01f).toDouble() }
+                        val decodeSpeed = (decoded / seconds.coerceAtLeast(.001)).toFloat()
+                        val firstToken = results.map { it.firstTokenMs }.sorted().let { it[it.size / 2] }
                         val after = hardware.resources()
-                        samples += BackendMeasurement(candidate, 0, effective.threads, result.tokensPerSecond,
-                            result.firstTokenMs, memoryMb(), session.initializationMs, before.thermal, after.thermal,
+                        samples += BackendMeasurement(candidate, 0, effective.threads, decodeSpeed,
+                            firstToken, memoryMb(), session.initializationMs, before.thermal, after.thermal,
                             if (before.batteryC > 0 && after.batteryC > 0) after.batteryC - before.batteryC else 0f,
-                            result.outputTokens > 1 && !after.lowMemory)
+                            decoded > 1 && !after.lowMemory)
                         if (candidate == ProcessingMode.GPU) hardware.liteRtGpuStatus(true, "LiteRT OpenCL model load and deterministic decode passed")
                     } catch (failure: Exception) {
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()
@@ -628,7 +639,8 @@ class InferenceEngine internal constructor(private val context: android.content.
         val key = SmartBackendSelector.key(android.os.Build.FINGERPRINT, caps.cpuAbi, caps.cpuBuild, caps.gpuName, SmartBackendSelector.RUNTIME,
             modelIdentity, params.contextSize, params.threads, layers)
         val mode = hardware.mode.value
-        val selection = "$key:$mode:${state.thermal >= 3}:${state.lowMemory}"
+        selector.reconsiderResources(key, layerState.availableMb, state.thermal, state.lowMemory)
+        val selection = "$key:$mode:${state.thermal >= 3}:${state.lowMemory}:${selector.blocked(key)}"
         if (selectedKey == selection) return
         _telemetry.value = _telemetry.value.copy(backendStatus = "Selecting processing backend…")
         var target = 0

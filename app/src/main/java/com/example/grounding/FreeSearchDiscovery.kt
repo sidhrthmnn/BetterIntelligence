@@ -16,11 +16,21 @@ class MwmblDiscovery(private val fetcher: WebFetcher, private val permitted: sus
         private var nextRequest = 0L
         private var unavailableUntil = 0L
         private fun now() = System.nanoTime() / 1_000_000
+        /** Isolate synthetic quota failures between tests; never called by app code. */
+        @androidx.annotation.VisibleForTesting
+        internal fun resetForTests() { nextRequest = 0L; unavailableUntil = 0L }
+        internal fun searchText(query: ResearchQuery): String = if (FactualResearch.isCasting(query.question) &&
+            query.terms.none { it == "actor" || it == "cast" })
+            query.searchText.removeSuffix(" official cast").removeSuffix(" actor cast") else query.searchText
         fun candidates(json: String): List<ResearchCandidate> {
             val rows = JSONObject(json).optJSONArray("results") ?: return emptyList()
             return (0 until minOf(rows.length(), 16)).mapNotNull { i ->
                 val row = rows.optJSONObject(i) ?: return@mapNotNull null
-                val url = row.optString("url").takeIf(GroundingPolicy::publicHttpsUrl) ?: return@mapNotNull null
+                // Older indexed links may use HTTP. Try only their HTTPS form;
+                // never send a cleartext request or relax public-network checks.
+                val raw = row.optString("url")
+                val url = (if (raw.startsWith("http://", true)) "https://" + raw.drop(7) else raw)
+                    .takeIf(GroundingPolicy::publicHttpsUrl) ?: return@mapNotNull null
                 ResearchCandidate(HtmlDiscovery.canonicalUrl(url), row.optString("title").take(200), row.optString("content").take(240))
             }.distinctBy { it.url }
         }
@@ -30,7 +40,7 @@ class MwmblDiscovery(private val fetcher: WebFetcher, private val permitted: sus
         delay((nextRequest - now()).coerceAtLeast(0))
         nextRequest = now() + 1_100
         try {
-            val url = "https://api.mwmbl.org/api/v2/search/".toHttpUrl().newBuilder().addQueryParameter("q", query.searchText).build().toString()
+            val url = "https://api.mwmbl.org/api/v2/search/".toHttpUrl().newBuilder().addQueryParameter("q", searchText(query)).build().toString()
             val page = fetcher.fetchPage(url, permitted)
             if (!page.contentType.startsWith("application/json", true)) return@withLock DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE)
             val found = candidates(page.text)
@@ -45,7 +55,7 @@ class MwmblDiscovery(private val fetcher: WebFetcher, private val permitted: sus
 }
 
 class FreeSearchDiscovery(private val primary: DiscoveryProvider, private val backup: DiscoveryProvider,
-    private val backupAllowed: suspend () -> Boolean) : DiscoveryProvider {
+    private val primaryCircuit: DiscoveryCircuit? = null, private val backupAllowed: suspend () -> Boolean) : DiscoveryProvider {
     override suspend fun discover(query: ResearchQuery, broad: Boolean): DiscoveryResult {
         fun relevant(result: DiscoveryResult): DiscoveryResult {
             val found = result.candidates.filter { query.candidateRelevant(it.title, it.routingHint) &&
@@ -53,10 +63,12 @@ class FreeSearchDiscovery(private val primary: DiscoveryProvider, private val ba
                 (FactualResearch.capitalPlace(query.question) == null || !Regex("(?i)\\bcapital punishment\\b").containsMatchIn(it.title)) }
             return result.copy(candidates = found, state = if (result.state == DiscoveryState.FOUND && found.isEmpty()) DiscoveryState.EMPTY else result.state)
         }
-        val first = try { withTimeoutOrNull(2_500) { relevant(primary.discover(query, broad)) }
-            ?: DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
+        val paused = primaryCircuit?.unavailable()
+        val first = if (paused != null) DiscoveryResult(emptyList(), paused) else try { withTimeoutOrNull(2_500) { relevant(primary.discover(query, broad)) }
+            ?: DiscoveryResult(emptyList(), DiscoveryState.TIMEOUT) }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
+        if (paused == null) primaryCircuit?.record(first.state)
         if (first.state == DiscoveryState.FOUND || !backupAllowed()) return first
         // A primary challenge ends requests to that service. The independent,
         // explicitly allowed backup does not solve or bypass its challenge.

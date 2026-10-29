@@ -37,6 +37,9 @@ object ConversationalResearch {
     fun needsPlace(question: String) = Regex("(?i)\\bthere\\b").containsMatchIn(question) &&
         Regex("(?i)\\b(mayor|governor)\\b").containsMatchIn(question)
     fun question(question: String, history: List<ChatMessageEntity>): String {
+        // A retry belongs to the active task. Do not revive a web topic from
+        // before a more recent local answer (for example after writing a poem).
+        if (isRecheck(question) && GroundingResult.sources(history.lastOrNull { it.role == "assistant" }?.sourcesJson ?: "[]").isEmpty()) return question
         if (history.lastOrNull()?.content == askNewsTopic && Regex("^[\\p{L}\\p{N} ,.'-]{2,100}$").matches(question)) return "Latest news about $question"
         if (history.lastOrNull()?.content == askPlace && Regex("^[\\p{L} ,.'-]{2,70}$").matches(question)) {
             val role = Regex("(?i)\\b(mayor|governor)\\b").find(history.lastOrNull { it.role == "user" }?.content.orEmpty())?.value

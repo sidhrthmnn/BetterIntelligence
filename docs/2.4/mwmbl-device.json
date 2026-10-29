@@ -1,0 +1,106 @@
+[
+  {
+    "question": "Who is playing Doctor Doom in Avengers Doomsday?",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 4288,
+    "requests": [
+      "https:\/\/api.mwmbl.org\/robots.txt",
+      "https:\/\/api.mwmbl.org\/api\/v2\/search\/?q=doctor%20doom%20avengers%20doomsday",
+      "https:\/\/news.bbc.co.uk\/robots.txt",
+      "https:\/\/www.polygon.com\/robots.txt",
+      "https:\/\/news.bbc.co.uk\/news\/articles\/ckrgd7eek09o",
+      "https:\/\/www.polygon.com\/23063545\/marvel-multiverse-doctor-doom-avengers",
+      "https:\/\/www.polygon.com\/23063545\/marvel-multiverse-doctor-doom-avengers\/",
+      "https:\/\/www.polygon.com\/e\/23971933",
+      "https:\/\/www.polygon.com\/sdcc\/24207892\/robert-downey-jr-doctor-doom-marvel\/"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "Robert Downey Jr. is returning to the MCU as Doctor Doom",
+        "url": "https:\/\/www.polygon.com\/sdcc\/24207892\/robert-downey-jr-doctor-doom-marvel\/",
+        "excerpt": "Published Jul 27, 2024, 10:12 PM EDT\n\nRobert Downey Jr. is returning to the MCU as Doctor Doom\nAdd Polygon.com on Google Add as Preferred Source Follow on Google Discover\n\nRobert Downey Jr. is returning to the MCU as Doctor Doom › Next\nWell, that’s a shocker: Robert Downey Jr. will be returning to the Marvel Cinematic Universe to play Victor Von Doom in Avengers: Doomsday, the next Avengers movie. The Russo brothers made the announcement at Marvel’s San Diego Comic-Con panel on Saturday night, shortly after being announced as the directors of both Doomsday and the follow-up movie, Avengers: Secret Wars.\n\nRobert Downey Jr. is returning to the MCU as Doctor Doom › Next\nAdd Polygon.com on Google Add as Preferred Source Follow on Google Discover",
+        "retrievedAt": 1793237814924,
+        "updatedAt": "2024-07-27",
+        "kind": "WEB_PAGE",
+        "dateKind": "PUBLISHED"
+      },
+      {
+        "id": 2,
+        "title": "It’s Doctor Doom’s multiverse of madness, and we’re all just living in it",
+        "url": "https:\/\/www.polygon.com\/23063545\/marvel-multiverse-doctor-doom-avengers\/",
+        "excerpt": "Published May 9, 2022, 3:03 PM EDT\n\nIt’s Doctor Doom’s multiverse of madness, and we’re all just living in it\nLike Follow Followed Thread Link copied to clipboard\n\nIt’s Doctor Doom’s multiverse of madness, and we’re all just living in it\nFollow Followed\n\nIt’s Doctor Doom’s multiverse of madness, and we’re all just living in it\nThe real promise of parallel earths is Doom\n\nIt’s Doctor Doom’s multiverse of madness, and we’re all just living in it\nAdd Polygon.com on Google Add as Preferred Source Follow on Google Discover\n\nIt’s Doctor Doom’s multiverse of madness, and we’re all just living in it\nIn his Avengers, Jason Aaron has riffed mightily on that utterly comic book idea of cooperation between parallel selves, first with the punnilly named Council of Red, an interdimensional alliance of Mephistos. And this week, with artists Jim Towe and Guru-eFX, Aaron introduces another. The Council of Doom? Perish the thought — Doctor Doom has no peers, be they man or god.\n\nIt’s Doctor Doom’s multiverse of madness, and we’re all just living in it › Avengers Forever #5\nImage: Jason Aaron, Jim Towe, Guru-eFX\/Marvel Comics\n\nIt’s Doctor Doom’s multiverse of madness, and we’re all just living in it › Avengers Forever #5\nAaron’s Avengers throws ideas at the wall with a speed that is often dizzying, but I am only human! You show me a the Doom Above All Dooms, whose base is a freakin’ Ego the Living Planet Doom? That rules. It’s just math.",
+        "retrievedAt": 1793237813905,
+        "updatedAt": "2022-05-09",
+        "kind": "WEB_PAGE",
+        "dateKind": "PUBLISHED"
+      }
+    ]
+  },
+  {
+    "question": "Search for Kotlin coroutines documentation",
+    "status": "SOURCES_RETRIEVED",
+    "wallMs": 18624,
+    "requests": [
+      "https:\/\/api.mwmbl.org\/robots.txt",
+      "https:\/\/api.mwmbl.org\/api\/v2\/search\/?q=kotlin%20coroutines%20documentation",
+      "https:\/\/www.jetbrains.com\/robots.txt",
+      "https:\/\/docs.python.org\/robots.txt",
+      "https:\/\/www.jetbrains.com\/help\/idea\/kotlin-a.html",
+      "https:\/\/docs.python.org\/3.14\/library\/asyncio-task.html",
+      "https:\/\/www.jetbrains.com\/help\/idea\/debug-kotlin-coroutines.html",
+      "https:\/\/github.com\/robots.txt",
+      "https:\/\/llvm.org\/robots.txt",
+      "https:\/\/github.com\/donghaic\/kotlin-vertx",
+      "https:\/\/llvm.org\/docs\/Coroutines.html",
+      "https:\/\/leanpub.com\/robots.txt",
+      "https:\/\/davidwalsh.name\/robots.txt",
+      "https:\/\/leanpub.com\/coroutines",
+      "https:\/\/davidwalsh.name\/kotlin-coroutines",
+      "https:\/\/stackoverflow.com\/robots.txt",
+      "https:\/\/developer.android.com\/robots.txt",
+      "https:\/\/developer.android.com\/kotlin\/coroutines\/test"
+    ],
+    "sources": [
+      {
+        "id": 1,
+        "title": "Debug Kotlin coroutines | IntelliJ IDEA",
+        "url": "https:\/\/www.jetbrains.com\/help\/idea\/debug-kotlin-coroutines.html",
+        "excerpt": "Debug Kotlin coroutines\nLearn more in the Kotlin documentation.\n\nDebug Kotlin coroutines › Inspect coroutines\nThe view groups coroutines by their dispatchers. Expand a dispatcher node to see its coroutines.\n\nDebug Kotlin coroutines › Inspect coroutines\n\nDebug Kotlin coroutines › Inspect coroutines\nWhere applicable, the view also shows information about the thread on which a coroutine is executing.\n\nDebug Kotlin coroutines › Capture a thread and coroutine dump\nJava platform threads · Virtual threads · Detected Kotlin coroutines and their stacks\n\nDebug Kotlin coroutines › Capture a thread and coroutine dump › Get coroutines dump\n15 September 2026\n\nDebug Kotlin coroutines › Capture a thread and coroutine dump › Get coroutines dump\nRun Kotlin interactivelyKtor",
+        "retrievedAt": 1793237816436,
+        "updatedAt": "",
+        "kind": "WEB_PAGE",
+        "dateKind": ""
+      }
+    ]
+  },
+  {
+    "question": "Search for Vulkan Android documentation",
+    "status": "SEARCH_FAILED",
+    "failure": "INSUFFICIENT",
+    "wallMs": 4140,
+    "requests": [
+      "https:\/\/api.mwmbl.org\/robots.txt",
+      "https:\/\/api.mwmbl.org\/api\/v2\/search\/?q=vulkan%20android%20documentation",
+      "https:\/\/sleep.urbandroid.org\/robots.txt",
+      "https:\/\/blog.mozilla.org\/robots.txt",
+      "https:\/\/blog.mozilla.org\/sumo\/2012\/06\/26\/new-firefox-for-android-documentation\/",
+      "https:\/\/sleep.urbandroid.org\/docs\/",
+      "https:\/\/docs.telerik.com\/robots.txt",
+      "https:\/\/support.atlassian.com\/robots.txt",
+      "https:\/\/support.atlassian.com\/jira-cloud-android\/resources\/",
+      "https:\/\/docs.telerik.com\/devtools\/android",
+      "https:\/\/docs.telerik.com\/devtools\/android\/",
+      "https:\/\/capacitorjs.com\/robots.txt",
+      "https:\/\/scichart.com\/robots.txt",
+      "https:\/\/scichart.com\/documentation\/android\/current\/",
+      "https:\/\/capacitorjs.com\/docs\/android",
+      "https:\/\/www.scichart.com\/robots.txt",
+      "https:\/\/www.scichart.com\/documentation\/android\/current\/",
+      "https:\/\/security.stackexchange.com\/robots.txt",
+      "https:\/\/gist.github.com\/robots.txt",
+      "https:\/\/gist.github.com\/rekire\/7675412"
+    ],
+    "sources": []
+  }
+]

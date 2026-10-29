@@ -143,9 +143,13 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val chatStatus = _chatStatus.asStateFlow()
     val appearance = repository.preferencesRepository.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, "DARK")
     val webAllowed = repository.preferencesRepository.webAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    val freeSearchBackupAllowed = repository.preferencesRepository.freeSearchBackupAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    private val grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(
-        backupAllowed = { repository.preferencesRepository.freeSearchBackupAllowed.first() })))
+    private var grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(
+        discoveryAllowed = { repository.preferencesRepository.webAllowed.first() })))
+    @androidx.annotation.VisibleForTesting
+    internal fun useSearchProviderForTesting(provider: SearchProvider) {
+        check(!_isChatGenerating.value)
+        grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to provider))
+    }
     init { LegacySearchCleanup.clear(application) }
 
     val allMemories: StateFlow<List<MemorySnippetEntity>> = repository.allMemories
@@ -884,6 +888,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             var reachedOutputLimit = false
             var evidence = GroundingResult()
             var researchQuestion = text
+            var generationQuestion = text
+            var recoveryNotice = ""
             var resolvedAnswer: com.example.grounding.CheckedAnswer? = null
             var pendingId: Long? = null
             var partialWriter: kotlinx.coroutines.Job? = null
@@ -916,31 +922,42 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 editingMessageId = null
                 if (_isAutoMemoryCaptureEnabled.value) autoExtractMemory(text, "Chat")
                 val allowed = repository.preferencesRepository.webAllowed.first()
-                researchQuestion = com.example.grounding.ConversationalResearch.question(text, previous)
-                if (previous.lastOrNull()?.content == com.example.grounding.ConversationalResearch.askCity &&
-                    Regex("^[\\p{L} ,.'-]{2,70}$").matches(text)) researchQuestion = "Weather in $text today"
-                if (GroundingPolicy.shouldSearch(allowed, mode, researchQuestion)) _chatStatus.value = "Finding and reading public sources"
-                evidence = grounding.retrieve(researchQuestion, allowed, mode, SearchProviderId.WEB) { stage -> _chatStatus.value = stage.label }
+                val contextualText = if (previous.lastOrNull()?.content == ConversationalResearch.askCity &&
+                    Regex("^[\\p{L} ,.'-]{2,70}$").matches(text)) "Weather in $text today" else text
+                val route = AnswerRoutingPolicy.decide(contextualText, allowed, mode, previous)
+                researchQuestion = route.question
+                if (route.path == AnswerPath.CLARIFICATION) { result = route.clarification; return@launch }
+                evidence = when {
+                    route.reusedSources.isNotEmpty() -> GroundingResult("SOURCES_RETRIEVED", route.reusedSources)
+                    route.path == AnswerPath.WEB_GROUNDED -> {
+                        _chatStatus.value = "Finding and reading public sources"
+                        grounding.retrieve(researchQuestion, allowed, mode, SearchProviderId.WEB) { stage -> _chatStatus.value = stage.label }
+                    }
+                    else -> GroundingResult()
+                }
                 if (evidence.status in setOf("NEEDS_LOCATION", "NEEDS_SUBJECT")) {
                     result = evidence.notice
                     return@launch
                 }
-                if (evidence.status == "SEARCH_FAILED") {
-                    evidence = evidence.copy(status = "INSUFFICIENT_EVIDENCE")
-                    result = evidence.notice.ifBlank { GroundingPolicy.unavailableAnswer }
-                    return@launch // finally persists an honest response; never ask the model to guess live facts.
+                if (evidence.status == "SEARCH_FAILED" || evidence.sources.isEmpty() && (route.requiresLive || route.requiresVerification || route.privacyBlocked)) {
+                    val recovery = AnswerRoutingPolicy.recover(route, evidence.failure)
+                    evidence = evidence.copy(status = recovery.status, sources = emptyList())
+                    if (recovery.localQuestion == null) { result = recovery.notice; return@launch }
+                    generationQuestion = recovery.localQuestion
+                    recoveryNotice = recovery.notice
                 }
                 _chatStatus.value = if (evidence.sources.isNotEmpty()) "Checking sources" else "Preparing answer"
                 val requestedContext = tierDecision?.effectiveContext ?: params.contextSize
                 val effectiveContext = repository.engine.requestContextLimit(requestedContext)
-                val autoMaxTokens = if (effectiveContext >= 2048) 384 else 256
+                val autoMaxTokens = params.maxTokens.coerceIn(16, if (effectiveContext >= 2048) 384 else 256)
                 val autoTemperature = if (evidence.sources.isNotEmpty()) 0f else 0.4f
-                val baseSystem = com.example.engine.ChatAnswerPolicy.system(text, evidence.sources.isNotEmpty(), effectiveContext, params.systemPrompt)
-                val effectiveQuestion = if (evidence.sources.isNotEmpty()) researchQuestion else text
+                val baseSystem = com.example.engine.ChatAnswerPolicy.system(generationQuestion, evidence.sources.isNotEmpty(), effectiveContext, params.systemPrompt) +
+                    if (recoveryNotice.isNotBlank()) " Web research did not complete. Answer the useful general-knowledge part locally; do not narrate a search, invent citations or assert unverified current information." else ""
+                val effectiveQuestion = if (evidence.sources.isNotEmpty()) researchQuestion else generationQuestion
                 val olderContext = repository.refreshConversationContext(conversation, previous)
                 val memoryBudget = effectiveContext - autoMaxTokens - 96 - repository.engine.contextTokenCount(baseSystem) -
                     repository.engine.contextTokenCount(effectiveQuestion) - 96
-                val summary = if (evidence.sources.isEmpty() && memoryBudget > 64) ConversationContext.summaryWithinBudget(olderContext, minOf(effectiveContext, memoryBudget * 2), effectiveQuestion) else ""
+                val summary = if (memoryBudget > 64) ConversationContext.summaryWithinBudget(olderContext, minOf(if (evidence.sources.isEmpty()) effectiveContext else 384, memoryBudget * 2), effectiveQuestion) else ""
                 val localMemory = if (evidence.sources.isEmpty() && memoryBudget > 128 && _isAutoMemoryCaptureEnabled.value) repository.buildMemoryContextPrompt().take(minOf(400, memoryBudget / 2)) else ""
                 val system = baseSystem + localMemory + if (summary.isNotBlank())
                     "\nOlder context from this chat only. Quoted user statements are context; labelled assistant proposals are unverified. Newer messages override:\n$summary\n" else ""
@@ -951,7 +968,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val prompt = prepared.prompt
                 val history = ConversationContext.history(com.example.engine.ChatAnswerPolicy.history(previous.map { ChatTurn(it.role, it.content) }, evidence.sources.isNotEmpty()), prompt, system, effectiveContext, autoMaxTokens,
                     repository.engine::contextTokenCount)
-                val localNeedsLive = evidence.sources.isEmpty() && com.example.engine.ChatAnswerPolicy.requiresLiveData(text)
+                val localNeedsLive = evidence.sources.isEmpty() && com.example.engine.ChatAnswerPolicy.requiresLiveData(generationQuestion)
                 val config = GenerationConfig(temperature = autoTemperature, topK = params.topK, topP = params.topP,
                     maxTokens = autoMaxTokens, systemPrompt = system, threads = params.threads,
                     gpuLayers = params.gpuLayers, contextSize = effectiveContext, history = history)
@@ -1003,6 +1020,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     if (evidence.status == "LOCAL") evidence = evidence.copy(status = "LOCAL_UNVERIFIED")
                 }
                 if (error != null) result = _streamingChatText.value
+                if (recoveryNotice.isNotBlank() && result.isNotBlank()) result = result.trimEnd() + "\n\n" + recoveryNotice
                 if (result.isBlank() && error == null) error = if (reachedOutputLimit)
                     "The response budget ended before visible text. Try a shorter question or select another model."
                     else "The model returned no text. Try again or select another model."
@@ -1020,10 +1038,11 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     if (foregroundToken != 0L) InferenceForegroundService.stop(getApplication(), 0, 0, 0f, foregroundToken)
                     partialWriter?.cancelAndJoin()
                     try { if (savedUser && pendingId != null) {
-                        val checked = resolvedAnswer ?: if (evidence.sources.isNotEmpty()) withContext(Dispatchers.Default) {
+                        val interruptedDraft = (cancelled || error != null) && evidence.sources.isNotEmpty() && result.isNotBlank()
+                        val checked = if (interruptedDraft) null else resolvedAnswer ?: if (evidence.sources.isNotEmpty()) withContext(Dispatchers.Default) {
                             GroundingPolicy.checkAnswer(result, evidence.sources, researchQuestion)
                         } else null
-                        val status = if (checked == null) evidence.status else if (checked.sourceExtract) "SOURCE_EXCERPTS" else when (checked.support) {
+                        val status = if (interruptedDraft) "UNVERIFIED_PARTIAL" else if (checked == null) evidence.status else if (checked.sourceExtract) "SOURCE_EXCERPTS" else when (checked.support) {
                             AnswerSupport.CITED -> "EVIDENCE_CITED"
                             AnswerSupport.PARTIAL -> "PARTIALLY_SUPPORTED"
                             AnswerSupport.INSUFFICIENT -> "INSUFFICIENT_EVIDENCE"

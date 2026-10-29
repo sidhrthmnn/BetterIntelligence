@@ -11,18 +11,20 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class AutomaticGroundingTest {
+    @org.junit.After fun clearSyntheticQuota() { MwmblDiscovery.resetForTests() }
     private val question = "Who is playing doom in avengers doomsday"
     private val confirmed = EvidenceSource(1, "Marvel Studios announces Avengers: Doomsday", "https://thewaltdisneycompany.com/news/cast/",
         "Marvel Studios announces Avengers: Doomsday\nRobert Downey Jr. returns in a new role as Doctor Doom in Avengers: Doomsday.", 1)
 
-    @Test fun broadPublicQuestionsSearchWithoutMagicFreshnessWords() {
+    @Test fun currentCastingAndLiveFactsResearchWhileEstablishedKnowledgeStaysLocal() {
         val factual = listOf(question, "who plays doom in avengers doomsday", "Who's playing Doctor Doom?", "Which actor is playing Doom?",
             "Who wrote Pride and Prejudice?", "Who directed Inception?", "Who voices Mario in the movie?", "Who founded Nintendo?",
             "What is photosynthesis?", "Explain recursion", "Why is the sky blue?", "How does Vulkan work?", "What does DNA stand for?",
             "Where is the Taj Mahal?", "When did World War II end?", "Who was UK prime minister in 1945?", "Does Android support Vulkan?",
             "Can example domains be registered?", "What is the weather in London today?", "Who is the mayor of London?",
             "What does iPhone Duo cost in the UK?", "What is the latest Android version?", "List the planets", "Difference between RAM and storage", "Tell me about photosynthesis")
-        factual.forEach { assertTrue(it, GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, it)) }
+                val stable = setOf("Who wrote Pride and Prejudice?", "Who directed Inception?", "Who founded Nintendo?", "What is photosynthesis?", "Explain recursion", "Why is the sky blue?", "How does Vulkan work?", "What does DNA stand for?", "Where is the Taj Mahal?", "When did World War II end?", "Who was UK prime minister in 1945?", "Can example domains be registered?", "List the planets", "Difference between RAM and storage", "Tell me about photosynthesis")
+        factual.forEach { assertEquals(it, it !in stable, GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, it)) }
         val local = listOf("Hello", "Thanks", "What did I tell you about my project?", "What was our game item?", "Is it a reptile?",
             "Write a poem about today", "Translate this text: who is playing Doom?", "What is 15% of 240?", "Do not search. Who plays Doom?")
         local.forEach { assertFalse(it, GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, it)) }
@@ -66,8 +68,12 @@ class AutomaticGroundingTest {
         assertEquals(DiscoveryState.FOUND, FreeSearchDiscovery(primary, backup) { true }.discover(ResearchQuery(question), false).state)
         assertEquals(2, primaryCalls); assertEquals(1, backupCalls)
         val json = """{"results":[{"url":"${confirmed.url}","title":"Actual publisher","content":"Untrusted search snippet"},{"url":"http://unsafe.example/","title":"Unsafe"},{"url":"https://127.0.0.1/private"}]}"""
-        assertEquals(1, MwmblDiscovery.candidates(json).size)
-        assertEquals("Untrusted search snippet", MwmblDiscovery.candidates(json).single().routingHint)
+        assertEquals(2, MwmblDiscovery.candidates(json).size)
+        assertEquals("Untrusted search snippet", MwmblDiscovery.candidates(json).first().routingHint)
+        assertEquals("https://unsafe.example/", MwmblDiscovery.candidates(json).last().url)
+        assertEquals("doom avengers doomsday", MwmblDiscovery.searchText(ResearchQuery(question)))
+        assertEquals("cast away actor", MwmblDiscovery.searchText(ResearchQuery("Who plays in Cast Away?")))
+        assertEquals("actor cast", MwmblDiscovery.searchText(ResearchQuery("Who plays in The Actor?")))
     }
 
     @Test fun liteHandlesUnknownMarkupButDoesNotRetryAChallenge() = runBlocking {

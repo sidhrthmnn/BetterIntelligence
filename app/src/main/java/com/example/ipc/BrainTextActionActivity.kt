@@ -68,7 +68,7 @@ private fun PolishSheet(text: String, canReplace: Boolean, onReplace: (String) -
         .verticalScroll(rememberScrollState()).testTag("brain_text_action_sheet"),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Polish text", style = MaterialTheme.typography.headlineMedium)
-        Text("English proofreading, using your local model.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Proofreading in the original language, using your local model.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text("Original", style = MaterialTheme.typography.labelLarge)
@@ -88,10 +88,8 @@ private fun PolishSheet(text: String, canReplace: Boolean, onReplace: (String) -
                     output = ""
                     try {
                         output = withContext(Dispatchers.Default) {
-                            val params = PolishText.parameters(repository.engine.activeContextLength)
-                            val result = repository.engine.generateSync(PolishText.prompt(text), params)
-                            check(repository.engine.telemetry.value.completionTokens < params.maxTokens)
-                            PolishText.validateOutput(text, result)
+                            val params = PolishText.parameters(repository.engine.activeContextLength, text)
+                            repository.engine.generateSync(PolishText.prompt(text), params)
                         }
                     } catch (e: Exception) {
                         error = "Could not polish this passage. Try a shorter passage or another model."

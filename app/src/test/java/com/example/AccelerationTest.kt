@@ -20,6 +20,39 @@ class AccelerationTest {
     private fun sample(mode: ProcessingMode, speed: Float, ttft: Long = 100, thermal: Int = 0) =
         BackendMeasurement(mode, if (mode == ProcessingMode.GPU) 16 else 0, 2, speed, ttft, 512f, 100, 0, thermal, 0f)
 
+    @Test fun recoveredPressureRetainsProvenGpuButCannotClearDriverQuarantine() {
+        var time = 1_000L
+        val selector = SmartBackendSelector(now = { time })
+        val gpu = sample(ProcessingMode.GPU, 40f)
+        selector.save("model", gpu, listOf(sample(ProcessingMode.CPU, 15f), gpu))
+        selector.failed("model", "Memory pressure after GPU initialization", 5000)
+        assertNull(selector.cached("model", true, 6000))
+        assertFalse(selector.reconsiderResources("model", 6000, 0, false))
+        time += 31_000
+        assertFalse(selector.reconsiderResources("model", 4000, 0, false))
+        assertFalse(selector.reconsiderResources("model", 6000, 3, false))
+        assertFalse(selector.reconsiderResources("model", 6000, 0, true))
+        assertTrue(selector.reconsiderResources("model", 6000, 0, false))
+        assertEquals(ProcessingMode.GPU, selector.cached("model", true, 6000)!!.backend)
+        assertTrue(selector.hasValidatedGpu("model"))
+        selector.failed("model", "Driver failed compute pipeline")
+        time += 600_000
+        assertFalse(selector.reconsiderResources("model", 10000, 0, false))
+        assertTrue(selector.blocked("model")); assertFalse(selector.hasValidatedGpu("model"))
+    }
+
+    @Test fun gemmaContextFloorAndGpuExecutorReuseFollowActualConfiguration() {
+        val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
+        val gemma = models.first { it.filename == "gemma-4-E4B-it.litertlm" }
+        assertEquals(1024, ModelLibrary.configuredContext(gemma, 512))
+        assertEquals(2048, ModelLibrary.configuredContext(gemma, 2048))
+        assertEquals(ModelLibrary.memoryEstimate(gemma, 1024), ModelLibrary.memoryEstimate(gemma, 512))
+        assertEquals(ModelMemoryPlanner.liteRtConfigurationKey(ProcessingMode.GPU, 2, 1024),
+            ModelMemoryPlanner.liteRtConfigurationKey(ProcessingMode.GPU, 4, 1024))
+        assertNotEquals(ModelMemoryPlanner.liteRtConfigurationKey(ProcessingMode.CPU, 2, 1024),
+            ModelMemoryPlanner.liteRtConfigurationKey(ProcessingMode.CPU, 4, 1024))
+    }
+
     @Test fun autoUsesMeasuredLatencyAndStabilityRatherThanBackendRanking() {
         val cpu = sample(ProcessingMode.CPU, 20f)
         assertEquals(ProcessingMode.CPU, SmartBackendSelector.choose(listOf(cpu, sample(ProcessingMode.GPU, 22f, 500)))!!.backend)
@@ -39,6 +72,7 @@ class AccelerationTest {
         preferences.edit().putString("pending", "interrupted").putString("pending_process", "previous-process").commit()
         val restarted = SmartBackendSelector(context)
         assertTrue(restarted.blocked("interrupted"))
+        assertTrue("Changing context or layers must not bypass a native crash guard", restarted.blocked("other-model-configuration"))
         assertEquals("Previous GPU attempt did not finish", restarted.failureReason("interrupted"))
         restarted.reset()
     }

@@ -1,0 +1,45 @@
+{
+  "dateUtc": "2026-10-29",
+  "sourceBaseline": "81253eee23b2e9ebf96eb813f5339f8d623d7032",
+  "publication": "Version 21 / 2.4.0-beta1 prepared for user-authorized closed beta",
+  "build": {
+    "freshDebugCompile": "PASS",
+    "freshReleaseCompile": "PASS",
+    "debugApk": "PASS",
+    "instrumentationApk": "PASS",
+    "releaseLint": "PASS",
+    "jvmTests": 209,
+    "jvmFailures": 0,
+    "jvmErrors": 0
+  },
+  "routing": {
+    "labelledCases": 131,
+    "matches": 131,
+    "localCases": 88,
+    "legacySearchedLocal": 56,
+    "balancedSearchedLocal": 0,
+    "scope": "Deterministic labelled routing corpus, not general answer accuracy"
+  },
+  "physical": {
+    "device": "HONOR VKP-NX9",
+    "soc": "SM8750",
+    "gpu": "Adreno 830",
+    "android": 16,
+    "chatRecovery": "PASS: 12 recorded turns",
+    "backend": "PASS: E2B OpenCL GPU at 1024/2048, E4B CPU, Qwen OpenCL GPU; E4B GPU resource-deferred",
+    "rawGpuProbe": "PASS",
+    "pairedLatency": "PASS: two public questions, one alternating pair each",
+    "finalBinderPolish": "PASS: unchanged AIDL, eight English/Malayalam/Manglish fixtures, raw model output, shared model, cancellation, switching and mapping cleanup",
+    "npu": "NOT EXECUTED; production disabled",
+    "mtp": "NOT EXECUTED; production disabled",
+    "mwmblOnly": "PASS: only Mwmbl discovery, actual page reads for Doom and Kotlin; Vulkan insufficient, no unsupported answer"
+  },
+  "limitations": [
+    "No general accuracy percentage",
+    "No sustained energy/thermal measurement",
+    "No new E4B GPU or physical GGUF GPU measurement",
+    "No NPU or MTP performance claim",
+    "Production app data preserved",
+    "Polishing output is not post-validated, as explicitly requested"
+  ]
+}
