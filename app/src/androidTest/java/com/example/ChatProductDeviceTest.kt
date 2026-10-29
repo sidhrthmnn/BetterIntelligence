@@ -115,7 +115,7 @@ class ChatProductDeviceTest {
                 newChat(); compose.runOnUiThread { vm.setGroundingMode(GroundingMode.ON) }
                 val unavailable = send("Read https://127.0.0.1/private")
                 record("private-url-rejected", unavailable)
-                assertEquals("INSUFFICIENT_EVIDENCE", unavailable.groundingStatus)
+                assertEquals("WEB_UNAVAILABLE", unavailable.groundingStatus)
                 assertTrue(GroundingResult.sources(unavailable.sourcesJson).isEmpty())
                 screenshot(context, "chat-search-unavailable.png")
             }
