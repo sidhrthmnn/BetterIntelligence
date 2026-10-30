@@ -95,9 +95,46 @@ object ConversationalResearch {
             "$question (Public source topic: $cleanTitle)"
         }
     }
-    fun isWeather(question: String) = Regex("(?i)\\b(weather|temperature|forecast)\\b")
-        .containsMatchIn(question.substringBefore("(Public source topic:"))
+    fun isWeather(question: String): Boolean {
+        val plain = question.substringBefore("(Public source topic:")
+        if (Regex("(?i)\\b(weather|temperature|forecast)\\b").containsMatchIn(plain)) return true
+        // Everyday decisions that depend on today's weather ("should I wear a raincoat today").
+        return Regex("(?i)\\b(?:rain\\s?coat|umbrella|sunscreen|sun\\s?cream|rain(?:ing|y)?|snow(?:ing|y)?|sunny|storm(?:y)?|windy|humid|jacket|coat|hot|cold|chilly|freezing)\\b").containsMatchIn(plain) &&
+            Regex("(?i)\\b(?:today|tonight|tomorrow|this (?:morning|afternoon|evening|weekend)|right now|outside|should i|do i need|will it|is it going to|is it)\\b").containsMatchIn(plain) &&
+            !Regex("(?i)\\b(?:song|lyrics|album|movie|film|book|poem|story|recipe|code|meaning of)\\b").containsMatchIn(plain)
+    }
+    private val legacyWeather = Regex("(?i)\\b(weather|temperature|forecast)\\b")
+    private val affirmation = Regex("(?i)^\\s*(?:ok(?:ay)?|yes|yeah|yep|sure|go ahead|please(?: do)?|do it|check(?: it| that)?(?: online| the web| the internet)?|search(?: it| that)?(?: online| the web)?|look it up|find out)\\s*[.!]*\\s*$")
+    private val placeReply = Regex("^[\\p{L}][\\p{L} ,.'-]{1,69}$")
+
+    /** Continue a turn where the on-device model said it needed outside
+     * information. The assistant's text is only a trigger; the outgoing query
+     * is built from the user's own words, and the caller re-applies the normal
+     * privacy/offline routing to it. Returns (question, forceWeb). */
+    fun continuation(text: String, history: List<ChatMessageEntity>): Pair<String, Boolean>? {
+        val reply = text.trim()
+        val last = history.lastOrNull() ?: return null
+        if (last.role != "assistant" || GroundingResult.sources(last.sourcesJson).isNotEmpty()) return null
+        val asked = last.content == askCity || LocalAnswerUncertainty.needsResearch(last.content) ||
+            Regex("(?i)\\b(?:which|what) (?:city|location|place)\\b|\\byour (?:current )?location\\b").containsMatchIn(last.content)
+        if (!asked) return null
+        val previousUser = history.lastOrNull { it.role == "user" }?.content?.trim().orEmpty()
+        val weatherTask = isWeather(previousUser) || legacyWeather.containsMatchIn(last.content)
+        if (weatherTask && !affirmation.matches(reply) && placeReply.matches(reply) && validPublicPlace(reply))
+            return "Weather in $reply today" to false
+        if (affirmation.matches(reply) && previousUser.isNotBlank() && validPublicQuery(previousUser)) {
+            if (weatherTask) {
+                val placeInAssistant = Regex("(?i)\\b(?:weather|forecast|temperature)\\s+(?:for|in|at)\\s+([\\p{L}][\\p{L} .'-]{1,60}?)(?=\\s+(?:to|today|tonight|tomorrow|now)\\b|[.,!?]|$)")
+                    .find(last.content)?.groupValues?.get(1)?.trim()?.takeIf { validPublicPlace(it) }
+                val place = weatherCity(previousUser) ?: placeInAssistant ?: history.takeLast(6).filter { it.role == "user" }
+                    .map { it.content.trim() }.lastOrNull { placeReply.matches(it) && validPublicPlace(it) && !affirmation.matches(it) && !isWeather(it) }
+                return if (place != null) "Weather in $place today" to false else null
+            }
+            return previousUser to true
+        }
+        return null
+    }
     fun weatherCity(question: String): String? = Regex("(?i)\\b(?:in|for|at)\\s+([\\p{L}][\\p{L} ,.'-]{1,70})").find(question)
-        ?.groupValues?.get(1)?.replace(Regex("(?i)\\b(today|now|currently|please)\\b.*"), "")?.trim(' ', '.', '?', ',')?.takeIf { it.length > 1 }
+        ?.groupValues?.get(1)?.replace(Regex("(?i)\\b(today|tonight|tomorrow|now|currently|please)\\b.*"), "")?.trim(' ', '.', '?', ',')?.takeIf { it.length > 1 }
     const val askCity = "Which city and country should I check the weather for? I don't have access to your location."
 }

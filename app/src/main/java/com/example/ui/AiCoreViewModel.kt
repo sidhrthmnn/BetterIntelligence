@@ -922,9 +922,10 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 editingMessageId = null
                 if (_isAutoMemoryCaptureEnabled.value) autoExtractMemory(text, "Chat")
                 val allowed = repository.preferencesRepository.webAllowed.first()
-                val contextualText = if (previous.lastOrNull()?.content == ConversationalResearch.askCity &&
-                    Regex("^[\\p{L} ,.'-]{2,70}$").matches(text)) "Weather in $text today" else text
-                val route = AnswerRoutingPolicy.decide(contextualText, allowed, mode, previous)
+                val continuation = ConversationalResearch.continuation(text, previous)
+                val contextualText = continuation?.first ?: text
+                val effectiveMode = if (continuation?.second == true) GroundingMode.ON else mode
+                val route = AnswerRoutingPolicy.decide(contextualText, allowed, effectiveMode, previous)
                 researchQuestion = route.question
                 if (route.path == AnswerPath.CLARIFICATION) { result = route.clarification; return@launch }
                 evidence = when {
@@ -1000,6 +1001,10 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     // Do not run a second classifier for every message or retry recursively.
                     _chatStatus.value = "Checking current information"
                     val currentRoute = AnswerRoutingPolicy.decide(ConversationalResearch.question(route.question, previous), allowed, GroundingMode.ON, previous)
+                    if (currentRoute.path == AnswerPath.CLARIFICATION) {
+                        result = currentRoute.clarification
+                        return@launch
+                    }
                     researchQuestion = currentRoute.question
                     effectiveQuestion = researchQuestion
                     val researched = grounding.retrieve(researchQuestion, allowed, GroundingMode.ON, SearchProviderId.WEB) {

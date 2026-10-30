@@ -38,14 +38,16 @@ object AnswerRoutingPolicy {
         val resolved = if (transform || calculation || privateInput || localOnly(q)) q else ConversationalResearch.question(q, history)
         val publicQuestion = resolved.substringBefore("(Public source topic:").trim()
         val signals = publicQuestion.substringBefore('\n').replace(technicalContext, "task context")
+        val weatherRequest = ConversationalResearch.isWeather(signals)
         val personalContext = !explicit && Regex("(?i)\\b(?:my|our|I|we)\\b|എന്റെ|ഞാൻ|നമ്മുടെ").containsMatchIn(instruction) &&
-            !changing.containsMatchIn(signals) && !product.containsMatchIn(signals) && !ResearchQuery.isCurrentIncumbentQuery(signals)
+            !changing.containsMatchIn(signals) && !weatherRequest && !product.containsMatchIn(signals) && !ResearchQuery.isCurrentIncumbentQuery(signals) &&
+            !Regex("(?i)^\\s*(?:should|can|could|do|did|does|is|are|am|will|would|may|shall)\\s+I\\b").containsMatchIn(instruction)
         val current = fresh.containsMatchIn(signals) || NewsIntent.isLiveRequest(signals)
         val general = explanation.containsMatchIn(signals) && !current && (concept.containsMatchIn(signals) ||
             Regex("(?i)^\\s*(?:explain|define|describe|how (?:does|do|to)|why)\\b|വിശദീകരി|എങ്ങനെ|എന്താണ്").containsMatchIn(signals))
         val historic = !current && (Regex("(?i)\\b(?:history|historical|who was|when did|what year did)\\b").containsMatchIn(signals) ||
             Regex("\\b(?:18|19|20)\\d{2}\\b").findAll(signals).any { it.value.toInt() < today.year - 1 })
-        val live = !transform && !calculation && !historic && !general && !personalContext && (current || changing.containsMatchIn(signals) ||
+        val live = !transform && !calculation && !historic && !general && !personalContext && (current || changing.containsMatchIn(signals) || weatherRequest ||
             Regex("(?i)\\b(?:who won|winner of)\\b").containsMatchIn(signals) ||
             ResearchQuery.isCurrentIncumbentQuery(signals) || FactualResearch.isCasting(signals) ||
             product.containsMatchIn(signals) && (compatibility.containsMatchIn(signals) || Regex("(?i)\\b(?:costs?|prices?)\\b").containsMatchIn(signals)) ||
@@ -53,7 +55,7 @@ object AnswerRoutingPolicy {
         val localPart = if (live && !verify) mixedLocalPart(q) else null
         val publicFacetFollowUp = followUp.containsMatchIn(q) && resolved.contains("(Public source topic:") &&
             Regex("(?i)\\b(?:prices?|costs?|temperature|forecast|actors?|cast|releas\\w*|elections?|results?|votes?|seats?|counts?|compatibility|supported)\\b").containsMatchIn(q)
-        val wantsWeb = explicit || live || publicFacetFollowUp || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
+        val wantsWeb = explicit || live || weatherRequest || publicFacetFollowUp || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
         val canSearch = allowed && mode != GroundingMode.OFF && !localOnly(q) && !privateInput && !personalContext && (!transform || mode == GroundingMode.ON) && !calculation
         if (history.none { it.role == "user" } && ConversationalResearch.needsSubject(q))
             return AnswerRoute(AnswerPath.CLARIFICATION, q, "Missing subject", clarification = ConversationalResearch.askSubject)
@@ -84,7 +86,7 @@ object AnswerRoutingPolicy {
      * Eligibility is fixed before inference: model text cannot override privacy/offline choices. */
     fun shouldResearchAfterLocalAnswer(route: AnswerRoute, answer: String): Boolean =
         route.path == AnswerPath.LOCAL && route.researchAllowed && !route.privacyBlocked &&
-            Regex("(?i)^\\s*(?:who|what|whats|when|where|which|how|why|explain|define|describe|tell me about)\\b").containsMatchIn(route.question) &&
+            !transformation.containsMatchIn(route.question) &&
             !ConversationalResearch.needsSubject(route.question) && LocalAnswerUncertainty.needsResearch(answer)
 
     private fun mixedLocalPart(question: String): String? {
