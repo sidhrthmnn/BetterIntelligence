@@ -13,18 +13,18 @@ object WeatherPageEvidence {
         val month = today.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
         if (Regex("(?is)observed at[^\\n]{0,160}\\b${today.dayOfMonth}(?:st|nd|rd|th)?\\s+${Regex.escape(month)}\\b").containsMatchIn(text)) return true
         // A recent observation does not become unusable at midnight. Require
-        // an explicit previous date AND GMT/UTC time, at most six hours old.
+        // an explicit adjacent date AND GMT/UTC time, at most six hours old.
         // Its actual reported time stays visible; never relabel it as today's.
-        if (now.toLocalDate() != today) return false
-        val previous = today.minusDays(1)
-        val previousMonth = previous.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
         val line = text.lines().firstOrNull { Regex("(?i)observed at").containsMatchIn(it) } ?: return false
-        if (!Regex("(?i)\\b${previous.dayOfMonth}(?:st|nd|rd|th)?\\s+${Regex.escape(previousMonth)}\\b").containsMatchIn(line)) return false
         val time = Regex("(?i)observed at[, :]*(\\d{1,2}):(\\d{2})\\s*\\(?GMT\\)?|observed at[, :]*(\\d{1,2}):(\\d{2})\\s*\\(?UTC\\)?").find(line) ?: return false
         val hour = time.groupValues[1].ifBlank { time.groupValues[3] }.toIntOrNull() ?: return false
         val minute = time.groupValues[2].ifBlank { time.groupValues[4] }.toIntOrNull() ?: return false
-        val observed = runCatching { previous.atTime(hour, minute).atZone(java.time.ZoneOffset.UTC) }.getOrNull() ?: return false
-        return java.time.Duration.between(observed, now).toMinutes() in 0..360
+        return listOf(today.minusDays(1), today.plusDays(1)).any { date ->
+            val name = date.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
+            val matches = Regex("(?i)\\b${date.dayOfMonth}(?:st|nd|rd|th)?\\s+${Regex.escape(name)}\\b").containsMatchIn(line)
+            val observed = runCatching { date.atTime(hour, minute).atZone(java.time.ZoneOffset.UTC) }.getOrNull()
+            matches && observed != null && java.time.Duration.between(observed, now).toMinutes() in 0..360
+        }
     }
     fun blocks(root: Element, title: String, url: String): List<String> {
         if (url.toHttpUrl().host !in setOf("www.bbc.co.uk", "www.bbc.com", "bbc.co.uk", "bbc.com")) return emptyList()

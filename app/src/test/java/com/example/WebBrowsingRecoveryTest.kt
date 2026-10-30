@@ -264,6 +264,8 @@ class WebBrowsingRecoveryTest {
         val now = java.time.ZonedDateTime.parse("2026-10-30T00:05:00Z")
         val text = "London - BBC Weather\nObserved at, 22:00 GMT Thursday 29 October\nObserved temperature: 11 °C (53 °F)."
         assertTrue(WeatherPageEvidence.current(text, now.toLocalDate(), now))
+        assertTrue(WeatherPageEvidence.current(text, now.toLocalDate(), now.minusHours(1)))
+        assertTrue(WeatherPageEvidence.current(text.replace("22:00", "00:00").replace("29 October", "30 October"), now.toLocalDate().minusDays(1), now))
         assertFalse(WeatherPageEvidence.current(text, now.toLocalDate(), now.plusHours(6)))
         assertFalse(WeatherPageEvidence.current(text.replace("29 October", "28 October"), now.toLocalDate(), now))
         assertFalse(WeatherPageEvidence.current(text.replace("GMT", "unknown timezone"), now.toLocalDate(), now))
