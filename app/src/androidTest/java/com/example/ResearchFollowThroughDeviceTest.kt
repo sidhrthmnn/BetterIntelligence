@@ -72,9 +72,13 @@ class ResearchFollowThroughDeviceTest {
             }
             val bond = ask("who is the next james bond")
             verify(bond.groundingStatus != "LOCAL", "Bond research was skipped")
+            verify(Regex("(?i)screen.?test|audition|confirmed|announced|cast").containsMatchIn(bond.content), "No substantive casting report: ${bond.content}")
+            verify(!bond.content.contains("questions fans want answered", true), "Related-story navigation mistaken for a report")
             verify(GroundingResult.sources(bond.sourcesJson).none { SourceBrief.predictionMarket(it.title, it.url, "who is the next james bond") }, "Betting result used as casting evidence")
             val transit = ask("Is jubilee line status good in tfl")
             verify(transit.groundingStatus != "LOCAL", "Service status research was skipped")
+            verify(Regex("(?i)good service|no disruptions|delays|suspend|closed|disruption").containsMatchIn(transit.content), "Actual line status omitted: ${transit.content}")
+            verify(!transit.content.contains("Connects to", true), "Station navigation mistaken for service status")
             val transitFollow = ask("Find status of the line from any websites", fresh = false)
             verify(GroundingResult.sources(transitFollow.sourcesJson).any { it.excerpt.contains("Jubilee", true) || it.title.contains("Jubilee", true) }, "Named line lost in follow-up")
             // A saved conversation from an older build must recover when the user says OK.
@@ -90,6 +94,8 @@ class ResearchFollowThroughDeviceTest {
             verify(EvidenceAnswer.hasTemperature(resumed.content) || Regex("(?i)rain|dry|cloud|forecast").containsMatchIn(resumed.content), "Raincoat continuation lost weather evidence")
             val direct = ask("should i wear a raincoat today in London")
             verify(direct.groundingStatus != "LOCAL", "Weather decision research was skipped")
+            verify(!EvidenceAnswer.hasTemperature(direct.content) || !direct.content.contains("Temperature was not available"), "Contradictory temperature disclaimer")
+            verify(GroundingResult.sources(direct.sourcesJson).all { WeatherPageEvidence.requestedDay(it.title, "Weather in London today") }, "A future forecast was presented as today's")
             val doom = ask("Who is acting as Doom in Avengers Doomsday?")
             verify(doom.content.contains("Robert Downey", true), "Confirmed actor regression: ${doom.content}")
             assertTrue(failures.joinToString("\n"), failures.isEmpty())
