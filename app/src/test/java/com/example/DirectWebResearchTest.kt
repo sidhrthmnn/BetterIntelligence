@@ -67,14 +67,14 @@ class DirectWebResearchTest {
             requests += url
             when {
                 url.endsWith("/robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-                "api.duckduckgo.com" in url -> ddgFixture(url, """<div class="result"><a class="result__a" href="https://publisher.example/report">Android Vulkan graphics</a></div>""")
+                url == ExaDiscovery.endpoint -> ddgFixture(url, """<div class="result"><a class="result__a" href="https://publisher.example/report">Android Vulkan graphics</a></div>""")
                 else -> page("<title>Android Vulkan graphics</title><article><p>Android Vulkan graphics provides explicit access to compatible GPU devices for rendering and compute workloads.</p></article>")
             }
         })
         assertEquals(1, reader.search("Android Vulkan graphics").size)
-        assertTrue(requests.first().startsWith(DuckDuckGoDiscovery.endpoint))
-        assertTrue(requests.any { it.startsWith("https://api.duckduckgo.com/?q=") })
-        assertFalse(requests.any { "html.duckduckgo.com" in it || "lite.duckduckgo.com" in it || "format=rss" in it || "bing.com" in it || "open-meteo" in it || "api_key" in it })
+        assertTrue(requests.first().startsWith(ExaDiscovery.endpoint))
+        assertTrue(requests.any { it == ExaDiscovery.endpoint })
+        assertFalse(requests.any { "html.duckduckgo.com" in it || "lite.duckduckgo.com" in it || "open-meteo" in it || "api_key" in it })
     }
     @Test fun challengeDoesNotCauseBroaderRetryOrPublisherReads() = runBlocking {
         val requests = mutableListOf<String>()

@@ -20,7 +20,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.grounding.EvidenceSource
-import com.example.grounding.DuckDuckGoDiscovery
+import com.example.grounding.LegacyTopicEvidence
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -41,7 +41,7 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
     ) {
         Text("Sources · ${sources.size} ${if (expanded) "⌃" else "⌄"}", style = MaterialTheme.typography.labelMedium)
     }
-    sources.firstOrNull { it.discoveryProvider == DuckDuckGoDiscovery.providerName }?.let {
+    sources.firstOrNull { it.discoveryProvider == LegacyTopicEvidence.providerName }?.let {
         DuckDuckGoAttribution(it.title)
     }
     if (sources.any { it.kind == "STRUCTURED_DATA" }) {
@@ -88,7 +88,7 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
                     Text(source.url, style = MaterialTheme.typography.bodySmall)
                     if (source.kind == "INSTANT_ANSWER") Text("Summary retrieved from DuckDuckGo's Instant Answer API. The linked publisher page was not independently checked. Source date unknown.", style = MaterialTheme.typography.bodySmall)
                     else if (source.discoveryProvider.isNotBlank()) Text("Found via ${source.discoveryProvider}; publisher page read by BI", style = MaterialTheme.typography.bodySmall)
-                    if (source.discoveryProvider == DuckDuckGoDiscovery.providerName) DuckDuckGoAttribution(source.title)
+                    if (source.discoveryProvider == LegacyTopicEvidence.providerName) DuckDuckGoAttribution(source.title)
                     if (source.updatedAt.isNotBlank()) Text(when (source.dateKind) {
                         "PUBLISHED" -> "Page-reported publication: ${source.updatedAt.take(10)}"
                         "MODIFIED" -> "Page-reported update: ${source.updatedAt.take(10)}"
@@ -118,7 +118,7 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
 @Composable
 private fun DuckDuckGoAttribution(topic: String) {
     val uri = LocalUriHandler.current
-    TextButton(onClick = { runCatching { uri.openUri(DuckDuckGoDiscovery.resultPage(topic)) } }, contentPadding = PaddingValues(0.dp)) {
+    TextButton(onClick = { runCatching { uri.openUri(LegacyTopicEvidence.resultPage(topic)) } }, contentPadding = PaddingValues(0.dp)) {
         Image(painterResource(com.example.R.drawable.duckduckgo_logo), contentDescription = null, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(6.dp))
         Text("Results from DuckDuckGo", style = MaterialTheme.typography.labelSmall)

@@ -120,23 +120,23 @@ fun AppearanceScreen(viewModel: AiCoreViewModel) {
 @Composable
 fun WebSettingsScreen(viewModel: AiCoreViewModel) {
     val allowed by viewModel.webAllowed.collectAsState()
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("web_settings_list"), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text("Allow web search", style = MaterialTheme.typography.titleMedium); Text("Off by default", style = MaterialTheme.typography.bodySmall) }
                 Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Research sends focused public topics only to DuckDuckGo's official Instant Answer API. BI tries reading linked publisher pages. For stable knowledge, an API topic summary can be used with a clear label if its publisher page cannot be checked. DuckDuckGo and visited sites receive your topic or requested URL and connection information, including your IP address. Stored private history, memories and connected-app requests are not sent. Do not include secrets or sensitive information in a web-enabled question. Enable this permission once after reading the updated disclosure.")
+            Text("Research sends focused public questions to Exa's free search service to find relevant links. BI reads the publisher pages and writes the answer using your on-device model. Exa and visited sites receive your question or requested URL and connection information, including your IP address. Stored private history, memories and connected-app requests are not sent. A follow-up can reuse the public topic already searched in this chat. Do not include secrets or sensitive information in a web-enabled question. Enable this permission once after reading the updated disclosure.")
         }
         item {
             Text("Always automatic", style = MaterialTheme.typography.titleMedium)
-            Text("Answers use the on-device model by default. Automatic research checks current facts, compatibility and explicit source requests. Definitions, established history, reasoning, writing and personal conversation stay local. If research is unavailable, useful local answers remain available; live facts are never guessed. The switch above controls web permission.", style = MaterialTheme.typography.bodySmall)
-            Text("Free, with no API key or account. Instant Answer supplies topic references, not full web-search results. News, weather and detailed questions may have no usable result. BI uses no other search engine, HTML search scraping or paid fallback. You can provide a public HTTPS source to read directly.", style = MaterialTheme.typography.bodySmall)
+            Text("Current facts, casting, movie reviews, prices, release dates and explicit source requests trigger research. Other public questions start locally; if the model says it cannot answer, BI makes one research attempt and answers from the sources. Reasoning, writing, calculations and personal conversation stay local. The switch above controls web permission.", style = MaterialTheme.typography.bodySmall)
+            Text("No API key or account is required. Exa's free service has usage limits and may be unavailable. BI uses no paid fallback or other search engine. You can also give BI a public HTTPS source to read directly.", style = MaterialTheme.typography.bodySmall)
         }
         item {
             Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
-            Text("BI distinguishes retrieved publisher pages from DuckDuckGo topic summaries. Summaries show that the publisher page was not independently verified and its source date is unknown. They cannot establish live news, weather, casting, current officeholders or explicitly verified claims. No cloud answer model or weather API is used. Public sites can block access.")
+            Text("Search highlights and summaries only help find pages; they are not answer evidence. BI reads publisher text, keeps source dates when available, and cites the passages used. No cloud answer model or weather API is used. Public sites can block access.")
             Text("Search can be blocked or unavailable. Pages requiring sign-in, scripts, CAPTCHA or unsupported file formats are skipped. Sources can be incomplete or wrong; citations show where text came from, not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
         }
         item {
@@ -185,7 +185,7 @@ fun PrivacyScreen(viewModel: AiCoreViewModel) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { Text("You control your data", style = MaterialTheme.typography.headlineSmall) }
         item { Text("Conversations, drafts, model files and app approvals are stored locally. Android backup may include settings and conversations according to your system backup preferences; model files and provider credentials are excluded.") }
-        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses only DuckDuckGo's official Instant Answer API, then reads linked publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
+        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses Exa's key-free search to find links, then reads publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
         item { Text("Deleting a model frees its storage and leaves your conversations intact. Revoking app access prevents new requests. Personal memory sharing has separate app permissions.") }
         item { TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Manage model storage") }
             TextButton(onClick = { viewModel.selectTab(AppTab.CONNECT) }) { Text("Manage app access") }

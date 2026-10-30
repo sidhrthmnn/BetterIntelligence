@@ -90,7 +90,7 @@ class ResearchRecoveryTest {
         assertFalse(SettingsPreferencesRepository.webConsentAccepted("true", "2"))
         assertFalse(SettingsPreferencesRepository.webConsentAccepted("false", "5"))
         assertFalse(SettingsPreferencesRepository.webConsentAccepted("true", "4"))
-        assertTrue(SettingsPreferencesRepository.webConsentAccepted("true", "5"))
+        assertTrue(SettingsPreferencesRepository.webConsentAccepted("true", "6"))
         val source = EvidenceSource(1, "Publisher", "https://publisher.example/article", "Read page text", 1, discoveryProvider = "DuckDuckGo")
         assertEquals(source, GroundingResult.sources(GroundingResult(sources = listOf(source)).json()).single())
         assertEquals("", GroundingResult.sources("""[{"id":1,"title":"Old","url":"https://publisher.example/old"}]""").single().discoveryProvider)

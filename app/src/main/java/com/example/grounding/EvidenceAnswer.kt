@@ -10,9 +10,10 @@ object EvidenceAnswer {
         val checked = GroundingPolicy.checkAnswer(draft, sources, question)
         val weather = ConversationalResearch.isWeather(question)
         val missingTemperature = weather && !hasTemperature(checked.text)
-        val labelledWeather = weather && sources.any { Regex("(?i)observed temperature:|today forecast: high").containsMatchIn(it.excerpt) }
+        val labelledWeather = weather && sources.any { Regex("(?i)observed temperature:|(?:today|tonight) forecast: (?:high|low)").containsMatchIn(it.excerpt) }
         val definitionMissing = FactualResearch.definitionTopic(question) != null && !FactualResearch.definitionLine(checked.text, question)
-        if (checked.support != AnswerSupport.INSUFFICIENT && !missingTemperature && !labelledWeather && !definitionMissing) return checked
+        val focusMissing = sources.any { FactualResearch.answerFocusScore(it.excerpt, question) >= 65 } && FactualResearch.answerFocusScore(checked.text, question) < 65
+        if (checked.support != AnswerSupport.INSUFFICIENT && !missingTemperature && !labelledWeather && !definitionMissing && !focusMissing) return checked
         val query = ResearchQuery(question)
         val plan = ResearchPlanner.plan(question)
         val office = ResearchQuery.isCurrentIncumbentQuery(question)
@@ -24,14 +25,23 @@ object EvidenceAnswer {
             val body = if ('\n' in text) text.substringAfter('\n') else text
             if (FactualResearch.headlineOnly(text, source.title) || FactualResearch.speculativeCasting(question, source.title) ||
                 FactualResearch.incomplete(body) || definitionMissing && !FactualResearch.definitionLine(body, question) ||
+                focusMissing && FactualResearch.answerFocusScore(text, question) < 65 ||
                 FactualResearch.isCasting(question) && (!FactualResearch.castingRelation(body) || FactualResearch.speculativeCasting(question, body))) return@mapNotNull null
             val found = ResearchQuery.words(text)
             val activeOffice = Regex("(?i)\\b(incumbent|current|present|serving|in office|leads|is (?:the )?(?:chief minister|prime minister|president|governor|mayor|ceo))\\b").containsMatchIn(text)
             val titleWords = ResearchQuery.words(source.title)
             val roleContext = office && activeOffice && ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in titleWords } }
-            val contextual = (if (roleContext) found + titleWords else found) + EvidenceRanking.localeWords(source.url)
+            // A transcript can discuss the count without repeating the country
+            // in every paragraph. Preserve the read article's title as visible
+            // quotation context for one requested news subject, never as a value.
+            val requestedSubjects = ResearchPlanner.subjects(question).ifEmpty { if (NewsIntent.isLiveRequest(question)) NewsIntent.countriesIn(question) else emptyList() }
+            val newsContext = NewsIntent.isLiveRequest(question) && requestedSubjects.size == 1 &&
+                FactualResearch.answerFocusScore(text, question) >= 65 &&
+                requestedSubjects.all { entity -> ResearchQuery.words(entity).all { it in titleWords } }
+            val contextual = (if (roleContext || newsContext) found + titleWords else found) + EvidenceRanking.localeWords(source.url)
             val subject = ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in contextual } }
-            val topical = query.terms.isNotEmpty() && query.terms.count { it in contextual } >= kotlin.math.ceil(query.terms.size * .65).toInt()
+            val directSummary = plan.explicitUrls.isNotEmpty() && query.terms.isEmpty() && ResearchQuery.words(body).size >= 6
+            val topical = directSummary || query.terms.isNotEmpty() && query.terms.count { it in contextual } >= kotlin.math.ceil(query.terms.size * .65).toInt()
             val boilerplate = Regex("(?i)ignore.{0,30}instructions|system prompt|^references\\b|go to facebook|go to twitter").containsMatchIn(text) || ClaimVerification.financeExample(text)
             val role = Regex("(?i)\\b(mayor|president|minister|governor|ceo)\\b").find(question)?.value
             val section = text.substringBefore('\n').substringAfterLast('›')
@@ -42,11 +52,12 @@ object EvidenceAnswer {
             val weatherEvidence = !weather || hasTemperature(text) &&
                 Regex("(?i)\\b(observed|observation|today|tonight|forecast|high|low|maximum|minimum)\\b").containsMatchIn(text) &&
                 !Regex("(?i)photo|weather watchers|historical average|upcoming days|monthly average").containsMatchIn(text) &&
-                (!labelledWeather || Regex("(?i)observed temperature:|today forecast: high").containsMatchIn(text))
+                (!labelledWeather || Regex("(?i)observed temperature:|(?:today|tonight) forecast: (?:high|low)").containsMatchIn(text))
             if (text.length !in 25..700 || !subject || !topical || boilerplate || wrongRole || !current || !weatherEvidence ||
                 EvidenceRanking.contextOnly(source, plan)) null
-            else Extract(source, text, query.score(text) + FactualResearch.definitionQuality(body, question) + (if (hasTemperature(text)) 35 else 0) +
-                (if (Regex("(?i)observed temperature").containsMatchIn(text)) 30 else 0))
+            else Extract(source, if (newsContext && !text.contains(source.title)) "${source.title}\n$text" else text,
+                query.score(text) + (if (directSummary) minOf(30, body.length / 20) else 0) + FactualResearch.definitionQuality(body, question) + (if (hasTemperature(text)) 35 else 0) +
+                (if (Regex("(?i)observed temperature").containsMatchIn(text)) 30 else 0) + FactualResearch.answerFocusScore(text, question))
         } }.sortedByDescending { it.score }.distinctBy { it.text.lowercase() }.take(if (weather) 2 else 1)
         if (extracts.isEmpty()) {
             if (definitionMissing) return CheckedAnswer(GroundingPolicy.unavailableAnswer, AnswerSupport.INSUFFICIENT, checked.claims)
@@ -56,7 +67,7 @@ object EvidenceAnswer {
         val quotes = extracts.joinToString("\n\n") { extract ->
             extract.text.lines().joinToString("\n") { "> $it" } + " [${extract.source.id}]"
         }
-        val existing = checked.text.takeIf { checked.support != AnswerSupport.INSUFFICIENT && !labelledWeather && !definitionMissing }.orEmpty()
+        val existing = checked.text.takeIf { checked.support != AnswerSupport.INSUFFICIENT && !labelledWeather && !definitionMissing && !focusMissing }.orEmpty()
         return CheckedAnswer("From the retrieved pages:\n\n$quotes" + if (existing.isBlank()) "" else "\n\n$existing",
             AnswerSupport.PARTIAL, checked.claims, sourceExtract = true)
     }

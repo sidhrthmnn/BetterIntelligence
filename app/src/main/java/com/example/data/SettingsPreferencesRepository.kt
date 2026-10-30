@@ -38,7 +38,7 @@ class SettingsPreferencesRepository(private val context: Context) {
         private val KEY_PRIMARY_MODEL_ID = stringPreferencesKey("primary_model_id")
         private val KEY_SECONDARY_MODEL_ID = stringPreferencesKey("secondary_model_id")
         private val KEY_AUTO_RAM_FALLBACK = stringPreferencesKey("auto_ram_fallback")
-        internal fun webConsentAccepted(allowed: String?, consent: String?) = allowed == "true" && consent == "5"
+        internal fun webConsentAccepted(allowed: String?, consent: String?) = allowed == "true" && consent == "6"
     }
 
     val selectedEngineFlow: Flow<SupportedEngine> = context.dataStore.data
@@ -98,7 +98,7 @@ class SettingsPreferencesRepository(private val context: Context) {
         require(value in setOf("LIGHT", "DARK", "AMOLED"))
         context.dataStore.edit { it[KEY_APPEARANCE] = value; it[KEY_DARK_THEME] = (value != "LIGHT").toString() }
     }
-    suspend fun saveWebAllowed(value: Boolean) { context.dataStore.edit { it[KEY_WEB_ALLOWED] = value.toString(); it[KEY_WEB_RESEARCH_CONSENT] = "5" } }
+    suspend fun saveWebAllowed(value: Boolean) { context.dataStore.edit { it[KEY_WEB_ALLOWED] = value.toString(); it[KEY_WEB_RESEARCH_CONSENT] = "6" } }
     suspend fun saveWebMode(value: String) { require(value in setOf("OFF", "AUTO", "ON")); context.dataStore.edit { it[KEY_WEB_MODE] = value } }
     suspend fun saveActiveConversation(id: Long) { context.dataStore.edit { it[KEY_CONVERSATION] = id.toString() } }
     suspend fun saveMemoryEnabled(enabled: Boolean) { context.dataStore.edit { it[KEY_MEMORY] = enabled.toString() } }

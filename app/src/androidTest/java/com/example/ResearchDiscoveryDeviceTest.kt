@@ -20,7 +20,7 @@ class ResearchDiscoveryDeviceTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         check(context.packageName.endsWith(".validation"))
         val rows = JSONArray()
-        val output = File(context.filesDir, "duckduckgo-only-device.json")
+        val output = File(context.filesDir, "exa-discovery-device.json")
         val questions = listOf("What's happening in France now", "What's happening in France?",
             "Who is playing Doctor Doom in Avengers Doomsday?", "Who is the current UK prime minister?",
             "What is the weather in London today?", "Search for Android Vulkan documentation",
@@ -38,7 +38,7 @@ class ResearchDiscoveryDeviceTest {
                 .put("requests", JSONArray(requests.toList())).put("sources", JSONArray(result.json())))
             output.writeText(rows.toString(2))
             assertEquals(question, AnswerPath.WEB_GROUNDED, route.path)
-            assertTrue(result.sources.all { it.kind in setOf("WEB_PAGE", "INSTANT_ANSWER") && it.discoveryProvider == "DuckDuckGo" })
+            assertTrue(result.sources.all { it.kind in setOf("WEB_PAGE", "INSTANT_ANSWER") && it.discoveryProvider == "Exa" })
             if (route.requiresLive || route.requiresVerification) assertTrue(result.sources.none { it.kind == "INSTANT_ANSWER" })
             assertTrue("Publisher text only", result.sources.all {
                 !it.url.contains("api.duckduckgo.com") && it.excerpt.isNotBlank()

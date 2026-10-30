@@ -19,7 +19,7 @@ object AnswerRoutingPolicy {
     private val fresh = Regex("(?i)\\b(?:latest|today|tonight|yesterday|currently|recent|this (?:week|month|year)|right now|news|headlines|current)\\b|ഇന്ന്|ഇപ്പോൾ|ഇപ്പോഴത്തെ|നിലവിലെ|ഏറ്റവും പുതിയ|പുതിയ വാർത്ത")
     private val technicalContext = Regex("(?i)\\b(?:current|recent|latest) (?:code|flow|messages?|conversation|example|implementation|function|snippet|draft|project|request|sentence|text)\\b")
     private val explanation = Regex("(?i)^\\s*(?:explain|define|describe|help me|how (?:does|do|can|could|to)|why (?:does|do|is|are)|what (?:is|are|does)|what['’]s the difference)\\b|വിശദീകരി|എങ്ങനെ|എന്താണ്|എന്തുകൊണ്ട്")
-    private val concept = Regex("(?i)\\b(?:work|works|working|concept|definition|meaning|role|forecasting|measured|calculate|calculated|measurement|difference between|stand for)\\b")
+    private val concept = Regex("(?i)\\b(?:work|works|working|concept|definition|meaning|role|forecasting|measured|calculate|calculated|measurement|difference between|stand for|elasticity|cost basis)\\b")
     private val changing = Regex("(?i)\\b(?:weather|forecast|temperature|exchange rates?|stock prices?|price of|cost of|population|security patch|security update|support end|latest stable|supported (?:android |runtime )?versions?)\\b|കാലാവസ്ഥ|താപനില|വില|ജനസംഖ്യ")
     private val compatibility = Regex("(?i)\\b(?:compatible|compatibility|supports?|supported|requirements?|specifications?|benchmarks?|release date|launch date|available)\\b")
     private val product = Regex("(?i)\\b(?:android|phones?|pixel|iphone|litert(?:-lm)?|llama\\.cpp|gguf|qwen|gemma|runtimes?|gpu|npu|snapdragon|adreno)\\b")
@@ -48,9 +48,12 @@ object AnswerRoutingPolicy {
         val live = !transform && !calculation && !historic && !general && !personalContext && (current || changing.containsMatchIn(signals) ||
             Regex("(?i)\\b(?:who won|winner of)\\b").containsMatchIn(signals) ||
             ResearchQuery.isCurrentIncumbentQuery(signals) || FactualResearch.isCasting(signals) ||
-            product.containsMatchIn(signals) && (compatibility.containsMatchIn(signals) || Regex("(?i)\\b(?:costs?|prices?)\\b").containsMatchIn(signals)))
+            product.containsMatchIn(signals) && (compatibility.containsMatchIn(signals) || Regex("(?i)\\b(?:costs?|prices?)\\b").containsMatchIn(signals)) ||
+            Regex("(?i)\\b(?:what(?:['’]s| is)? (?:the )?(?:price|cost)|how much (?:is|does|for)|(?:movie|film|series|game|album).{0,35}(?:releas\\w*|review)|(?:releas\\w*|review).{0,35}(?:movie|film|series|game|album)|how is .{1,70}(?:movie|film)|when .{0,80}releas\\w*)\\b").containsMatchIn(signals))
         val localPart = if (live && !verify) mixedLocalPart(q) else null
-        val wantsWeb = explicit || live || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
+        val publicFacetFollowUp = followUp.containsMatchIn(q) && resolved.contains("(Public source topic:") &&
+            Regex("(?i)\\b(?:prices?|costs?|temperature|forecast|actors?|cast|releas\\w*|elections?|results?|votes?|seats?|counts?|compatibility|supported)\\b").containsMatchIn(q)
+        val wantsWeb = explicit || live || publicFacetFollowUp || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
         val canSearch = allowed && mode != GroundingMode.OFF && !localOnly(q) && !privateInput && !personalContext && (!transform || mode == GroundingMode.ON) && !calculation
         if (history.none { it.role == "user" } && ConversationalResearch.needsSubject(q))
             return AnswerRoute(AnswerPath.CLARIFICATION, q, "Missing subject", clarification = ConversationalResearch.askSubject)
@@ -77,12 +80,12 @@ object AnswerRoutingPolicy {
             researchAllowed = canSearch, webDisabled = !allowed || mode == GroundingMode.OFF)
     }
 
-    /** One recovery search only when a public factual answer itself needs current data.
+    /** One recovery search when the local model cannot answer a public question.
      * Eligibility is fixed before inference: model text cannot override privacy/offline choices. */
     fun shouldResearchAfterLocalAnswer(route: AnswerRoute, answer: String): Boolean =
         route.path == AnswerPath.LOCAL && route.researchAllowed && !route.privacyBlocked &&
-            Regex("(?i)^\\s*(?:who|what|whats|when|where|which|how much|tell me about)\\b").containsMatchIn(route.question) &&
-            Regex("(?is)\\b(?:do not|don't|don’t|cannot|can't|can’t)\\s+(?:currently\\s+)?(?:have|access|provide)\\b.{0,75}\\b(?:real[- ]?time|up[- ]to[- ]date|current (?:information|events|data)|internet access)\\b|തത്സമയ വിവരങ്ങൾ.{0,30}(?:ലഭ്യമല്ല|അറിയില്ല)").containsMatchIn(answer)
+            Regex("(?i)^\\s*(?:who|what|whats|when|where|which|how|why|explain|define|describe|tell me about)\\b").containsMatchIn(route.question) &&
+            !ConversationalResearch.needsSubject(route.question) && LocalAnswerUncertainty.needsResearch(answer)
 
     private fun mixedLocalPart(question: String): String? {
         val parts = question.split(Regex("(?i),?\\s+and\\s+(?=what|which|who|when|where)|;\\s*|\\s+കൂടാതെ\\s+"), limit = 2)

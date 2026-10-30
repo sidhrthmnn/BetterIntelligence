@@ -48,12 +48,19 @@ object ResearchPlanner {
                 ResearchFocus("Measured inference performance", ResearchQuery.words("benchmark performance latency speed tokens")),
                 ResearchFocus("Benchmark device and test conditions", ResearchQuery.words("device hardware context threads quantization measured conditions")))
             parts.size > 1 -> parts.map { ResearchFocus(it, ResearchQuery(it, today).terms) }
-            else -> listOf(ResearchFocus(plain, (query.terms - entityWords).ifEmpty { query.terms }))
+            else -> {
+                // "Documentation" describes the requested kind of page. Its body
+                // need not literally call itself documentation to explain the subject.
+                val pageKind = if (Regex("(?i)\\b(?:documentation|docs|guide)\\b").containsMatchIn(plain)) ResearchQuery.words("documentation docs guide") else emptySet()
+                listOf(ResearchFocus(plain, (query.terms - entityWords - pageKind).ifEmpty { query.terms - pageKind }.ifEmpty { query.terms }))
+            }
         }
         val subject = if (plain.any { it.code > 127 }) query.searchText else entities.joinToString(" ").ifBlank { query.searchText }
         val searches = when {
             urls.isNotEmpty() -> emptyList()
             FactualResearch.isCasting(plain) -> listOf(query.searchText)
+            NewsIntent.isLiveRequest(plain) && Regex("(?i)\\belections?\\b").containsMatchIn(plain) ->
+                listOf(query.searchText, "${query.topicSearchText} election results vote count seats")
             technicalComparison -> listOf("$subject Android runtime GPU compatibility", "$subject memory RAM quantization", "$subject Android benchmark device context tokens latency")
             parts.size > 1 -> parts.map { part ->
                 val q = ResearchQuery(part, today).searchText
@@ -87,13 +94,13 @@ object ResearchPlanner {
             .findAll(text).flatMap { sequenceOf(it.groupValues[1], it.groupValues[2]) }
         val versions = Regex("\\b[\\p{L}][\\p{L}\\p{N}-]{1,25}\\s+\\d+(?:\\.\\d+)*(?:\\s+[A-Z]\\d+[A-Z]?)?\\b").findAll(text).map { it.value }
         val names = Regex("\\b[A-Z][\\p{L}\\p{N}-]+(?:\\s+[A-Z][\\p{L}\\p{N}-]+){0,3}\\b").findAll(text).map { it.value }
-            .map { it.replace(Regex("(?i)^(?:Compare|Explain|What|When|Which|Who|Where|Is|Are|Does|Do|How|Why|Tell|Read|Current|Check|Verify)\\s+"), "") }
+            .map { it.replace(Regex("(?i)^(?:Compare|Explain|What|When|Which|Who|Where|Is|Are|Does|Do|How|Why|Tell|Read|Current|Check|Verify|Search|Research|Find|Summarize|Summarise|Describe)\\s+"), "") }
             .map { candidate ->
                 candidate.split(Regex("\\s+"))
                     .filter { token -> token.lowercase() !in setOf("of", "the", "in", "for", "to", "on", "at", "by", "with", "from", "is", "are", "who", "what", "where", "when", "why", "how", "cm", "pm", "ceo", "current", "incumbent", "list", "all") }
                     .joinToString(" ")
             }
-            .filter { it.length >= 2 && it.lowercase() !in setOf("is", "are", "when", "what", "who", "where", "how", "why", "compare", "explain", "does", "can", "tell", "read", "search", "research", "find", "which", "public", "source", "topic") }
+            .filter { it.length >= 2 && it.lowercase() !in setOf("is", "are", "when", "what", "who", "where", "how", "why", "compare", "explain", "does", "can", "tell", "read", "search", "research", "find", "summarize", "summarise", "describe", "which", "public", "source", "topic") }
         val locations = Regex("\\b(?:in|near|for|of)\\s+([A-Z][\\p{L}]+(?:[, ]+[A-Z][\\p{L}]+){0,2})").findAll(text).map { it.groupValues[1] }
         val weatherLocations = if (Regex("(?i)\\b(weather|temperature|forecast|rain|wind|humidity)\\b").containsMatchIn(text)) {
             Regex("(?i)\\b(?:in|near|for|at)\\s+([\\p{L}][\\p{L}-]{2,}(?:\\s+[\\p{L}][\\p{L}-]{2,}){0,2}?)(?=\\s*(?:today|tonight|now|right now|currently|tomorrow|this week|\\?|$))")

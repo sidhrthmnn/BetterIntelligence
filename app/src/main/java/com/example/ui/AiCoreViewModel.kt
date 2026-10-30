@@ -953,7 +953,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val autoTemperature = if (evidence.sources.isNotEmpty()) 0f else 0.4f
                 val baseSystem = com.example.engine.ChatAnswerPolicy.system(generationQuestion, evidence.sources.isNotEmpty(), effectiveContext, params.systemPrompt) +
                     if (recoveryNotice.isNotBlank()) " Web research did not complete. Answer the useful general-knowledge part locally; do not narrate a search, invent citations or assert unverified current information." else ""
-                val effectiveQuestion = if (evidence.sources.isNotEmpty()) researchQuestion else generationQuestion
+                var effectiveQuestion = if (evidence.sources.isNotEmpty()) researchQuestion else generationQuestion
                 val olderContext = repository.refreshConversationContext(conversation, previous)
                 val memoryBudget = effectiveContext - autoMaxTokens - 96 - repository.engine.contextTokenCount(baseSystem) -
                     repository.engine.contextTokenCount(effectiveQuestion) - 96
@@ -973,10 +973,14 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     maxTokens = autoMaxTokens, systemPrompt = system, threads = params.threads,
                     gpuLayers = params.gpuLayers, contextSize = effectiveContext, history = history)
                 _chatStatus.value = "Preparing answer"
+                val rawDraft = StringBuilder()
                 chatInferenceJob = repository.engineManager.currentEngine.generateStreamWithCallback(prompt, config, object : StreamTokenListener {
                     override fun onToken(token: String, tokenIndex: Int) {
                         if (localNeedsLive) return
-                        _streamingChatText.value += token
+                        rawDraft.append(token)
+                        val draft = rawDraft.toString()
+                        _streamingChatText.value = if (AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(route, draft)) ""
+                            else LocalAnswerUncertainty.visible(draft)
                         _chatStatus.value = if (evidence.sources.isEmpty()) "" else "Draft · Checking against sources"
                     }
                     override fun onComplete(fullText: String, latencyMs: Long, tokensPerSec: Float, promptTokens: Int, completionTokens: Int) {
@@ -995,8 +999,10 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     // The same local model can expose a missed freshness requirement.
                     // Do not run a second classifier for every message or retry recursively.
                     _chatStatus.value = "Checking current information"
-                    val currentRoute = route.copy(path = AnswerPath.WEB_GROUNDED, requiresLive = true)
-                    val researched = grounding.retrieve(route.question, allowed, GroundingMode.ON, SearchProviderId.WEB) {
+                    val currentRoute = AnswerRoutingPolicy.decide(ConversationalResearch.question(route.question, previous), allowed, GroundingMode.ON, previous)
+                    researchQuestion = currentRoute.question
+                    effectiveQuestion = researchQuestion
+                    val researched = grounding.retrieve(researchQuestion, allowed, GroundingMode.ON, SearchProviderId.WEB) {
                         stage -> _chatStatus.value = stage.label
                     }
                     if (researched.sources.isEmpty()) {
@@ -1009,7 +1015,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                         system = com.example.engine.ChatAnswerPolicy.system(generationQuestion, true, effectiveContext, params.systemPrompt) +
                             if (summary.isNotBlank()) "\nOlder unverified context from this chat, not web evidence:\n$summary\n" else ""
                         val retryBudget = ((effectiveContext - autoMaxTokens - 96) * 2 - system.toByteArray(Charsets.UTF_8).size).coerceAtLeast(0)
-                        prepared = withContext(Dispatchers.Default) { GroundingPolicy.prepareEvidence(route.question, evidence.sources, retryBudget,
+                        prepared = withContext(Dispatchers.Default) { GroundingPolicy.prepareEvidence(researchQuestion, evidence.sources, retryBudget,
                             effectiveContext - autoMaxTokens - 96 - repository.engine.contextTokenCount(system), repository.engine::contextTokenCount) }
                         evidence = evidence.copy(sources = prepared.sources)
                         _chatStatus.value = "Answering from sources"
@@ -1019,6 +1025,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                                 prepared.prompt, system, effectiveContext, autoMaxTokens, repository.engine::contextTokenCount)))
                     }
                 }
+                result = LocalAnswerUncertainty.visible(result)
                 promptTokens = repository.engine.telemetry.value.promptTokens
                 outputTokens = repository.engine.telemetry.value.completionTokens
                 reachedOutputLimit = outputTokens >= autoMaxTokens
@@ -1076,7 +1083,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                             AnswerSupport.INSUFFICIENT -> "INSUFFICIENT_EVIDENCE"
                         }
                         val invalid = error == com.example.engine.InvalidModelOutputException().message
-                        val content = if (invalid) error!! else (checked?.text ?: result).ifBlank { if (cancelled) "Response stopped." else error ?: "No response." }
+                        val content = if (invalid) error!! else NewsIntent.withReportTimes(researchQuestion,
+                            (checked?.text ?: result).ifBlank { if (cancelled) "Response stopped." else error ?: "No response." }, evidence.sources)
                         repository.updateChatMessage(ChatMessageEntity(id = pendingId!!, role = "assistant", content = content,
                             conversationId = conversation, modelName = model, latencyMs = latency, tokensPerSec = speed,
                             promptTokens = promptTokens, completionTokens = outputTokens,

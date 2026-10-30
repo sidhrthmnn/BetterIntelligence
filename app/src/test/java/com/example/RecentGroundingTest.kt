@@ -60,7 +60,7 @@ class RecentGroundingTest {
         val sources = PublicWebResearch(WebFetcher { url ->
             requested += url
             if (url.endsWith("/robots.txt")) WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-            else if ("api.duckduckgo.com" in url) ddgFixture(url, (1..6).joinToString("") {
+            else if (url == ExaDiscovery.endpoint) ddgFixture(url, (1..6).joinToString("") {
                 result("https://p$it.example/news", "Physics Nobel Prize 2026")
             })
             else when {
@@ -80,7 +80,7 @@ class RecentGroundingTest {
         var pages = 0
         val result = PublicWebResearch(WebFetcher { url ->
             if (url.endsWith("/robots.txt")) return@WebFetcher WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-            if ("api.duckduckgo.com" !in url) { pages++; error("Do not read irrelevant result") }
+            if (url != ExaDiscovery.endpoint) { pages++; error("Do not read irrelevant result") }
             ddgFixture(url, result("https://dictionary.example/won", "WON dictionary"))
         }).search(question)
         assertTrue(result.isEmpty()); assertEquals(0, pages)
@@ -92,7 +92,7 @@ class RecentGroundingTest {
             requested += url
             when {
                 url.endsWith("/robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-                "api.duckduckgo.com" in url -> ddgFixture(url, (1..10).joinToString("") {
+                url == ExaDiscovery.endpoint -> ddgFixture(url, (1..10).joinToString("") {
                     result("https://weak$it.example/article", "Android phone")
                 } + result("https://strong.example/article", "Android Vulkan graphics explained"))
                 "strong.example" in url -> WebDocument(url, "<title>Android Vulkan graphics</title><article><p>Android uses Vulkan graphics to provide explicit access to a GPU and its compute and rendering capabilities.</p></article>", "text/html")
@@ -100,7 +100,7 @@ class RecentGroundingTest {
             }
         }).search("Android Vulkan graphics")
         assertEquals("https://strong.example/article", sources.single().url)
-        assertTrue(requested.count { "api.duckduckgo.com" !in it && !it.endsWith("/robots.txt") } <= 8)
+        assertTrue(requested.count { it != ExaDiscovery.endpoint && !it.endsWith("/robots.txt") } <= 8)
     }
 
     @Test fun compactEvidenceKeepsUsefulTextAndOnlyAdvertisesIncludedSources() {

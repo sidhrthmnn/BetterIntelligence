@@ -96,7 +96,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
     val years = Regex("\\b(?:19|20)\\d{2}\\b").findAll(userPlain).map { it.value }.toSet()
     private val rawTerms = wordPattern.findAll(normalizedModels(plain.lowercase())).map { it.value }
         .filter { it != "s" && stem(it) !in normalizedStop && it !in years &&
-            (!FactualResearch.isCasting(userPlain) || it !in setOf("playing", "plays", "played", "play", "portraying", "portrays", "portrayed", "voicing", "voices", "voiced")) }.take(14).toList()
+            (!FactualResearch.isCasting(userPlain) || it !in setOf("acting", "acts", "act", "playing", "plays", "played", "play", "portraying", "portrays", "portrayed", "voicing", "voices", "voiced")) }.take(14).toList()
     private val expandedSearchTerms = rawTerms.flatMap { token ->
         phraseAbbreviations.firstOrNull { it.first == token }?.second ?: listOf(token)
     } + if (FactualResearch.capitalPlace(userPlain) != null) listOf("city") else emptyList()

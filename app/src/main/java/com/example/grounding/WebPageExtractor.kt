@@ -175,7 +175,7 @@ object WebPageExtractor {
             val normalized = block.replace(Regex("[\\u200B\\uFEFF]"), "").replace(Regex("[\\t ]+"), " ").trim()
             if (normalized.length <= 1800) listOf(normalized) else ClaimVerification.sentences(normalized)
         }
-            .filter { it.length >= 12 && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) &&
+            .filter { it.length >= 12 && !FactualResearch.headlineOnly(it, title) && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) &&
                 (!priceRequest || financeRequest || !ClaimVerification.financeExample(it)) }
             .distinct().take(350)
         val usable = clean.ifEmpty { listOf(body.trim().take(2200)) }
@@ -208,7 +208,8 @@ object WebPageExtractor {
     private fun focused(blocks: List<String>, dates: List<String>, question: String, budget: Int): String {
         val plan = ResearchPlanner.plan(question)
         val query = ResearchQuery(question)
-        val candidates = blocks.filter { it.isNotBlank() && !FactualResearch.incomplete(it.substringAfter('\n', it)) }.distinct().take(350)
+        val candidates = blocks.filter { it.isNotBlank() && !FactualResearch.incomplete(it.substringAfter('\n', it)) &&
+            !FactualResearch.headlineOnly(it, if ('\n' in it) it.substringBefore('\n') else "") }.distinct().take(350)
         if (candidates.isEmpty()) return dates.joinToString("\n").take(budget)
         val docFreqs = mutableMapOf<String, Int>()
         var totalWords = 0
@@ -274,7 +275,7 @@ object WebPageExtractor {
                 query.bm25Score(blockText, docFreqs, candidates.size, avgWords) +
                     (plan.coverage(blockText) - covered).size * 15 +
                     mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20 +
-                    incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText)
+                    incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText) + FactualResearch.answerFocusScore(blockText, question)
             }
             remaining.remove(index)
             val block = candidates[index]
@@ -290,7 +291,7 @@ object WebPageExtractor {
             isWeatherQuery -> selected.sortedWith(compareByDescending<Int> {
                 Regex("(?i)(?:observed temperature|today forecast: high)").containsMatchIn(candidates[it])
             }.thenBy { it })
-            else -> selected.toList()
+            else -> selected.sortedWith(compareByDescending<Int> { FactualResearch.answerFocusScore(candidates[it], question) }.thenBy { it })
         }
         return EvidencePacket.completeExcerpt((dates + orderedSelected.map { candidates[it] }).distinct().joinToString("\n\n"), budget)
     }
