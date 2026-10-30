@@ -1,0 +1,379 @@
+{
+  "recordedAtUtc": "2026-10-30T00:19:38.124273+00:00",
+  "versionCode": 24,
+  "versionName": "2.4.0-beta4",
+  "sourceCommit": "5c3bd1573de307a63f9ca3edde33ca5daf2556bd",
+  "device": "HONOR VKP_NX9",
+  "testPackage": "com.aistudio.betterintelligence.mobile.validation",
+  "productionInstallationPreserved": true,
+  "jvmTests": {
+    "tests": 242,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "instrumentedTestMethods": 9,
+  "instrumentedOutcome": "passed",
+  "answerModel": "Gemma 4 E2B Instruct / LiteRT-LM CPU, context 2048, four threads",
+  "metricScope": "Recorded local generation metrics; excludes discovery/page-reading time. Short validation prompts, not sustained throughput or an engine comparison.",
+  "answers": [
+    {
+      "question": "Who is acting as Doom in Avengers Doomsday?",
+      "status": "EVIDENCE_CITED",
+      "state": "COMPLETE",
+      "firstTokenMs": 3895,
+      "tokensPerSecond": 17.970615,
+      "sources": [
+        {
+          "url": "https://movies.disney.com/avengers-doomsday",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        }
+      ]
+    },
+    {
+      "question": "How is the election going on in israel?",
+      "status": "SOURCE_EXCERPTS",
+      "state": "COMPLETE",
+      "firstTokenMs": 7376,
+      "tokensPerSecond": 25.36149,
+      "sources": [
+        {
+          "url": "https://www.haaretz.com/israel-news/elections/2026-10-29/ty-article-live/seat-results-steady-as-elections-committee-begins-counting-absentee-ballots/000001a1-8567-d9b5-a3b5-cdf7e5cc0004?liveBlogItemId=618765347",
+          "updatedAt": "2026-10-30T01:45:00+0200",
+          "dateKind": "MODIFIED",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://www.pbs.org/newshour/show/whats-next-for-israel-after-election-produces-political-gridlock",
+          "updatedAt": "2026-10-29T13:19:54-04:00",
+          "dateKind": "MODIFIED",
+          "discoveryProvider": "Exa"
+        }
+      ]
+    },
+    {
+      "question": "How is Jailer 2 movie?",
+      "status": "SOURCE_EXCERPTS",
+      "state": "COMPLETE",
+      "firstTokenMs": 8197,
+      "tokensPerSecond": 21.474134,
+      "sources": [
+        {
+          "url": "https://timesofindia.indiatimes.com/entertainment/tamil/movie-reviews/jailer-2/movie-review/134961587.cms",
+          "updatedAt": "2026-10-15T13:28:00+05:30",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://www.thehindu.com/entertainment/movies/jailer-2-movie-review-superstar-rajinikanth-nelson-shivarajkumar-mohanlal-anirudh-ravichander/article71587540.ece",
+          "updatedAt": "2026-10-15T16:13:09+05:30",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        }
+      ]
+    },
+    {
+      "question": "What is the price of a latte at Pret in the UK?",
+      "status": "SOURCE_EXCERPTS",
+      "state": "COMPLETE",
+      "firstTokenMs": 5841,
+      "tokensPerSecond": 24.51882,
+      "sources": [
+        {
+          "url": "https://www.workingfromcoffeeshops.co.uk/blog/pret-a-manger-uk-menu-prices",
+          "updatedAt": "2025-06-04T19:52:57+0100",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://becleverwithyourcash.com/prets-coffee-subscription-how-yourpret-works/",
+          "updatedAt": "2024-09-03T16:14:22+00:00",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        }
+      ]
+    },
+    {
+      "question": "Is that the latte price in the UK?",
+      "status": "PARTIALLY_SUPPORTED",
+      "state": "COMPLETE",
+      "firstTokenMs": 6140,
+      "tokensPerSecond": 24.608465,
+      "sources": [
+        {
+          "url": "https://www.workingfromcoffeeshops.co.uk/blog/pret-a-manger-uk-menu-prices",
+          "updatedAt": "2025-06-04T19:52:57+0100",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://becleverwithyourcash.com/prets-coffee-subscription-how-yourpret-works/",
+          "updatedAt": "2024-09-03T16:14:22+00:00",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        }
+      ]
+    },
+    {
+      "question": "What is the weather in London today?",
+      "status": "SOURCE_EXCERPTS",
+      "state": "COMPLETE",
+      "firstTokenMs": 4501,
+      "tokensPerSecond": 26.149479,
+      "sources": [
+        {
+          "url": "https://www.bbc.com/weather/2643743",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        }
+      ]
+    }
+  ],
+  "discoveryAndReading": [
+    {
+      "question": "Who is acting as Doom in Avengers Doomsday",
+      "status": "SOURCES_RETRIEVED",
+      "wallMs": 1815,
+      "sources": [
+        {
+          "url": "https://movies.disney.com/avengers-doomsday",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        }
+      ],
+      "otherSearchEnginesRequested": false
+    },
+    {
+      "question": "How is the election going on in Israel",
+      "status": "SOURCES_RETRIEVED",
+      "wallMs": 4166,
+      "sources": [
+        {
+          "url": "https://www.haaretz.com/israel-news/elections/2026-10-29/ty-article-live/seat-results-steady-as-elections-committee-begins-counting-absentee-ballots/000001a1-8567-d9b5-a3b5-cdf7e5cc0004?liveBlogItemId=618765347",
+          "updatedAt": "2026-10-30T01:45:00+0200",
+          "dateKind": "MODIFIED",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://www.bbc.com/news/live/cqpvgnlm9944t",
+          "updatedAt": "2026-10-28T17:15:00.000Z",
+          "dateKind": "MODIFIED",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://www.pbs.org/newshour/show/whats-next-for-israel-after-election-produces-political-gridlock",
+          "updatedAt": "2026-10-29T13:19:54-04:00",
+          "dateKind": "MODIFIED",
+          "discoveryProvider": "Exa"
+        }
+      ],
+      "otherSearchEnginesRequested": false
+    },
+    {
+      "question": "How is Jailer 2 movie?",
+      "status": "SOURCES_RETRIEVED",
+      "wallMs": 2819,
+      "sources": [
+        {
+          "url": "https://timesofindia.indiatimes.com/entertainment/tamil/movie-reviews/jailer-2/movie-review/134961587.cms",
+          "updatedAt": "2026-10-15T13:28:00+05:30",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://www.thehindu.com/entertainment/movies/jailer-2-movie-review-superstar-rajinikanth-nelson-shivarajkumar-mohanlal-anirudh-ravichander/article71587540.ece",
+          "updatedAt": "2026-10-15T16:13:09+05:30",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        }
+      ],
+      "otherSearchEnginesRequested": false
+    },
+    {
+      "question": "When is Ramayana movie releasing?",
+      "status": "SOURCES_RETRIEVED",
+      "wallMs": 2781,
+      "sources": [
+        {
+          "url": "https://www.fandango.com/ramayana-2026-245446/movie-overview",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://ramayanariseofalegend.com/",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        }
+      ],
+      "otherSearchEnginesRequested": false
+    },
+    {
+      "question": "What is the price of a latte at Pret in the UK?",
+      "status": "SOURCES_RETRIEVED",
+      "wallMs": 4520,
+      "sources": [
+        {
+          "url": "https://www.workingfromcoffeeshops.co.uk/blog/pret-a-manger-uk-menu-prices",
+          "updatedAt": "2025-06-04T19:52:57+0100",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://becleverwithyourcash.com/prets-coffee-subscription-how-yourpret-works/",
+          "updatedAt": "2024-09-03T16:14:22+00:00",
+          "dateKind": "PUBLISHED",
+          "discoveryProvider": "Exa"
+        }
+      ],
+      "otherSearchEnginesRequested": false
+    },
+    {
+      "question": "What is the weather in London today?",
+      "status": "SOURCES_RETRIEVED",
+      "wallMs": 10684,
+      "sources": [
+        {
+          "url": "https://www.bbc.com/weather/2643743",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://www.bbc.com/weather/2652222",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        }
+      ],
+      "otherSearchEnginesRequested": false
+    },
+    {
+      "question": "Search Android Vulkan documentation",
+      "status": "SOURCES_RETRIEVED",
+      "wallMs": 2724,
+      "sources": [
+        {
+          "url": "https://developer.android.com/ndk/guides/graphics",
+          "updatedAt": "2026-03-06",
+          "dateKind": "MODIFIED",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://docs.vulkan.org/tutorial/latest/14_Android.html",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        }
+      ],
+      "otherSearchEnginesRequested": false
+    },
+    {
+      "question": "Search Kotlin coroutines documentation",
+      "status": "SOURCES_RETRIEVED",
+      "wallMs": 1913,
+      "sources": [
+        {
+          "url": "https://kotlinlang.org/docs/coroutines-overview.html",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        },
+        {
+          "url": "https://kotlinlang.org/docs/coroutines-guide.html",
+          "updatedAt": "",
+          "dateKind": "",
+          "discoveryProvider": "Exa"
+        }
+      ],
+      "otherSearchEnginesRequested": false
+    }
+  ],
+  "chatScenarios": [
+    {
+      "scenario": "remember",
+      "state": "COMPLETE",
+      "grounding": "LOCAL"
+    },
+    {
+      "scenario": "same-conversation-recall",
+      "state": "COMPLETE",
+      "grounding": "LOCAL"
+    },
+    {
+      "scenario": "edit-and-resend",
+      "state": "COMPLETE",
+      "grounding": "LOCAL"
+    },
+    {
+      "scenario": "new-conversation-isolation",
+      "state": "COMPLETE",
+      "grounding": "LOCAL"
+    },
+    {
+      "scenario": "cancelled-stream",
+      "state": "STOPPED",
+      "grounding": "LOCAL"
+    },
+    {
+      "scenario": "web-researched-answer",
+      "state": "COMPLETE",
+      "grounding": "PARTIALLY_SUPPORTED"
+    },
+    {
+      "scenario": "private-url-rejected",
+      "state": "COMPLETE",
+      "grounding": "WEB_UNAVAILABLE"
+    },
+    {
+      "scenario": "web-off",
+      "state": "COMPLETE",
+      "grounding": "LOCAL"
+    }
+  ],
+  "nativeSamples": [
+    {
+      "kind": "measured native CPU",
+      "filename": "smollm2-135m-instruct-q4_k_m.gguf",
+      "activeBackend": "CPU",
+      "activeGpuLayers": 0,
+      "tokensPerSecond": 110.16451263427734,
+      "timeToFirstTokenMs": 146,
+      "lastFallback": ""
+    },
+    {
+      "kind": "measured native CPU",
+      "filename": "smollm2-135m-instruct-q4_k_m.gguf",
+      "activeBackend": "CPU",
+      "activeGpuLayers": 0,
+      "tokensPerSecond": 198.4258270263672,
+      "timeToFirstTokenMs": 77,
+      "lastFallback": ""
+    },
+    {
+      "kind": "measured GPU fallback",
+      "filename": "smollm2-135m-instruct-q4_k_m.gguf",
+      "activeBackend": "CPU",
+      "activeGpuLayers": 0,
+      "tokensPerSecond": 165.65432739257812,
+      "timeToFirstTokenMs": 1070,
+      "lastFallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown"
+    },
+    {
+      "kind": "measured GPU fallback",
+      "filename": "smollm2-135m-instruct-q4_k_m.gguf",
+      "activeBackend": "CPU",
+      "activeGpuLayers": 0,
+      "tokensPerSecond": 162.9549102783203,
+      "timeToFirstTokenMs": 2596,
+      "lastFallback": "GPU validation failed; using CPU: vk::Device::createComputePipeline: ErrorUnknown"
+    }
+  ],
+  "gpuConclusion": "Vulkan compute-pipeline validation failed on this driver; CPU fallback and cleanup passed. No GPU inference success claimed.",
+  "npuConclusion": "Not tested in this web-research change."
+}
