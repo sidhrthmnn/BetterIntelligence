@@ -5,6 +5,12 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 /** Lexical relevance and collection coverage, not neural semantic entailment.
  * Publisher suffixes (.gov/.edu) alone confer no authority. */
 object EvidenceRanking {
+    fun weatherPlaceScore(title: String, question: String): Int {
+        if (!ConversationalResearch.isWeather(question)) return 0
+        val place = ConversationalResearch.weatherCity(question) ?: return 0
+        val required = ResearchQuery.words(place)
+        return if (required.isNotEmpty() && ResearchQuery.words(title).containsAll(required)) 60 else 0
+    }
     /** An explicit locale path can scope a page, but never supplies a value. */
     fun localeWords(url: String): Set<String> = url.toHttpUrl().pathSegments.firstOrNull()
         ?.takeIf { Regex("[a-zA-Z]{2}(?:-[a-zA-Z]{2})?").matches(it) }?.let { ResearchQuery.words(it) }.orEmpty()
@@ -46,7 +52,7 @@ object EvidenceRanking {
         val directAnswer = if (FactualResearch.isCasting(plan.question) && FactualResearch.usable(source, plan.question)) 25 else 0
         val definition = if (FactualResearch.definitionLine(source.excerpt, plan.question)) 25 else 0
         return q.score(text) + entityCoverage * 8 + plan.coverage(text).size * 5 + provenance + incumbentBonus + weatherQuality + directAnswer + definition + primaryRelevance(source.url, plan.question) +
-            minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question) / 2
+            minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question) / 2 + weatherPlaceScore(source.title, plan.question)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
         if (source.kind == "INSTANT_ANSWER" && (source.discoveryProvider != LegacyTopicEvidence.providerName ||

@@ -259,4 +259,19 @@ class WebBrowsingRecoveryTest {
         assertEquals("https://results.example/count", result.sources.first().url)
         assertTrue(result.sources.first().excerpt.contains("53 seats"))
     }
+
+    @Test fun recentDatedWeatherObservationSurvivesMidnightWithoutChangingItsTimeOrPlace() {
+        val now = java.time.ZonedDateTime.parse("2026-10-30T00:05:00Z")
+        val text = "London - BBC Weather\nObserved at, 22:00 GMT Thursday 29 October\nObserved temperature: 11 °C (53 °F)."
+        assertTrue(WeatherPageEvidence.current(text, now.toLocalDate(), now))
+        assertFalse(WeatherPageEvidence.current(text, now.toLocalDate(), now.plusHours(6)))
+        assertFalse(WeatherPageEvidence.current(text.replace("29 October", "28 October"), now.toLocalDate(), now))
+        assertFalse(WeatherPageEvidence.current(text.replace("GMT", "unknown timezone"), now.toLocalDate(), now))
+        val q = "What is the weather in London today?"
+        assertTrue(EvidenceRanking.weatherPlaceScore("London - BBC Weather", q) > EvidenceRanking.weatherPlaceScore("Covent Garden - BBC Weather", q))
+        val html = "<title>London - BBC Weather</title><main><div class='WeatherObservationsContainer'><div class='ObservationsContainerText'>Observed at, 22:00 GMT Thursday 29 OctoberObserved at:22:00 (GMT) Thu 29 Oct</div>Temperature 11 Celsius Temperature 53 Fahrenheit</div></main>"
+        val source = WebPageExtractor.article(WebDocument("https://www.bbc.com/weather/2643743", html, "text/html"), 1, q)!!
+        assertTrue(source.excerpt.contains("October Observed at:"))
+        assertTrue(WeatherPageEvidence.current(source.excerpt, now.toLocalDate(), now))
+    }
 }

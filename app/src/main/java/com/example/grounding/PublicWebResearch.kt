@@ -148,7 +148,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 unique.indexOfFirst { domain(it.url) == domain(candidate.url) } != unique.indexOf(candidate)
                 }.thenByDescending {
                 val combined = "${it.title} ${it.routingHint}".trim()
-                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question)
+                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question) + EvidenceRanking.weatherPlaceScore(it.title, question)
             })
             .filter { domains.getOrDefault(domain(it.url), 0) < 2 }
             // Reserve reads for one focused reformulation when broad election
