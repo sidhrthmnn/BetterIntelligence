@@ -101,4 +101,8 @@ class ResearchFollowThroughTest {
         assertFalse(WeatherPageEvidence.requestedDay("London Weather Friday 6 Nov: Rain, Outfit & Plans", "Weather in London today", today))
         assertTrue(WeatherPageEvidence.requestedDay("London Weather 31 Oct", "Weather in London tomorrow", today))
     }
+    @Test fun rejectedPublisherControlsCannotReturnThroughThePlainBodyFallback() {
+        val html = "<title>James Bond casting</title><article><h1>James Bond casting</h1><p>Swipe for next article</p><p>Download our app</p><p>News · Sport · Culture · Lifestyle</p></article>"
+        assertNull(WebPageExtractor.article(WebDocument("https://publisher.example/bond", html, "text/html"), 1, "who is the next james bond"))
+    }
 }

@@ -182,6 +182,9 @@ object WebPageExtractor {
             .filter { it.length >= 12 && !FactualResearch.headlineOnly(it, title) && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) &&
                 (!priceRequest || financeRequest || !ClaimVerification.financeExample(it)) }
             .distinct().take(350)
+        // Do not reintroduce a rejected subscription/app-promotion screen by
+        // flattening the same controls back into one apparent body paragraph.
+        if (clean.isEmpty() && blocks.isNotEmpty()) return null
         val usable = clean.ifEmpty { listOf(body.trim().take(2200)) }
         val text = focused(usable, dateLines, question, minOf(2200, snippetLimit)).trim()
         if (text.length < 80) return null
