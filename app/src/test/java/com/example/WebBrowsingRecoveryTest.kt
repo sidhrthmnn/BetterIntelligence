@@ -237,4 +237,26 @@ class WebBrowsingRecoveryTest {
         assertEquals(0, FactualResearch.answerFocusScore("Israel election\nTurnout broke records from 1967, as more than 10,000 residents exercised their right to vote.", q))
         assertTrue(ResearchPlanner.plan(q).searches.any { it.contains("results vote count seats") })
     }
+
+    @Test fun backgroundElectionPagesDoNotStopTheSearchBeforeResults() = runBlocking {
+        val queries = mutableListOf<String>()
+        val discovery = DiscoveryProvider { query, _ ->
+            queries += query.searchText
+            DiscoveryResult(if (query.searchText.contains("results vote count seats"))
+                listOf(ResearchCandidate("https://results.example/count", "Israel election results", provider = "Exa")) else
+                listOf(ResearchCandidate("https://first.example/campaign", "Israel election campaign", provider = "Exa"),
+                    ResearchCandidate("https://second.example/turnout", "Israel election turnout", provider = "Exa")), DiscoveryState.FOUND)
+        }
+        val fetcher = WebFetcher { url ->
+            if (url.endsWith("robots.txt")) WebDocument(url, "User-agent: *\nAllow: /", "text/plain") else {
+                val body = if (url.contains("results.example")) "Israel election results: the leading bloc has 53 seats, short of the 61 needed for a majority. Coalition talks continue." else
+                    "Israel election campaign coverage includes policy debates and voter participation. More than 10,000 residents exercised their right to vote."
+                WebDocument(url, "<title>Israel election report</title><meta property='article:published_time' content='${java.time.LocalDate.now()}'><article><h1>Israel election report</h1><p>$body</p></article>", "text/html")
+            }
+        }
+        val result = PublicWebResearch(fetcher, discovery).research("How is the election going on in israel?") {}
+        assertEquals(2, queries.size)
+        assertEquals("https://results.example/count", result.sources.first().url)
+        assertTrue(result.sources.first().excerpt.contains("53 seats"))
+    }
 }
