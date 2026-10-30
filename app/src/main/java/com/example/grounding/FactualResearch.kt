@@ -58,7 +58,7 @@ object FactualResearch {
         // Context fitting can leave only a hierarchical heading when its body
         // does not fit. A longer section heading is still not article evidence.
         if ('\n' !in clean && " › " in clean) return true
-        val utility = Regex("(?i)^(?:you(?: are)? logged in|loading[. …]*|you (?:do not|don't|don’t) have(?: any)?(?: active)? subscription[.!]?|save|share|listen(?:\\s*\\([^)]*\\))?|news\\s*[|›].*|(?:subscribe|sign in|log in)(?: to.*)?)$")
+        val utility = Regex("(?i)^(?:you(?: are)? logged in|loading[. …]*|you (?:do not|don't|don’t) have(?: any)?(?: active)? subscription[.!]?|save|share|swipe for next article|download our app|news\\s*·.*|listen(?:\\s*\\([^)]*\\))?|news\\s*[|›].*|(?:subscribe|sign in|log in)(?: to.*)?)$")
         val bodies = clean.split(Regex("\\n\\s*\\n")).map { block ->
             block.lines().dropWhile { it.trim() == title.trim() || it.trim().startsWith("${title.trim()} ›") }
                 .map(String::trim).filter { it.isNotBlank() && !utility.matches(it) }.joinToString(" ")
@@ -68,6 +68,7 @@ object FactualResearch {
         return title.isNotBlank() && words.isNotEmpty() && (words - ResearchQuery.words(title)).isEmpty()
     }
     fun usable(source: EvidenceSource, question: String): Boolean = !headlineOnly(source.excerpt, source.title) &&
+        PublicQuestionIntent.serviceEvidence(source, question) &&
         (capitalPlace(question) == null || !Regex("(?i)\\bcapital punishment\\b").containsMatchIn(source.title)) &&
         !speculativeCasting(question, source.title) && (!isCasting(question) || source.excerpt.split(Regex("\\n\\s*\\n")).any { block ->
             val body = if ('\n' in block) block.substringAfter('\n') else block

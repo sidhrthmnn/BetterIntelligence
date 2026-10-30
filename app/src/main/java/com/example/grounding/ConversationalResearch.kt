@@ -48,7 +48,7 @@ object ConversationalResearch {
             if (role != null) return "Who is the $role in $question?"
         }
         val scopedFollowUp = Regex("(?i)^\\s*(?:in|for|from) [\\p{L} .'-]{2,40}\\b.*\\b(?:price|cost|release|review)|\\b(?:what|how) about\\b").containsMatchIn(question)
-        if (!followUpPattern.containsMatchIn(question) && !scopedFollowUp) return question
+        if (!followUpPattern.containsMatchIn(question) && !scopedFollowUp && !PublicQuestionIntent.externalRequest(question)) return question
         val conversation = history.lastOrNull()?.conversationId
         val sources = history.filter { it.conversationId == conversation }.takeLast(4).lastOrNull { it.role == "assistant" && it.sourcesJson != "[]" }
             ?.let { GroundingResult.sources(it.sourcesJson) }.orEmpty()
@@ -101,11 +101,20 @@ object ConversationalResearch {
         // Everyday decisions that depend on today's weather ("should I wear a raincoat today").
         return Regex("(?i)\\b(?:rain\\s?coat|umbrella|sunscreen|sun\\s?cream|rain(?:ing|y)?|snow(?:ing|y)?|sunny|storm(?:y)?|windy|humid|jacket|coat|hot|cold|chilly|freezing)\\b").containsMatchIn(plain) &&
             Regex("(?i)\\b(?:today|tonight|tomorrow|this (?:morning|afternoon|evening|weekend)|right now|outside|should i|do i need|will it|is it going to|is it)\\b").containsMatchIn(plain) &&
-            !Regex("(?i)\\b(?:song|lyrics|album|movie|film|book|poem|story|recipe|code|meaning of)\\b").containsMatchIn(plain)
+            !Regex("(?i)\\b(?:song|lyrics|album|movie|film|book|poem|story|recipe|code|meaning of|medicine|medication|flu|coffee|drink|food)\\b").containsMatchIn(plain)
+    }
+    /** Normalise the evidence topic while retaining the actual task in the prompt. */
+    fun weatherResearchQuestion(question: String): String {
+        if (!isWeather(question) || legacyWeather.containsMatchIn(question)) return question
+        val place = weatherCity(question) ?: return question
+        val day = Regex("(?i)\\b(?:tomorrow|tonight|today)\\b").find(question)?.value ?: "today"
+        return "Weather in $place $day"
     }
     private val legacyWeather = Regex("(?i)\\b(weather|temperature|forecast)\\b")
     private val affirmation = Regex("(?i)^\\s*(?:ok(?:ay)?|yes|yeah|yep|sure|go ahead|please(?: do)?|do it|check(?: it| that)?(?: online| the web| the internet)?|search(?: it| that)?(?: online| the web)?|look it up|find out)\\s*[.!]*\\s*$")
     private val placeReply = Regex("^[\\p{L}][\\p{L} ,.'-]{1,69}$")
+    private fun locationReply(value: String) = placeReply.matches(value) && validPublicPlace(value) && !affirmation.matches(value) &&
+        !Regex("(?i)^(?:write|draft|compose|translate|rewrite|polish|explain|tell|show|find|search|check|who|what|when|where|why|how|i|my|our|no|never|don't|do not)\\b").containsMatchIn(value)
 
     /** Continue a turn where the on-device model said it needed outside
      * information. The assistant's text is only a trigger; the outgoing query
@@ -118,19 +127,27 @@ object ConversationalResearch {
         val asked = last.content == askCity || LocalAnswerUncertainty.needsResearch(last.content) ||
             Regex("(?i)\\b(?:which|what) (?:city|location|place)\\b|\\byour (?:current )?location\\b").containsMatchIn(last.content)
         if (!asked) return null
-        val previousUser = history.lastOrNull { it.role == "user" }?.content?.trim().orEmpty()
-        val weatherTask = isWeather(previousUser) || legacyWeather.containsMatchIn(last.content)
-        if (weatherTask && !affirmation.matches(reply) && placeReply.matches(reply) && validPublicPlace(reply))
-            return "Weather in $reply today" to false
-        if (affirmation.matches(reply) && previousUser.isNotBlank() && validPublicQuery(previousUser)) {
+        val sameChat = history.filter { it.conversationId == last.conversationId }.takeLast(6)
+        val userIndex = sameChat.indexOfLast { it.role == "user" }
+        if (userIndex < 0) return null
+        val previousUser = sameChat[userIndex].content.trim()
+        val prior = sameChat.take(userIndex)
+        fun asksPlace(value: String) = value == askCity || Regex("(?i)\\b(?:which|what) (?:city|location|place)\\b|\\byour (?:current )?location\\b").containsMatchIn(value)
+        // Only a user-provided location belonging to this clarification chain
+        // may complete the task. Never adopt a city invented by the assistant.
+        val placeTurn = prior.lastOrNull()?.let { it.role == "assistant" && asksPlace(it.content) } == true &&
+            locationReply(previousUser)
+        val task = if (placeTurn) prior.lastOrNull { it.role == "user" }?.content?.takeIf(::isWeather) ?: previousUser else previousUser
+        val weatherTask = isWeather(task)
+        fun located(place: String): String = task.trimEnd('?', '.', ' ') + " in $place?"
+        if (weatherTask && asksPlace(last.content) && locationReply(reply))
+            return located(reply) to false
+        if ((affirmation.matches(reply) || PublicQuestionIntent.externalRequest(reply)) && task.isNotBlank() && validPublicQuery(task)) {
             if (weatherTask) {
-                val placeInAssistant = Regex("(?i)\\b(?:weather|forecast|temperature)\\s+(?:for|in|at)\\s+([\\p{L}][\\p{L} .'-]{1,60}?)(?=\\s+(?:to|today|tonight|tomorrow|now)\\b|[.,!?]|$)")
-                    .find(last.content)?.groupValues?.get(1)?.trim()?.takeIf { validPublicPlace(it) }
-                val place = weatherCity(previousUser) ?: placeInAssistant ?: history.takeLast(6).filter { it.role == "user" }
-                    .map { it.content.trim() }.lastOrNull { placeReply.matches(it) && validPublicPlace(it) && !affirmation.matches(it) && !isWeather(it) }
-                return if (place != null) "Weather in $place today" to false else null
+                val place = weatherCity(task) ?: previousUser.takeIf { placeTurn && validPublicPlace(it) }
+                return (if (place != null && weatherCity(task) == null) located(place) else task) to false
             }
-            return previousUser to true
+            return task to true
         }
         return null
     }

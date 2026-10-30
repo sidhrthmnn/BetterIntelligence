@@ -23,7 +23,7 @@ class AutomaticGroundingTest {
             "Where is the Taj Mahal?", "When did World War II end?", "Who was UK prime minister in 1945?", "Does Android support Vulkan?",
             "Can example domains be registered?", "What is the weather in London today?", "Who is the mayor of London?",
             "What does iPhone Duo cost in the UK?", "What is the latest Android version?", "List the planets", "Difference between RAM and storage", "Tell me about photosynthesis")
-                val stable = setOf("Who wrote Pride and Prejudice?", "Who directed Inception?", "Who founded Nintendo?", "What is photosynthesis?", "Explain recursion", "Why is the sky blue?", "How does Vulkan work?", "What does DNA stand for?", "Where is the Taj Mahal?", "When did World War II end?", "Who was UK prime minister in 1945?", "Can example domains be registered?", "List the planets", "Difference between RAM and storage", "Tell me about photosynthesis")
+                val stable = setOf("What is photosynthesis?", "Explain recursion", "Why is the sky blue?", "How does Vulkan work?", "What does DNA stand for?", "When did World War II end?", "Who was UK prime minister in 1945?", "Can example domains be registered?", "List the planets", "Difference between RAM and storage", "Tell me about photosynthesis")
         factual.forEach { assertEquals(it, it !in stable, GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, it)) }
         val local = listOf("Hello", "Thanks", "What did I tell you about my project?", "What was our game item?", "Is it a reptile?",
             "Write a poem about today", "Translate this text: who is playing Doom?", "What is 15% of 240?", "Do not search. Who plays Doom?")

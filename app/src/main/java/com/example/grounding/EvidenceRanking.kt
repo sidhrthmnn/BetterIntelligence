@@ -55,9 +55,11 @@ object EvidenceRanking {
             minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question) / 2 + weatherPlaceScore(source.title, plan.question)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
+        if (!WeatherPageEvidence.requestedDay(source.title, plan.question)) return false
+        if (SourceBrief.predictionMarket(source.title, source.url, plan.question)) return false
         if (source.kind == "INSTANT_ANSWER" && (source.discoveryProvider != LegacyTopicEvidence.providerName ||
             !LegacyTopicEvidence.summaryAllowed(plan.question))) return false
-        if (!FactualResearch.usable(source, plan.question)) return false
+        if (!FactualResearch.usable(source, plan.question) && !SourceBrief.reportedRoleContext(source, plan.question)) return false
         val q = ResearchQuery(plan.question)
         val currentWeather = ConversationalResearch.isWeather(plan.question) && WeatherPageEvidence.current(source.excerpt, q.today) &&
             ResearchQuery.date(source.updatedAt)?.isAfter(q.today.plusDays(1)) != true

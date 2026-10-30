@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-30",
+  "versionCode": 25,
+  "versionName": "2.4.0-beta5",
+  "sourceCommit": "eb8fdcc8f12a1d1f1c5fb63933b4d46ca21fb797",
+  "device": "HONOR VKP_NX9",
+  "model": "Gemma 4 E2B LiteRT-LM",
+  "modelSha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+  "backend": "CPU",
+  "contextTokens": 2048,
+  "threads": 4,
+  "unitTests": {
+    "failures": 0,
+    "errors": 0,
+    "tests": 253,
+    "skipped": 0
+  },
+  "instrumentedMethods": 1,
+  "instrumentedDurationSeconds": 83.737,
+  "scenarios": [
+    {
+      "scenario": "Unconfirmed public casting lookup",
+      "state": "COMPLETE",
+      "groundingStatus": "SOURCE_BRIEF",
+      "readSources": 2,
+      "localGenerationFirstTokenMs": 5662,
+      "localGenerationTokensPerSecond": 24.007381
+    },
+    {
+      "scenario": "Named live transit status",
+      "state": "COMPLETE",
+      "groundingStatus": "PARTIALLY_SUPPORTED",
+      "readSources": 2,
+      "localGenerationFirstTokenMs": 6699,
+      "localGenerationTokensPerSecond": 25.421505
+    },
+    {
+      "scenario": "Explicit website follow-up",
+      "state": "COMPLETE",
+      "groundingStatus": "SOURCE_BRIEF",
+      "readSources": 2,
+      "localGenerationFirstTokenMs": 6115,
+      "localGenerationTokensPerSecond": 24.499542
+    },
+    {
+      "scenario": "Saved weather clarification and confirmation",
+      "state": "COMPLETE",
+      "groundingStatus": "SOURCE_EXCERPTS",
+      "readSources": 2,
+      "localGenerationFirstTokenMs": 5989,
+      "localGenerationTokensPerSecond": 24.624802
+    },
+    {
+      "scenario": "Direct weather decision",
+      "state": "COMPLETE",
+      "groundingStatus": "EVIDENCE_CITED",
+      "readSources": 1,
+      "localGenerationFirstTokenMs": 3619,
+      "localGenerationTokensPerSecond": 24.774076
+    },
+    {
+      "scenario": "Previously failing confirmed casting lookup",
+      "state": "COMPLETE",
+      "groundingStatus": "EVIDENCE_CITED",
+      "readSources": 1,
+      "localGenerationFirstTokenMs": 2787,
+      "localGenerationTokensPerSecond": 24.925264
+    }
+  ],
+  "release": {
+    "signature": "passed",
+    "bundletool": "passed",
+    "nativeLibraries": 18,
+    "exaOnlyEndpointScan": "passed",
+    "releaseLint": "passed",
+    "minElfLoadAlignmentBytes": 16384,
+    "manifestAndNativePackaging": "passed",
+    "apkSha256": "4632f9af7b6ae5449a09f8f304d125b1c438c29219d4ce6ab34444e153822981",
+    "aabSha256": "8f820799268912a45abf37335eb701201bc9b04ae8f236dd22e390e5e8885bb9"
+  },
+  "limitations": [
+    "Short validation samples; generation metrics exclude search and page reading, and are not end-to-end latency.",
+    "Partial source reports and cited excerpts do not establish a complete or independently verified answer.",
+    "Initial low-memory launch was refused safely; an unrelated package update interrupted another attempt. Final exact-build run completed.",
+    "No GPU or NPU execution benchmark was performed in this web-research change.",
+    "Production chats were inspected separately through the UI and are not included in this report."
+  ]
+}

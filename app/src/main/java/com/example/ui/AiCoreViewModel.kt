@@ -924,7 +924,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val allowed = repository.preferencesRepository.webAllowed.first()
                 val continuation = ConversationalResearch.continuation(text, previous)
                 val contextualText = continuation?.first ?: text
-                val effectiveMode = if (continuation?.second == true) GroundingMode.ON else mode
+                val effectiveMode = if (continuation?.second == true && mode != GroundingMode.OFF) GroundingMode.ON else mode
                 val route = AnswerRoutingPolicy.decide(contextualText, allowed, effectiveMode, previous)
                 researchQuestion = route.question
                 if (route.path == AnswerPath.CLARIFICATION) { result = route.clarification; return@launch }
@@ -932,7 +932,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     route.reusedSources.isNotEmpty() -> GroundingResult("SOURCES_RETRIEVED", route.reusedSources)
                     route.path == AnswerPath.WEB_GROUNDED -> {
                         _chatStatus.value = "Finding and reading public sources"
-                        grounding.retrieve(researchQuestion, allowed, mode, SearchProviderId.WEB) { stage -> _chatStatus.value = stage.label }
+                        grounding.retrieve(researchQuestion, allowed, effectiveMode, SearchProviderId.WEB) { stage -> _chatStatus.value = stage.label }
                     }
                     else -> GroundingResult()
                 }
@@ -1082,7 +1082,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                         val checked = if (interruptedDraft) null else resolvedAnswer ?: if (evidence.sources.isNotEmpty()) withContext(Dispatchers.Default) {
                             GroundingPolicy.checkAnswer(result, evidence.sources, researchQuestion)
                         } else null
-                        val status = if (interruptedDraft) "UNVERIFIED_PARTIAL" else if (checked == null) evidence.status else if (checked.sourceExtract) "SOURCE_EXCERPTS" else when (checked.support) {
+                        val status = if (interruptedDraft) "UNVERIFIED_PARTIAL" else if (checked == null) evidence.status else if (checked.sourceBrief) "SOURCE_BRIEF" else if (checked.sourceExtract) "SOURCE_EXCERPTS" else when (checked.support) {
                             AnswerSupport.CITED -> "EVIDENCE_CITED"
                             AnswerSupport.PARTIAL -> "PARTIALLY_SUPPORTED"
                             AnswerSupport.INSUFFICIENT -> "INSUFFICIENT_EVIDENCE"

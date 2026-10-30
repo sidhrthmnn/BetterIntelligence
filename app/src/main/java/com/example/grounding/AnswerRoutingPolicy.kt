@@ -30,7 +30,7 @@ object AnswerRoutingPolicy {
         history: List<ChatMessageEntity> = emptyList(), today: LocalDate = LocalDate.now(), now: Long = System.currentTimeMillis()): AnswerRoute {
         val q = question.trim()
         val instruction = q.substringBefore('\n')
-        val explicit = explicitResearch.containsMatchIn(instruction) || verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
+        val explicit = explicitResearch.containsMatchIn(instruction) || PublicQuestionIntent.externalRequest(instruction) || verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val verify = verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val privateInput = GroundingPolicy.containsCredential(q) || !explicit && Regex("(?i)\\b(?:my|our)\\s+(?:(?:current|recent|latest|private)\\s+)?(?:password|secret|key|token|chat|messages|notes|project|code|email|salary|medical)\\b").containsMatchIn(q)
         val calculation = com.example.engine.LocalCalculation.evaluate(q) != null
@@ -38,15 +38,15 @@ object AnswerRoutingPolicy {
         val resolved = if (transform || calculation || privateInput || localOnly(q)) q else ConversationalResearch.question(q, history)
         val publicQuestion = resolved.substringBefore("(Public source topic:").trim()
         val signals = publicQuestion.substringBefore('\n').replace(technicalContext, "task context")
-        val weatherRequest = ConversationalResearch.isWeather(signals)
         val personalContext = !explicit && Regex("(?i)\\b(?:my|our|I|we)\\b|എന്റെ|ഞാൻ|നമ്മുടെ").containsMatchIn(instruction) &&
-            !changing.containsMatchIn(signals) && !weatherRequest && !product.containsMatchIn(signals) && !ResearchQuery.isCurrentIncumbentQuery(signals) &&
-            !Regex("(?i)^\\s*(?:should|can|could|do|did|does|is|are|am|will|would|may|shall)\\s+I\\b").containsMatchIn(instruction)
-        val current = fresh.containsMatchIn(signals) || NewsIntent.isLiveRequest(signals)
+            !changing.containsMatchIn(signals) && !ConversationalResearch.isWeather(signals) && !product.containsMatchIn(signals) && !ResearchQuery.isCurrentIncumbentQuery(signals)
+        val current = fresh.containsMatchIn(signals) || NewsIntent.isLiveRequest(signals) || PublicQuestionIntent.serviceStatus(signals) || PublicQuestionIntent.upcoming(signals)
         val general = explanation.containsMatchIn(signals) && !current && (concept.containsMatchIn(signals) ||
             Regex("(?i)^\\s*(?:explain|define|describe|how (?:does|do|to)|why)\\b|വിശദീകരി|എങ്ങനെ|എന്താണ്").containsMatchIn(signals))
         val historic = !current && (Regex("(?i)\\b(?:history|historical|who was|when did|what year did)\\b").containsMatchIn(signals) ||
             Regex("\\b(?:18|19|20)\\d{2}\\b").findAll(signals).any { it.value.toInt() < today.year - 1 })
+        val weatherRequest = ConversationalResearch.isWeather(signals) && !general
+        val publicLookup = !general && !historic && !transform && !personalContext && PublicQuestionIntent.lookup(signals)
         val live = !transform && !calculation && !historic && !general && !personalContext && (current || changing.containsMatchIn(signals) || weatherRequest ||
             Regex("(?i)\\b(?:who won|winner of)\\b").containsMatchIn(signals) ||
             ResearchQuery.isCurrentIncumbentQuery(signals) || FactualResearch.isCasting(signals) ||
@@ -55,7 +55,7 @@ object AnswerRoutingPolicy {
         val localPart = if (live && !verify) mixedLocalPart(q) else null
         val publicFacetFollowUp = followUp.containsMatchIn(q) && resolved.contains("(Public source topic:") &&
             Regex("(?i)\\b(?:prices?|costs?|temperature|forecast|actors?|cast|releas\\w*|elections?|results?|votes?|seats?|counts?|compatibility|supported)\\b").containsMatchIn(q)
-        val wantsWeb = explicit || live || weatherRequest || publicFacetFollowUp || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
+        val wantsWeb = explicit || live || weatherRequest || publicLookup || publicFacetFollowUp || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
         val canSearch = allowed && mode != GroundingMode.OFF && !localOnly(q) && !privateInput && !personalContext && (!transform || mode == GroundingMode.ON) && !calculation
         if (history.none { it.role == "user" } && ConversationalResearch.needsSubject(q))
             return AnswerRoute(AnswerPath.CLARIFICATION, q, "Missing subject", clarification = ConversationalResearch.askSubject)
@@ -115,9 +115,10 @@ object AnswerRoutingPolicy {
     }
 
     private fun reusableEvidence(question: String, history: List<ChatMessageEntity>, now: Long): List<EvidenceSource> {
-        val last = history.lastOrNull { it.role == "assistant" && it.groundingStatus in setOf("EVIDENCE_CITED", "PARTIALLY_SUPPORTED", "SOURCE_EXCERPTS") } ?: return emptyList()
+        val last = history.lastOrNull { it.role == "assistant" && it.groundingStatus in setOf("EVIDENCE_CITED", "PARTIALLY_SUPPORTED", "SOURCE_EXCERPTS", "SOURCE_BRIEF") } ?: return emptyList()
         val age = if (ConversationalResearch.isWeather(question)) 60_000L else 300_000L
         return GroundingResult.sources(last.sourcesJson).filter { now - it.retrievedAt in 0..age &&
+            !SourceBrief.predictionMarket(it.title, it.url, question) &&
             FactualResearch.usable(it, question) && ResearchQuery(question).score(it.title + " " + it.excerpt) > 0 }
     }
 }

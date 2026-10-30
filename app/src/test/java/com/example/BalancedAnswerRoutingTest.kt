@@ -146,7 +146,7 @@ class BalancedAnswerRoutingTest {
         val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to object : SearchProvider {
             override suspend fun search(question: String): List<EvidenceSource> { requests++; error("offline") }
         }))
-        for (q in listOf("Explain recursion", "What is the capital of France?", "Write a story", "Explain the current code I pasted")) {
+        for (q in listOf("Explain recursion", "What is gravity?", "Write a story", "Explain the current code I pasted")) {
             assertEquals("LOCAL", coordinator.retrieve(q, true, GroundingMode.AUTO, SearchProviderId.WEB).status)
         }
         assertEquals(0, requests)

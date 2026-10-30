@@ -143,10 +143,11 @@ object GroundingPolicy {
         val plans = if (complex) listOf(3 to 900, 3 to 600, 2 to 900, 2 to 600, 1 to 1200, 1 to 600, 1 to 350)
             else listOf(1 to 700, 2 to 450, 1 to 450, 1 to 250)
         val options = mutableListOf<PreparedEvidence>()
+        val eligibleSources = sources.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) }
         for ((count, excerptBudget) in plans) {
-            val included = sources.take(count).map { it.copy(
+            val included = eligibleSources.take(count).map { it.copy(
                 excerpt = EvidencePacket.completeExcerpt(WebPageExtractor.focusExcerpt(it.excerpt, question, excerptBudget), excerptBudget)) }
-                .filter { it.excerpt.isNotBlank() && FactualResearch.usable(it, question) }.map { it.copy(title = bounded(it.title, 120)) }
+                .filter { it.excerpt.isNotBlank() && (FactualResearch.usable(it, question) || SourceBrief.reportedRoleContext(it, question)) }.map { it.copy(title = bounded(it.title, 120)) }
             if (included.isEmpty()) continue
             val evidence = JSONArray().apply { included.forEach { source -> put(JSONObject()
                 .put("id", source.id).put("title", bounded(source.title, 120))
@@ -193,6 +194,7 @@ object GroundingPolicy {
                 (if (option.sources.any { FactualResearch.definitionLine(it.excerpt, question) }) 120 else 0) +
                 option.sources.maxOf { FactualResearch.definitionQuality(it.excerpt, question) } +
                 option.sources.maxOf { FactualResearch.answerFocusScore(it.excerpt, question) } * 2 +
+                option.sources.maxOf { SourceBrief.roleReportScore(it.excerpt, question) } * 2 +
                 minOf(20, text.length / 100) + option.sources.map { EvidenceRanking.publisher(it.url) }.distinct().size * 3
         }
         error("Web evidence does not fit this model's context. Choose 2048 context in Advanced settings, shorten the question, or turn web search off.")
