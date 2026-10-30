@@ -6,6 +6,16 @@ import org.jsoup.nodes.Element
 /** Read visible observation/forecast cards, never an API or embedded script.
  * Keep timestamps and forecast labels. Photo temperatures are not observations. */
 object WeatherPageEvidence {
+    /** A page updated today may describe next week's forecast. Its title's
+     * explicit forecast date must match the day requested, not its update date. */
+    fun requestedDay(title: String, question: String, today: java.time.LocalDate = java.time.LocalDate.now()): Boolean {
+        if (!ConversationalResearch.isWeather(question) || Regex("(?i)\\b(?:week|month|history|historical)\\b").containsMatchIn(question)) return true
+        val target = if (Regex("(?i)\\btomorrow\\b").containsMatchIn(question)) today.plusDays(1) else today
+        val months = java.time.Month.entries.associateBy { it.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH).lowercase() }
+        val date = Regex("(?i)\\b(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\\b").find(title) ?: return true
+        val month = months[date.groupValues[2].take(3).lowercase()] ?: return true
+        return date.groupValues[1].toIntOrNull() == target.dayOfMonth && month == target.month
+    }
     fun current(text: String, today: java.time.LocalDate,
         now: java.time.ZonedDateTime = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC)): Boolean {
         if (!EvidenceAnswer.hasTemperature(text)) return false

@@ -76,4 +76,29 @@ class ResearchFollowThroughTest {
             assertNull(SourceBrief.build(q, listOf(source), emptyList()))
         assertNull(SourceBrief.build(q, listOf(page("James Bond", "James Bond candidates will screen test this weekend.").copy(kind = "INSTANT_ANSWER")), emptyList()))
     }
+    @Test fun shortOfficialStatusBeatsStationNavigation() {
+        val q = "Is jubilee line status good in tfl"
+        val source = page("Jubilee Underground line", "Jubilee Good service", "https://tfl.gov.uk/tube/route/jubilee/")
+            .copy(excerpt = "Jubilee › Status\nJubilee Good service\n\nJubilee › No disruptions\nBaker Street Underground Station connects to other lines and stations.")
+        val result = SourceBrief.build(q, listOf(source), emptyList())!!
+        assertTrue(result.text.contains("Jubilee Good service")); assertFalse(result.text.contains("Baker Street"))
+    }
+    @Test fun actualReportParagraphsBeatRelatedStoryLinkLists() {
+        val q = "who is the next james bond"
+        val title = "James Bond screen tests, reports say"
+        val html = "<title>$title</title><article><h1>$title</h1><ul><li><a href='/other'>The next James Bond questions fans want answered</a></li><li><a href='/more'>Search for James Bond officially kicks off</a></li></ul>" +
+            "<p>Sources report that final screen test offers have been made. While unconfirmed, Jack Lowden and Callum Turner are expected to test.</p></article>"
+        val source = WebPageExtractor.article(WebDocument("https://publisher.example/report", html, "text/html"), 1, q)!!
+        val prepared = GroundingPolicy.prepareEvidence(q, listOf(source), 6000)
+        val answer = EvidenceAnswer.resolve("A definitive actor is known.", prepared.sources, q)
+        assertTrue(answer.text, answer.sourceBrief); assertTrue(answer.text.contains("Jack Lowden"))
+        assertTrue(answer.text.contains("unconfirmed")); assertFalse(answer.text.contains("questions fans want answered"))
+    }
+    @Test fun weatherUsesTheForecastDayAndRecognisesExplicitUnitsWithoutADegreeGlyph() {
+        assertTrue(EvidenceAnswer.hasTemperature("Temperatures will reach 16C around 2pm."))
+        assertFalse(EvidenceAnswer.hasTemperature("The temperature will reach 16 around 2pm."))
+        val today = java.time.LocalDate.of(2026, 10, 30)
+        assertFalse(WeatherPageEvidence.requestedDay("London Weather Friday 6 Nov: Rain, Outfit & Plans", "Weather in London today", today))
+        assertTrue(WeatherPageEvidence.requestedDay("London Weather 31 Oct", "Weather in London tomorrow", today))
+    }
 }

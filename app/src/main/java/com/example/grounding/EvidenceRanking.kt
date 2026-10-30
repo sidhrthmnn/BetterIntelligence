@@ -55,6 +55,7 @@ object EvidenceRanking {
             minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question) / 2 + weatherPlaceScore(source.title, plan.question)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
+        if (!WeatherPageEvidence.requestedDay(source.title, plan.question)) return false
         if (SourceBrief.predictionMarket(source.title, source.url, plan.question)) return false
         if (source.kind == "INSTANT_ANSWER" && (source.discoveryProvider != LegacyTopicEvidence.providerName ||
             !LegacyTopicEvidence.summaryAllowed(plan.question))) return false

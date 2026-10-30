@@ -3,6 +3,12 @@ package com.example.grounding
 /** A partial report from read publisher text. Never treats a generated claim,
  * a search highlight, a headline or betting odds as a verified answer. */
 object SourceBrief {
+    fun roleReportScore(text: String, question: String): Int {
+        if (!FactualResearch.isCasting(question) && !(PublicQuestionIntent.upcoming(question) && PublicQuestionIntent.lookup(question))) return 0
+        val body = text.substringAfter('\n', text)
+        if (!Regex("(?i)screen[- ]?tests?|auditions?|shortlist|casting process|not (?:yet )?(?:confirmed|announced)").containsMatchIn(body)) return 0
+        return 60 + minOf(20, ResearchPlanner.entities(body).size * 4)
+    }
     fun reportedRoleContext(source: EvidenceSource, question: String): Boolean =
         (FactualResearch.isCasting(question) || PublicQuestionIntent.upcoming(question) && PublicQuestionIntent.lookup(question)) &&
             !predictionMarket(source.title, source.url, question) &&
@@ -20,7 +26,7 @@ object SourceBrief {
         val plan = ResearchPlanner.plan(question)
         val entities = ResearchPlanner.subjects(ConversationalResearch.weatherResearchQuestion(question))
         val selected = sources.filter { source ->
-            val words = ResearchQuery.words(source.title + " " + source.excerpt)
+            val words = ResearchQuery.words(source.title + " " + source.excerpt + " " + source.url)
             source.kind == "WEB_PAGE" && GroundingPolicy.publicHttpsUrl(source.url) &&
                 !predictionMarket(source.title, source.url, question) &&
                 !Regex("(?i)\\b(?:fan theor(?:y|ies)|fan[- ]?casting)\\b").containsMatchIn(source.title) &&
@@ -32,16 +38,16 @@ object SourceBrief {
         }.mapNotNull { source ->
             val candidates = source.excerpt.split(Regex("\\n\\s*\\n")).mapNotNull { block ->
                 val body = if ('\n' in block) block.substringAfter('\n').trim() else block.trim()
-                if (FactualResearch.headlineOnly(block, source.title) || ResearchQuery.words(body).size < 6 ||
+                if (FactualResearch.headlineOnly(block, source.title) || ResearchQuery.words(body).size < (if (PublicQuestionIntent.statusValue(block, question)) 2 else 6) ||
                     FactualResearch.incomplete(body) || Regex("(?i)ignore.{0,30}instructions|system prompt|^references\\b").containsMatchIn(body) ||
                     ConversationalResearch.isWeather(question) && Regex("(?i)weather watchers|photo gallery|historical average").containsMatchIn(body)) null
                 else EvidencePacket.completeExcerpt(block, 600).takeIf { text ->
                     val keptBody = if ('\n' in text) text.substringAfter('\n') else text
-                    ResearchQuery.words(keptBody).size >= 6 && !FactualResearch.headlineOnly(text, source.title) &&
-                        (q.terms.isEmpty() || q.score(keptBody) > 0)
+                    ResearchQuery.words(keptBody).size >= (if (PublicQuestionIntent.statusValue(text, question)) 2 else 6) && !FactualResearch.headlineOnly(text, source.title) &&
+                        (q.terms.isEmpty() || q.score(keptBody) > 0 || roleReportScore(text, question) > 0)
                 }
             }
-            candidates.maxByOrNull { q.score(it) + FactualResearch.answerFocusScore(it, question) }
+            candidates.maxByOrNull { q.score(it) + FactualResearch.answerFocusScore(it, question) + roleReportScore(it, question) + if (PublicQuestionIntent.statusValue(it, question)) 100 else 0 }
                 ?.let { source to it }
         }.distinctBy { EvidenceRanking.publisher(it.first.url) }.take(2)
         if (selected.isEmpty()) return null

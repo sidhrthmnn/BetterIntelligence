@@ -129,6 +129,10 @@ object WebPageExtractor {
                         listOf(listOf(heading, combined).filter { it.isNotBlank() }.distinct().joinToString("\n"))
                     }
                     node.tagName() in setOf("ul", "ol") -> {
+                        // Link lists are discovery/navigation, not article prose.
+                        // Repeated related-story titles otherwise outrank the report.
+                        val length = node.text().length.coerceAtLeast(1)
+                        if (node.select("a[href]").sumOf { it.text().length }.toDouble() / length > 0.8) return@flatMap emptyList()
                         val heading = currentHeading()
                         val items = node.select("> li").ifEmpty { node.select("li") }
                             .map { item -> item.clone().also { it.select("table").remove() }.text().replace(Regex("[\\t ]+"), " ").trim() }
@@ -275,7 +279,8 @@ object WebPageExtractor {
                 query.bm25Score(blockText, docFreqs, candidates.size, avgWords) +
                     (plan.coverage(blockText) - covered).size * 15 +
                     mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20 +
-                    incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText) + FactualResearch.answerFocusScore(blockText, question)
+                    incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText) + FactualResearch.answerFocusScore(blockText, question) + SourceBrief.roleReportScore(blockText, question) +
+                    if (PublicQuestionIntent.statusValue(blockText, question)) 100 else 0
             }
             remaining.remove(index)
             val block = candidates[index]

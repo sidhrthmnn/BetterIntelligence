@@ -4,7 +4,7 @@ package com.example.grounding
  * Quotes come verbatim from retrieved passages; model text never gains an
  * inferred citation. Keep source headings, units, timing and qualifications. */
 object EvidenceAnswer {
-    fun hasTemperature(text: String) = Regex("(?i)-?\\d+(?:\\.\\d+)?\\s*°\\s*[CF]\\b|\\d+\\s+degrees?\\s+(?:celsius|fahrenheit)").containsMatchIn(text)
+    fun hasTemperature(text: String) = Regex("(?i)(?<![\\p{L}\\p{N}])-?\\d+(?:\\.\\d+)?\\s*(?:°\\s*)?[CF]\\b|\\d+\\s+degrees?\\s+(?:celsius|fahrenheit)").containsMatchIn(text)
 
     fun resolve(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
         if (sources.any { SourceBrief.reportedRoleContext(it, question) })

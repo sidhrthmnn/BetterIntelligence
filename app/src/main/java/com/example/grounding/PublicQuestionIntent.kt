@@ -3,6 +3,7 @@ package com.example.grounding
 /** Public lookups and changing service conditions should not depend on the
  * model admitting uncertainty. Local task/privacy/offline rules still win. */
 object PublicQuestionIntent {
+    fun statusValue(text: String, q: String) = serviceStatus(q) && Regex("(?i)\\b(?:good service|no disruptions|minor delays|severe delays|part suspended|suspended|planned closure|service closed)\\b").containsMatchIn(text.substringAfter('\n', text))
     fun serviceStatus(q: String) = Regex("(?i)\\b(?:line|train|tube|tfl|flight|airport|road|service|website|server)\\b.{0,55}\\b(?:status|delays?|disruptions?|running|fine|good|cancelled|open|closed|working)\\b|\\b(?:status|delays?|disruptions?)\\b.{0,55}\\b(?:line|train|tube|tfl|flight|airport|road|service|website|server)\\b").containsMatchIn(q)
     fun lookup(q: String) = !Regex("(?i)\\b(?:it|this|that|he|she|my|our|you|your|previous example)\\b").containsMatchIn(q) &&
         (Regex("(?i)^\\s*(?:who|where|when|which)\\b").containsMatchIn(q) ||
