@@ -1,0 +1,19 @@
+{
+  "versionCode": 25,
+  "versionName": "2.4.0-beta5",
+  "aabSha256": "8f820799268912a45abf37335eb701201bc9b04ae8f236dd22e390e5e8885bb9",
+  "sourceCommit": "eb8fdcc8f12a1d1f1c5fb63933b4d46ca21fb797",
+  "mainMergeCommit": "8484678c850b387df13da1a315051d1392932df8",
+  "pullRequest": "https://github.com/sidhrthmnn/BetterIntelligence/pull/15",
+  "track": "Closed testing - Alpha",
+  "trackId": "4700162612789187101",
+  "releaseId": 19,
+  "queuedAtUtc": "2026-10-30T09:57:24.2500481Z",
+  "observedState": "Changes in review",
+  "preliminaryChecks": "Running; review queued to follow successful checks",
+  "managedPublishing": false,
+  "rolloutPercent": 100,
+  "approvalOrPublicationAwaited": false,
+  "warning": "No deobfuscation file; minification is disabled for this release",
+  "validationRecord": "android-research-follow-through.json"
+}
