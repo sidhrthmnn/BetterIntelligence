@@ -38,7 +38,9 @@ object SourceBrief {
         }.mapNotNull { source ->
             val candidates = source.excerpt.split(Regex("\\n\\s*\\n")).mapNotNull { block ->
                 val body = if ('\n' in block) block.substringAfter('\n').trim() else block.trim()
-                if (FactualResearch.headlineOnly(block, source.title) || ResearchQuery.words(body).size < (if (PublicQuestionIntent.statusValue(block, question)) 2 else 6) ||
+                if (PublicQuestionIntent.serviceStatus(question) && (!PublicQuestionIntent.statusValue(block, question) ||
+                        !PublicQuestionIntent.serviceScope(source.title + " " + source.url + " " + block, question)) ||
+                    FactualResearch.headlineOnly(block, source.title) || ResearchQuery.words(body).size < (if (PublicQuestionIntent.statusValue(block, question)) 2 else 6) ||
                     FactualResearch.incomplete(body) || Regex("(?i)ignore.{0,30}instructions|system prompt|^references\\b").containsMatchIn(body) ||
                     ConversationalResearch.isWeather(question) && Regex("(?i)weather watchers|photo gallery|historical average").containsMatchIn(body)) null
                 else EvidencePacket.completeExcerpt(block, 600).takeIf { text ->

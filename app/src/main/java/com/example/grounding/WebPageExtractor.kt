@@ -93,10 +93,13 @@ object WebPageExtractor {
         fun currentHeading(): String = headingStack.values.filter { it.isNotBlank() }.distinct().joinToString(" › ")
         var pendingTerm = ""
         val blockTags = setOf("p", "h1", "h2", "h3", "h4", "ul", "ol", "pre", "table", "dd", "dt")
-        val blocks = if (type == "text/plain") page.text.split(Regex("\\n\\s*\\n|\\n")) else root.select("p, h1, h2, h3, h4, ul, ol, pre, table, dd, dt, div, section")
+        val blocks = if (type == "text/plain") page.text.split(Regex("\\n\\s*\\n|\\n")) else root.select("p, h1, h2, h3, h4, ul, ol, pre, table, dd, dt, div, section, span, strong")
             .filter { node ->
                 val tag = node.tagName()
-                if (tag in setOf("div", "section")) {
+                if (tag in setOf("span", "strong")) {
+                    node.text().length in 8..80 && PublicQuestionIntent.statusValue(node.text(), question) &&
+                        node.children().none { PublicQuestionIntent.statusValue(it.text(), question) }
+                } else if (tag in setOf("div", "section")) {
                     val ownLen = node.text().trim().length
                     ownLen in 15..360 &&
                         node.parents().takeWhile { it != root }.none { it.tagName() in setOf("ul", "ol", "pre", "table", "p", "dd", "dt") } &&
@@ -179,7 +182,9 @@ object WebPageExtractor {
             val normalized = block.replace(Regex("[\\u200B\\uFEFF]"), "").replace(Regex("[\\t ]+"), " ").trim()
             if (normalized.length <= 1800) listOf(normalized) else ClaimVerification.sentences(normalized)
         }
-            .filter { it.length >= 12 && !FactualResearch.headlineOnly(it, title) && !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) &&
+            .filter { it.length >= 12 && !FactualResearch.headlineOnly(it, title) &&
+                !(PublicQuestionIntent.serviceStatus(question) && PublicQuestionIntent.statusPlaceholder(it)) &&
+                !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) &&
                 (!priceRequest || financeRequest || !ClaimVerification.financeExample(it)) }
             .distinct().take(350)
         // Do not reintroduce a rejected subscription/app-promotion screen by
@@ -187,7 +192,8 @@ object WebPageExtractor {
         if (clean.isEmpty() && blocks.isNotEmpty()) return null
         val usable = clean.ifEmpty { listOf(body.trim().take(2200)) }
         val text = focused(usable, dateLines, question, minOf(2200, snippetLimit)).trim()
-        if (text.length < 80) return null
+        if (text.length < 80 && !(PublicQuestionIntent.statusValue(text, question) &&
+                PublicQuestionIntent.serviceScope(title + " " + page.url + " " + text, question))) return null
         return EvidenceSource(id, title, HtmlDiscovery.canonicalUrl(page.url), text, System.currentTimeMillis(), date.first, "WEB_PAGE", date.second)
     }
 

@@ -105,4 +105,16 @@ class ResearchFollowThroughTest {
         val html = "<title>James Bond casting</title><article><h1>James Bond casting</h1><p>Swipe for next article</p><p>Download our app</p><p>News · Sport · Culture · Lifestyle</p></article>"
         assertNull(WebPageExtractor.article(WebDocument("https://publisher.example/bond", html, "text/html"), 1, "who is the next james bond"))
     }
+    @Test fun networkStatusMustBelongToTheNamedLineAndShortVisibleValuesAreKept() {
+        val q = "Is jubilee line status good in tfl"
+        val wrong = page("Tube, DLR and Tram status", "Good service on all other lines", "https://tfl.gov.uk/status")
+            .copy(excerpt = "Status › Tram\nGood service on all other lines")
+        assertFalse(FactualResearch.usable(wrong, q)); assertNull(SourceBrief.build(q, listOf(wrong), emptyList()))
+        val empty = page("Jubilee Underground line", "There are no reported disruptions at any .", "https://tfl.gov.uk/tube/route/jubilee/")
+        assertFalse(FactualResearch.usable(empty, q))
+        val html = "<title>Jubilee Underground line</title><main><h1>Jubilee</h1><h2>Status</h2><span>Good service</span></main>"
+        val source = WebPageExtractor.article(WebDocument("https://tfl.gov.uk/tube/route/jubilee/", html, "text/html"), 1, q)!!
+        assertTrue(source.excerpt, PublicQuestionIntent.serviceEvidence(source, q))
+        assertTrue(SourceBrief.build(q, listOf(source), emptyList())!!.text.contains("Good service"))
+    }
 }

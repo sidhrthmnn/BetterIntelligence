@@ -79,8 +79,11 @@ class ResearchFollowThroughDeviceTest {
             verify(transit.groundingStatus != "LOCAL", "Service status research was skipped")
             verify(Regex("(?i)good service|no disruptions|delays|suspend|closed|disruption").containsMatchIn(transit.content), "Actual line status omitted: ${transit.content}")
             verify(!transit.content.contains("Connects to", true), "Station navigation mistaken for service status")
+            verify(!transit.content.contains("Status › Tram", true), "Another line's status used for Jubilee")
+            verify(GroundingResult.sources(transit.sourcesJson).all { PublicQuestionIntent.serviceEvidence(it, "Is jubilee line status good in tfl") }, "Evidence does not bind status to Jubilee")
             val transitFollow = ask("Find status of the line from any websites", fresh = false)
             verify(GroundingResult.sources(transitFollow.sourcesJson).any { it.excerpt.contains("Jubilee", true) || it.title.contains("Jubilee", true) }, "Named line lost in follow-up")
+            verify(!transitFollow.content.contains("at any ."), "Empty publisher status template used as evidence")
             // A saved conversation from an older build must recover when the user says OK.
             val oldConversation = vm.conversationId.value
             compose.runOnUiThread { vm.newConversation() }

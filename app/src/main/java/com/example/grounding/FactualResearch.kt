@@ -68,6 +68,7 @@ object FactualResearch {
         return title.isNotBlank() && words.isNotEmpty() && (words - ResearchQuery.words(title)).isEmpty()
     }
     fun usable(source: EvidenceSource, question: String): Boolean = !headlineOnly(source.excerpt, source.title) &&
+        PublicQuestionIntent.serviceEvidence(source, question) &&
         (capitalPlace(question) == null || !Regex("(?i)\\bcapital punishment\\b").containsMatchIn(source.title)) &&
         !speculativeCasting(question, source.title) && (!isCasting(question) || source.excerpt.split(Regex("\\n\\s*\\n")).any { block ->
             val body = if ('\n' in block) block.substringAfter('\n') else block
