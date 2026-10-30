@@ -23,7 +23,8 @@ class WebBrowsingRecoveryTest {
     }
 
     @Test fun uncertaintyTriggersOnceForEligiblePublicTasksAndNeverOverridesPrivacy() {
-        for (q in listOf("Who developed OrionHub?", "Explain the OrionHub protocol", "How is OrionHub different?")) {
+        assertEquals(AnswerPath.WEB_GROUNDED, AnswerRoutingPolicy.decide("Who developed OrionHub?").path)
+        for (q in listOf("Explain the OrionHub protocol", "How is OrionHub different?")) {
             val route = AnswerRoutingPolicy.decide(q)
             for (answer in listOf("I do not have specific information about OrionHub.", "I don't know who developed it.",
                 "I'm not sure about this topic.", "[WEB_NEEDED] This needs a source.",

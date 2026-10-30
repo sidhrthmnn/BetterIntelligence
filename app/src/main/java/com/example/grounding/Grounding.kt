@@ -143,10 +143,11 @@ object GroundingPolicy {
         val plans = if (complex) listOf(3 to 900, 3 to 600, 2 to 900, 2 to 600, 1 to 1200, 1 to 600, 1 to 350)
             else listOf(1 to 700, 2 to 450, 1 to 450, 1 to 250)
         val options = mutableListOf<PreparedEvidence>()
+        val eligibleSources = sources.filterNot { SourceBrief.predictionMarket(it.title, it.url, question) }
         for ((count, excerptBudget) in plans) {
-            val included = sources.take(count).map { it.copy(
+            val included = eligibleSources.take(count).map { it.copy(
                 excerpt = EvidencePacket.completeExcerpt(WebPageExtractor.focusExcerpt(it.excerpt, question, excerptBudget), excerptBudget)) }
-                .filter { it.excerpt.isNotBlank() && FactualResearch.usable(it, question) }.map { it.copy(title = bounded(it.title, 120)) }
+                .filter { it.excerpt.isNotBlank() && (FactualResearch.usable(it, question) || SourceBrief.reportedRoleContext(it, question)) }.map { it.copy(title = bounded(it.title, 120)) }
             if (included.isEmpty()) continue
             val evidence = JSONArray().apply { included.forEach { source -> put(JSONObject()
                 .put("id", source.id).put("title", bounded(source.title, 120))

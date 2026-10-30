@@ -106,8 +106,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
                 discoveryFailed = true; blocked = result.state == DiscoveryState.BLOCKED; return null
             }
-            return result.candidates.filter { query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) &&
-                !FactualResearch.speculativeCasting(question, it.title) }
+            return result.candidates.filter { !SourceBrief.predictionMarket(it.title, it.url, question) && query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) &&
+                (!FactualResearch.speculativeCasting(question, it.title) || Regex("(?i)screen[- ]?tests?|auditions?|shortlist|not (?:yet )?(?:confirmed|announced)").containsMatchIn(it.title)) }
         }
 
         val links = if (explicit.isNotEmpty()) explicit.map { ResearchCandidate(it, "") } else {

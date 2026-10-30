@@ -2,7 +2,7 @@ package com.example.grounding
 
 enum class AnswerSupport { CITED, PARTIAL, INSUFFICIENT }
 data class ClaimCheck(val text: String, val sourceIds: Set<Int>, val supported: Boolean, val reason: String)
-data class CheckedAnswer(val text: String, val support: AnswerSupport, val claims: List<ClaimCheck>, val sourceExtract: Boolean = false)
+data class CheckedAnswer(val text: String, val support: AnswerSupport, val claims: List<ClaimCheck>, val sourceExtract: Boolean = false, val sourceBrief: Boolean = false)
 
 /** Conservative, deterministic evidence checks, NOT general semantic entailment
  * or a guarantee that a publisher is correct. Each surviving claim must match

@@ -65,7 +65,8 @@ class ResearchRecoveryTest {
 
     @Test fun modelCurrentDataRefusalCanTriggerOnlyOneEligiblePublicResearchPass() {
         val refusal = "I do not have real-time access to current events. Check a news source."
-        assertTrue(AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(AnswerRoutingPolicy.decide("Who developed OrionHub?"), refusal))
+        assertEquals(AnswerPath.WEB_GROUNDED, AnswerRoutingPolicy.decide("Who developed OrionHub?").path)
+        assertTrue(AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(AnswerRoutingPolicy.decide("Explain the OrionHub protocol"), refusal))
         for (q in listOf("What was my project idea?", "Write a story", "Offline: who developed OrionHub?", "What is 15% of 240?", "What is my password: abcdef?"))
             assertFalse(q, AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(AnswerRoutingPolicy.decide(q), refusal))
         assertFalse(AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(AnswerRoutingPolicy.decide("Who developed OrionHub?", false), refusal))

@@ -90,7 +90,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
             runCatching { LocalDate.parse(value.trim(), format) }.getOrNull()
         }
     }
-    private val plain = NewsIntent.topicQuestion(question).replace(Regex("(?i)\\b(who|what|where|when|how)['’]s\\b"), "\$1 is")
+    private val plain = NewsIntent.topicQuestion(ConversationalResearch.weatherResearchQuestion(question)).replace(Regex("(?i)\\b(who|what|where|when|how)['’]s\\b"), "\$1 is")
         .replace(Regex("(?i)\\bwhats\\b"), "what is").replace(Regex("https?://\\S+"), " ")
     private val userPlain = plain.substringBefore("(Public source topic:")
     val years = Regex("\\b(?:19|20)\\d{2}\\b").findAll(userPlain).map { it.value }.toSet()

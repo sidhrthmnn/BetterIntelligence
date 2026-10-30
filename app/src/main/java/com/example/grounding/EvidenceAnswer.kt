@@ -7,6 +7,13 @@ object EvidenceAnswer {
     fun hasTemperature(text: String) = Regex("(?i)-?\\d+(?:\\.\\d+)?\\s*°\\s*[CF]\\b|\\d+\\s+degrees?\\s+(?:celsius|fahrenheit)").containsMatchIn(text)
 
     fun resolve(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
+        if (sources.any { SourceBrief.reportedRoleContext(it, question) })
+            SourceBrief.build(question, sources, emptyList())?.let { return it }
+        val checked = resolveStrict(draft, sources, question)
+        return if (checked.support == AnswerSupport.INSUFFICIENT) SourceBrief.build(question, sources, checked.claims) ?: checked else checked
+    }
+
+    private fun resolveStrict(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
         val checked = GroundingPolicy.checkAnswer(draft, sources, question)
         val weather = ConversationalResearch.isWeather(question)
         val missingTemperature = weather && !hasTemperature(checked.text)

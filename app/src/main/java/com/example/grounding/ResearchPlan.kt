@@ -29,7 +29,7 @@ object ResearchPlanner {
     fun plan(question: String, today: LocalDate = LocalDate.now()): ResearchPlan {
         val urls = Regex("https?://[^\\s<>]+").findAll(question).map { it.value.trimEnd('.', ',', ')', ']') }.distinct().toList()
         require(urls.all(GroundingPolicy::publicHttpsUrl)) { "Use a public HTTPS link" }
-        val plain = Normalizer.normalize(question.replace(Regex("https?://\\S+"), " "), Normalizer.Form.NFC).trim().take(700)
+        val plain = Normalizer.normalize(ConversationalResearch.weatherResearchQuestion(question).replace(Regex("https?://\\S+"), " "), Normalizer.Form.NFC).trim().take(700)
         val query = ResearchQuery(plain, today)
         val comparison = Regex("(?i)\\b(vs\\.?|versus|compare|comparison|better than|difference between)\\b|തമ്മിൽ|താരതമ്യം").containsMatchIn(plain)
         val explanation = Regex("(?i)^(how|why|explain)\\b|എങ്ങനെ|എന്തുകൊണ്ട്").containsMatchIn(plain)

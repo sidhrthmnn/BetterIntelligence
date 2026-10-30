@@ -1,7 +1,7 @@
 LOCAL	knowledge	What is artificial intelligence?
-LOCAL	knowledge	What is the capital of France?
-LOCAL	knowledge	Who wrote Pride and Prejudice?
-LOCAL	knowledge	Who directed Inception?
+WEB_GROUNDED	lookup	What is the capital of France?
+WEB_GROUNDED	lookup	Who wrote Pride and Prejudice?
+WEB_GROUNDED	lookup	Who directed Inception?
 LOCAL	knowledge	What is photosynthesis?
 LOCAL	knowledge	What are mitochondria?
 LOCAL	knowledge	What is gravity?
