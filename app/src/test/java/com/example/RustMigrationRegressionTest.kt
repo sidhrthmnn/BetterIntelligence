@@ -2,6 +2,7 @@ package com.example
 
 import com.example.grounding.*
 import com.example.rustcore.ModelFailureKind
+import com.example.rustcore.RustModelPolicy
 import com.example.rustcore.RustIntelligence
 import com.example.rustcore.IntelligenceMode
 import org.junit.Assert.*
@@ -30,6 +31,9 @@ class RustMigrationRegressionTest {
         assertEquals(ModelFailureKind.TIMEOUT, ModelFailureKind.classify(java.net.SocketTimeoutException()))
         assertTrue(ModelFailureKind.classify(java.io.IOException()).transient)
         assertFalse(ModelFailureKind.classify(IllegalStateException("Invalid GGUF magic")).transient)
+        assertTrue(RustModelPolicy.isBackendFailure("Vulkan GPU initialization failed"))
+        assertTrue(RustModelPolicy.isBackendFailure("NPU runtime unavailable"))
+        assertFalse(RustModelPolicy.isBackendFailure("Malformed input response"))
     }
     @Test fun unavailableNativeLibraryLeavesLocalRoutingAndContextFunctional() {
         // Robolectric runs on the host, which intentionally has no Android .so.

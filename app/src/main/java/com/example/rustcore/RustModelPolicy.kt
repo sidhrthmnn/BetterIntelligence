@@ -35,6 +35,7 @@ enum class ModelFailureKind(val transient: Boolean = false) {
 }
 
 object RustModelPolicy {
+    internal fun isBackendFailure(message: String) = Regex("(?i)\\b(?:GPU|Vulkan|NPU)\\b").containsMatchIn(message)
     fun key(model: ModelEntity) = "${model.id}:${model.sha256Checksum.orEmpty().take(64)}:${model.fileSizeMb}:${model.contextLength}"
     fun reset(model: ModelEntity) { RustIntelligence.call("model_reset", JSONObject().put("id", key(model))) }
     fun loading(model: ModelEntity) { RustIntelligence.call("model_loading", JSONObject().put("id", key(model)).put("now_ms", SystemClock.elapsedRealtime())) }
@@ -46,7 +47,7 @@ object RustModelPolicy {
         if (key.isBlank() || ModelFailureKind.classify(error).neutral) return
         // Native GPU/CPU recovery owns backend errors. They do not blacklist
         // a working model merely because one accelerator failed.
-        if (Regex("(?i)GPU|Vulkan|NPU").containsMatchIn(error.message.orEmpty())) return
+        if (isBackendFailure(error.message.orEmpty())) return
         RustIntelligence.call("model_outcome", JSONObject().put("id", key).put("now_ms", SystemClock.elapsedRealtime())
             .put("success", false).put("failure", ModelFailureKind.classify(error).name).put("budget_mb", budget.coerceAtLeast(0)))
     }
