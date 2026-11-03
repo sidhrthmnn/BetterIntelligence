@@ -32,7 +32,7 @@ enum class ResearchFailure(val notice: String) {
     TIMEOUT("Web research timed out. Try a narrower question or a public HTTPS source."),
     BLOCKED("The search provider is temporarily blocking requests. Try a public HTTPS source instead.")
 }
-data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: ResearchFailure? = null, val conflicts: List<String> = emptyList())
+data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: ResearchFailure? = null, val conflicts: List<String> = emptyList(), val clarification: String = "")
 
 data class EvidenceSource(val id: Int, val title: String, val url: String, val excerpt: String,
     val retrievedAt: Long, val updatedAt: String = "", val kind: String = "ARTICLE_SUMMARY", val dateKind: String = "",
@@ -321,7 +321,9 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
                 topic.sourceMatches(source.title, source.excerpt, source.url) && FactualResearch.usable(source, question)
             } != false }
             val sources = ConversationalResearch.bindPublicPlace(question, eligible).map { it.copy(publicQuery = publicQuery) }
-            if (sources.isEmpty()) GroundingResult("SEARCH_FAILED", notice = (outcome.failure ?: ResearchFailure.INSUFFICIENT).notice, failure = outcome.failure ?: ResearchFailure.INSUFFICIENT)
+            if (sources.isEmpty() && outcome.clarification.isNotBlank() && !GroundingPolicy.containsCredential(outcome.clarification))
+                GroundingResult("NEEDS_SUBJECT", notice = outcome.clarification.take(400))
+            else if (sources.isEmpty()) GroundingResult("SEARCH_FAILED", notice = (outcome.failure ?: ResearchFailure.INSUFFICIENT).notice, failure = outcome.failure ?: ResearchFailure.INSUFFICIENT)
             else {
                 synchronized(this) {
                     if (epoch == startedEpoch && cached == null && mode != GroundingMode.ON) {

@@ -52,6 +52,25 @@ data class PublicResearchTopic(val subject: String, val type: PublicEntityType, 
 }
 
 object PublicTopics {
+    /** A near spelling from discovery is a clarification candidate only, never
+     * evidence or an automatic identity substitution. No actor/rating is inferred. */
+    fun possibleSpelling(topic: PublicResearchTopic, title: String): String? {
+        if (topic.type != PublicEntityType.FILM || topic.subject.length !in 4..60) return null
+        val before = title.substringBefore(Regex("(?i)\\b(?:movie\\s+|film\\s+)?review\\b").find(title)?.value ?: return null)
+            .trim(' ', '\'', '"', '‘', '’', '“', '”', '-', ':')
+            .replace(Regex("(?i)\\s+(?:tamil|hindi|malayalam|telugu|kannada)\\s*$"), "").trim()
+        if (before.length !in 4..60 || !Regex("[\\p{L}\\p{M}][\\p{L}\\p{M} '-]*").matches(before) || !ConversationalResearch.validPublicQuery(before)) return null
+        fun folded(value: String) = Normalizer.normalize(value.lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{M}+|[^\\p{L}]"), "")
+        val a = folded(topic.subject); val b = folded(before)
+        if (a == b || kotlin.math.abs(a.length - b.length) > 2) return null
+        var row = IntArray(b.length + 1) { it }
+        for (i in a.indices) {
+            val next = IntArray(b.length + 1); next[0] = i + 1
+            for (j in b.indices) next[j + 1] = minOf(next[j] + 1, row[j + 1] + 1, row[j] + if (a[i] == b[j]) 0 else 1)
+            row = next
+        }
+        return before.takeIf { row.last() <= 2 }
+    }
     fun normalize(text: String) = text.replace(Regex("(?i)\\b(how|what|who|when)['’]s\\b"), "$1 is")
         .replace(Regex("(?i)^\\s*(?:(?:can|could|would) you\\s+|please\\s+)+"), "").trim()
     private val language = Regex("(?i)\\b(tamil|hindi|malayalam|telugu|kannada|bengali|marathi|english|korean|japanese)\\b")
@@ -90,7 +109,14 @@ object PublicTopics {
     }
     fun resolve(text: String, history: List<ChatMessageEntity>, conversationId: Long? = null): PublicResearchTopic? {
         val chat = conversationId ?: history.lastOrNull()?.conversationId ?: 0
-        parse(text, chat)?.let { return it }
+        parse(text, chat)?.let { named ->
+            if (named.intent == PublicTopicIntent.INFORMATION && history.lastOrNull { it.conversationId == chat }?.groundingStatus == "NEEDS_SUBJECT") {
+                val prior = history.asReversed().filter { it.conversationId == chat && it.role == "user" }.take(12)
+                    .firstNotNullOfOrNull { parse(it.content, chat, it.id) }
+                if (prior != null) return named.copy(intent = prior.intent)
+            }
+            return named
+        }
         if (!followUp(text)) return null
         for (turn in history.asReversed().asSequence().filter { it.conversationId == chat && it.role == "user" }.take(12)) {
             parse(turn.content, chat, turn.id)?.let { return it.copy(intent = intent(text).takeUnless { it == PublicTopicIntent.INFORMATION } ?: it.intent) }

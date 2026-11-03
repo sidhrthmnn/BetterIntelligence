@@ -37,10 +37,12 @@ object AnswerRoutingPolicy {
         val verify = verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val privateInput = GroundingPolicy.containsCredential(q) || !explicit && Regex("(?i)\\b(?:my|our)\\s+(?:(?:current|recent|latest|private)\\s+)?(?:password|secret|key|token|chat|messages|notes|project|code|email|salary|medical)\\b").containsMatchIn(q)
         val calculation = com.example.engine.LocalCalculation.evaluate(q) != null
-        val conversational = Regex("(?i)^\\s*(?:hi|hello|hey|thanks?(?: you)?|thank you|good (?:morning|evening|night)|who are you|what can you do|how are you)[.!? ]*$").matches(q)
+        val conversational = Regex("(?i)^\\s*(?:hi|hello|hey|yes|no|ok(?:ay)?|sure|thanks?(?: you)?|thank you|good (?:morning|evening|night)|who are you|what can you do|how are you)[.!? ]*$").matches(q)
         val transform = transformation.containsMatchIn(task) && !explicitResearch.containsMatchIn(q.substringBefore('\n').substringBefore(": ")) && !Regex("https?://").containsMatchIn(q.substringBefore('\n'))
         val resolved = if (transform || calculation || privateInput || localOnly(q)) q else ConversationalResearch.question(q, history, conversationId)
         val publicTopic = PublicTopics.parse(resolved)
+        if (conversational && history.lastOrNull { conversationId == null || it.conversationId == conversationId }?.groundingStatus == "NEEDS_SUBJECT")
+            return AnswerRoute(AnswerPath.CLARIFICATION, q, "Title confirmation needs a named subject", clarification = ConversationalResearch.askSubject)
         val publicQuestion = resolved.substringBefore("(Public source topic:").trim()
         val signals = publicQuestion.substringBefore('\n').replace(Regex("(?i)^\\s*(?:(?:can|could|would) you\\s+|please\\s+)+"), "").replace(technicalContext, "task context")
         val personalContext = !explicit && Regex("(?i)\\b(?:my|our|I|we)\\b|എന്റെ|ഞാൻ|നമ്മുടെ").containsMatchIn(instruction) &&

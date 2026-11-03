@@ -76,6 +76,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val permitted: suspend (String) -> Boolean = { robots.allowed(it, transport) }
         val explicit = plan.explicitUrls
         val query = ResearchQuery(question)
+        val possibleSpellings = linkedSetOf<String>()
         var providerCalls = 0
         val discovered = mutableMapOf<String, DiscoveryResult>()
         fun bounded(provider: DiscoveryProvider): DiscoveryProvider = DiscoveryProvider { request, broad ->
@@ -107,6 +108,9 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
                 discoveryFailed = true; blocked = result.state == DiscoveryState.BLOCKED; return null
             }
+            query.publicTopic?.let { topic -> result.candidates.forEach { candidate ->
+                PublicTopics.possibleSpelling(topic, candidate.title)?.let(possibleSpellings::add)
+            } }
             return result.candidates.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) && query.candidateRelevant("${it.title} ${it.url}", it.routingHint) && !query.isPrediction(it.title) &&
                 (!FactualResearch.speculativeCasting(question, it.title) || Regex("(?i)screen[- ]?tests?|auditions?|shortlist|not (?:yet )?(?:confirmed|announced)").containsMatchIn(it.title)) }
         }
@@ -211,7 +215,9 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             readCount == 0 && discoveryFailed -> ResearchFailure.DISCOVERY_UNAVAILABLE
             readCount > 0 && failedReads.get() >= readCount -> ResearchFailure.INACCESSIBLE
             else -> ResearchFailure.INSUFFICIENT
-        }, EvidenceRanking.conflicts(selected))
+        }, EvidenceRanking.conflicts(selected), if (selected.isEmpty() && possibleSpellings.size == 1)
+            "I couldn't identify ${query.publicTopic?.subject} confidently. Search found a possible spelling, ${possibleSpellings.single()}. Please name the intended film with its language or release year, or share a public HTTPS source."
+        else "")
     }
 
     private fun domain(url: String): String = url.toHttpUrl().topPrivateDomain() ?: url.toHttpUrl().host

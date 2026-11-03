@@ -76,6 +76,20 @@ class FilmResearchTopicTest {
         assertFalse(ResearchQuery(query).candidateRelevant("iPhone 15 Pro Max review", "verified creator review rating"))
         assertFalse(ResearchQuery("find review").candidateRelevant("A verified creator review"))
     }
+    @Test fun nearbyRomanisedSpellingIsAClarificationNotVerifiedEvidence() = runBlocking {
+        val q = AnswerRoutingPolicy.decide(question).question
+        val discovery = DiscoveryProvider { _, _ -> DiscoveryResult(listOf(ResearchCandidate("https://reviews.example/baththa", "Baththa movie review")), DiscoveryState.FOUND) }
+        val research = PublicWebResearch(WebFetcher { error("A nonmatching spelling must not be read as the requested film") }, discovery)
+        val result = GroundingCoordinator(mapOf(SearchProviderId.WEB to research)).retrieve(q, true, GroundingMode.ON, SearchProviderId.WEB)
+        assertEquals("NEEDS_SUBJECT", result.status); assertTrue(result.sources.isEmpty())
+        assertTrue(result.notice.contains("Baththa")); assertTrue(result.notice.contains("possible spelling"))
+        assertFalse(ResearchQuery(q).candidateRelevant("Baththa movie review"))
+        assertNull(PublicTopics.possibleSpelling(PublicTopics.parse(q)!!, "iPhone 15 Pro Max review"))
+        val history = listOf(user(question), ChatMessageEntity(role = "assistant", content = result.notice, groundingStatus = "NEEDS_SUBJECT", conversationId = 1))
+        assertEquals(AnswerPath.CLARIFICATION, AnswerRoutingPolicy.decide("Yes", mode = GroundingMode.ON, history = history, conversationId = 1).path)
+        val confirmed = PublicTopics.resolve("Baththa Tamil film", history, 1)!!
+        assertEquals("Baththa", confirmed.subject); assertEquals(PublicTopicIntent.REVIEW, confirmed.intent)
+    }
     @Test fun filmIdentityAndReviewBodyAreRequiredAtEveryEvidenceBoundary() = runBlocking {
         val q = AnswerRoutingPolicy.decide(question).question
         val unrelated = source("iPhone 15 Pro Max review", "The iPhone 15 Pro Max has an excellent camera.")
