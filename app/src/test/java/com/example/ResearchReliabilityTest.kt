@@ -67,7 +67,8 @@ class ResearchReliabilityTest {
         for (draft in listOf("London is 99 °C [1].", "The temperature is eleven degrees.", "[99]")) {
             val answer = EvidenceAnswer.resolve(draft, listOf(s), "Weather in London?")
             assertTrue(answer.sourceExtract); assertEquals(AnswerSupport.PARTIAL, answer.support)
-            assertTrue(answer.text.contains("> Observed at 09:00 GMT. Observed temperature: 11 °C. [1]"))
+            assertTrue(answer.text.contains("Observed at 09:00 GMT. Observed temperature: 11 °C. [1]"))
+            assertFalse(answer.text.lines().any { it.startsWith(">") })
             assertFalse(answer.text.contains("99"))
         }
         assertEquals(AnswerSupport.INSUFFICIENT, EvidenceAnswer.resolve("It is sunny [99]", emptyList(), "Weather in London?").support)

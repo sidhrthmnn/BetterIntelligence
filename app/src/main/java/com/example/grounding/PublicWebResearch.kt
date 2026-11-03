@@ -70,11 +70,13 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val deadline = System.nanoTime() / 1_000_000 + researchBudgetMs.coerceIn(2_000, 26_000)
         fun remaining() = (deadline - System.nanoTime() / 1_000_000).coerceAtLeast(1)
         require(!GroundingPolicy.containsCredential(question)) { "Do not search for credentials" }
+        if (ConversationalResearch.needsSubject(question)) return@withContext ResearchOutcome(emptyList(), ResearchFailure.INSUFFICIENT)
         val plan = ResearchPlanner.plan(question)
         val transport = fetcher.session(24)
         val permitted: suspend (String) -> Boolean = { robots.allowed(it, transport) }
         val explicit = plan.explicitUrls
         val query = ResearchQuery(question)
+        val possibleSpellings = linkedSetOf<String>()
         var providerCalls = 0
         val discovered = mutableMapOf<String, DiscoveryResult>()
         fun bounded(provider: DiscoveryProvider): DiscoveryProvider = DiscoveryProvider { request, broad ->
@@ -106,7 +108,10 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
                 discoveryFailed = true; blocked = result.state == DiscoveryState.BLOCKED; return null
             }
-            return result.candidates.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) && query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) &&
+            query.publicTopic?.let { topic -> result.candidates.forEach { candidate ->
+                PublicTopics.possibleSpelling(topic, candidate.title)?.let(possibleSpellings::add)
+            } }
+            return result.candidates.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) && query.candidateRelevant("${it.title} ${it.url}", it.routingHint) && !query.isPrediction(it.title) &&
                 (!FactualResearch.speculativeCasting(question, it.title) || Regex("(?i)screen[- ]?tests?|auditions?|shortlist|not (?:yet )?(?:confirmed|announced)").containsMatchIn(it.title)) }
         }
 
@@ -121,7 +126,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 candidates += result.orEmpty()
                 if (result == null || blocked) break
             }
-            if (candidates.isEmpty() && !blocked && !discoveryFailed && searches < 3) {
+            if (candidates.isEmpty() && query.publicTopic == null && !blocked && !discoveryFailed && searches < 3) {
                 candidates += discover(plan.searches.first(), true).orEmpty()
             }
             candidates
@@ -137,6 +142,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             val selected = EvidenceRanking.select(sources, plan)
             val covered = selected.flatMap { plan.coverage(it.excerpt) }.toSet()
             return (!FactualResearch.needsAnswerFocus(question) || selected.any { FactualResearch.answerFocusScore(it.excerpt, question) >= 65 }) &&
+                (query.publicTopic?.intent != PublicTopicIntent.REVIEW || selected.any { FactualResearch.reviewKind(it.title, it.url) == "CRITIC" }) &&
                 covered.size == plan.focuses.size && (selected.size >= 2 || selected.size == 1 &&
                 (explicit.isNotEmpty() || EvidenceRanking.primaryRelevance(selected.single().url, question) > 0)) && EvidenceRanking.conflicts(selected).isEmpty()
         }
@@ -148,7 +154,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 unique.indexOfFirst { domain(it.url) == domain(candidate.url) } != unique.indexOf(candidate)
                 }.thenByDescending {
                 val combined = "${it.title} ${it.routingHint}".trim()
-                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question) + EvidenceRanking.weatherPlaceScore(it.title, question)
+                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question) + EvidenceRanking.weatherPlaceScore(it.title, question) + FactualResearch.reviewPriority(it.title, it.url, question)
             })
             .filter { domains.getOrDefault(domain(it.url), 0) < 2 }
             // Reserve reads for one focused reformulation when broad election
@@ -209,7 +215,9 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             readCount == 0 && discoveryFailed -> ResearchFailure.DISCOVERY_UNAVAILABLE
             readCount > 0 && failedReads.get() >= readCount -> ResearchFailure.INACCESSIBLE
             else -> ResearchFailure.INSUFFICIENT
-        }, EvidenceRanking.conflicts(selected))
+        }, EvidenceRanking.conflicts(selected), if (selected.isEmpty() && possibleSpellings.size == 1)
+            "I couldn't identify ${query.publicTopic?.subject} confidently. Search found a possible spelling, ${possibleSpellings.single()}. Please name the intended film with its language or release year, or share a public HTTPS source."
+        else "")
     }
 
     private fun domain(url: String): String = url.toHttpUrl().topPrivateDomain() ?: url.toHttpUrl().host

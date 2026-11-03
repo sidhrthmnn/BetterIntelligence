@@ -163,7 +163,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                                 TextButton(onClick = { viewModel.selectTab(AppTab.WEB) },
                                     modifier = Modifier.testTag("chat_grounding")) {
                                     Icon(Icons.Default.Language, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                                    Text(if (allowed) "Research: Automatic" else "Enable web research", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(if (allowed) "Research: On · Fact check" else "Enable web research", maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                             FilledIconButton(onClick = { if (generating) viewModel.cancelGeneration() else { keyboard?.hide(); viewModel.sendChatMessage(draft) } },

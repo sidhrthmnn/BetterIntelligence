@@ -1,0 +1,264 @@
+{
+  "versionCode": 27,
+  "buildRevision": "7b5e695d1ed6a106f2a91a7d31e2645bfea70fa3",
+  "device": {
+    "model": "HONOR VKP-NX9",
+    "android": 16,
+    "testPackage": "com.aistudio.betterintelligence.mobile.validation"
+  },
+  "inference": {
+    "runtime": "LiteRT-LM",
+    "model": "Gemma 4 E2B Instruct",
+    "backend": "CPU",
+    "context": 2048,
+    "threads": 4,
+    "temperature": 0
+  },
+  "measurementScope": "Synthetic test chats only; no production conversations exported. Real model generation in both scenarios. Fixture evidence is synthetic; live evidence is retrieved from public sites.",
+  "filmLive": [
+    {
+      "question": "How's batha tamil movie?",
+      "status": "NEEDS_SUBJECT",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "elapsedMs": 10311,
+      "sources": []
+    },
+    {
+      "question": "Find review",
+      "status": "NEEDS_SUBJECT",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "elapsedMs": 5750,
+      "sources": []
+    },
+    {
+      "question": "How's Maharaja Tamil movie?",
+      "status": "SOURCE_BRIEF",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "elapsedMs": 9704,
+      "sources": [
+        {
+          "title": "Maharaja movie review: Contrived screenplay overshadows the few good things in Vijay Sethupathi’s film",
+          "url": "https://indianexpress.com/article/entertainment/movie-review/maharaja-movie-review-contrived-screenplay-overshadows-the-few-good-things-in-vijay-sethupathis-film-9389245/"
+        }
+      ]
+    },
+    {
+      "question": "Who acted in it?",
+      "status": "SOURCE_EXCERPTS",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "elapsedMs": 9266,
+      "sources": [
+        {
+          "title": "Maharaja (2024 film) - Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Maharaja_(2024_film)"
+        },
+        {
+          "title": "Vijay Sethupathi's New Tamil Movie Maharaja (2024): Release Date, Cast & More",
+          "url": "https://www.comingsoon.net/indian/news/1765727-vijay-sethupathi-new-tamil-movie-maharaja-2024-release-date-cast"
+        }
+      ]
+    }
+  ],
+  "filmControlled": {
+    "provider": "deterministic fixtures, including unrelated iPhone evidence and simulated network failure",
+    "requests": [
+      "batha tamil film reviews audience reception",
+      "batha tamil film reviews audience reception",
+      "Who starred in batha tamil film?",
+      "What is the rating of batha tamil film?",
+      "Explain recursion",
+      "batha tamil film reviews audience reception"
+    ],
+    "results": [
+      {
+        "question": "How's batha tamil movie?",
+        "status": "WEB_UNAVAILABLE",
+        "state": "COMPLETE",
+        "model": "Gemma 4 E2B Instruct · LiteRT",
+        "elapsedMs": 324,
+        "sources": []
+      },
+      {
+        "question": "Find review",
+        "status": "SOURCE_EXCERPTS",
+        "state": "COMPLETE",
+        "model": "Gemma 4 E2B Instruct · LiteRT",
+        "elapsedMs": 4407,
+        "sources": [
+          {
+            "title": "Batha Tamil film review",
+            "url": "https://reviews.example/batha"
+          }
+        ]
+      },
+      {
+        "question": "Who acted in it?",
+        "status": "SOURCE_EXCERPTS",
+        "state": "COMPLETE",
+        "model": "Gemma 4 E2B Instruct · LiteRT",
+        "elapsedMs": 3682,
+        "sources": [
+          {
+            "title": "Batha Tamil film review",
+            "url": "https://reviews.example/batha"
+          }
+        ]
+      },
+      {
+        "question": "What is its rating?",
+        "status": "PARTIALLY_SUPPORTED",
+        "state": "COMPLETE",
+        "model": "Gemma 4 E2B Instruct · LiteRT",
+        "elapsedMs": 5155,
+        "sources": [
+          {
+            "title": "Batha Tamil film review",
+            "url": "https://reviews.example/batha"
+          }
+        ]
+      },
+      {
+        "question": "Find review",
+        "status": "LOCAL",
+        "state": "COMPLETE",
+        "model": "Gemma 4 E2B Instruct · LiteRT",
+        "elapsedMs": 206,
+        "sources": []
+      },
+      {
+        "question": "Explain recursion",
+        "status": "EVIDENCE_CITED",
+        "state": "COMPLETE",
+        "model": "Gemma 4 E2B Instruct · LiteRT",
+        "elapsedMs": 3772,
+        "sources": [
+          {
+            "title": "Recursion explained",
+            "url": "https://code.example/recursion"
+          }
+        ]
+      },
+      {
+        "question": "How's batha tamil movie?",
+        "status": "WEB_UNAVAILABLE",
+        "state": "COMPLETE",
+        "model": "Gemma 4 E2B Instruct · LiteRT",
+        "elapsedMs": 259,
+        "sources": []
+      },
+      {
+        "question": "How's batha tamil movie?",
+        "status": "LOCAL",
+        "state": "COMPLETE",
+        "model": "Gemma 4 E2B Instruct · LiteRT",
+        "elapsedMs": 3726,
+        "sources": []
+      }
+    ]
+  },
+  "existingResearchLive": [
+    {
+      "question": "who is the next james bond",
+      "status": "SOURCE_BRIEF",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "sources": [
+        {
+          "title": "The Crown star Josh O'Connor reacts to James Bond rumours",
+          "url": "https://www.bbc.com/news/articles/cmqxn7p1qpqno"
+        },
+        {
+          "title": "James Bond: Fourth actor joins the race to replace 007 ",
+          "url": "https://www.independent.co.uk/bulletin/culture/callum-turner-james-bond-actors-new-cast-b3076162.html"
+        }
+      ]
+    },
+    {
+      "question": "Is jubilee line status good in tfl",
+      "status": "PARTIALLY_SUPPORTED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "sources": [
+        {
+          "title": "London SitRep: live London security and disruption picture",
+          "url": "https://londonsitrep.com/status/jubilee"
+        },
+        {
+          "title": "Jubilee Line - current status, departures & statistics - tubestatus.net",
+          "url": "https://www.tfl.neilladams.co.uk/line/jubilee"
+        }
+      ]
+    },
+    {
+      "question": "Find status of the line from any websites",
+      "status": "PARTIALLY_SUPPORTED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "sources": [
+        {
+          "title": "London SitRep: live London security and disruption picture",
+          "url": "https://londonsitrep.com/status/jubilee"
+        },
+        {
+          "title": "Jubilee Line - current status, departures & statistics - tubestatus.net",
+          "url": "https://www.tfl.neilladams.co.uk/line/jubilee"
+        }
+      ]
+    },
+    {
+      "question": "Ok",
+      "status": "PARTIALLY_SUPPORTED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "sources": [
+        {
+          "title": "London weather update for November 3, 2026: light showers with a high of 12°C",
+          "url": "https://timesofindia.indiatimes.com/weather/uk/london-weather-update-for-november-3-2026-light-showers-with-a-high-of-12c/articleshow/135483320.cms"
+        },
+        {
+          "title": "Rain set to interrupt London's afternoon and evening commute",
+          "url": "https://www.london-now.co.uk/news/26693468.london-weather-today---met-office-forecasts-hours-rain/"
+        }
+      ]
+    },
+    {
+      "question": "should i wear a raincoat today in London",
+      "status": "PARTIALLY_SUPPORTED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "sources": [
+        {
+          "title": "London weather update for November 3, 2026: light showers with a high of 12°C",
+          "url": "https://timesofindia.indiatimes.com/weather/uk/london-weather-update-for-november-3-2026-light-showers-with-a-high-of-12c/articleshow/135483320.cms"
+        },
+        {
+          "title": "Rain set to interrupt London's afternoon and evening commute",
+          "url": "https://www.london-now.co.uk/news/26693468.london-weather-today---met-office-forecasts-hours-rain/"
+        }
+      ]
+    },
+    {
+      "question": "Who is acting as Doom in Avengers Doomsday?",
+      "status": "EVIDENCE_CITED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "sources": [
+        {
+          "title": "Avengers: Doomsday",
+          "url": "https://movies.disney.com/avengers-doomsday"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    "Batha retained across follow-up; live search offered Baththa only as an unverified spelling clarification.",
+    "Maharaja returned a publisher-attributed 2/5 field, with an explicit fuller-assessment limitation; cast follow-up cited the same film.",
+    "Current Bond reporting remained attributed and partial. Jubilee status, London weather with temperature and the Doom actor returned cited information. These are observations at test time, not permanent truth fixtures."
+  ],
+  "rawExcerptsCommitted": false,
+  "productionDataModified": false
+}

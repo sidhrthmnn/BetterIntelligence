@@ -57,7 +57,9 @@ object ResearchPlanner {
         }
         val subject = if (plain.any { it.code > 127 }) query.searchText else entities.joinToString(" ").ifBlank { query.searchText }
         val searches = when {
+            ConversationalResearch.needsSubject(question) -> emptyList()
             urls.isNotEmpty() -> emptyList()
+            query.publicTopic != null -> query.publicTopic.searches()
             FactualResearch.isCasting(plain) -> listOf(query.searchText)
             NewsIntent.isLiveRequest(plain) && Regex("(?i)\\belections?\\b").containsMatchIn(plain) ->
                 listOf(query.searchText, "${query.topicSearchText} election results vote count seats")
@@ -87,6 +89,7 @@ object ResearchPlanner {
     }
 
     fun entities(text: String): List<String> {
+        PublicTopics.parse(text)?.let { return listOf(it.subject) }
         val quoted = Regex("[\"“]([^\"”]{2,70})[\"”]").findAll(text).map { it.groupValues[1] }
         val compared = Regex("(?i)([\\p{L}][\\p{L}\\p{N}._-]*(?:\\s+\\d+(?:\\.\\d+)*)?)\\s+(?:vs\\.?|versus|better than)\\s+([\\p{L}][\\p{L}\\p{N}._-]*(?:\\s+\\d+(?:\\.\\d+)*)?)")
             .findAll(text).flatMap { sequenceOf(it.groupValues[1], it.groupValues[2]) }

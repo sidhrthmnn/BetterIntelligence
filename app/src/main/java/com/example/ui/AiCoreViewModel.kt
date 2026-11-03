@@ -137,7 +137,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     private var editingMessageId: Long? = null
     private val _isEditingMessage = MutableStateFlow(false)
     val isEditingMessage = _isEditingMessage.asStateFlow()
-    private val _groundingMode = MutableStateFlow(GroundingMode.AUTO)
+    private val _groundingMode = MutableStateFlow(GroundingMode.ON)
     val groundingMode = _groundingMode.asStateFlow()
     private val _chatStatus = MutableStateFlow("")
     val chatStatus = _chatStatus.asStateFlow()
@@ -340,9 +340,10 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     fun setAppearance(value: String) { viewModelScope.launch { repository.preferencesRepository.saveAppearance(value) } }
     fun setWebAllowed(value: Boolean) {
         if (!value) { grounding.clearTemporaryData(); if (chatInferenceJob == null && _isChatGenerating.value) chatPreparationJob?.cancel() }
-        viewModelScope.launch { repository.preferencesRepository.saveWebAllowed(value) }
+        viewModelScope.launch { repository.preferencesRepository.saveWebAllowed(value)
+            if (!value) withContext(Dispatchers.IO) { ResearchDiagnostics.clear(getApplication()) } }
     }
-    fun clearSearchData() { grounding.clearTemporaryData(); _userMessage.value = "Temporary search data cleared." }
+    fun clearSearchData() { grounding.clearTemporaryData(); viewModelScope.launch(Dispatchers.IO) { ResearchDiagnostics.clear(getApplication()) }; _userMessage.value = "Temporary search data cleared." }
     @androidx.annotation.VisibleForTesting
     internal fun setGroundingMode(mode: GroundingMode) {
         _groundingMode.value = mode
@@ -363,9 +364,9 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         repository.preferencesRepository.saveActiveConversation(id)
         _draft.value = if (savedState.get<Long>("draftConversation") == id) savedState.get<String>("draft") ?: conversation.draft else conversation.draft
         savedState["draft"] = _draft.value; savedState["draftConversation"] = id
-        // Automatic is the app's conversation behaviour, including old Off/On chats.
-        // The separate web permission and explicit offline instructions still apply.
-        _groundingMode.value = GroundingMode.AUTO
+        // Enabled grounding checks public factual answers before generation.
+        // Global web consent and explicit offline/private admission still apply.
+        _groundingMode.value = GroundingMode.ON
         editingMessageId = null
         _isEditingMessage.value = false
         _conversationId.value = id
@@ -378,7 +379,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     fun newConversation() { viewModelScope.launch { conversationLock.withLock {
         stopChatAndSaveDraft()
         val id = repository.createConversation()
-        repository.saveGroundingMode(id, GroundingMode.AUTO.name)
+        repository.saveGroundingMode(id, GroundingMode.ON.name)
         activateConversation(id); selectTab(AppTab.CHAT)
     } } }
     fun openConversation(id: Long) { viewModelScope.launch { conversationLock.withLock {
@@ -387,6 +388,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     fun deleteConversation(id: Long) { viewModelScope.launch { conversationLock.withLock {
         if (id == _conversationId.value) stopChatAndSaveDraft()
         repository.deleteConversation(id)
+        withContext(Dispatchers.IO) { ResearchDiagnostics.removeConversation(getApplication(), id) }
         if (id == _conversationId.value) {
             val next = repository.conversations.first().firstOrNull()?.id ?: repository.createConversation()
             activateConversation(next)
@@ -888,6 +890,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             var reachedOutputLimit = false
             var evidence = GroundingResult()
             var researchQuestion = text
+            var diagnosticRoute: AnswerRoute? = null
+            val diagnosticGeneration = ResearchDiagnostics.generation()
             var generationQuestion = text
             var recoveryNotice = ""
             var resolvedAnswer: com.example.grounding.CheckedAnswer? = null
@@ -926,7 +930,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val continuation = ConversationalResearch.continuation(text, previous)
                 val contextualText = continuation?.first ?: text
                 val effectiveMode = if (continuation?.second == true && mode != GroundingMode.OFF) GroundingMode.ON else mode
-                val route = AnswerRoutingPolicy.decide(contextualText, allowed, effectiveMode, previous)
+                val route = AnswerRoutingPolicy.decide(contextualText, allowed, effectiveMode, previous, conversationId = conversation)
+                diagnosticRoute = route
                 researchQuestion = route.question
                 if (route.path == AnswerPath.CLARIFICATION) { result = route.clarification; return@launch }
                 evidence = when {
@@ -1010,7 +1015,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     // The same local model can expose a missed freshness requirement.
                     // Do not run a second classifier for every message or retry recursively.
                     _chatStatus.value = "Checking current information"
-                    val currentRoute = AnswerRoutingPolicy.decide(ConversationalResearch.question(route.question, previous), allowed, GroundingMode.ON, previous)
+                    val currentRoute = AnswerRoutingPolicy.decide(ConversationalResearch.question(route.question, previous, conversation), allowed, GroundingMode.ON, previous, conversationId = conversation)
+                    diagnosticRoute = currentRoute
                     if (currentRoute.path == AnswerPath.CLARIFICATION) {
                         result = currentRoute.clarification
                         return@launch
@@ -1105,6 +1111,9 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                             promptTokens = promptTokens, completionTokens = outputTokens,
                             sourcesJson = evidence.json(), groundingStatus = com.example.grounding.AnswerSourceStatus.forEvidence(status, evidence.sources),
                             messageState = if (cancelled) "STOPPED" else if (error != null) "ERROR" else if (reachedOutputLimit) "LENGTH_LIMIT" else "COMPLETE"))
+                        withContext(Dispatchers.IO) { if (repository.preferencesRepository.webAllowed.first())
+                            ResearchDiagnostics.record(getApplication(), conversation, pendingId!!, text,
+                                diagnosticRoute, evidence, checked, error != null, diagnosticGeneration) }
                     } else if (error != null) { _userMessage.value = error; if (_draft.value.isBlank()) updateDraft(text) }
                     } finally { _streamingChatText.value = ""; _chatStatus.value = ""; _isChatGenerating.value = false }
                 }

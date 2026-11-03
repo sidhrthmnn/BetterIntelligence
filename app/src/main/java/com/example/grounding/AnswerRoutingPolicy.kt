@@ -27,7 +27,7 @@ object AnswerRoutingPolicy {
     fun localOnly(question: String): Boolean = Regex("(?i)\\b(?:offline|without (?:web|search)|do not search|don't search)\\b|(?:^|[.;]\\s*|\\bplease\\s+)(?:(?:work|answer|respond|stay)\\s+)?locally\\b|(?:do not|don't) (?:use|search) (?:the )?(?:web|internet)|ഓഫ്‌ലൈൻ|വെബ് വേണ്ട").containsMatchIn(question)
 
     fun decide(question: String, allowed: Boolean = true, mode: GroundingMode = GroundingMode.AUTO,
-        history: List<ChatMessageEntity> = emptyList(), today: LocalDate = LocalDate.now(), now: Long = System.currentTimeMillis()): AnswerRoute {
+        history: List<ChatMessageEntity> = emptyList(), today: LocalDate = LocalDate.now(), now: Long = System.currentTimeMillis(), conversationId: Long? = null): AnswerRoute {
         val q = question.trim()
         val instruction = q.substringBefore('\n')
         // Polite writing requests remain local even when their supplied subject
@@ -37,8 +37,12 @@ object AnswerRoutingPolicy {
         val verify = verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val privateInput = GroundingPolicy.containsCredential(q) || !explicit && Regex("(?i)\\b(?:my|our)\\s+(?:(?:current|recent|latest|private)\\s+)?(?:password|secret|key|token|chat|messages|notes|project|code|email|salary|medical)\\b").containsMatchIn(q)
         val calculation = com.example.engine.LocalCalculation.evaluate(q) != null
+        val conversational = Regex("(?i)^\\s*(?:hi|hello|hey|yes|no|ok(?:ay)?|sure|thanks?(?: you)?|thank you|good (?:morning|evening|night)|who are you|what can you do|how are you)[.!? ]*$").matches(q)
         val transform = transformation.containsMatchIn(task) && !explicitResearch.containsMatchIn(q.substringBefore('\n').substringBefore(": ")) && !Regex("https?://").containsMatchIn(q.substringBefore('\n'))
-        val resolved = if (transform || calculation || privateInput || localOnly(q)) q else ConversationalResearch.question(q, history)
+        val resolved = if (transform || calculation || privateInput || localOnly(q)) q else ConversationalResearch.question(q, history, conversationId)
+        val publicTopic = PublicTopics.parse(resolved)
+        if (conversational && history.lastOrNull { conversationId == null || it.conversationId == conversationId }?.groundingStatus == "NEEDS_SUBJECT")
+            return AnswerRoute(AnswerPath.CLARIFICATION, q, "Title confirmation needs a named subject", clarification = ConversationalResearch.askSubject)
         val publicQuestion = resolved.substringBefore("(Public source topic:").trim()
         val signals = publicQuestion.substringBefore('\n').replace(Regex("(?i)^\\s*(?:(?:can|could|would) you\\s+|please\\s+)+"), "").replace(technicalContext, "task context")
         val personalContext = !explicit && Regex("(?i)\\b(?:my|our|I|we)\\b|എന്റെ|ഞാൻ|നമ്മുടെ").containsMatchIn(instruction) &&
@@ -58,9 +62,9 @@ object AnswerRoutingPolicy {
         val localPart = if (live && !verify) mixedLocalPart(q) else null
         val publicFacetFollowUp = followUp.containsMatchIn(q) && resolved.contains("(Public source topic:") &&
             Regex("(?i)\\b(?:prices?|costs?|temperature|forecast|actors?|cast|releas\\w*|elections?|results?|votes?|seats?|counts?|compatibility|supported)\\b").containsMatchIn(q)
-        val wantsWeb = explicit || live || weatherRequest || publicLookup || publicFacetFollowUp || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
-        val canSearch = allowed && mode != GroundingMode.OFF && !localOnly(q) && !privateInput && !personalContext && (!transform || mode == GroundingMode.ON) && !calculation
-        if (history.none { it.role == "user" } && ConversationalResearch.needsSubject(q))
+        val wantsWeb = explicit || publicTopic != null || live || weatherRequest || publicLookup || publicFacetFollowUp || ConversationalResearch.isRecheck(q) && resolved.contains("(Public source topic:") || mode == GroundingMode.ON
+        val canSearch = allowed && mode != GroundingMode.OFF && !localOnly(q) && !privateInput && !personalContext && (!transform || explicit) && !calculation && !conversational
+        if (PublicTopics.missingSubject(resolved) || history.none { it.role == "user" } && ConversationalResearch.needsSubject(q))
             return AnswerRoute(AnswerPath.CLARIFICATION, q, "Missing subject", clarification = ConversationalResearch.askSubject)
         val rustSearch = com.example.rustcore.RustIntelligence.queryRoute(canSearch, wantsWeb, privateInput,
             localOnly(q), calculation, transform, mode == GroundingMode.ON)
@@ -75,8 +79,8 @@ object AnswerRoutingPolicy {
                 else -> ""
             }
             if (clarification.isNotBlank()) return AnswerRoute(AnswerPath.CLARIFICATION, resolved, "Missing public subject or place", live, verify, clarification)
-            val reuse = if (!explicit && !current && followUp.containsMatchIn(q)) reusableEvidence(resolved, history, now) else emptyList()
-            return AnswerRoute(AnswerPath.WEB_GROUNDED, resolved, if (explicit) "Requested external evidence" else "Changing facts or runtime compatibility", live, verify, localPart = localPart, reusedSources = reuse, researchAllowed = true)
+            val reuse = if (mode != GroundingMode.ON && !explicit && !current && followUp.containsMatchIn(q)) reusableEvidence(resolved, history, now) else emptyList()
+            return AnswerRoute(AnswerPath.WEB_GROUNDED, resolved, if (explicit) "Requested external evidence" else if (publicTopic != null) "Public ${publicTopic.type.name.lowercase()} ${publicTopic.intent.name.lowercase()} lookup" else "Changing facts or runtime compatibility", live, verify, localPart = localPart, reusedSources = reuse, researchAllowed = true)
         }
         return AnswerRoute(AnswerPath.LOCAL, q, when {
             privateInput -> "Possible credentials stay on device"
@@ -109,6 +113,12 @@ object AnswerRoutingPolicy {
         if (route.webDisabled && (route.requiresLive || route.requiresVerification)) return AnswerRecovery(route.localPart,
             if (ml) "വെബ് ഗവേഷണം ഓഫാണ്. ക്രമീകരണങ്ങളിൽ അത് പ്രവർത്തനക്ഷമമാക്കാം." else
                 "Web research is off. Enable it in Web & grounding to check current sources.", "WEB_DISABLED")
+        PublicTopics.parse(route.question)?.let { topic ->
+            val reason = if (failure == null || failure == ResearchFailure.INSUFFICIENT)
+                "I couldn't verify matching sources for ${topic.identity}. Check the title, language or release year, or share a public HTTPS source."
+            else "I couldn't research ${topic.identity} right now. ${failure.notice}"
+            return AnswerRecovery(null, reason, "WEB_UNAVAILABLE")
+        }
         val liveNotice = if (ml) "തത്സമയ വിവരങ്ങൾ ഇപ്പോൾ പരിശോധിക്കാൻ കഴിഞ്ഞില്ല." else if (ConversationalResearch.isWeather(route.question))
             "I couldn't check the live weather or temperature right now." else "I couldn't check the current information right now."
         if (route.requiresVerification) return AnswerRecovery(null, if (ml) "ആവശ്യപ്പെട്ട സ്രോതസ്സുകൾ പരിശോധിച്ച് ഉറപ്പിക്കാൻ കഴിഞ്ഞില്ല." else
@@ -125,6 +135,7 @@ object AnswerRoutingPolicy {
         val age = if (ConversationalResearch.isWeather(question)) 60_000L else 300_000L
         return GroundingResult.sources(last.sourcesJson).filter { now - it.retrievedAt in 0..age &&
             !SourceBrief.predictionMarket(it.title, it.url, question) &&
-            FactualResearch.usable(it, question) && ResearchQuery(question).score(it.title + " " + it.excerpt) > 0 }
+            FactualResearch.usable(it, question) && ResearchQuery(question).relevant(it.title + " " + it.excerpt) &&
+            ResearchQuery(question).score(it.title + " " + it.excerpt) > 0 }
     }
 }
