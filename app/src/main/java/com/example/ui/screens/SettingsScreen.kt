@@ -130,8 +130,8 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
             Text("Research sends focused public questions to Exa's free search service to find relevant links. BI reads the publisher pages and writes the answer using your on-device model. Exa and visited sites receive your question or requested URL and connection information, including your IP address. Saved memories and connected-app requests are not sent. A short reply such as a city or OK can complete the current public task using your own question and location from this chat. Locations guessed by the model are not used. Do not include secrets or sensitive information in a web-enabled question.")
         }
         item {
-            Text("Always automatic", style = MaterialTheme.typography.titleMedium)
-            Text("Public fact lookups, service status, weather decisions, casting, reviews, prices, releases and explicit source requests trigger research. Other public questions can make one research attempt if the local model cannot answer. Explanations, writing, calculations and personal conversation stay local. When a full answer is unconfirmed, BI can briefly show what relevant sources say, with citations and an incomplete-answer label. The switch above controls web permission.", style = MaterialTheme.typography.bodySmall)
+            Text("Fact check public answers", style = MaterialTheme.typography.titleMedium)
+            Text("When enabled, BI searches and reads public sources before answering factual questions, including explanations, reviews, ratings, casting, prices and service status. Short follow-ups keep the subject you named in this chat. Writing-only tasks, calculations, private input and explicit offline requests stay on device. Missing subjects are clarified. Incomplete evidence gets a short attributed explanation, without inventing a complete answer.", style = MaterialTheme.typography.bodySmall)
             Text("No API key or account is required. Exa's free service has usage limits and may be unavailable. BI uses no paid fallback or other search engine. You can also give BI a public HTTPS source to read directly.", style = MaterialTheme.typography.bodySmall)
         }
         item {
@@ -140,7 +140,7 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
             Text("Search can be blocked or unavailable. Pages requiring sign-in, scripts, CAPTCHA or unsupported file formats are skipped. Sources can be incomplete or wrong; citations show where text came from, not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
         }
         item {
-            Text("Questions and retrieved page text are excluded from app logs. Temporary public evidence is held in memory for up to 15 minutes; weather expires after one minute and changing facts after five. Sources attached to an answer stay with that conversation until you delete it.", style = MaterialTheme.typography.bodySmall)
+            Text("Questions and retrieved text are excluded from system logs. To diagnose research errors, BI keeps up to 48 recent public questions, resolved search topics and outcomes in a local temporary record. It contains no answer text or private history. Clearing search data removes it; deleting a chat removes its records. Temporary evidence expires within 15 minutes, or sooner for live information. Sources attached to an answer stay with that chat until you delete it.", style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
         }
     }

@@ -70,6 +70,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val deadline = System.nanoTime() / 1_000_000 + researchBudgetMs.coerceIn(2_000, 26_000)
         fun remaining() = (deadline - System.nanoTime() / 1_000_000).coerceAtLeast(1)
         require(!GroundingPolicy.containsCredential(question)) { "Do not search for credentials" }
+        if (ConversationalResearch.needsSubject(question)) return@withContext ResearchOutcome(emptyList(), ResearchFailure.INSUFFICIENT)
         val plan = ResearchPlanner.plan(question)
         val transport = fetcher.session(24)
         val permitted: suspend (String) -> Boolean = { robots.allowed(it, transport) }
@@ -106,7 +107,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
                 discoveryFailed = true; blocked = result.state == DiscoveryState.BLOCKED; return null
             }
-            return result.candidates.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) && query.candidateRelevant(it.title, it.routingHint) && !query.isPrediction(it.title) &&
+            return result.candidates.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) && query.candidateRelevant("${it.title} ${it.url}", it.routingHint) && !query.isPrediction(it.title) &&
                 (!FactualResearch.speculativeCasting(question, it.title) || Regex("(?i)screen[- ]?tests?|auditions?|shortlist|not (?:yet )?(?:confirmed|announced)").containsMatchIn(it.title)) }
         }
 
@@ -121,7 +122,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 candidates += result.orEmpty()
                 if (result == null || blocked) break
             }
-            if (candidates.isEmpty() && !blocked && !discoveryFailed && searches < 3) {
+            if (candidates.isEmpty() && query.publicTopic == null && !blocked && !discoveryFailed && searches < 3) {
                 candidates += discover(plan.searches.first(), true).orEmpty()
             }
             candidates

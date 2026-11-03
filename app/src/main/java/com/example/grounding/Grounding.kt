@@ -308,7 +308,7 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
         val startedEpoch = synchronized(this) { epoch }
         val recheck = ConversationalResearch.isRecheck(question) || Regex("(?i)\\b(?:check|search|verify) again\\b").containsMatchIn(question)
         val lifetime = if (ConversationalResearch.isWeather(question)) 60_000L else if (AnswerRoutingPolicy.decide(question).requiresLive) 300_000L else 900_000L
-        val cached = synchronized(this) { cache[key]?.takeIf { !recheck && now() - it.first in 0 until lifetime }?.second }
+        val cached = synchronized(this) { cache[key]?.takeIf { mode != GroundingMode.ON && !recheck && now() - it.first in 0 until lifetime }?.second }
         return try {
             val outcome = if (cached != null) ResearchOutcome(cached) else kotlinx.coroutines.withTimeoutOrNull(30_000) {
                 checkNotNull(providers[provider]).research(question, progress)
@@ -317,11 +317,14 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
             // Follow-ups can reuse it without sending unsent chat/history.
             val publicQuery = if (ResearchPlanner.plan(question).explicitUrls.isNotEmpty()) "" else
                 ResearchQuery(question).topicSearchText.takeIf(ConversationalResearch::validPublicQuery).orEmpty()
-            val sources = ConversationalResearch.bindPublicPlace(question, outcome.sources).map { it.copy(publicQuery = publicQuery) }
+            val eligible = outcome.sources.filter { source -> PublicTopics.parse(question)?.let { topic ->
+                topic.sourceMatches(source.title, source.excerpt, source.url) && FactualResearch.usable(source, question)
+            } != false }
+            val sources = ConversationalResearch.bindPublicPlace(question, eligible).map { it.copy(publicQuery = publicQuery) }
             if (sources.isEmpty()) GroundingResult("SEARCH_FAILED", notice = (outcome.failure ?: ResearchFailure.INSUFFICIENT).notice, failure = outcome.failure ?: ResearchFailure.INSUFFICIENT)
             else {
                 synchronized(this) {
-                    if (epoch == startedEpoch && cached == null) {
+                    if (epoch == startedEpoch && cached == null && mode != GroundingMode.ON) {
                         if (cache.size >= 8) cache.remove(cache.keys.first())
                         cache[key] = now() to sources
                     }

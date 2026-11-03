@@ -2,14 +2,14 @@ package com.example.grounding
 
 /** Request shape and evidence requirements, never an embedded answer database. */
 object FactualResearch {
-    fun isMovieReview(question: String) = Regex("(?i)\\b(?:reviews?|how (?:is|was) .{1,70}(?:movie|film))\\b").containsMatchIn(question)
+    fun isMovieReview(question: String) = Regex("(?i)\\b(?:reviews?|ratings?|audience reception|how (?:is|was) .{1,70}(?:movie|film))\\b").containsMatchIn(PublicTopics.normalize(question))
 
     /** Rank the requested answer facet in actual body text, never in a headline. */
     fun answerFocusScore(text: String, question: String): Int {
         val body = text.split(Regex("\\n\\s*\\n")).joinToString(" ") { if ('\n' in it) it.substringAfter('\n') else it }
         if (isMovieReview(question)) return when {
-            Regex("(?i)\\b(?:\\d(?:\\.\\d)?\\s*(?:/\\s*5|stars?)|rat(?:ed|ing)\\s*:?\\s*\\d)").containsMatchIn(body) -> 100
-            Regex("(?i)\\b(?:verdict|screenplay|uneven|prais\\w*|criticis\\w*|criticiz\\w*|disappoint\\w*|rousing|compelling)\\b").containsMatchIn(body) -> 65
+            Regex("(?i)\\b(?:\\d(?:\\.\\d)?\\s*(?:/\\s*(?:5|10|100)\\b|stars?)|rat(?:ed|ing)\\s*:?\\s*\\d)").containsMatchIn(body) -> 100
+            Regex("(?i)\\b(?:verdict|uneven|prais\\w*|criticis\\w*|criticiz\\w*|disappoint\\w*|rousing|compelling|gripping|engaging|entertaining|boring|tedious|predictable|underwhelming|outstanding)\\b").containsMatchIn(body) -> 65
             else -> 0
         }
         if (NewsIntent.isLiveRequest(question) && Regex("(?i)\\belections?\\b").containsMatchIn(question)) return when {
@@ -24,7 +24,7 @@ object FactualResearch {
     private val casting = Regex("(?i)\\b(?:who(?:['’]s|\\s+(?:is|was|will be|has been|was announced as))?\\s+(?:(?:currently|now|actually|really)\\s+)?(?:(?:going to|set to)\\s+)?(?:play(?:s|ed|ing)?|portray(?:s|ed|ing)?|voic(?:e|es|ed|ing)|cast)|(?:which|what)\\s+(?:actor|actress)|(?:actor|actress)\\s+(?:playing|portraying)|who\\s+(?:is|was)\\s+.*\\bcast\\s+as)\\b")
     private val speculative = Regex("(?i)\\b(?:fan theories|fan theory|theory|theories|rumou?rs?|speculat(?:ion|ive)|unconfirmed|fan[- ]?casting|predictions?|might|could|allegedly|reportedly)\\b")
     fun isCasting(question: String) = casting.containsMatchIn(question) ||
-        Regex("(?i)\\bwho (?:is |was )?(?:acting|acts?) as\\b").containsMatchIn(question)
+        Regex("(?i)\\bwho (?:is |was )?(?:acting|acts?) as\\b|\\bwho (?:acted|starred|stars) in\\b").containsMatchIn(question)
     fun speculationRequested(question: String) = Regex("(?i)\\b(?:theories|theory|rumou?rs?|speculation|fan[- ]?casting)\\b").containsMatchIn(question)
     fun speculativeCasting(question: String, text: String) = isCasting(question) && !speculationRequested(question) && speculative.containsMatchIn(text)
     fun definitionTopic(question: String): String? {
@@ -50,7 +50,8 @@ object FactualResearch {
         .matchEntire(question)?.groupValues?.get(1)?.trim(' ', '.', '?', '!')
     fun incomplete(text: String) = Regex("(?i)\\b(?:because|such as|as follows|the following)\\s*:?$|:\\s*$").containsMatchIn(text.trim())
     fun castingRelation(text: String) = Regex("(?i)\\b(?:play(?:s|ed|ing)?|portray(?:s|ed|ing)?|voic(?:e|es|ed|ing)|cast as|role (?:as|of)|star(?:s|ring)? as)\\b").containsMatchIn(text) ||
-        Regex("\\b[A-Z][\\p{L}.'’-]+(?:\\s+[A-Z][\\p{L}.'’-]+){0,4}\\s+as\\s+[A-Z][\\p{L}.'’-]+").containsMatchIn(text)
+        Regex("\\b[A-Z][\\p{L}.'’-]+(?:\\s+[A-Z][\\p{L}.'’-]+){0,4}\\s+as\\s+[A-Z][\\p{L}.'’-]+").containsMatchIn(text) ||
+        Regex("(?i)\\b(?:stars|starring|cast includes|features)\\s+[\\p{L}]").containsMatchIn(text)
 
     fun headlineOnly(text: String, title: String): Boolean {
         val clean = text.trim()
@@ -68,6 +69,9 @@ object FactualResearch {
         return title.isNotBlank() && words.isNotEmpty() && (words - ResearchQuery.words(title)).isEmpty()
     }
     fun usable(source: EvidenceSource, question: String): Boolean = !headlineOnly(source.excerpt, source.title) &&
+        PublicTopics.parse(question)?.let { topic -> topic.sourceMatches(source.title, source.excerpt, source.url) &&
+            (topic.intent !in setOf(PublicTopicIntent.REVIEW, PublicTopicIntent.RATING) || answerFocusScore(source.excerpt, question) >=
+                if (topic.intent == PublicTopicIntent.RATING) 100 else 65) } != false &&
         PublicQuestionIntent.serviceEvidence(source, question) &&
         (capitalPlace(question) == null || !Regex("(?i)\\bcapital punishment\\b").containsMatchIn(source.title)) &&
         !speculativeCasting(question, source.title) && (!isCasting(question) || source.excerpt.split(Regex("\\n\\s*\\n")).any { block ->

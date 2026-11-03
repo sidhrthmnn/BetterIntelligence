@@ -28,6 +28,8 @@ object SourceBrief {
         val selected = sources.filter { source ->
             val words = ResearchQuery.words(source.title + " " + source.excerpt + " " + source.url)
             source.kind == "WEB_PAGE" && GroundingPolicy.publicHttpsUrl(source.url) &&
+                PublicTopics.parse(question)?.sourceMatches(source.title, source.excerpt, source.url) != false &&
+                (PublicTopics.parse(question)?.intent !in setOf(PublicTopicIntent.REVIEW, PublicTopicIntent.RATING) || FactualResearch.usable(source, question)) &&
                 !predictionMarket(source.title, source.url, question) &&
                 !Regex("(?i)\\b(?:fan theor(?:y|ies)|fan[- ]?casting)\\b").containsMatchIn(source.title) &&
                 !FactualResearch.headlineOnly(source.excerpt, source.title) &&
@@ -54,13 +56,8 @@ object SourceBrief {
         }.distinctBy { EvidenceRanking.publisher(it.first.url) }.take(2)
         if (selected.isEmpty()) return null
         val conflict = EvidenceRanking.conflicts(selected.map { it.first }).isNotEmpty()
-        val lead = if (conflict) "The pages give different reported values, so I couldn't establish one answer. What each source says:"
-            else "I found relevant sources. Here is what they say:"
-        val quotes = selected.joinToString("\n\n") { (source, text) ->
-            val passage = if (text.startsWith(source.title)) text else source.title + "\n" + text
-            passage.lines().joinToString("\n") { "> $it" } + " [${source.id}]"
-        }
-        return CheckedAnswer("$lead\n\n$quotes\n\nThis is a partial answer; the full conclusion remains unconfirmed.",
+        val summary = ReadableSourceSummary.build(selected, question, conflict) ?: return null
+        return CheckedAnswer(summary,
             AnswerSupport.PARTIAL, claims, sourceExtract = true, sourceBrief = true)
     }
 }

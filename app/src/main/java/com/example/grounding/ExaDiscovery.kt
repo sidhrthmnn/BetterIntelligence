@@ -12,6 +12,7 @@ class ExaDiscovery(private val fetcher: WebFetcher, private val allowed: suspend
         const val providerName = "Exa"
         fun searchText(query: ResearchQuery, broad: Boolean = false): String = when {
             broad -> query.topicSearchText
+            query.publicTopic != null -> query.searchText
             query.searchText != ResearchQuery(query.question, query.today).searchText -> query.searchText
             else -> query.question
         }.trim().take(400)

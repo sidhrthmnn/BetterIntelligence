@@ -9,6 +9,8 @@ import kotlin.math.ln
 
 /** Small deterministic query plan: no second model, private history or credentials. */
 class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now(), searchOverride: String? = null) {
+    val publicTopic = PublicTopics.parse(question)
+    private val subjectless = ConversationalResearch.needsSubject(question)
     companion object {
         private val stop = ("a an and are as at be been by can could did do does for from give has have how " +
             "i in into is it me of on or please say should tell than that the their there these they this to " +
@@ -105,13 +107,13 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
     private fun has(phrase: String) = Regex("(?<![\\p{L}\\p{M}])${Regex.escape(phrase)}(?![\\p{L}\\p{M}])").containsMatchIn(lower)
     val relative = NewsIntent.isLiveRequest(question) || listOf("latest", "recent", "recently", "current", "currently", "today", "yesterday", "this week", "this month", "now", "who won", "ഇന്ന്", "ഇപ്പോൾ").any(::has)
     // Provider-neutral original terms: no generated actor/cast synonyms or inferred year.
-    val topicSearchText = (expandedSearchTerms + years).distinct().joinToString(" ").take(400)
+    val topicSearchText = if (subjectless) "" else (expandedSearchTerms + years).distinct().joinToString(" ").take(400)
     // A maintained office-holder page may have been published years ago.
     // Ask for the incumbent, not exclusively for news published this month.
     private val currentRoleLookup = (isCurrentIncumbentQuery(userPlain) || FactualResearch.isCasting(userPlain)) &&
         !Regex("(?i)\\b(news|announced|appointed|became|election|elected|resigned)\\b").containsMatchIn(userPlain)
     val useNews = relative || years.any { it.toInt() >= today.year - 1 }
-    val searchText = searchOverride ?: (expandedSearchTerms + years +
+    val searchText = if (subjectless) "" else searchOverride ?: (expandedSearchTerms + years +
         (if (FactualResearch.isCasting(userPlain)) listOf("actor", "cast") else emptyList()) +
         if (relative && years.isEmpty() && !currentRoleLookup) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
     val earliest: LocalDate? = when {
@@ -132,17 +134,22 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         else -> null
     }
     fun relevant(text: String): Boolean {
+        publicTopic?.let { return it.subjectMatches(text) }
         val found = words(text)
         if (years.isNotEmpty() && !found.containsAll(years)) return false
         val matches = terms.count { it in found }
         return terms.isEmpty() || matches >= if (terms.size <= 3) terms.size else kotlin.math.ceil(terms.size * .65).toInt()
     }
     fun candidateRelevant(text: String, routingHint: String = ""): Boolean {
+        // Generic task words can never substitute for a named identity. Search
+        // highlights are ranking hints, not permission to introduce a subject.
+        publicTopic?.let { return it.subjectMatches(text) }
         val titleWords = words(text)
         val combined = if (routingHint.isBlank()) titleWords else words("$text $routingHint")
         val reportedYears = titleWords.filter { it.matches(Regex("(?:19|20)\\d{2}")) }.toSet()
         if (years.isNotEmpty() && reportedYears.isNotEmpty() && !reportedYears.containsAll(years)) return false
-        return terms.isEmpty() || terms.any { it in combined }
+        val anchors = terms - words("review reviews rating rated verified creator sources information more audience reception film movie product")
+        return anchors.isNotEmpty() && anchors.any { it in combined }
     }
     fun currentEnough(date: String): Boolean {
         val parsed = ResearchQuery.date(date) ?: return earliest == null

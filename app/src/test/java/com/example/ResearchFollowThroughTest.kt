@@ -60,7 +60,7 @@ class ResearchFollowThroughTest {
         assertTrue(result.text, result.sourceBrief); assertEquals(AnswerSupport.PARTIAL, result.support)
         assertTrue(result.text.contains("screen test")); assertTrue(result.text.contains("not yet been confirmed"))
         assertFalse(result.text.contains("58%")); assertFalse(result.text.contains("Kalshi"))
-        assertEquals("What sources say · Answer remains incomplete", AnswerSourceStatus.label("SOURCE_BRIEF"))
+        assertEquals("Web sources · Partial answer", AnswerSourceStatus.label("SOURCE_BRIEF"))
     }
     @Test fun partialComparisonsCanShowEachReportedValueWithoutInventingAWinner() {
         val a = page("Orion memory", "Orion requires 4 GB of shared memory only on the tested device.")

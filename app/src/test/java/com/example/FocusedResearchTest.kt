@@ -23,7 +23,7 @@ class FocusedResearchTest {
     }
     @Test fun autoModeDoesNotResearchCreativeRequestsAndWeatherNeedsExplicitCity() = runBlocking {
         assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.AUTO, "Write a poem about today"))
-        assertTrue(GroundingPolicy.shouldSearch(true, GroundingMode.ON, "Write a poem about today"))
+        assertFalse(GroundingPolicy.shouldSearch(true, GroundingMode.ON, "Write a poem about today"))
         assertEquals("London, UK", ConversationalResearch.weatherCity("Weather in London, UK today?"))
         var calls = 0
         val coordinator = GroundingCoordinator(mapOf(SearchProviderId.WEB to object : SearchProvider {

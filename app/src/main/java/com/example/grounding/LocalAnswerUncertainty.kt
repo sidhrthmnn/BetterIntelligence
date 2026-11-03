@@ -17,7 +17,8 @@ object LocalAnswerUncertainty {
             "|I (?:have no|lack) (?:access|way|real-time|live|current)" +
             "|(?:you (?:will|would|'ll|'d)? need to|please) (?:check|look up|consult|search)" +
             "|my (?:knowledge|information).{0,50}(?:limited|outdated|cutoff)|I lack)"
-        return Regex("(?is)^$opener$admission\\b").containsMatchIn(text)
+        return Regex("(?is)^$opener$admission\\b").containsMatchIn(text) ||
+            Regex("(?is)(?:^|[.!?]\\s+)(?:I(?:'m| am|’m) not familiar with|I (?:recommend|suggest|would suggest) (?:you )?(?:check(?:ing)?|search(?:ing)?|look(?:ing)?)|(?:you can|you could|please) (?:check|search|look up).{0,60}(?:IMDb|reviews?|online|websites?|internet))\\b").containsMatchIn(text.substringBefore("\n\n"))
     }
     fun visible(text: String): String = if (marker.startsWith(text.trimStart())) "" else text.replace(marker, "").trimStart()
 }

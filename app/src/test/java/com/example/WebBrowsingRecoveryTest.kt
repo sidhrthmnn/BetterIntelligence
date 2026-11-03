@@ -95,7 +95,7 @@ class WebBrowsingRecoveryTest {
     }
 
     @Test fun followupsReuseOnlyAnAlreadyPublicTopicFromTheSameSession() {
-        val source = EvidenceSource(1, "Pret menu", "https://publisher.example/pret", "Menu text", 1,
+        val source = EvidenceSource(1, "Pret menu", "https://publisher.example/pret", "Pret A Manger latte price in the UK is £4.", 1,
             discoveryProvider = "Exa", publicQuery = "price latte pret manger")
         val history = listOf(ChatMessageEntity(role = "user", content = "Private unsent project note", conversationId = 9),
             ChatMessageEntity(role = "assistant", content = "Background", conversationId = 9, groundingStatus = "SOURCE_EXCERPTS", sourcesJson = GroundingResult(sources = listOf(source)).json()))
@@ -108,7 +108,7 @@ class WebBrowsingRecoveryTest {
         assertEquals(source, GroundingResult.sources(GroundingResult(sources = listOf(source)).json()).single())
         assertEquals("In uk what's the price", ConversationalResearch.question("In uk what's the price", emptyList()))
         assertFalse(ConversationalResearch.validPublicQuery("api_key: private-value"))
-        assertEquals("How is Jailer 2 movie?", ExaDiscovery.searchText(ResearchQuery("How is Jailer 2 movie?")))
+        assertTrue(ExaDiscovery.searchText(ResearchQuery("How is Jailer 2 movie?")).contains("jailer 2", true))
     }
 
     @Test fun slowLaterPageCannotDiscardAlreadyReadEvidence() = runBlocking {
@@ -231,7 +231,8 @@ class WebBrowsingRecoveryTest {
         val q = "How is the election going on in Israel?"
         val resolved = EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), q)
         assertTrue(resolved.text, resolved.sourceExtract)
-        assertTrue(resolved.text.contains(source.title)); assertTrue(resolved.text.contains("53 seats"))
+        assertTrue(resolved.text.contains("Israel")); assertTrue(resolved.text.contains("53 seats"))
+        assertFalse(resolved.text.contains("From the retrieved pages"))
         assertTrue(EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), q.lowercase()).sourceExtract)
         assertFalse(EvidenceAnswer.resolve("An unsupported uncited claim.", listOf(source), "How is the election going on in France?").sourceExtract)
         assertTrue(FactualResearch.headlineOnly("Live Israel election › Updates › Political parties discuss the next step", "Israel election"))

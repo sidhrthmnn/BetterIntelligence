@@ -2,8 +2,8 @@ package com.example.grounding
 
 import com.example.data.ChatMessageEntity
 
-/** Only a public source title from this conversation can expand a follow-up.
- * Stored private user/assistant messages are never copied into a search query.
+/** Public identities are resolved from the user's topic in this conversation.
+ * Only minimal subject metadata, never raw history, becomes a public query.
  */
 object ConversationalResearch {
     fun validPublicQuery(value: String): Boolean = value.length in 2..400 &&
@@ -31,14 +31,17 @@ object ConversationalResearch {
         "(?i)^\\s*(?:please\\s+)?(?:check|search|verify|try|look|are\\s+you\\s+sure|that'?s\\s+wrong|wrong(?:\\s+info)?)(?:\\s+(?:it|that|this|again|now|once\\s+more|properly|carefully|the\\s+web|online))*\\s*[.?!]*$"
     )
     fun isRecheck(question: String): Boolean = recheckPattern.matches(question.trim())
-    fun needsSubject(question: String): Boolean = Regex("(?i)^\\s*(?:who (?:owns|developed|made)|whose is|what is the owner of)\\s+(?:it|this|that)\\s*[?!.]*$").matches(question)
-    const val askSubject = "Which product, organisation or item do you mean? Please name it so I can check the right subject."
+    fun needsSubject(question: String): Boolean = PublicTopics.missingSubject(question) || Regex("(?i)^\\s*(?:who (?:owns|developed|made)|whose is|what is the owner of)\\s+(?:it|this|that)\\s*[?!.]*$").matches(question)
+    const val askSubject = "Which film, product or subject do you mean? Please name it so I can check the right sources."
     const val askPlace = "Which city or place do you mean? I don't have access to your location."
     const val askNewsTopic = "Which topic, country or event would you like news about?"
     fun needsNewsTopic(question: String) = Regex("(?i)^\\s*(?:(?:please |give me |show me |tell me |the |latest |some |a |an )*)(?:news|headlines)(?: updates?| today| now)?[?!.]*\\s*$").matches(question)
     fun needsPlace(question: String) = Regex("(?i)\\bthere\\b").containsMatchIn(question) &&
         Regex("(?i)\\b(mayor|governor)\\b").containsMatchIn(question)
-    fun question(question: String, history: List<ChatMessageEntity>): String {
+    fun question(question: String, history: List<ChatMessageEntity>, conversationId: Long? = null): String {
+        PublicTopics.resolve(question, history, conversationId)?.let { return it.question() }
+        // A generic review command cannot inherit a publisher's unrelated title.
+        if (PublicTopics.missingSubject(question)) return question
         // A retry belongs to the active task. Do not revive a web topic from
         // before a more recent local answer (for example after writing a poem).
         if (isRecheck(question) && GroundingResult.sources(history.lastOrNull { it.role == "assistant" }?.sourcesJson ?: "[]").isEmpty()) return question
