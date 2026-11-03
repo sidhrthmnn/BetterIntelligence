@@ -57,6 +57,8 @@ Version 2.0 adds the optional `model_loading` boolean. Startup restoration and m
 
 New status Bundles advertise `supports_model_preparation=true`. Only after a user requests Polish, an approved client can call `ContentResolver.call(uri, "prepare_polish", null, null)`. This sends no editor text. BI checks current RAM, uses the configured Primary/Secondary policy and shares one preparation job across clients. It does not download weights. A load failure is surfaced rather than silently claiming that the fallback was activated. A fitting already-loaded fallback is reused. The admitted `effective_context` is passed to actual Binder generation.
 
+Start preparation once, then poll `status` while its activity is `CHECKING_MEMORY` or `LOADING_MODEL`. Do not poll `prepare_polish`: a new explicit preparation request rechecks resources and can start another preparation after the preceding one finishes. Submit text only after `status=READY`.
+
 Poll `status` with a bounded deadline while `model_loading=true` / `status=BUSY`. Additional fields are:
 
 | Field | Meaning |

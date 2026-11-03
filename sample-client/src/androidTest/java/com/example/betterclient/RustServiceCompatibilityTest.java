@@ -17,11 +17,11 @@ public class RustServiceCompatibilityTest {
         assertTrue(BuildConfig.BI_PACKAGE.endsWith(".validation"));
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         Uri uri = Uri.parse("content://" + BuildConfig.BI_PACKAGE + ".provider");
-        Bundle status = null;
+        Bundle status = context.getContentResolver().call(uri, "prepare_polish", null, null);
         for (int i = 0; i < 80; i++) {
-            status = context.getContentResolver().call(uri, "prepare_polish", null, null);
             if (status != null && "READY".equals(status.getString("status"))) break;
             Thread.sleep(500);
+            status = context.getContentResolver().call(uri, "status", null, null);
         }
         assertNotNull(status); assertEquals(status.toString(), "READY", status.getString("status"));
         assertEquals("RUST", status.getString("intelligence_engine"));
