@@ -1,10 +1,12 @@
 # Better Intelligence privacy policy
 
-Updated 30 October 2026 for version 25 / 2.4.0-beta5.
+Updated 3 November 2026 for version 26 / 2.5.0-beta1.
 
 Developer: HaveAnIdea. Contact: siddharthpazhoor@gmail.com. Android package: com.aistudio.betterintelligence.mobile.
 
 Better Intelligence runs downloaded AI models on your Android device. Chat, proofreading and connected-app inference have no automatic cloud fallback. Review AI-generated text before relying on it.
+
+The native Rust policy core processes model health, request ownership and bounded numerical context/evidence selection metadata on-device. It adds no network destination, background recovery timer, developer telemetry upload or separate conversation database. Conversation text and documents are not retained in its diagnostics. The existing Android database, deletion controls and web permission remain authoritative.
 
 ## Local information and your controls
 

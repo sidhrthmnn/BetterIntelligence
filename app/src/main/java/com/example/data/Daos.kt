@@ -137,6 +137,10 @@ interface ConversationDao {
 
 @Dao
 interface MemorySnippetDao {
+    @Query("SELECT * FROM memory_snippets WHERE isActive = 1 ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getActiveMemoriesBounded(limit: Int): List<MemorySnippetEntity>
+    @Query("SELECT * FROM memory_snippets WHERE isActive = 1 AND (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%') ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun searchActiveMemoriesBounded(query: String, limit: Int): List<MemorySnippetEntity>
     @Query("SELECT * FROM memory_snippets ORDER BY timestamp DESC")
     fun getAllMemories(): Flow<List<MemorySnippetEntity>>
 

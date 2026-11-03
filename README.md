@@ -1,5 +1,7 @@
 # Better Intelligence
 
+Version 26 / 2.5.0-beta1 adds a [Rust intelligence policy core](docs/RUST_ENGINE.md) for model health/recovery, request admission/cancellation, final research routing and bounded context/evidence selection. Existing llama.cpp/LiteRT kernels, Android UI, model files and Room storage remain in use. See the [migration audit](docs/RUST_MIGRATION_PLAN.md). Rust is not a new LLM or a claim of faster inference kernels.
+
 Chat-first Android assistant and shared local AI service. Version 2.0 opens directly into chat, with saved conversations, Markdown, streaming, edit/regenerate and keyboard-aware scrolling. Open **Settings → AI & Models** to download, select, import or delete models, **Connected Apps** to approve local clients, and **Advanced** for hardware diagnostics. GGUF uses llama.cpp; compatible LiteRT-LM packages use LiteRT-LM. Downloads and activation are separate choices; installation does not silently download gigabytes.
 
 Optional web research is under **Web & Grounding** and requires consent. Public fact lookups, current facts, casting, service status, movie reviews, prices, release dates and explicit website requests trigger research. Weather decisions retain your original question when you supply a city or confirm a lookup. Other eligible questions can make one bounded research attempt if the local model admits it cannot answer. Reasoning, writing, personal context and calculations stay local. These rules are practical routing, not a truth detector; they cannot catch every confident error.

@@ -29,7 +29,7 @@ assert provider.attrib[android + "permission"] == service.attrib[android + "perm
 assert provider.attrib[android + "exported"] == service.attrib[android + "exported"] == "true"
 assert any(a.attrib[android + "name"] == "com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE"
            for f in service.findall("intent-filter") for a in f.findall("action"))
-expected = {"libbetter_gguf.so", "libggml.so", "libggml-base.so", "libggml-cpu.so", "libggml-vulkan.so", "libllama.so", "liblitertlm_jni.so",
+expected = {"libbi_intelligence.so", "libbetter_gguf.so", "libggml.so", "libggml-base.so", "libggml-cpu.so", "libggml-vulkan.so", "libllama.so", "liblitertlm_jni.so",
             "libandroidx.graphics.path.so", "libdatastore_shared_counter.so"}
 platform_libraries = {"libandroid.so", "liblog.so", "libm.so", "libdl.so", "libc.so", "libz.so",
                       "libGLESv2.so", "libGLESv3.so", "libEGL.so", "libvulkan.so"}

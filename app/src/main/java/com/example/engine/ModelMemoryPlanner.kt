@@ -15,7 +15,8 @@ data class ModelTierDecision(
     val effectiveContext: Int,
     val estimatedRamMb: Long,
     val safeBudgetMb: Long,
-    val reason: String = ""
+    val reason: String = "",
+    val failureCode: String = ""
 )
 
 /** Estimates, not allocation guarantees. Quantisation is already reflected in

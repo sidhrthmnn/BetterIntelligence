@@ -97,7 +97,7 @@ class LlamaCppEngine(
             params = params,
             listener = object : StreamTokenListener {
                 override fun onToken(token: String, tokenIndex: Int) {
-                    trySend(token)
+                    if (trySend(token).isFailure) close(IllegalStateException("The response consumer stopped keeping up. Partial text is preserved; retry the answer."))
                 }
 
                 override fun onComplete(

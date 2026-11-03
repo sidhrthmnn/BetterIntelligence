@@ -898,7 +898,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             try {
                 // Evaluate available RAM and dynamically route between Primary (full/stepped-down context) and Secondary model.
                 val params = _chatGenerationParams.value
-                val tierDecision = runCatching { repository.resolveAndActivateForRam(params.contextSize) }.getOrNull()
+                val tierDecision = repository.resolveAndActivateForRam(params.contextSize)
+                check(tierDecision.role != ModelTierRole.NONE) { tierDecision.reason.ifBlank { "Download and select a model in Settings." } }
                 _activeTierDecision.value = tierDecision
                 if (tierDecision?.role == ModelTierRole.SECONDARY_FALLBACK && tierDecision.reason.isNotBlank()) {
                     _userMessage.value = tierDecision.reason
@@ -959,7 +960,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val memoryBudget = effectiveContext - autoMaxTokens - 96 - repository.engine.contextTokenCount(baseSystem) -
                     repository.engine.contextTokenCount(effectiveQuestion) - 96
                 val summary = if (memoryBudget > 64) ConversationContext.summaryWithinBudget(olderContext, minOf(if (evidence.sources.isEmpty()) effectiveContext else 384, memoryBudget * 2), effectiveQuestion) else ""
-                val localMemory = if (evidence.sources.isEmpty() && memoryBudget > 128 && _isAutoMemoryCaptureEnabled.value) repository.buildMemoryContextPrompt().take(minOf(400, memoryBudget / 2)) else ""
+                val localMemory = if (evidence.sources.isEmpty() && memoryBudget > 128 && _isAutoMemoryCaptureEnabled.value)
+                    repository.buildMemoryContextPrompt(effectiveQuestion, minOf(400, memoryBudget / 2)) else ""
                 var system = baseSystem + localMemory + if (summary.isNotBlank())
                     "\nOlder context from this chat only. Quoted user statements are context; labelled assistant proposals are unverified. Newer messages override:\n$summary\n" else ""
                 val promptBudget = ((effectiveContext - autoMaxTokens - 96) * 2 - system.toByteArray(Charsets.UTF_8).size).coerceAtLeast(0)
@@ -975,19 +977,27 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     gpuLayers = params.gpuLayers, contextSize = effectiveContext, history = history)
                 _chatStatus.value = "Preparing answer"
                 val rawDraft = StringBuilder()
+                var lastDraftUiAt = 0L
+                fun publishDraft() {
+                    if (localNeedsLive) return
+                    val draft = rawDraft.toString()
+                    _streamingChatText.value = if (AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(route, draft)) ""
+                        else LocalAnswerUncertainty.visible(draft)
+                    lastDraftUiAt = android.os.SystemClock.elapsedRealtime()
+                }
                 chatInferenceJob = repository.engineManager.currentEngine.generateStreamWithCallback(prompt, config, object : StreamTokenListener {
                     override fun onToken(token: String, tokenIndex: Int) {
                         if (localNeedsLive) return
                         rawDraft.append(token)
-                        val draft = rawDraft.toString()
-                        _streamingChatText.value = if (AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(route, draft)) ""
-                            else LocalAnswerUncertainty.visible(draft)
+                        if (android.os.SystemClock.elapsedRealtime() - lastDraftUiAt >= 40) publishDraft()
                         _chatStatus.value = if (evidence.sources.isEmpty()) "" else "Draft · Checking against sources"
                     }
                     override fun onComplete(fullText: String, latencyMs: Long, tokensPerSec: Float, promptTokens: Int, completionTokens: Int) {
+                        publishDraft()
                         result = fullText; latency = latencyMs; speed = tokensPerSec
                     }
                     override fun onError(errorCode: Int, errorMessage: String) {
+                        publishDraft()
                         error = errorMessage
                         if (errorMessage == com.example.engine.InvalidModelOutputException().message) {
                             _streamingChatText.value = ""; result = ""

@@ -136,13 +136,14 @@ class InferenceEngine internal constructor(private val context: android.content.
         @Volatile private var owner: InferenceEngine? = null
     }
     private val engineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val busy = AtomicBoolean(false)
+    private val busy = com.example.rustcore.IntelligenceRequestGate()
     @Volatile private var activeJob: Job? = null
     val hardware = HardwareAccelerationManager(context)
     private val selector = SmartBackendSelector(context)
     private val npuController = QualcommNpuController(hardware, selector)
     private var capabilitiesRead = false
     private var loadedFile: File? = null
+    @Volatile internal var policyModelKey: String = ""
     private var modelIdentity = ""
     private var loadedLayers = 0
     private var selectedKey = ""
@@ -237,14 +238,16 @@ class InferenceEngine internal constructor(private val context: android.content.
     }
 
     private fun clearModelState() {
+        if (policyModelKey.isNotEmpty()) com.example.rustcore.RustIntelligence.call("model_unloaded", JSONObject().put("id", policyModelKey))
         hardware.npuStatus(false, "Select a matching compiled Qualcomm NPU model; runtime validation is required.")
         if (liteSession != null) capabilitiesRead = false
         liteSession?.close(); liteSession = null; liteName = ""; liteQuantization = ""; liteLibraryModel = null
         loadedFile = null; loadedLayers = 0; selectedKey = ""
+        policyModelKey = ""
         _activeMetadata.value = null; _telemetry.value = HardwareTelemetry()
     }
 
-    fun cancelGeneration() { activeJob?.cancel() }
+    fun cancelGeneration() { busy.cancel(); activeJob?.cancel() }
     fun requestContextLimit(requested: Int): Int = liteSession?.configurationContext(requested.coerceIn(512, 4096))
         ?: minOf(requested, activeContextLength.takeIf { it > 0 } ?: requested)
     fun contextTokenCount(text: String): Int = synchronized(lifecycleLock) {
@@ -361,7 +364,7 @@ class InferenceEngine internal constructor(private val context: android.content.
                 check(!resources.lowMemory && resources.availableMb >= 256 && resources.thermal < 5) { "Critical memory/thermal pressure; partial output is preserved" }
                 visible = true
                 if (_telemetry.value.timeToFirstTokenMs == 0L) _telemetry.value = _telemetry.value.copy(timeToFirstTokenMs = SystemClock.elapsedRealtime() - started)
-                listener?.onToken(delta, index)
+                if (busy.allowToken()) listener?.onToken(delta, index)
             }
             _telemetry.value = _telemetry.value.copy(tokensPerSecond = result.tokensPerSecond, completionTokens = result.outputTokens,
                 promptTokens = result.inputTokens, promptEvaluationTimeMs = result.prefillMs, peakMemoryUsageMb = memoryMb())
@@ -525,7 +528,7 @@ class InferenceEngine internal constructor(private val context: android.content.
                 }
                 visibleOutput = true
                 if (_telemetry.value.timeToFirstTokenMs == 0L) _telemetry.value = _telemetry.value.copy(timeToFirstTokenMs = SystemClock.elapsedRealtime() - started)
-                listener?.onToken(delta, index)
+                if (busy.allowToken()) listener?.onToken(delta, index)
             }
             if (target == ProcessingMode.GPU) hardware.liteRtGpuStatus(true, "LiteRT OpenCL initialization and model decode succeeded")
             _telemetry.value = _telemetry.value.copy(tokensPerSecond = result.tokensPerSecond,
@@ -782,7 +785,7 @@ class InferenceEngine internal constructor(private val context: android.content.
                 _telemetry.value = _telemetry.value.copy(tokensPerSecond = if (outputTokens > 1) (outputTokens - 1) * 1000f / (elapsed - firstTokenMs).coerceAtLeast(1) else 0f,
                     timeToFirstTokenMs = firstTokenMs, completionTokens = outputTokens, promptTokens = inputTokens,
                     promptEvaluationTimeMs = firstTokenMs)
-                if (delta.isNotEmpty()) listener?.onToken(delta, outputTokens - 1)
+                if (delta.isNotEmpty() && requestJob?.isActive != false && busy.allowToken()) listener?.onToken(delta, outputTokens - 1)
             }
             val attemptKey = selectedKey.substringBefore(':')
             if (loadedLayers > 0) selector.beginGpuAttempt(attemptKey)
@@ -806,6 +809,8 @@ class InferenceEngine internal constructor(private val context: android.content.
             // Native cancellation becomes IllegalStateException across JNI. Restore
             // coroutine cancellation semantics so sibling work is not failed.
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            val budget = runCatching { hardware.resources().let { ModelMemoryPlanner.budget(it.totalMb, it.availableMb) } }.getOrDefault(0L)
+            com.example.rustcore.RustModelPolicy.runtimeFailure(policyModelKey, e, budget)
             throw e
         } finally {
             synchronized(lifecycleLock) {
