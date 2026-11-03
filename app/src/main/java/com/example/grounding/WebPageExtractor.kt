@@ -56,7 +56,7 @@ object WebPageExtractor {
         if (type != "text/plain") {
             root.select("img[alt]").forEach { img ->
                 val alt = img.attr("alt").trim()
-                if (alt.length in 3..60 && !Regex("(?i)^(icon|image|logo|photo|avatar|placeholder|banner|arrow|close)\\b").containsMatchIn(alt)) {
+                if (alt.length in 3..60 && !Regex("(?i)^(icon|image|logo|photo|avatar|placeholder|banner|arrow|close)\\b|\\b(?:rating|star) icon\\b").containsMatchIn(alt)) {
                     img.appendText(" $alt ")
                 }
             }

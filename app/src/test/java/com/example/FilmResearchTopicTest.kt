@@ -156,6 +156,19 @@ class FilmResearchTopicTest {
         assertTrue(result.text, result.text.contains("batha", true))
         assertTrue(result.text.contains("2.5 stars")); assertTrue(result.text.contains("[1]"))
     }
+    @Test fun shortLabelledRatingDoesNotBecomeAnUnverifiableAnswerOrAnIconDump() {
+        val q = AnswerRoutingPolicy.decide(question).question
+        val html = "<title>Batha Tamil movie review</title><article><h1>Batha Tamil movie review</h1><p>" +
+            "<img alt='rating icon'><img alt='rating icon'>Rating: 2 out of 5</p>" +
+            "<p>Batha is a Tamil film with an uneven story and compelling performances.</p></article>"
+        val page = WebPageExtractor.article(WebDocument("https://reviews.example/batha", html, "text/html"), 1, q)!!
+        assertFalse(page.excerpt.contains("rating icon"))
+        val rating = source().copy(excerpt = "Batha Tamil movie review\nRating: 2 out of 5")
+        val answer = EvidenceAnswer.resolve("An unsupported uncited assessment.", listOf(rating), q)
+        assertTrue(answer.text, answer.text.contains("2 out of 5")); assertTrue(answer.text.contains("[1]")); assertTrue(answer.text.contains("batha", true))
+        assertNotEquals(AnswerSupport.INSUFFICIENT, answer.support)
+        assertNull(MovieRatingEvidence.summary(q, listOf(rating.copy(excerpt = "Other Film review\nRating: 5 out of 5")), emptyList()))
+    }
     @Test fun diagnosticsAreBoundedScopedAndOmitPrivateQueriesAndResponses() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         ResearchDiagnostics.clear(context)

@@ -13,7 +13,8 @@ object EvidenceAnswer {
         val prose = draft.replace(Regex("(?im)^\\s*(?:From the retrieved pages|Untrusted source evidence|Here are the retrieved excerpts)\\s*:\\s*"), "")
             .replace(Regex("(?m)^\\s*>\\s?"), "")
         val checked = resolveStrict(prose, aligned, question)
-        val resolved = if (checked.support == AnswerSupport.INSUFFICIENT) SourceBrief.build(question, aligned, checked.claims) ?: checked else checked
+        val resolved = if (checked.support == AnswerSupport.INSUFFICIENT)
+            MovieRatingEvidence.summary(question, aligned, checked.claims) ?: SourceBrief.build(question, aligned, checked.claims) ?: checked else checked
         return focusReview(resolved, question)
     }
 
