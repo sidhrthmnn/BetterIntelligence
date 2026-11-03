@@ -132,6 +132,16 @@ class FilmResearchTopicTest {
         assertFalse(result.text.contains("From the retrieved pages")); assertFalse(result.text.lines().any { it.startsWith(">") })
         assertFalse(AnswerSourceStatus.label("SOURCE_EXCERPTS").contains("excerpt", true))
     }
+    @Test fun professionalReviewIsPreferredAndVerifiedProseKeepsTheFilmScope() {
+        val q = AnswerRoutingPolicy.decide(question).question
+        assertTrue(PublicTopics.parse(q)!!.searches().first().contains("critic reviews"))
+        val critic = source("Batha movie review")
+        val audience = source("Batha movie review: viewers response").copy(id = 2)
+        assertTrue(EvidenceRanking.score(critic, ResearchPlanner.plan(q)) > EvidenceRanking.score(audience, ResearchPlanner.plan(q)))
+        val result = EvidenceAnswer.resolve("The critic rated it 2.5 stars [1].", listOf(critic), q)
+        assertTrue(result.text, result.text.contains("batha", true))
+        assertTrue(result.text.contains("2.5 stars")); assertTrue(result.text.contains("[1]"))
+    }
     @Test fun diagnosticsAreBoundedScopedAndOmitPrivateQueriesAndResponses() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         ResearchDiagnostics.clear(context)

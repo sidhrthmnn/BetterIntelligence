@@ -13,7 +13,21 @@ object EvidenceAnswer {
         val prose = draft.replace(Regex("(?im)^\\s*(?:From the retrieved pages|Untrusted source evidence|Here are the retrieved excerpts)\\s*:\\s*"), "")
             .replace(Regex("(?m)^\\s*>\\s?"), "")
         val checked = resolveStrict(prose, aligned, question)
-        return if (checked.support == AnswerSupport.INSUFFICIENT) SourceBrief.build(question, aligned, checked.claims) ?: checked else checked
+        val resolved = if (checked.support == AnswerSupport.INSUFFICIENT) SourceBrief.build(question, aligned, checked.claims) ?: checked else checked
+        return focusReview(resolved, question)
+    }
+
+    /** Keep verified review conclusions ahead of tangential production facts.
+     * The prefix is the user's subject, not a new sourced factual assertion. */
+    private fun focusReview(checked: CheckedAnswer, question: String): CheckedAnswer {
+        val topic = PublicTopics.parse(question) ?: return checked
+        if (topic.intent !in setOf(PublicTopicIntent.REVIEW, PublicTopicIntent.RATING) || checked.sourceExtract || checked.sourceBrief) return checked
+        val facts = checked.claims.filter { it.supported && it.reason == "Passage checks passed" && FactualResearch.answerFocusScore(it.text, question) >= 65 }
+            .sortedByDescending { FactualResearch.answerFocusScore(it.text, question) + if (Regex("(?i)\\b(?:critic|review|praised|criticised|criticized)\\b").containsMatchIn(it.text)) 50 else 0 }
+            .take(3)
+        if (facts.isEmpty()) return checked
+        val text = facts.joinToString("\n\n") { it.text }
+        return checked.copy(text = if (topic.subjectMatches(text)) text else "${topic.subject} — $text")
     }
 
     private fun resolveStrict(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {

@@ -2,6 +2,17 @@ package com.example.grounding
 
 /** Request shape and evidence requirements, never an embedded answer database. */
 object FactualResearch {
+    fun reviewKind(title: String, url: String): String = when {
+        Regex("(?i)viewers?['’]? response|audience|fan reactions?|twitter|social media|public reactions?").containsMatchIn(title) -> "AUDIENCE"
+        Regex("(?i)wikipedia\\.org|rottentomatoes\\.com|imdb\\.com|metacritic\\.com").containsMatchIn(url) -> "OVERVIEW"
+        Regex("(?i)\\breview\\b").containsMatchIn(title) -> "CRITIC"
+        else -> "UNKNOWN"
+    }
+    fun reviewPriority(title: String, url: String, question: String): Int = if (PublicTopics.parse(question)?.intent != PublicTopicIntent.REVIEW) 0 else when (reviewKind(title, url)) {
+        "CRITIC" -> 30
+        "AUDIENCE" -> -15
+        else -> 0
+    }
     fun isMovieReview(question: String) = Regex("(?i)\\b(?:reviews?|ratings?|audience reception|how (?:is|was) .{1,70}(?:movie|film))\\b").containsMatchIn(PublicTopics.normalize(question))
 
     /** Rank the requested answer facet in actual body text, never in a headline. */

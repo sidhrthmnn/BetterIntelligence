@@ -138,6 +138,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             val selected = EvidenceRanking.select(sources, plan)
             val covered = selected.flatMap { plan.coverage(it.excerpt) }.toSet()
             return (!FactualResearch.needsAnswerFocus(question) || selected.any { FactualResearch.answerFocusScore(it.excerpt, question) >= 65 }) &&
+                (query.publicTopic?.intent != PublicTopicIntent.REVIEW || selected.any { FactualResearch.reviewKind(it.title, it.url) == "CRITIC" }) &&
                 covered.size == plan.focuses.size && (selected.size >= 2 || selected.size == 1 &&
                 (explicit.isNotEmpty() || EvidenceRanking.primaryRelevance(selected.single().url, question) > 0)) && EvidenceRanking.conflicts(selected).isEmpty()
         }
@@ -149,7 +150,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 unique.indexOfFirst { domain(it.url) == domain(candidate.url) } != unique.indexOf(candidate)
                 }.thenByDescending {
                 val combined = "${it.title} ${it.routingHint}".trim()
-                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question) + EvidenceRanking.weatherPlaceScore(it.title, question)
+                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question) + EvidenceRanking.weatherPlaceScore(it.title, question) + FactualResearch.reviewPriority(it.title, it.url, question)
             })
             .filter { domains.getOrDefault(domain(it.url), 0) < 2 }
             // Reserve reads for one focused reformulation when broad election

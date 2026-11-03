@@ -46,6 +46,7 @@ data class PublicResearchTopic(val subject: String, val type: PublicEntityType, 
         // never guess a different film or use an assistant-invented title.
         return listOf("$identity $facet", "\"$subject\" $language ${if (type == PublicEntityType.FILM) "movie" else ""} $facet",
             "$unaccented $language ${if (type == PublicEntityType.FILM) "cinema" else "product"} $facet")
+            .mapIndexed { index, query -> if (intent == PublicTopicIntent.REVIEW && index == 0) "$identity critic reviews" else query }
             .map { it.replace(Regex("\\s+"), " ").trim().take(300) }.distinct().take(3)
     }
 }
