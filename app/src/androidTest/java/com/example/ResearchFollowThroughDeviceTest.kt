@@ -77,7 +77,12 @@ class ResearchFollowThroughDeviceTest {
             verify(GroundingResult.sources(bond.sourcesJson).none { SourceBrief.predictionMarket(it.title, it.url, "who is the next james bond") }, "Betting result used as casting evidence")
             val transit = ask("Is jubilee line status good in tfl")
             verify(transit.groundingStatus != "LOCAL", "Service status research was skipped")
-            verify(Regex("(?i)good service|no disruptions|delays|suspend|closed|disruption").containsMatchIn(transit.content), "Actual line status omitted: ${transit.content}")
+            // A cited "Jubilee Line status is good" is the same answer as
+            // "Good Service". Require the requested line as well as a status;
+            // do not fail a correct paraphrase or accept a different line.
+            verify(transit.content.contains("Jubilee", true) &&
+                Regex("(?i)good service|jubilee line status is good|no disruptions|delays|suspend|closed|disruption").containsMatchIn(transit.content),
+                "Actual line status omitted: ${transit.content}")
             verify(!transit.content.contains("Connects to", true), "Station navigation mistaken for service status")
             verify(!transit.content.contains("Status › Tram", true), "Another line's status used for Jubilee")
             verify(GroundingResult.sources(transit.sourcesJson).all { PublicQuestionIntent.serviceEvidence(it, "Is jubilee line status good in tfl") }, "Evidence does not bind status to Jubilee")

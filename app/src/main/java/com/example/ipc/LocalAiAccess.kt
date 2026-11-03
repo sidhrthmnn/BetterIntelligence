@@ -38,13 +38,14 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
         }
         return Bundle().apply {
             putInt("api_version", 2)
+            putString("intelligence_engine", com.example.rustcore.RustIntelligence.mode.name)
             putBoolean("supports_polish", true)
             putString("polish_language", "en")
             putBoolean("model_loaded", repository.engine.isReady())
             putBoolean("model_loading", repository.isModelLoading || preparing)
             putBoolean("supports_model_preparation", true)
             putString("activity", phase)
-            putString("target_model", if (preparing) preparation.model else "")
+            putString("target_model", if (preparing) preparation.model else repository.modelLoadingTarget)
             putString("model_role", preparation.role)
             putInt("effective_context", preparation.context)
             if (preparation.failed) putString("error", preparation.error)
@@ -78,9 +79,14 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
                     val (allowed, reason) = repository.checkSecurityAndRateLimit(caller)
                     if (!allowed) failure(if (reason.startsWith("Rate limit")) "RATE_LIMITED" else "DENIED", reason)
                     else try {
-                        val params = PolishText.parameters(repository.engine.activeContextLength, text)
-                        val output = repository.engine.generateSync(PolishText.prompt(text), params)
-                        Bundle().apply { putString("status", "SUCCESS"); putString("text", output) }
+                        val requested = PolishText.parameters(repository.engine.activeContextLength, text).contextSize
+                        val selected = repository.resolveAndActivateForRam(requested, preferLoaded = true)
+                        if (selected.role == com.example.engine.ModelTierRole.NONE) failure("ERROR", selected.reason)
+                        else {
+                            val params = PolishText.parameters(repository.engine.activeContextLength, text).copy(contextSize = selected.effectiveContext)
+                            val output = repository.engine.generateSync(PolishText.prompt(text), params)
+                            Bundle().apply { putString("status", "SUCCESS"); putString("text", output) }
+                        }
                     } catch (e: Exception) {
                         failure(if (e.message?.contains("busy", true) == true) "BUSY" else "ERROR",
                             "The local model could not complete polishing. Try a shorter passage or another model.")

@@ -28,3 +28,4 @@ debug.keystore
 /models/*.litertlm
 __pycache__/
 *.pyc
+/rust-core/target/

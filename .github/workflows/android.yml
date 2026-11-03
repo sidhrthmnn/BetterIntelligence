@@ -40,7 +40,10 @@ jobs:
           sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0' 'ndk;28.0.12433566' 'cmake;3.22.1'
           chmod +x gradlew
       - name: JVM regressions and release lint
-        run: ./gradlew -PbiValidationPackage=true '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --max-workers=2 --no-configuration-cache :app:testDebugUnitTest :app:lintRelease
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal --component rustfmt,clippy --target aarch64-linux-android,x86_64-linux-android
+          python scripts/build_rust_core.py --test
+          ./gradlew -PbiValidationPackage=true '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --max-workers=2 --no-configuration-cache :app:testDebugUnitTest :app:lintRelease
       - name: Build real ARM64 CPU and Vulkan libraries
         run: ./gradlew -PbiValidationPackage=true -Pandroid.injected.build.abi=arm64-v8a '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8' --max-workers=2 --no-configuration-cache :app:assembleDebug :app:assembleDebugAndroidTest
       # A Qualcomm phone is required for runtime execution; CI verifies that the

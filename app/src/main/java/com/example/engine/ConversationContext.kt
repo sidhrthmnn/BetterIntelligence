@@ -69,6 +69,11 @@ object ConversationContext {
             terms.count { it in lines[index].lowercase() } * 8 + if (lines[index].startsWith("User")) 2 else 0
         }.thenByDescending { it })
         var budget = minOf(1200, context.coerceAtLeast(0) / 2)
+        val scores = lines.map { line -> terms.count { it in line.lowercase() } * 8 + if (line.startsWith("User")) 2 else 0 }
+        val anchor = 0.takeIf { lines.isNotEmpty() && terms.none { term -> lines.any { term in it.lowercase() } } && lines[0].length < budget / 2 }
+        com.example.rustcore.RustIntelligence.selectContext(lines.map { it.length }, scores, budget, anchor)?.let { chosen ->
+            return chosen.joinToString("\n") { lines[it] }
+        }
         val chosen = sortedSetOf<Int>()
         fun include(index: Int) { if (index !in chosen && lines[index].length + 1 <= budget) {
             chosen += index; budget -= lines[index].length + 1

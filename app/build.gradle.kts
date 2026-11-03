@@ -58,6 +58,20 @@ val prepareQualcommNpu by tasks.registering {
   }
 }
 
+val rustOutput = layout.buildDirectory.dir("generated/rust-core")
+val buildRustCore by tasks.registering(Exec::class) {
+  notCompatibleWithConfigurationCache("Native Cargo build uses the configured Android NDK environment")
+  workingDir(rootProject.projectDir)
+  inputs.dir(rootProject.file("rust-core/src"))
+  inputs.files(rootProject.file("rust-core/Cargo.toml"), rootProject.file("rust-core/Cargo.lock"),
+    rootProject.file("rust-core/rust-toolchain.toml"), rootProject.file("scripts/build_rust_core.py"))
+  val abis = providers.gradleProperty("android.injected.build.abi").orElse("arm64-v8a,x86_64")
+  inputs.property("abis", abis)
+  outputs.dir(rustOutput)
+  commandLine(System.getenv("BI_PYTHON") ?: "python", rootProject.file("scripts/build_rust_core.py").absolutePath,
+    "--abis", abis.get(), "--output", rustOutput.get().asFile.absolutePath)
+}
+
 android {
   ndkVersion = "28.0.12433566"
   externalNativeBuild { cmake {
@@ -73,12 +87,17 @@ android {
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
     targetSdk = 36
-    versionCode = 25
-    versionName = "2.4.0-beta5"
+    versionCode = 26
+    versionName = "2.5.0-beta1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders["localAiExported"] = "true"
     buildConfigField("boolean", "QUALCOMM_NPU_ENABLED", qualcommNpu.get().toString())
+    val rustEnabled = providers.gradleProperty("biRustCore").map { it.toBooleanStrict() }.orElse(true)
+    buildConfigField("boolean", "RUST_CORE_ENABLED", rustEnabled.get().toString())
+    for (flag in listOf("MODEL_ROUTER", "QUERY_ROUTER", "REQUEST_GATE", "CONTEXT", "PASSAGE_RANKING")) {
+      buildConfigField("boolean", "RUST_$flag", providers.gradleProperty("biRust$flag").map { it.toBooleanStrict() }.orElse(true).get().toString())
+    }
   }
 
   signingConfigs {
@@ -131,8 +150,11 @@ android {
   // One frozen, test-only beta5 retrieval snapshot supports both JVM corpus
   // comparisons and opt-in real-device before/after probes; never ships in app.
   sourceSets.getByName("androidTest").kotlin.directories += "src/test/java/com/example/researchbaseline"
+  sourceSets.getByName("androidTest").assets.directories += "src/test/resources"
   sourceSets.getByName("main").jniLibs.directories += qualcommOutput.get().dir("jniLibs").asFile.absolutePath
   sourceSets.getByName("main").assets.directories += qualcommOutput.get().dir("assets").asFile.absolutePath
+  sourceSets.getByName("main").jniLibs.directories += rustOutput.get().dir("jniLibs").asFile.absolutePath
+  sourceSets.getByName("main").assets.directories += rustOutput.get().dir("assets").asFile.absolutePath
   // Backend.NPU resolves vendor libraries via applicationInfo.nativeLibraryDir.
   if (qualcommNpu.get()) packaging.jniLibs.useLegacyPackaging = true
   dependenciesInfo {
@@ -143,7 +165,7 @@ android {
     noCompress += listOf("gguf", "bin")
   }
 }
-tasks.named("preBuild") { dependsOn(prepareQualcommNpu) }
+tasks.named("preBuild") { dependsOn(prepareQualcommNpu, buildRustCore) }
 
 tasks.withType<Test>().configureEach {
   maxHeapSize = System.getenv("BI_TEST_HEAP") ?: "3g"

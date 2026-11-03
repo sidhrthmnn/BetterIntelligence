@@ -33,6 +33,9 @@ import com.example.engine.ModelTierRole
 import com.example.engine.GenerationParams
 import com.example.engine.ConversationContext
 import com.example.engine.ChatTurn
+import com.example.rustcore.RustModelPolicy
+import com.example.rustcore.ModelFailureKind
+import com.example.rustcore.RustIntelligence
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -126,10 +129,13 @@ class AiCoreRepository(
 
     private val repositoryScope = CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
     private val modelLock = Mutex()
+    private val resolutionLock = Mutex()
     private val verifiedFiles = com.example.engine.VerifiedModelFileCache(appContext)
     @Volatile private var explicitModelSelection = false
     private val modelOperations = java.util.concurrent.atomic.AtomicInteger(1) // Startup/restore owns the first lease.
     val isModelLoading: Boolean get() = modelOperations.get() > 0
+    @Volatile var modelLoadingTarget: String = ""
+        private set
 
     val clientPreparation = com.example.engine.ClientModelPreparation(repositoryScope,
         generating = { engine.telemetry.value.isRunning }, loading = { isModelLoading }) { progress ->
@@ -138,9 +144,9 @@ class AiCoreRepository(
             progress(com.example.engine.ClientModelState("LOADING_MODEL", model.name, role.name))
         })
         if (decision.role == ModelTierRole.NONE) {
-            com.example.engine.ClientModelState(if (decision.model == null) "MODEL_REQUIRED" else "LOW_MEMORY",
-                error = if (decision.model == null) "Download and select a model in Better Intelligence."
-                    else "Not enough RAM for a downloaded model. Free memory or select a smaller fallback model in Better Intelligence.")
+            com.example.engine.ClientModelState(if (decision.model == null) "MODEL_REQUIRED" else
+                if (decision.failureCode in setOf("", "LOW_MEMORY", "MEMORY_PRESSURE")) "LOW_MEMORY" else "PREPARATION_FAILED",
+                error = decision.reason.ifBlank { "Download and select a model in Better Intelligence." })
         } else {
             check(engine.isReady() && modelDao.getActiveModel().first()?.id == decision.model?.id) { "Model preparation did not activate its target" }
             com.example.engine.ClientModelState("READY", engine.activeModelName, decision.role.name, decision.effectiveContext)
@@ -155,9 +161,10 @@ class AiCoreRepository(
             prepared.context else preferencesRepository.generationPreferences.first().contextSize.coerceIn(512, 2048)
     }
 
-    private suspend fun <T> withModelLoading(block: suspend () -> T): T {
+    private suspend fun <T> withModelLoading(target: String, block: suspend () -> T): T {
         modelOperations.incrementAndGet()
-        try { return block() } finally { modelOperations.decrementAndGet() }
+        modelLoadingTarget = target
+        try { return block() } finally { modelLoadingTarget = ""; modelOperations.decrementAndGet() }
     }
 
     init {
@@ -173,16 +180,12 @@ class AiCoreRepository(
                     }
                     try { activateModel(previous, restoring = true) }
                     catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        RustModelPolicy.outcome(previous, e)
                         val fallbackSuccess = runCatching {
                             if (!explicitModelSelection && preferencesRepository.autoRamFallback.first()) {
-                                val models = modelDao.getAllModels().first()
-                                val secId = preferencesRepository.secondaryModelId.first()
-                                val secondary = models.find { it.id == secId && it.isInstalled && it.id != previous.id }
-                                    ?: ModelMemoryPlanner.pickDefaultSecondary(models, previous)
-                                if (secondary != null) {
-                                    activateModel(secondary, restoring = true)
-                                    true
-                                } else false
+                                val decision = resolveAndActivateForRam(preferencesRepository.generationPreferences.first().contextSize)
+                                decision.role != ModelTierRole.NONE && engine.isReady()
                             } else false
                         }.getOrDefault(false)
                         if (!fallbackSuccess && !explicitModelSelection && !engine.isReady()) modelDao.clearActiveModel()
@@ -240,16 +243,22 @@ class AiCoreRepository(
     }
 
     suspend fun unloadModel() = withContext(Dispatchers.IO) {
-        explicitModelSelection = true
-        modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() }
-        clientPreparation.invalidate()
+        resolutionLock.withLock {
+            explicitModelSelection = true
+            modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() }
+            clientPreparation.invalidate()
+        }
     }
 
     suspend fun switchActiveModel(model: ModelEntity) {
-        explicitModelSelection = true
-        clientPreparation.invalidate()
-        preferencesRepository.savePrimaryModelId(model.id)
-        activateModel(model)
+        resolutionLock.withLock {
+            explicitModelSelection = true
+            clientPreparation.invalidate()
+            preferencesRepository.savePrimaryModelId(model.id)
+            RustModelPolicy.reset(model)
+            try { activateModel(model); RustModelPolicy.outcome(model) }
+            catch (e: Exception) { RustModelPolicy.outcome(model, e); throw e }
+        }
     }
 
     suspend fun setSecondaryModel(model: ModelEntity?) {
@@ -259,15 +268,15 @@ class AiCoreRepository(
     /** Evaluates current available RAM against Primary and Secondary models and hot-swaps if required. */
     suspend fun resolveAndActivateForRam(requestedContext: Int, preferLoaded: Boolean = false,
         onLoading: (ModelEntity, ModelTierRole) -> Unit = { _, _ -> }): ModelTierDecision = withContext(Dispatchers.IO) {
+        resolutionLock.withLock {
         val models = modelDao.getAllModels().first()
         val currentActive = modelDao.getActiveModel().first()
         val primaryId = preferencesRepository.primaryModelId.first()
         val secondaryId = preferencesRepository.secondaryModelId.first()
         val autoFallback = preferencesRepository.autoRamFallback.first()
-        val preferred = models.find { it.id == primaryId && it.isInstalled } ?: currentActive
-        // A short external polish reuses a working fallback. Only explicit model
-        // selection/chat policy promotes back to the larger Primary model.
-        val primary = if (preferLoaded && engine.isReady()) currentActive ?: preferred else preferred
+        // Configured primary and current fallback are distinct identities. Rust
+        // may keep the fallback through cooldown, but cannot rename it primary.
+        val primary = models.find { it.id == primaryId } ?: currentActive
         val secondary = models.find { it.id == secondaryId && it.isInstalled && it.id != primary?.id }
             ?: ModelMemoryPlanner.pickDefaultSecondary(models, primary)
         val rawProfile = HardwareAnalyzer.analyze(appContext)
@@ -278,38 +287,49 @@ class AiCoreRepository(
             safeModelRamLimitMb = ModelMemoryPlanner.budget(rawProfile.totalRamMb, available)
         )
         _hardwareProfile.value = rawProfile
-        val chosen = ModelMemoryPlanner.resolveTier(primary, secondary, profile, requestedContext, autoFallback)
-        val decision = if (preferLoaded && chosen.model?.id != preferred?.id && chosen.role != ModelTierRole.NONE)
-            chosen.copy(role = ModelTierRole.SECONDARY_FALLBACK) else chosen
-        // NONE retains the rejected candidate only to explain why it cannot fit.
-        // Never pass that candidate to the loader, even when no engine is ready.
-        if (decision.role == ModelTierRole.NONE) return@withContext decision
-        val target = decision.model
-        if (target != null && target.isInstalled) {
-            when {
-                decision.role == ModelTierRole.SECONDARY_FALLBACK && currentActive?.id != target.id -> {
+        val excluded = mutableSetOf<Long>()
+        var lastFailure: Exception? = null
+        repeat(3) {
+            val decision = RustModelPolicy.choose(primary, secondary, currentActive.takeIf { engine.isReady() }, profile,
+                requestedContext, autoFallback, preferLoaded, engine.telemetry.value.isRunning, excluded)
+            if (decision.role == ModelTierRole.NONE) return@withLock if (lastFailure == null) decision else
+                decision.copy(reason = "The downloaded model could not load. Try again shortly, free memory, or select another model.", failureCode = "LOAD_FAILED")
+            val target = checkNotNull(decision.model)
+            try {
+                if (!engine.isReady() || modelDao.getActiveModel().first()?.id != target.id) {
                     onLoading(target, decision.role)
-                    activateModel(target, contextOverride = decision.effectiveContext)
+                    try { activateModel(target, contextOverride = decision.effectiveContext) }
+                    catch (e: Exception) {
+                        // One short retry only for transient loader I/O. No retry
+                        // of memory pressure, malformed files, busy or cancellation.
+                        val kind = ModelFailureKind.classify(e)
+                        if (!kind.transient || kind != ModelFailureKind.LOAD_TRANSIENT) throw e
+                        delay(200L + target.id.mod(101))
+                        activateModel(target, contextOverride = decision.effectiveContext)
+                    }
                 }
-                decision.role in setOf(ModelTierRole.PRIMARY, ModelTierRole.PRIMARY_STEPPED_DOWN) &&
-                    currentActive?.id != target.id &&
-                    (preferLoaded || profile.safeModelRamLimitMb >= decision.estimatedRamMb + 192) -> {
-                    onLoading(target, decision.role)
-                    activateModel(target, contextOverride = decision.effectiveContext)
-                }
-                !engine.isReady() && preferLoaded -> {
-                    onLoading(target, decision.role)
-                    activateModel(target, contextOverride = decision.effectiveContext)
-                }
+                check(engine.isReady() && modelDao.getActiveModel().first()?.id == target.id) { "Model selection did not activate its target" }
+                RustModelPolicy.outcome(target)
+                if (currentActive?.id != target.id) clientPreparation.invalidate()
+                return@withLock decision
+            } catch (e: Exception) {
+                val kind = ModelFailureKind.classify(e)
+                RustModelPolicy.outcome(target, e, profile.safeModelRamLimitMb)
+                if (kind.neutral || !autoFallback) throw e
+                excluded += target.id
+                lastFailure = e
             }
         }
-        decision
+        ModelTierDecision(ModelTierRole.NONE, primary ?: secondary, 512, 0, profile.safeModelRamLimitMb,
+            "No downloaded model could load safely. Try another model or free memory.", "LOAD_FAILED")
+        }
     }
 
     private suspend fun activateModel(model: ModelEntity, restoring: Boolean = false, contextOverride: Int? = null) = withContext(Dispatchers.IO) {
         modelLock.withLock {
             if (restoring && (explicitModelSelection || engine.isReady())) return@withLock
-            withModelLoading {
+            withModelLoading(model.name) {
+                RustModelPolicy.loading(model)
                 check(model.isInstalled) { "Download this model first" }
                 require(model.filename.endsWith(".gguf", true) || model.filename.endsWith(".litertlm", true)) { "Select a GGUF or LiteRT-LM instruction model" }
                 val file = File(model.localFilePath ?: File(downloadManager.modelsDirectory, model.filename).absolutePath)
@@ -334,6 +354,8 @@ class AiCoreRepository(
                 engineManager.selectEngine(if (liteRt) SupportedEngine.LITERT else SupportedEngine.LLAMA_CPP)
                 modelDao.clearActiveModel()
                 modelDao.setActiveModel(model.id)
+                engine.policyModelKey = RustModelPolicy.key(model)
+                RustModelPolicy.outcome(model)
             }
         }
     }
@@ -724,15 +746,29 @@ class AiCoreRepository(
         memoryDao.clearAllMemories()
     }
 
-    suspend fun buildMemoryContextPrompt(): String {
-        val memories = memoryDao.getActiveMemories().firstOrNull() ?: emptyList()
+    suspend fun buildMemoryContextPrompt(question: String = "", budget: Int = 1200): String {
+        val terms = Regex("[\\p{L}\\p{N}]{3,}").findAll(question.lowercase()).map { it.value }.toSet() -
+            setOf("what", "which", "how", "could", "would", "tell", "about", "this", "that", "with", "from", "please", "the", "and", "for", "our", "you", "your", "remember")
+        // Retrieve older relevant memories without materialising the full table.
+        val relevant = terms.take(4).flatMap { memoryDao.searchActiveMemoriesBounded(it, 32) }
+        val memories = (relevant + memoryDao.getActiveMemoriesBounded(32)).distinctBy { it.id }
         if (memories.isEmpty()) return ""
+        val header = "\n[ON-DEVICE USER CONTEXT & MEMORY (BETTER INTELLIGENCE)]\n"
+        val footer = "[Use this persistent contextual awareness to give accurate, personalized, and relevant responses]\n\n"
+        val contentBudget = (budget - header.length - footer.length).coerceAtLeast(0)
+        if (contentBudget == 0) return ""
         val sb = StringBuilder()
-        sb.append("\n[ON-DEVICE USER CONTEXT & MEMORY (BETTER INTELLIGENCE)]\n")
-        memories.forEach { mem ->
+        sb.append(header)
+        val costs = memories.map { "- [${it.category.uppercase()}] ${it.title}: ${it.content}\n".length }
+        val scores = memories.mapIndexed { i, m -> terms.count { it in (m.title + " " + m.content).lowercase() } * 100 - i }
+        val chosen = RustIntelligence.selectContext(costs, scores, contentBudget.coerceIn(0, 4000), maxItems = 16)
+            ?: run { var left = contentBudget; memories.indices.sortedByDescending { scores[it] }.filter { i ->
+                if (costs[i] + 1 <= left) { left -= costs[i] + 1; true } else false }.take(16).sorted() }
+        chosen.forEach { index -> val mem = memories[index]
             sb.append("- [${mem.category.uppercase()}] ${mem.title}: ${mem.content}\n")
         }
-        sb.append("[Use this persistent contextual awareness to give accurate, personalized, and relevant responses]\n\n")
+        if (chosen.isEmpty()) return ""
+        sb.append(footer)
         return sb.toString()
     }
 

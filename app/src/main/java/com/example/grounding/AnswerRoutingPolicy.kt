@@ -13,7 +13,7 @@ data class AnswerRecovery(val localQuestion: String?, val notice: String, val st
 
 /** Chat-only intent routing. No additional model run; private history stays on device. */
 object AnswerRoutingPolicy {
-    private val transformation = Regex("(?i)^\\s*(?:please\\s+)?(?:write|draft|compose|imagine|brainstorm|translate|rewrite|polish|proofread|summari[sz]e|format|extract|convert)\\b|^(?:എഴുത|വിവർത്തനം|തിരുത്ത)")
+    private val transformation = Regex("(?i)^\\s*(?:please\\s+)?(?:write|draft|compose|imagine|brainstorm|translate|rewrite|improve|correct|rephrase|edit|polish|proofread|summari[sz]e|format|extract|convert)\\b|^(?:എഴുത|വിവർത്തനം|തിരുത്ത)")
     private val explicitResearch = Regex("(?i)(?:^\\s*(?:please\\s+)?|\\b(?:can|could|would) you\\s+|\\b(?:and|also)\\s+)(?:search(?: the web| online| for)?|look up|check online|research|find (?:official |public )?(?:sources|documentation))\\b|\\b(?:with|using|cite|give|provide|include) (?:cited |official |reliable )?(?:sources|citations|references)\\b|വെബിൽ|തിരയുക|അന്വേഷിക്കുക")
     private val verification = Regex("(?i)(?:^\\s*(?:please\\s+)?|\\b(?:can|could|would) you\\s+|\\b(?:and|also)\\s+)(?:verify|fact[- ]?check|cite|check (?:this|the) claim)\\b|\\b(?:with|using) (?:official )?(?:sources|citations|evidence)\\b|\\bofficial documentation\\b|സത്യമാണോ|സ്ഥിരീകരിക്കുക")
     private val fresh = Regex("(?i)\\b(?:latest|today|tonight|yesterday|currently|recent|this (?:week|month|year)|right now|news|headlines|current)\\b|ഇന്ന്|ഇപ്പോൾ|ഇപ്പോഴത്തെ|നിലവിലെ|ഏറ്റവും പുതിയ|പുതിയ വാർത്ത")
@@ -30,14 +30,17 @@ object AnswerRoutingPolicy {
         history: List<ChatMessageEntity> = emptyList(), today: LocalDate = LocalDate.now(), now: Long = System.currentTimeMillis()): AnswerRoute {
         val q = question.trim()
         val instruction = q.substringBefore('\n')
+        // Polite writing requests remain local even when their supplied subject
+        // mentions news/today. Explicit research retains priority.
+        val task = q.replace(Regex("(?i)^\\s*(?:(?:can|could|would) you\\s+|please\\s+)+"), "")
         val explicit = explicitResearch.containsMatchIn(instruction) || PublicQuestionIntent.externalRequest(instruction) || verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val verify = verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val privateInput = GroundingPolicy.containsCredential(q) || !explicit && Regex("(?i)\\b(?:my|our)\\s+(?:(?:current|recent|latest|private)\\s+)?(?:password|secret|key|token|chat|messages|notes|project|code|email|salary|medical)\\b").containsMatchIn(q)
         val calculation = com.example.engine.LocalCalculation.evaluate(q) != null
-        val transform = transformation.containsMatchIn(q) && !explicitResearch.containsMatchIn(q.substringBefore('\n').substringBefore(": ")) && !Regex("https?://").containsMatchIn(q.substringBefore('\n'))
+        val transform = transformation.containsMatchIn(task) && !explicitResearch.containsMatchIn(q.substringBefore('\n').substringBefore(": ")) && !Regex("https?://").containsMatchIn(q.substringBefore('\n'))
         val resolved = if (transform || calculation || privateInput || localOnly(q)) q else ConversationalResearch.question(q, history)
         val publicQuestion = resolved.substringBefore("(Public source topic:").trim()
-        val signals = publicQuestion.substringBefore('\n').replace(technicalContext, "task context")
+        val signals = publicQuestion.substringBefore('\n').replace(Regex("(?i)^\\s*(?:(?:can|could|would) you\\s+|please\\s+)+"), "").replace(technicalContext, "task context")
         val personalContext = !explicit && Regex("(?i)\\b(?:my|our|I|we)\\b|എന്റെ|ഞാൻ|നമ്മുടെ").containsMatchIn(instruction) &&
             !changing.containsMatchIn(signals) && !ConversationalResearch.isWeather(signals) && !product.containsMatchIn(signals) && !ResearchQuery.isCurrentIncumbentQuery(signals)
         val current = fresh.containsMatchIn(signals) || NewsIntent.isLiveRequest(signals) || PublicQuestionIntent.serviceStatus(signals) || PublicQuestionIntent.upcoming(signals)
@@ -59,7 +62,10 @@ object AnswerRoutingPolicy {
         val canSearch = allowed && mode != GroundingMode.OFF && !localOnly(q) && !privateInput && !personalContext && (!transform || mode == GroundingMode.ON) && !calculation
         if (history.none { it.role == "user" } && ConversationalResearch.needsSubject(q))
             return AnswerRoute(AnswerPath.CLARIFICATION, q, "Missing subject", clarification = ConversationalResearch.askSubject)
-        if (canSearch && wantsWeb) {
+        val rustSearch = com.example.rustcore.RustIntelligence.queryRoute(canSearch, wantsWeb, privateInput,
+            localOnly(q), calculation, transform, mode == GroundingMode.ON)
+        // Android privacy/permission admission is never overridden by native policy.
+        if (canSearch && (rustSearch ?: wantsWeb)) {
             val clarification = when {
                 ConversationalResearch.needsSubject(resolved) -> ConversationalResearch.askSubject
                 ConversationalResearch.needsPlace(resolved) -> ConversationalResearch.askPlace

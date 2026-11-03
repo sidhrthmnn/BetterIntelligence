@@ -258,8 +258,9 @@ object WebPageExtractor {
             val qualifier = Regex("(?i)\\b(lord|lady|deputy|vice|former|assistant)\\b").find(section)?.value
             return if (qualifier != null && !Regex("(?i)\\b${Regex.escape(qualifier)}\\b").containsMatchIn(question)) -60 else 25
         }
-        while (remaining.isNotEmpty() && selected.size < 7) {
-            val index = remaining.maxBy { i ->
+        // Semantic scores are calculated once per block, not again on every
+        // greedy selection round. Rust receives only bounded numeric metadata.
+        fun staticScore(i: Int): Double {
                 val blockText = candidates[i]
                 val incumbentScore = if (isIncumbentQuery) {
                     val hasPresent = presentPattern.containsMatchIn(blockText)
@@ -285,12 +286,21 @@ object WebPageExtractor {
                     Regex("(?i)\\b(?:important|importance|benefits?)\\b").containsMatchIn(castingBody) -> -25
                     else -> 0
                 } else 0
-                query.bm25Score(blockText, docFreqs, candidates.size, avgWords) +
-                    (plan.coverage(blockText) - covered).size * 15 +
-                    mentioned(i).size * 6 + (mentioned(i) - subjects).size * 20 +
+                return query.bm25Score(blockText, docFreqs, candidates.size, avgWords).toDouble() +
                     incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText) + FactualResearch.answerFocusScore(blockText, question) + SourceBrief.roleReportScore(blockText, question) +
                     if (PublicQuestionIntent.statusValue(blockText, question)) 100 else 0
-            }
+        }
+        val scores = candidates.indices.map(::staticScore)
+        val coverage = candidates.map { plan.coverage(it) }
+        val mentions = candidates.indices.map(::mentioned)
+        val nativeSelection = com.example.rustcore.RustIntelligence.rankPassages(JSONArray().apply {
+            candidates.indices.forEach { i -> put(JSONObject().put("cost", candidates[i].length).put("score", scores[i])
+                .put("coverage", JSONArray(coverage[i].toList())).put("subjects", JSONArray(mentions[i].toList())).put("allowed", i in remaining)) }
+        }, budget, size, plan.focuses.size, plan.entities.size)
+        if (nativeSelection != null) selected += nativeSelection
+        else while (remaining.isNotEmpty() && selected.size < 7) {
+            val index = remaining.maxBy { i -> scores[i] + (coverage[i] - covered).size * 15 +
+                mentions[i].size * 6 + (mentions[i] - subjects).size * 20 }
             remaining.remove(index)
             val block = candidates[index]
             if (size + block.length + 2 > budget && selected.isNotEmpty()) continue
