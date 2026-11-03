@@ -67,3 +67,5 @@ Default mode is RUST after native initialization; inability to load the library 
 Host Rust tests cover model health/recovery, quotas, missing status, contention, cancellation, protocol errors and bounded selection. JVM regressions exercise Android policy and library-unavailable rollback. Device tests execute the real JNI library, compare routes/excerpts/context with legacy mode, verify Room reopening/deletion and run real llama.cpp CPU streaming/cancellation/reload. The isolated sample client checks the existing Binder/ContentProvider contract under another UID.
 
 Performance reports distinguish local generation, loading, extraction, bridge overhead and end-to-end research. Rust does not make the unchanged inference kernels intrinsically faster. No battery, crash-rate, GPU/NPU throughput or universal accuracy improvement is claimed without measurements. Validation results and remaining limits accompany the release record.
+
+See the [version 26 validation and measured limits](2.5/RUST_VALIDATION.md).

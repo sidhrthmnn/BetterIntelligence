@@ -1,0 +1,367 @@
+{
+  "date": "2026-11-03",
+  "versionCode": 26,
+  "versionName": "2.5.0-beta1",
+  "device": "HONOR VKP-NX9; Android ARM64; 11238 MiB reported RAM",
+  "scope": "Same-build internal LEGACY/RUST controls, not a controlled comparison against the installed v25 binary. Library resident in both modes. No kernel, battery or sustained GPU/NPU speedup claim.",
+  "generation": {
+    "model": "SmolLM2 135M Instruct Q8_0",
+    "backend": "llama.cpp CPU",
+    "threads": 4,
+    "context": 512,
+    "outputTokens": 16,
+    "temperature": 0,
+    "warmup": true,
+    "order": [
+      "LEGACY",
+      "RUST",
+      "RUST",
+      "LEGACY",
+      "RUST",
+      "LEGACY"
+    ],
+    "exactOutputParity": true,
+    "loadWallMs": 293,
+    "modes": {
+      "LEGACY": {
+        "samples": 3,
+        "medianTokensPerSecond": 236.172119140625,
+        "medianTimeToFirstTokenMs": 48,
+        "medianElapsedMs": 137,
+        "processPssMbRange": [
+          386.361328125,
+          436.177734375
+        ]
+      },
+      "RUST": {
+        "samples": 3,
+        "medianTokensPerSecond": 237.42066955566406,
+        "medianTimeToFirstTokenMs": 53,
+        "medianElapsedMs": 137,
+        "processPssMbRange": [
+          390.400390625,
+          432.470703125
+        ]
+      }
+    },
+    "samples": [
+      {
+        "tokensPerSecond": 124.9188003540039,
+        "timeToFirstTokenMs": 53,
+        "memoryUsageMb": 436.177734375,
+        "peakMemoryUsageMb": 437.556640625,
+        "totalRamMb": 11238,
+        "activeThreads": 4,
+        "activeGpuLayers": 0,
+        "accelerationMode": "CPU (llama.cpp)",
+        "isRunning": false,
+        "promptEvaluationTimeMs": 37,
+        "completionTokens": 16,
+        "promptTokens": 15,
+        "kvCacheTokens": 0,
+        "temperatureCelsius": 28,
+        "thermalState": "Nominal / Cool",
+        "isModelLoaded": true,
+        "activeBackend": "CPU",
+        "modelName": "Smollm2 135M 8k Lc100K Mix1 Ep2",
+        "backendInitializationMs": 0,
+        "modelLoadTimeMs": 109,
+        "fallbackCount": 0,
+        "lastFallback": "",
+        "backendDecision": "CPU selected in Advanced settings",
+        "backendStatus": "Ready",
+        "engineMode": "LEGACY",
+        "elapsedMs": 198,
+        "modelLoadMs": 293
+      },
+      {
+        "tokensPerSecond": 226.82937622070312,
+        "timeToFirstTokenMs": 54,
+        "memoryUsageMb": 432.470703125,
+        "peakMemoryUsageMb": 436.716796875,
+        "totalRamMb": 11238,
+        "activeThreads": 4,
+        "activeGpuLayers": 0,
+        "accelerationMode": "CPU (llama.cpp)",
+        "isRunning": false,
+        "promptEvaluationTimeMs": 38,
+        "completionTokens": 16,
+        "promptTokens": 15,
+        "kvCacheTokens": 0,
+        "temperatureCelsius": 28,
+        "thermalState": "Nominal / Cool",
+        "isModelLoaded": true,
+        "activeBackend": "CPU",
+        "modelName": "Smollm2 135M 8k Lc100K Mix1 Ep2",
+        "backendInitializationMs": 0,
+        "modelLoadTimeMs": 109,
+        "fallbackCount": 0,
+        "lastFallback": "",
+        "backendDecision": "CPU selected in Advanced settings",
+        "backendStatus": "Ready",
+        "engineMode": "RUST",
+        "elapsedMs": 147,
+        "modelLoadMs": 293
+      },
+      {
+        "tokensPerSecond": 260.84234619140625,
+        "timeToFirstTokenMs": 53,
+        "memoryUsageMb": 426.759765625,
+        "peakMemoryUsageMb": 433.005859375,
+        "totalRamMb": 11238,
+        "activeThreads": 4,
+        "activeGpuLayers": 0,
+        "accelerationMode": "CPU (llama.cpp)",
+        "isRunning": false,
+        "promptEvaluationTimeMs": 36,
+        "completionTokens": 16,
+        "promptTokens": 15,
+        "kvCacheTokens": 0,
+        "temperatureCelsius": 28,
+        "thermalState": "Nominal / Cool",
+        "isModelLoaded": true,
+        "activeBackend": "CPU",
+        "modelName": "Smollm2 135M 8k Lc100K Mix1 Ep2",
+        "backendInitializationMs": 0,
+        "modelLoadTimeMs": 109,
+        "fallbackCount": 0,
+        "lastFallback": "",
+        "backendDecision": "CPU selected in Advanced settings",
+        "backendStatus": "Ready",
+        "engineMode": "RUST",
+        "elapsedMs": 137,
+        "modelLoadMs": 293
+      },
+      {
+        "tokensPerSecond": 239.97695922851562,
+        "timeToFirstTokenMs": 48,
+        "memoryUsageMb": 390.2490234375,
+        "peakMemoryUsageMb": 429.8310546875,
+        "totalRamMb": 11238,
+        "activeThreads": 4,
+        "activeGpuLayers": 0,
+        "accelerationMode": "CPU (llama.cpp)",
+        "isRunning": false,
+        "promptEvaluationTimeMs": 37,
+        "completionTokens": 16,
+        "promptTokens": 15,
+        "kvCacheTokens": 0,
+        "temperatureCelsius": 28,
+        "thermalState": "Nominal / Cool",
+        "isModelLoaded": true,
+        "activeBackend": "CPU",
+        "modelName": "Smollm2 135M 8k Lc100K Mix1 Ep2",
+        "backendInitializationMs": 0,
+        "modelLoadTimeMs": 109,
+        "fallbackCount": 0,
+        "lastFallback": "",
+        "backendDecision": "CPU selected in Advanced settings",
+        "backendStatus": "Ready",
+        "engineMode": "LEGACY",
+        "elapsedMs": 137,
+        "modelLoadMs": 293
+      },
+      {
+        "tokensPerSecond": 237.42066955566406,
+        "timeToFirstTokenMs": 48,
+        "memoryUsageMb": 390.400390625,
+        "peakMemoryUsageMb": 390.572265625,
+        "totalRamMb": 11238,
+        "activeThreads": 4,
+        "activeGpuLayers": 0,
+        "accelerationMode": "CPU (llama.cpp)",
+        "isRunning": false,
+        "promptEvaluationTimeMs": 37,
+        "completionTokens": 16,
+        "promptTokens": 15,
+        "kvCacheTokens": 0,
+        "temperatureCelsius": 28,
+        "thermalState": "Nominal / Cool",
+        "isModelLoaded": true,
+        "activeBackend": "CPU",
+        "modelName": "Smollm2 135M 8k Lc100K Mix1 Ep2",
+        "backendInitializationMs": 0,
+        "modelLoadTimeMs": 109,
+        "fallbackCount": 0,
+        "lastFallback": "",
+        "backendDecision": "CPU selected in Advanced settings",
+        "backendStatus": "Ready",
+        "engineMode": "RUST",
+        "elapsedMs": 135,
+        "modelLoadMs": 293
+      },
+      {
+        "tokensPerSecond": 236.172119140625,
+        "timeToFirstTokenMs": 47,
+        "memoryUsageMb": 386.361328125,
+        "peakMemoryUsageMb": 390.662109375,
+        "totalRamMb": 11238,
+        "activeThreads": 4,
+        "activeGpuLayers": 0,
+        "accelerationMode": "CPU (llama.cpp)",
+        "isRunning": false,
+        "promptEvaluationTimeMs": 36,
+        "completionTokens": 16,
+        "promptTokens": 15,
+        "kvCacheTokens": 0,
+        "temperatureCelsius": 28,
+        "thermalState": "Nominal / Cool",
+        "isModelLoaded": true,
+        "activeBackend": "CPU",
+        "modelName": "Smollm2 135M 8k Lc100K Mix1 Ep2",
+        "backendInitializationMs": 0,
+        "modelLoadTimeMs": 109,
+        "fallbackCount": 0,
+        "lastFallback": "",
+        "backendDecision": "CPU selected in Advanced settings",
+        "backendStatus": "Ready",
+        "engineMode": "LEGACY",
+        "elapsedMs": 137,
+        "modelLoadMs": 293
+      }
+    ]
+  },
+  "policy": {
+    "extraction": [
+      {
+        "mode": "LEGACY",
+        "samples": 20,
+        "medianExtractionMs": 378.284479,
+        "maxExtractionMs": 405.524583
+      },
+      {
+        "mode": "RUST",
+        "samples": 20,
+        "medianExtractionMs": 366.073854,
+        "maxExtractionMs": 375.269844
+      },
+      {
+        "mode": "RUST",
+        "samples": 20,
+        "medianExtractionMs": 368.958906,
+        "maxExtractionMs": 379.510886
+      },
+      {
+        "mode": "LEGACY",
+        "samples": 20,
+        "medianExtractionMs": 192.020208,
+        "maxExtractionMs": 223.802344
+      }
+    ],
+    "bridgeInfoMedianMicros": 12.761,
+    "sampledProcessPssMb": 356.51171875,
+    "scope": "Same-build internal LEGACY/RUST policies; native library resident in both modes. Synthetic 101-paragraph HTML, no HTTP or inference."
+  },
+  "research": [
+    {
+      "question": "who is the next james bond",
+      "status": "SOURCE_BRIEF",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "storedLatencyMs": 7446,
+      "tokensPerSecond": 22.060444,
+      "sourceCount": 2,
+      "sourceUrls": [
+        "https://www.cbr.com/james-bond-26-callum-turner-007-casting-report/",
+        "https://www.independent.co.uk/bulletin/culture/callum-turner-james-bond-actors-new-cast-b3076162.html"
+      ]
+    },
+    {
+      "question": "Is jubilee line status good in tfl",
+      "status": "PARTIALLY_SUPPORTED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "storedLatencyMs": 3673,
+      "tokensPerSecond": 24.974207,
+      "sourceCount": 2,
+      "sourceUrls": [
+        "https://minne.london/line-status/jubilee-line-status",
+        "https://tubenotifications.co.uk/line/jubilee"
+      ]
+    },
+    {
+      "question": "Find status of the line from any websites",
+      "status": "PARTIALLY_SUPPORTED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "storedLatencyMs": 5097,
+      "tokensPerSecond": 24.727085,
+      "sourceCount": 2,
+      "sourceUrls": [
+        "https://minne.london/line-status/jubilee-line-status",
+        "https://tubenotifications.co.uk/line/jubilee"
+      ]
+    },
+    {
+      "question": "Ok",
+      "status": "PARTIALLY_SUPPORTED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "storedLatencyMs": 5002,
+      "tokensPerSecond": 24.612604,
+      "sourceCount": 2,
+      "sourceUrls": [
+        "https://timesofindia.indiatimes.com/weather/uk/london-weather-update-for-november-3-2026-light-showers-with-a-high-of-12c/articleshow/135483320.cms",
+        "https://www.london-now.co.uk/news/26693468.london-weather-today---met-office-forecasts-hours-rain/"
+      ]
+    },
+    {
+      "question": "should i wear a raincoat today in London",
+      "status": "PARTIALLY_SUPPORTED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "storedLatencyMs": 5177,
+      "tokensPerSecond": 24.736141,
+      "sourceCount": 2,
+      "sourceUrls": [
+        "https://timesofindia.indiatimes.com/weather/uk/london-weather-update-for-november-3-2026-light-showers-with-a-high-of-12c/articleshow/135483320.cms",
+        "https://www.london-now.co.uk/news/26693468.london-weather-today---met-office-forecasts-hours-rain/"
+      ]
+    },
+    {
+      "question": "Who is acting as Doom in Avengers Doomsday?",
+      "status": "EVIDENCE_CITED",
+      "state": "COMPLETE",
+      "model": "Gemma 4 E2B Instruct · LiteRT",
+      "storedLatencyMs": 3411,
+      "tokensPerSecond": 25.041508,
+      "sourceCount": 2,
+      "sourceUrls": [
+        "https://movies.disney.com/avengers-doomsday",
+        "https://www.superherohype.com/news/689482-robert-downey-jr-avengers-doomsday-doctor-doom-role-performance-capture"
+      ]
+    }
+  ],
+  "researchScope": "Six synthetic saved-chat UI questions using real Gemma 4 E2B CPU and live Exa/publisher reads. Stored latency is not an isolated network or end-to-end search timing. No private chats or publisher excerpts in this record.",
+  "packaging": {
+    "bundleBytes": 91867908,
+    "priorV25BundleBytes": 90488570,
+    "sha256": "aa5efd862e7f5d186b3667f20d0054abd720817b0e8a7106e14e0162b16a764c",
+    "rustLibraries": [
+      {
+        "abi": "arm64-v8a",
+        "uncompressedBytes": 530336,
+        "compressedBytes": 276209
+      },
+      {
+        "abi": "x86_64",
+        "uncompressedBytes": 600072,
+        "compressedBytes": 296212
+      }
+    ],
+    "sourceMetadata": "repositories {\n  system: GIT\n  local_root_path: \"$PROJECT_DIR\"\n  revision: \"8e688947d0d336f47f9cb1ccdef71e0d744a181c\"\n}\n",
+    "optionalVulkanAnd16KbValidation": true,
+    "normalPlayQnnEnabled": false,
+    "removedDiscoveryEndpointsAbsent": true
+  },
+  "unmeasured": [
+    "Cold startup comparison",
+    "Isolated Rust initialization time",
+    "Isolated HTTP latency",
+    "Chat retrieval latency comparison",
+    "Battery/power consumption",
+    "Population crash rates",
+    "Long sustained thermal behaviour",
+    "GPU/NPU hardware throughput in this migration"
+  ]
+}
