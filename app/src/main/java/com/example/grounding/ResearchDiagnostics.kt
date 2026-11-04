@@ -15,6 +15,7 @@ object ResearchDiagnostics {
         !Regex("(?i)\\b(?:my|our)\\b|@|\\b(?:password|secret|token|salary|medical|address)\\b").containsMatchIn(it) }?.take(240).orEmpty()
     @Synchronized fun clear(context: Context) { generation++; file(context).delete() }
     @Synchronized fun removeConversation(context: Context, conversation: Long) {
+        generation++
         runCatching {
             val target = file(context)
             if (!target.isFile || target.length() > 131072) { target.delete(); return }
@@ -37,6 +38,13 @@ object ResearchDiagnostics {
                 .put("route", route.path.name).put("routingReason", route.reason).put("retrievalStatus", evidence.status)
                 .put("verification", checked?.support?.name ?: "NOT_APPLICABLE")
                 .put("fallbackReason", if (failed) "REQUEST_FAILED" else evidence.failure?.name ?: if (checked?.sourceBrief == true || checked?.sourceExtract == true) "PARTIAL_SOURCE_SUMMARY" else "")
+                .put("research", JSONObject().put("provider", evidence.metrics.provider)
+                    .put("durationMs", evidence.metrics.durationMs).put("httpCategory", evidence.metrics.httpCategory)
+                    .put("discoveredResults", evidence.metrics.discoveredResults).put("readPublishers", evidence.metrics.readPublishers)
+                    .put("attemptedPublishers", evidence.metrics.attemptedPublishers).put("retryCount", evidence.metrics.retries)
+                    .put("timeoutStage", evidence.metrics.timeoutStage)
+                    .put("failure", (evidence.failure ?: evidence.metrics.failure ?: ResearchFailure.GROUNDING_VERIFICATION_FAILED.takeIf {
+                        checked?.support == AnswerSupport.INSUFFICIENT })?.name.orEmpty()))
                 .put("selectedSources", JSONArray().apply { evidence.sources.take(4).forEach { source ->
                     put(JSONObject().put("id", source.id).put("relevanceScore", ResearchQuery(route.question).score(source.title + " " + source.excerpt)))
                 } })
@@ -45,5 +53,28 @@ object ResearchDiagnostics {
             bounded.put(row)
             target.writeText(bounded.toString())
         }
+    }
+    /** Strict allowlist, including when an old/corrupt cache contains arbitrary text.
+     * No questions, conversation/source IDs, URLs, bodies, keys or exception text. */
+    @Synchronized fun export(context: Context): String {
+        val target = file(context)
+        val input = if (target.isFile && target.length() <= 131072) runCatching { JSONArray(target.readText()) }.getOrDefault(JSONArray()) else JSONArray()
+        val output = JSONArray()
+        (maxOf(0, input.length() - 48) until input.length()).forEach { index ->
+            val row = input.optJSONObject(index) ?: return@forEach
+            val data = row.optJSONObject("research") ?: JSONObject()
+            val clean = JSONObject().put("time", row.optLong("time").coerceAtLeast(0))
+            fun category(key: String, accepted: Set<String>) { clean.put(key, data.optString(key).takeIf { it in accepted }.orEmpty()) }
+            category("provider", setOf("Exa", "Direct website", "Exa + BI source index", "BI source index"))
+            category("httpCategory", setOf("1xx", "2xx", "3xx", "4xx", "5xx"))
+            category("timeoutStage", setOf("PROVIDER", "PUBLISHER"))
+            category("failure", ResearchFailure.entries.map { it.name }.toSet())
+            for (key in listOf("durationMs", "discoveredResults", "readPublishers", "attemptedPublishers", "retryCount"))
+                clean.put(key, data.optLong(key).coerceIn(0, if (key == "durationMs") 60000L else 100L))
+            clean.put("verification", row.optString("verification").takeIf { it in AnswerSupport.entries.map { s -> s.name } }.orEmpty())
+            clean.put("fallback", row.optString("fallbackReason").takeIf { it in ResearchFailure.entries.map { f -> f.name } + listOf("REQUEST_FAILED", "PARTIAL_SOURCE_SUMMARY") }.orEmpty())
+            output.put(clean)
+        }
+        return JSONObject().put("format", 1).put("reports", output).toString(2)
     }
 }

@@ -57,7 +57,7 @@ class WebBrowsingRecoveryTest {
             item("https://news.example/a", "News"), "text/event-stream"))
         assertEquals(listOf("https://publisher.example/a", "https://news.example/a"), result.candidates.map { it.url })
         assertTrue(result.candidates.all { it.provider == "Exa" && it.instantAnswer == null && it.routingHint.isEmpty() })
-        assertEquals(DiscoveryState.UNAVAILABLE, ExaDiscovery.candidates(feed("<html>Human check</html>", "text/html")).state)
+        assertEquals(DiscoveryState.MALFORMED, ExaDiscovery.candidates(feed("<html>Human check</html>", "text/html")).state)
         assertEquals(DiscoveryState.EMPTY, ExaDiscovery.candidates(feed("")).state)
         assertEquals(DiscoveryState.UNAVAILABLE, ExaDiscovery.candidates(WebDocument(ExaDiscovery.endpoint,
             "{\"id\":1,\"result\":{\"isError\":true}}", "application/json")).state)
@@ -82,7 +82,7 @@ class WebBrowsingRecoveryTest {
 
     @Test fun deniedDiscoveryBacksOffAndNeverUsesAnotherEngine() = runBlocking {
         val requests = mutableListOf<String>()
-        val reader = PublicWebResearch(WebFetcher { requests += it; error("HTTP 429") })
+        val reader = PublicWebResearch(WebFetcher { requests += it; throw WebRequestException(429) }, biFallback = false)
         repeat(2) { assertTrue(reader.search("How is the election going on in Israel").isEmpty()) }
         assertEquals(1, requests.size)
         assertTrue(requests.single() == ExaDiscovery.endpoint)

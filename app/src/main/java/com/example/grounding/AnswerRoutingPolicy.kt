@@ -100,7 +100,7 @@ object AnswerRoutingPolicy {
             !ConversationalResearch.needsSubject(route.question) && LocalAnswerUncertainty.needsResearch(answer)
 
     private fun mixedLocalPart(question: String): String? {
-        val parts = question.split(Regex("(?i),?\\s+and\\s+(?=what|which|who|when|where)|;\\s*|\\s+കൂടാതെ\\s+"), limit = 2)
+        val parts = question.split(Regex("(?i),?\\s+and\\s+(?=(?:(?:also )?(?:tell|give|show) me )?(?:what|which|who|when|where|the latest|latest|the current|current))|;\\s*|\\s+കൂടാതെ\\s+"), limit = 2)
         return parts.firstOrNull()?.trim(' ', ',', '?')?.takeIf {
             parts.size == 2 && explanation.containsMatchIn(it) && !fresh.containsMatchIn(it) && !changing.containsMatchIn(it) &&
                 !verification.containsMatchIn(it) && !compatibility.containsMatchIn(it)
@@ -110,6 +110,8 @@ object AnswerRoutingPolicy {
     /** Failure recovery never manufactures evidence or current observations. */
     fun recover(route: AnswerRoute, failure: ResearchFailure? = null): AnswerRecovery {
         val ml = Regex("[\\u0D00-\\u0D7F]").containsMatchIn(route.question)
+        val failedStatus = (failure ?: ResearchFailure.INSUFFICIENT_EVIDENCE).name
+        val failureNotice = failure?.notice.orEmpty()
         if (route.webDisabled && (route.requiresLive || route.requiresVerification)) return AnswerRecovery(route.localPart,
             if (ml) "വെബ് ഗവേഷണം ഓഫാണ്. ക്രമീകരണങ്ങളിൽ അത് പ്രവർത്തനക്ഷമമാക്കാം." else
                 "Web research is off. Enable it in Web & grounding to check current sources.", "WEB_DISABLED")
@@ -117,17 +119,17 @@ object AnswerRoutingPolicy {
             val reason = if (failure == null || failure == ResearchFailure.INSUFFICIENT)
                 "I couldn't verify matching sources for ${topic.identity}. Check the title, language or release year, or share a public HTTPS source."
             else "I couldn't research ${topic.identity} right now. ${failure.notice}"
-            return AnswerRecovery(null, reason, "WEB_UNAVAILABLE")
+            return AnswerRecovery(null, reason, failedStatus)
         }
         val liveNotice = if (ml) "തത്സമയ വിവരങ്ങൾ ഇപ്പോൾ പരിശോധിക്കാൻ കഴിഞ്ഞില്ല." else if (ConversationalResearch.isWeather(route.question))
             "I couldn't check the live weather or temperature right now." else "I couldn't check the current information right now."
         if (route.requiresVerification) return AnswerRecovery(null, if (ml) "ആവശ്യപ്പെട്ട സ്രോതസ്സുകൾ പരിശോധിച്ച് ഉറപ്പിക്കാൻ കഴിഞ്ഞില്ല." else
-            "I couldn't verify this from the requested sources right now. You can try another public HTTPS source.", "WEB_UNAVAILABLE")
-        if (route.requiresLive && route.localPart == null) return AnswerRecovery(null, liveNotice, "WEB_UNAVAILABLE")
-        if (route.localPart != null) return AnswerRecovery(route.localPart, liveNotice, "LOCAL_WITH_WEB_GAP")
+            "I couldn't verify this from the requested sources right now. $failureNotice", failedStatus)
+        if (route.requiresLive && route.localPart == null) return AnswerRecovery(null, "$liveNotice $failureNotice".trim(), failedStatus)
+        if (route.localPart != null) return AnswerRecovery(route.localPart, "$liveNotice $failureNotice".trim(), "LOCAL_WITH_WEB_GAP")
         return AnswerRecovery(route.question, if (route.privacyBlocked) "" else if (failure != null) {
-            if (ml) "വെബ് പരിശോധിക്കാനായില്ല; ഈ മറുപടി ഉപകരണത്തിലെ മോഡലിൽ നിന്നുള്ളതാണ്." else "Web research was unavailable; this answer uses on-device knowledge."
-        } else "", if (route.privacyBlocked) "PRIVACY_BLOCKED" else if (failure != null) "LOCAL_WEB_UNAVAILABLE" else "LOCAL")
+            if (ml) "വെബ് പരിശോധിക്കാനായില്ല; ഈ മറുപടി ഉപകരണത്തിലെ മോഡലിൽ നിന്നുള്ളതാണ്." else "Live sources weren't checked; this answer uses on-device knowledge. $failureNotice"
+        } else "", if (route.privacyBlocked) "PRIVACY_BLOCKED" else if (failure != null) "LOCAL_UNVERIFIED" else "LOCAL")
     }
 
     private fun reusableEvidence(question: String, history: List<ChatMessageEntity>, now: Long): List<EvidenceSource> {

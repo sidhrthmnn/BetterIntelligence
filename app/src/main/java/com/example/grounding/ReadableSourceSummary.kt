@@ -41,8 +41,8 @@ object ReadableSourceSummary {
     fun build(selected: List<Pair<EvidenceSource, String>>, question: String, conflict: Boolean = false): String? {
         val lines = selected.mapNotNull { (source, text) -> sentence(source, text, question) }.distinct().take(2)
         if (lines.isEmpty()) return null
-        val tail = if (conflict) "The reports differ, so I couldn't establish a single conclusion."
-            else "These sources provide a partial answer; I couldn't verify the remaining details."
+        val tail = if (conflict) "I couldn't establish a single conclusion because the reports differ."
+            else "I couldn't verify the remaining details; these sources provide a partial answer."
         return lines.joinToString("\n\n") + "\n\n" + tail
     }
 }

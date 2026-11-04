@@ -6,13 +6,19 @@ class DiscoveryCircuit(private val now: () -> Long = { System.nanoTime() / 1_000
     private var until = 0L
     private var state = DiscoveryState.UNAVAILABLE
     @Synchronized fun unavailable(): DiscoveryState? = state.takeIf { now() < until }
-    @Synchronized fun record(result: DiscoveryState) {
-        when (result) {
+    @Synchronized fun record(result: DiscoveryState) = record(DiscoveryResult(emptyList(), result))
+    @Synchronized fun record(result: DiscoveryResult) {
+        when (result.state) {
             DiscoveryState.FOUND, DiscoveryState.EMPTY -> { failures = 0; until = 0 }
+            DiscoveryState.NETWORK_UNAVAILABLE, DiscoveryState.MALFORMED -> Unit // Network/parser failures aren't provider outages.
             else -> {
-                state = result; failures++
-                if (result == DiscoveryState.BLOCKED || failures >= 2)
-                    until = now() + if (result == DiscoveryState.BLOCKED) 300_000 else 60_000
+                state = result.state; failures++
+                if (state in setOf(DiscoveryState.BLOCKED, DiscoveryState.RATE_LIMITED) || failures >= 2)
+                    until = now() + when (state) {
+                        DiscoveryState.RATE_LIMITED -> result.retryAfterMs.coerceIn(60_000, 86_400_000)
+                        DiscoveryState.BLOCKED -> 300_000
+                        else -> 60_000
+                    }
             }
         }
     }

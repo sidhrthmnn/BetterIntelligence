@@ -79,7 +79,7 @@ class DirectWebResearchTest {
     @Test fun challengeDoesNotCauseBroaderRetryOrPublisherReads() = runBlocking {
         val requests = mutableListOf<String>()
         val reader = PublicWebResearch(WebFetcher { url -> requests += url; WebDocument(url,
-            if (url.endsWith("robots.txt")) "User-agent: *\nAllow: /" else "<form id='challenge-form'></form>", "text/html") })
+            if (url.endsWith("robots.txt")) "User-agent: *\nAllow: /" else "<form id='challenge-form'></form>", "text/html") }, biFallback = false)
         assertTrue(reader.search("Latest Android updates").isEmpty()); assertEquals(1, requests.size)
     }
     @Test fun samePublisherPoliciesAreFetchedOnlyOnceEvenWithConcurrentReads() = runBlocking {

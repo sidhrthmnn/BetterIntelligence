@@ -17,6 +17,26 @@ import kotlin.concurrent.thread
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SearchHttpTest {
+    @Test fun terminalSseReplyReturnsWithoutWaitingForTheServerToClose() = runBlocking {
+        ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
+            val responder = thread(isDaemon = true) {
+                server.accept().use { socket ->
+                    socket.soTimeout = 4000
+                    val input = socket.getInputStream().bufferedReader()
+                    while (!input.readLine().isNullOrEmpty()) { }
+                    socket.getOutputStream().apply {
+                        write(("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: keep-alive\r\n\r\n" +
+                            "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[]}}\n\n").toByteArray()); flush()
+                    }
+                    runCatching { input.read() }
+                }
+            }
+            val page = withTimeout(1500) { SearchHttp(okhttp3.OkHttpClient(), true)
+                .postJson("http://localhost:${server.localPort}/mcp", "{}") { true } }
+            assertEquals(com.example.grounding.DiscoveryState.EMPTY, com.example.grounding.ExaDiscovery.candidates(page).state)
+            responder.join(4000)
+        }
+    }
     @Test fun searchPostIsJsonAndNeverReplayedToARedirect() = runBlocking {
         ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
             var firstLine = ""

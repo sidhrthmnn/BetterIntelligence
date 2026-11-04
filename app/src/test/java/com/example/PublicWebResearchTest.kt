@@ -17,9 +17,9 @@ class PublicWebResearchTest {
         val fetcher = WebFetcher { url ->
             requests += url
             if (url.endsWith("/robots.txt")) WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-            else error("Website unavailable (HTTP 429)")
+            else throw WebRequestException(429)
         }
-        assertEquals(ResearchFailure.DISCOVERY_UNAVAILABLE,
+        assertEquals(ResearchFailure.PROVIDER_ACCESS_DENIED,
             PublicWebResearch(fetcher, discoveryAllowed = { false }).research("Search Orion memory") {}.failure)
         assertTrue(requests.isEmpty())
         val reader = PublicWebResearch(fetcher)

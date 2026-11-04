@@ -113,7 +113,7 @@ class Research22Test {
         val transport = WebFetcher { url -> WebDocument(url, if (url.endsWith("robots.txt")) "User-agent: *\nAllow: /" else "<main><p>Orion supports Android devices and the documented runtime. Its memory requirements depend on context size and quantization.</p></main>", if (url.endsWith("robots.txt")) "text/plain" else "text/html") }
         val engine = PublicWebResearch(transport, discovery)
         val failed = engine.research("Compare Orion 2 vs Vega 3 for local Android inference") {}
-        assertEquals(ResearchFailure.BLOCKED, failed.failure); assertEquals(1, discoveryCalls)
+        assertEquals(ResearchFailure.PROVIDER_ACCESS_DENIED, failed.failure); assertEquals(1, discoveryCalls)
         assertTrue(engine.search("Read https://docs.example/orion").isNotEmpty()); assertEquals(1, discoveryCalls)
     }
     @Test fun progressCancellationAndPrivacyModesWorkWithoutInferenceOrNetworkLeakage() = runBlocking {
@@ -180,7 +180,7 @@ class Research22Test {
     )
     @Test fun ramAwareDualModelPlannerStepsDownContextBeforeSwitchingToSecondary() {
         val catalog = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        val primary = catalog.single { it.parameterCount == "4B" }.copy(id = 1L, isInstalled = true)
+        val primary = catalog.single { it.filename == "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf" }.copy(id = 1L, isInstalled = true)
         val secondary = catalog.first { ModelLibrary.category(it) == "FAST" }.copy(id = 2L, isInstalled = true)
         val picked = ModelMemoryPlanner.pickDefaultSecondary(listOf(primary, secondary), primary)
         assertEquals(secondary.id, picked?.id)
