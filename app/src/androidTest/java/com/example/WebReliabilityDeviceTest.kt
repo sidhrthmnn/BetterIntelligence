@@ -49,8 +49,9 @@ class WebReliabilityDeviceTest {
     }
     @Test fun realNativeModelRecoversGeneralAndMixedTasksKeepsLiveFactsUnverifiedAndCancelsCleanly(): Unit = runBlocking {
         admit()
-        val model = withTimeout(90_000) { repo.allModels.first { models -> models.any { it.filename == "smollm2-135m-instruct-q4_k_m.gguf" && it.isInstalled } } }
-            .single { it.filename == "smollm2-135m-instruct-q4_k_m.gguf" }
+        val filename = InstrumentationRegistry.getArguments().getString("reliabilityModel") ?: "smollm2-135m-instruct-q4_k_m.gguf"
+        val model = withTimeout(90_000) { repo.allModels.first { models -> models.any { it.filename == filename && it.isInstalled } } }
+            .single { it.filename == filename }
         repo.engine.setProcessingMode(ProcessingMode.CPU)
         repo.switchActiveModel(model)
         repo.preferencesRepository.saveWebAllowed(true)

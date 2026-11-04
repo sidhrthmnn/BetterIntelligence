@@ -17,7 +17,9 @@ class BiDiscovery(private val fetcher: WebFetcher, private val robots: ResearchR
     private val directory: List<Seed> = seeds,
     private val index: LinkedHashMap<String, Pair<Long, ResearchCandidate>> = LinkedHashMap(),
     private val epoch: java.util.concurrent.atomic.AtomicLong = java.util.concurrent.atomic.AtomicLong()) : DiscoveryProvider {
-    data class Seed(val url: String, val title: String, val topics: Set<String>)
+    data class Seed(val url: String, val title: String, val topics: Set<String>) {
+        val matchingTerms = topics.flatMap { ResearchQuery.words(it) }.toSet()
+    }
     companion object {
         const val providerName = "BI source index"
         // Source addresses/categories only, never answers. New topics require a
@@ -25,7 +27,7 @@ class BiDiscovery(private val fetcher: WebFetcher, private val robots: ResearchR
         val seeds = listOf(
             Seed("https://tfl.gov.uk/tube-dlr-overground/status/", "TfL London Underground line service status", setOf("tfl", "jubilee", "underground", "tube")),
             Seed("https://www.bbc.com/weather/2643743", "London BBC Weather", setOf("london")),
-            Seed("https://developer.android.com/ndk/guides/graphics", "Android Vulkan graphics API documentation", setOf("vulkan", "ndk", "android")),
+            Seed("https://developer.android.com/ndk/guides/graphics/getting-started", "Android Vulkan graphics initialization and setup guide", setOf("vulkan", "ndk", "android")),
             Seed("https://ai.google.dev/edge/litert-lm", "Google AI Edge LiteRT-LM documentation", setOf("litert", "litertlm", "inference")),
             Seed("https://kotlinlang.org/docs/home.html", "Kotlin language documentation", setOf("kotlin", "coroutines")),
             Seed("https://doc.rust-lang.org/book/", "The Rust programming language", setOf("rust")),
@@ -41,7 +43,7 @@ class BiDiscovery(private val fetcher: WebFetcher, private val robots: ResearchR
         )
     }
     fun clear() = synchronized(index) { epoch.incrementAndGet(); index.clear() }
-    fun supports(query: ResearchQuery): Boolean = directory.any { seed -> seed.topics.any { it in ResearchQuery.words(query.question) } }
+    fun supports(query: ResearchQuery): Boolean = directory.any { seed -> seed.matchingTerms.any { it in ResearchQuery.words(query.question) } }
     fun session(transport: WebFetcher) = BiDiscovery(transport, robots, allowed, timeouts, directory, index, epoch)
     override suspend fun discover(query: ResearchQuery, broad: Boolean): DiscoveryResult = coroutineScope {
         if (!allowed()) return@coroutineScope DiscoveryResult(emptyList(), DiscoveryState.BLOCKED)
@@ -49,8 +51,8 @@ class BiDiscovery(private val fetcher: WebFetcher, private val robots: ResearchR
         val deadline = currentCoroutineContext()[ResearchDeadline] ?: ResearchDeadline(timeouts.overallMs)
         val terms = ResearchQuery.words(query.question)
         val selected = directory.filter { seed ->
-            seed.topics.any { it in terms } && ("weather" !in seed.url || ConversationalResearch.isWeather(query.question))
-        }.sortedByDescending { seed -> seed.topics.count { it in terms } + query.score(seed.title) }.take(3)
+            seed.matchingTerms.any { it in terms } && ("weather" !in seed.url || ConversationalResearch.isWeather(query.question))
+        }.sortedByDescending { seed -> seed.matchingTerms.count { it in terms } + query.score(seed.title) }.take(3)
         val found = mutableListOf<ResearchCandidate>()
         synchronized(index) {
             index.entries.removeAll { System.currentTimeMillis() - it.value.first !in 0..900_000 }

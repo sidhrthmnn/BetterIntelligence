@@ -178,13 +178,17 @@ class WebSearchReliabilityTest {
         val prior = requests.size
         val denied = BiDiscovery(fetcher, ResearchRobots(fetcher), { false }).discover(q, false)
         assertEquals(prior, requests.size); assertTrue(denied.candidates.isEmpty())
+        val categories = BiDiscovery(fetcher, ResearchRobots(fetcher), { true }, directory = listOf(
+            BiDiscovery.Seed("https://docs.example/index", "News and film sources", setOf("headlines", "reviews"))))
+        assertTrue(categories.supports(ResearchQuery("Latest news headlines")))
+        assertTrue(categories.supports(ResearchQuery("Tamil movie reviews")))
     }
     @Test fun actualReaderCanRecoverThroughBiWithoutReplayingRateLimitedExa() = runBlocking {
         var exa = 0
         val reader = PublicWebResearch(WebFetcher { url -> when {
             url == ExaDiscovery.endpoint -> { exa++; throw WebRequestException(429, 120_000) }
             url.endsWith("robots.txt") -> WebDocument(url, "", "text/plain")
-            url == "https://developer.android.com/ndk/guides/graphics" -> WebDocument(url, "<main><a href='/orion'>Orion Android memory</a></main>", "text/html")
+            url == "https://developer.android.com/ndk/guides/graphics/getting-started" -> WebDocument(url, "<main><a href='/orion'>Orion Android memory</a></main>", "text/html")
             else -> page(url)
         } })
         val outcome = reader.research(q.question) {}

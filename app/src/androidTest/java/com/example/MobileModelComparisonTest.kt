@@ -77,8 +77,10 @@ class MobileModelComparisonTest {
                     finally { monitor.cancelAndJoin() }
                     val data = core.telemetry.value
                     val matched = if (task.jsonRoute) runCatching {
-                        val json = Regex("\\{[^{}]+}").find(answer)?.value ?: ""
-                        JSONObject(json).optString("route") == task.expected
+                        // Score the requested JSON-only output, not an object
+                        // embedded in prose. Android's ICU regex brace rules
+                        // also differ from the desktop parser.
+                        JSONObject(answer.trim()).optString("route") == task.expected
                     }.getOrDefault(false) else Regex(task.expected).containsMatchIn(answer)
                     samples.put(JSONObject().put("trial", trial).put("task", task.id).put("answer", answer).put("criterionMatched", matched)
                         .put("elapsedMs", SystemClock.elapsedRealtime() - began).put("firstTokenMs", data.timeToFirstTokenMs)
