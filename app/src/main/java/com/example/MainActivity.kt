@@ -33,6 +33,7 @@ import com.example.ui.AiCoreViewModel
 import com.example.ui.AppTab
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.components.BiAvatar
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AiCoreViewModel by viewModels()
@@ -63,6 +64,7 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
     val destination by viewModel.currentTab.collectAsState()
     val navDepth by viewModel.navigationDepth.collectAsState()
     val message by viewModel.userMessage.collectAsState()
+    val answering by viewModel.isChatGenerating.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); viewModel.clearUserMessage() } }
     fun back() = viewModel.navigateBack()
@@ -73,8 +75,9 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(title = {
-                Text(if (destination == AppTab.CHAT) "Better Intelligence" else destination.title,
-                    style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (destination == AppTab.CHAT) BiAvatar(answering)
+                else Text(destination.title, style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
             }, navigationIcon = {
                 IconButton(onClick = { if (destination == AppTab.CHAT) viewModel.selectTab(AppTab.HISTORY) else back() },
                     modifier = Modifier.testTag(if (destination == AppTab.CHAT) "open_history" else "navigate_back")) {
