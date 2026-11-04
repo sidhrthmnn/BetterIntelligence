@@ -1,0 +1,31 @@
+[
+  {
+    "question": "How do birds fly?",
+    "status": "LOCAL_UNVERIFIED",
+    "state": "LENGTH_LIMIT",
+    "answer": "I don't have specific information on how birds fly in my training data. This is a general biology question about avian locomotion. I can explain the basic principles from general knowledge: birds generate lift by flapping their wings, creating a downward force that pushes air down, and Newton's third law propels them forward. They also use body positioning and wing shape to control thrust and maneuver. However, for detailed biomechanical specifics, I would need to rely on a web search or tool access that I don't have here. I'll provide a concise overview based on established facts.\n\nBirds fly primarily by flapping their wings, which creates lift and thrust. As they move their wings up and down, they push air downward; the reaction force from this airflow propels the bird forward. Their wing shape and the angle of flapping allow them to generate both lift and thrust efficiently. They also adjust their body\n\nLive sources weren't checked; this answer uses on-device knowledge. Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source.",
+    "sources": [],
+    "model": "LFM3 1.7B QAD"
+  },
+  {
+    "question": "What's the current Jubilee line status?",
+    "status": "PROVIDER_RATE_LIMITED",
+    "state": "COMPLETE",
+    "answer": "I couldn't check the current information right now. Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source.",
+    "sources": [],
+    "model": "LFM3 1.7B QAD"
+  },
+  {
+    "question": "Explain inflation and tell me the latest UK inflation rate.",
+    "status": "LOCAL_WITH_WEB_GAP",
+    "state": "LENGTH_LIMIT",
+    "answer": "I need to explain inflation clearly. Since I cannot browse the web or access live data, I will rely on established general knowledge. Inflation is the rate at which the general level of prices for goods and services rises, eroding purchasing power. It's a measure of the decline in the real value of money over time. Central banks often target low inflation (around 2%) to maintain economic stability. High inflation can lead to reduced savings and increased uncertainty. I can describe the concept and its effects without needing a live search.</think>Inflation is the gradual increase in the general price level of goods and services over time, which reduces the purchasing power of money. When prices rise, each dollar buys fewer items or services than before. Inflation can be caused by factors like increased demand, supply shortages, or monetary expansion. Central banks aim to control inflation to protect consumers and maintain economic stability. For example, if inflation\n\nI couldn't check the current information right now. Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source.",
+    "sources": [],
+    "model": "LFM3 1.7B QAD"
+  },
+  {
+    "question": "Cancellation during discovery",
+    "state": "STOPPED",
+    "status": "USER_CANCELLED"
+  }
+]

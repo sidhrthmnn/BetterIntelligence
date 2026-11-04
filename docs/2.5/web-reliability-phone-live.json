@@ -1,0 +1,32 @@
+[
+  {
+    "question": "How does Android Vulkan graphics initialization work?",
+    "scope": "Live phone retrieval plus deterministic synthesis; no model run",
+    "failure": "",
+    "readSources": 2,
+    "supported": "PARTIAL",
+    "elapsedMs": 5687
+  },
+  {
+    "question": "Weather in London today",
+    "scope": "Live phone retrieval plus deterministic synthesis; no model run",
+    "failure": "",
+    "readSources": 2,
+    "supported": "PARTIAL",
+    "elapsedMs": 6746
+  },
+  {
+    "question": "Who is acting as Doom in Avengers Doomsday?",
+    "scope": "Live phone retrieval plus deterministic synthesis; no model run",
+    "failure": "",
+    "readSources": 2,
+    "supported": "PARTIAL",
+    "elapsedMs": 2866
+  },
+  {
+    "question": "How does Android Vulkan graphics initialization work?",
+    "scope": "Simulated Exa rate limit; real publisher requests through BI fallback",
+    "provider": "Exa + BI source index",
+    "readSources": 1
+  }
+]
