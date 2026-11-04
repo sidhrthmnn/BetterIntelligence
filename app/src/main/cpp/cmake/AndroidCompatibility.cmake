@@ -1,4 +1,4 @@
-# llama.cpp v0.7.0's Vulkan host buffer helper uses aligned_alloc (Android 28).
+# llama.cpp v0.7.0's Vulkan host buffer helper used aligned_alloc (Android 28).
 # posix_memalign has the same paired free() lifecycle and supports our API 24
 # baseline. Keep this small compatibility patch checked against the pinned source.
 set(_buffers "${llama_SOURCE_DIR}/ggml/src/ggml-vulkan/ggml-vulkan-buffers.cpp")
@@ -12,6 +12,12 @@ if(NOT _position EQUAL -1)
 else()
     string(FIND "${_text}" "${_portable}" _position)
     if(_position EQUAL -1)
-        message(FATAL_ERROR "Review pinned Vulkan aligned allocation compatibility")
+        # v0.8.0 implements the same portable allocation/free pairing upstream.
+        string(FIND "${_text}" "static void * portable_aligned_malloc" _helper)
+        string(FIND "${_text}" "posix_memalign(&ptr, align, size)" _posix)
+        string(FIND "${_text}" "portable_aligned_free(entry.base)" _free)
+        if(_helper EQUAL -1 OR _posix EQUAL -1 OR _free EQUAL -1)
+            message(FATAL_ERROR "Review pinned Vulkan aligned allocation compatibility")
+        endif()
     endif()
 endif()

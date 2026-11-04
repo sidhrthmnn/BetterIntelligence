@@ -13,6 +13,8 @@ object ModelLibrary {
     private val runtimeContexts = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private val runtimeMemoryFloors = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val categories = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val manualModels = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    fun automaticUseAllowed(model: ModelEntity): Boolean = model.sha256Checksum !in manualModels
     fun category(model: ModelEntity): String? = model.sha256Checksum?.let(categories::get)
     fun categoryLabel(model: ModelEntity): String? = when (category(model)) {
         "FAST" -> "Fast"
@@ -69,6 +71,7 @@ object ModelLibrary {
             item.optLong("runtimeMemoryFloorMb", 0).takeIf { it > 0 }?.let { runtimeMemoryFloors[item.getString("sha256")] = it }
             if (primary) item.optString("recommendedMode").takeIf { it in setOf("FAST", "BALANCED", "ADVANCED", "EXPERIMENTAL") }
                 ?.let { categories[item.getString("sha256")] = it }
+            if (primary) { if (item.optBoolean("manualOnly")) manualModels.add(item.getString("sha256")) else manualModels.remove(item.getString("sha256")) }
             if (item.getString("filename").endsWith(".litertlm") && !item.optBoolean("dynamicContext", false))
                 fixedContexts[item.getString("sha256")] = item.optInt("runtimeMaxContext", 0).takeIf { it > 0 } ?: 2048
             ModelEntity(name = item.getString("name"), filename = item.getString("filename"),
@@ -125,7 +128,7 @@ object ModelLibrary {
     fun fits(model: ModelEntity, profile: HardwareProfile, context: Int = 2048): Boolean = incompatibilityReason(model, profile, context) == null
 
     fun recommend(models: List<ModelEntity>, profile: HardwareProfile): ModelRecommendation? {
-        val selected = models.filter { !it.isCustom && category(it) != "EXPERIMENTAL" && fits(it, profile) }
+        val selected = models.filter { !it.isCustom && automaticUseAllowed(it) && category(it) != "EXPERIMENTAL" && fits(it, profile) }
             .minWithOrNull(compareBy<ModelEntity> { when (category(it)) { "BALANCED" -> 0; "FAST" -> 1; "ADVANCED" -> 2; else -> 3 } }
                 .thenBy { it.fileSizeMb }) ?: return null
         return ModelRecommendation(selected.name, selected.filename, selected.quantization, 0f,

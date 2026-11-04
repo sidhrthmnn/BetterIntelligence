@@ -45,7 +45,26 @@ object ModelMemoryPlanner {
         val keyLength = meta.customKvPairs["${meta.architecture}.attention.key_length"]?.toLongOrNull()
             ?: (meta.embeddingLength / meta.headCount.coerceAtLeast(1)).toLong()
         val valueLength = meta.customKvPairs["${meta.architecture}.attention.value_length"]?.toLongOrNull() ?: keyLength
-        return meta.blockCount.toLong() * meta.headCountKv.coerceAtLeast(1) * (keyLength + valueLength) * 2 // F16
+        val perLayer = meta.customKvPairs["${meta.architecture}.attention.head_count_kv"]
+            ?.takeIf { it.startsWith("[") && !it.endsWith("items]") }?.trim('[', ']')?.split(',')
+            ?.mapNotNull { it.trim().toLongOrNull()?.takeIf { count -> count in 0..256 } }
+            ?.takeIf { it.size == meta.blockCount }
+        // Hybrid convolution/linear-attention layers have recurrent state, not
+        // a growing K/V cache. Fixed state is covered by runtime headroom.
+        // Retain a full-window upper bound for sliding-window attention.
+        val attentionLayers = if (meta.architecture == "qwen35") {
+            val recurrent = meta.customKvPairs["qwen35.attention.recurrent_layers"]
+                ?.trim('[', ']')?.split(',')?.map { it.trim() }
+                ?.takeIf { it.size == meta.blockCount && it.all { flag -> flag in setOf("true", "false") } }
+            recurrent?.count { it == "false" } ?: run {
+                // Same documented default as the pinned qwen35 runtime.
+                val interval = meta.customKvPairs["qwen35.full_attention_interval"]?.toIntOrNull()
+                    ?.takeIf { it in 1..meta.blockCount } ?: 4
+                (1..meta.blockCount).count { it % interval == 0 }
+            }
+        } else meta.blockCount
+        val totalHeads = perLayer?.sum() ?: attentionLayers.toLong() * meta.headCountKv.coerceAtLeast(1)
+        return totalHeads * (keyLength + valueLength) * 2 // F16
     }
     fun estimate(meta: GgufMetadata, context: Int, gpuLayers: Int = 0) =
         estimate(meta.totalSizeBytes, context, kvBytesPerToken(meta), gpuLayers, meta.blockCount)
@@ -56,7 +75,7 @@ object ModelMemoryPlanner {
     fun pickDefaultSecondary(models: List<ModelEntity>, primary: ModelEntity?): ModelEntity? {
         val primaryRam = primary?.let { ModelLibrary.memoryEstimate(it, 512).totalMb } ?: Long.MAX_VALUE
         return models.filter {
-            it.isInstalled && it.id != primary?.id && ModelLibrary.category(it) != "EXPERIMENTAL" &&
+            it.isInstalled && it.id != primary?.id && ModelLibrary.automaticUseAllowed(it) && ModelLibrary.category(it) != "EXPERIMENTAL" &&
                 ModelLibrary.memoryEstimate(it, 512).totalMb < primaryRam
         }.minWithOrNull(
             compareBy<ModelEntity> {

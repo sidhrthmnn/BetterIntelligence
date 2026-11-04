@@ -11,6 +11,21 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ModelLibraryTest {
+    @Test fun mobileComparisonCatalogUsesPinnedIdentitiesAndHybridMemoryGeometry() {
+        val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
+        val expected = mapOf("LFM3-1.7B-QAD-Q4_0.gguf" to 44L, "Qwen3.5-2B-Q4_K_M.gguf" to 24L,
+            "Qwen3.5-4B-Q4_K_M.gguf" to 64L, "gemma-4-E2B_q4_0-it.gguf" to 140L)
+        expected.forEach { (filename, kvMb) ->
+            val model = models.single { it.filename == filename }
+            assertEquals(kvMb, ModelLibrary.memoryEstimate(model, 2048).kvMb)
+            assertTrue(model.downloadUrl!!.contains(model.versionTag!!))
+            assertEquals(64, model.sha256Checksum!!.length)
+            assertFalse(ModelLibrary.automaticUseAllowed(model))
+            assertTrue(model.description.contains("Text", true))
+        }
+        assertEquals("lfm3", models.single { it.filename == "LFM3-1.7B-QAD-Q4_0.gguf" }.architecture)
+        assertTrue(SmartBackendSelector.RUNTIME.startsWith("llama-0.8.0"))
+    }
     @Test fun newGgufOptionsArePinnedAndAccountForDifferentKvGeometry() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
         val qwen = models.single { it.filename == "Qwen_Qwen3-1.7B-Q4_K_M.gguf" }
@@ -54,7 +69,7 @@ class ModelLibraryTest {
         assertNull(ModelLibrary.inferenceModel(context, e2.filename, "different-content"))
         assertTrue(ModelLibrary.liteRtGpuRestriction("7243c33c9c6192150ab6da7ac13a9efdc24ff1a653eabc93b2757de4b44b012a").contains("CPU inference remains available"))
         assertEquals("", ModelLibrary.liteRtGpuRestriction(e2.sha256Checksum!!))
-        val gguf = ModelLibrary.read(context).single { it.parameterCount == "4B" }
+        val gguf = ModelLibrary.read(context).single { it.filename == "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf" }
         assertEquals("", ModelLibrary.liteRtGpuRestriction(gguf.sha256Checksum!!))
     }
     private fun profile(ram: Long = 2048, storage: Float = 10f, abi: String = "arm64-v8a") = HardwareProfile(
@@ -63,7 +78,7 @@ class ModelLibraryTest {
 
     @Test fun recommendationUsesAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        assertEquals(19, models.size)
+        assertEquals(23, models.size)
         assertTrue(models.all { !it.isInstalled && !it.isActive && !it.isChecksumVerified })
         assertEquals("Qwen 3 0.6B Instruct · LiteRT", ModelLibrary.recommend(models, profile())!!.recommendedModelName)
         assertEquals("SmolLM2 135M Instruct", ModelLibrary.recommend(models, profile(storage = 0.3f))!!.recommendedModelName)
@@ -108,7 +123,7 @@ class ModelLibraryTest {
 
     @Test fun higherCapacityModelsRequireEnoughAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        val fourB = models.single { it.parameterCount == "4B" }
+        val fourB = models.single { it.filename == "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf" }
         val sevenB = models.single { it.parameterCount == "7B" }
         assertTrue(ModelLibrary.fits(fourB, profile(ram = 4096)))
         assertTrue(ModelLibrary.fits(fourB, profile(ram = 6144)))
@@ -121,7 +136,7 @@ class ModelLibraryTest {
     }
 
     @Test fun qwen4BOn12GbPhoneUsesCurrentHeadroomContextAndQuantizedFileSize() {
-        val model = ModelLibrary.read(ApplicationProvider.getApplicationContext()).single { it.parameterCount == "4B" }
+        val model = ModelLibrary.read(ApplicationProvider.getApplicationContext()).single { it.filename == "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf" }
         val phone = profile(ram = 3800).copy(totalRamMb = 12 * 1024, safeModelRamLimitMb = ModelMemoryPlanner.budget(12 * 1024, 3800))
         assertTrue(ModelLibrary.fits(model, phone))
         assertTrue(ModelLibrary.memoryEstimate(model, 4096).totalMb > ModelLibrary.memoryEstimate(model, 512).totalMb)
@@ -137,7 +152,7 @@ class ModelLibraryTest {
         val asset = context.assets.open("model-library.json").bufferedReader().use { it.readText() }
         assertEquals(java.io.File("../models/library.json").readText().trim(), asset.trim())
         val models = ModelLibrary.read(context)
-        assertEquals(19, models.map { it.filename }.distinct().size)
+        assertEquals(23, models.map { it.filename }.distinct().size)
         assertEquals(setOf("LIGHTWEIGHT", "BALANCED", "QUALITY"), models.map { it.recommendedTier }.toSet())
         for (model in models) {
             assertTrue(model.sha256Checksum!!.matches(Regex("[a-f0-9]{64}")))
@@ -148,6 +163,7 @@ class ModelLibraryTest {
                 model.name.startsWith("SmolLM3 3B") && model.filename.endsWith(".litertlm") -> "INT4 block32 + INT8 embed"
                 model.architecture == "qwen3" && model.filename.endsWith(".litertlm") -> "INT4 block32"
                 model.filename.endsWith(".litertlm") -> "Mixed 2/4/8-bit"
+                model.filename.contains("Q4_0", true) -> "Q4_0"
                 else -> "Q4_K_M"
             }, model.quantization)
             assertEquals(0f, model.speedScoreTokSec)
@@ -180,7 +196,7 @@ class ModelLibraryTest {
         assertEquals(setOf("E2B", "E4B"), models.map { it.parameterCount }.toSet())
         for (size in listOf("E2B", "E4B")) {
             val pair = models.filter { it.parameterCount == size }
-            assertEquals(2, pair.size)
+            assertEquals(if (size == "E2B") 3 else 2, pair.size)
             val lite = pair.single { it.filename.endsWith(".litertlm") }
             assertTrue(ModelLibrary.memoryEstimate(lite).weightsMb < lite.fileSizeMb)
             assertTrue(ModelLibrary.memoryEstimate(lite, 4096).totalMb > ModelLibrary.memoryEstimate(lite, 512).totalMb)

@@ -42,7 +42,7 @@ class CandidateEvaluationTest {
         require(file.isFile)
         val gguf = name.endsWith(".gguf", true)
         val report = JSONObject().put("model", name).put("device", Build.FINGERPRINT)
-            .put("requestedBackend", backend).put("requestedContext", contextSize).put("runtime", if (gguf) "llama.cpp 0.7.0" else "LiteRT-LM 0.18.0")
+            .put("requestedBackend", backend).put("requestedContext", contextSize).put("runtime", if (gguf) "llama.cpp 0.8.0" else "LiteRT-LM 0.18.0")
             .put("quality", quality).put("chatQuality", chatQuality).put("chargingDuringTest", true)
             .put("backendPolicy", if (gguf) SmartBackendSelector.RUNTIME else SmartBackendSelector.LITERT_RUNTIME).put("harnessRevision", "2026-10-18-d")
         val output = File(context.filesDir, "candidate-$phase-$backend-$contextSize$limitSuffix-$name.json")

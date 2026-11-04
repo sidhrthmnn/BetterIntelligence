@@ -1,4 +1,4 @@
-# llama.cpp v0.7.0 leaves compile_pending set when Vulkan shader compilation
+# llama.cpp v0.7.0/v0.8.0 leave compile_pending set when Vulkan shader compilation
 # throws. A second graph using that pipeline then waits forever. Observed on
 # HONOR/Adreno 830 in ggml_vk_load_shaders after a failed warm-up. Preserve the
 # exception, wake every waiter and release partially created Vulkan handles.
