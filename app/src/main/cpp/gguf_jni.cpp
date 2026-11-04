@@ -296,9 +296,11 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
             const std::string arch(architecture), tmpl(chatTemplate);
             const std::string prompt(formatted.data(), size);
             const std::string suffix = "<|im_start|>assistant\n";
-            if ((arch == "qwen3" || arch == "smollm3") && tmpl.find("enable_thinking") != std::string::npos &&
+            if ((arch == "qwen3" || arch == "qwen35" || arch == "smollm3" || arch == "lfm3") && tmpl.find("enable_thinking") != std::string::npos &&
                 prompt.size() >= suffix.size() && prompt.compare(prompt.size() - suffix.size(), suffix.size(), suffix) == 0) {
-                const std::string text = prompt + "<think>\n\n</think>\n\n";
+                // LiquidAI's own template uses the compact empty thought prefix.
+                // https://huggingface.co/LiquidAI/LFM3-1.7B/blob/main/chat_template.jinja
+                const std::string text = prompt + (arch == "lfm3" ? "<think></think>" : "<think>\n\n</think>\n\n");
                 formatted.assign(text.begin(), text.end()); size = static_cast<int>(formatted.size());
             }
         }

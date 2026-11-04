@@ -111,7 +111,9 @@ class GgufParser {
                 "$architecture.embedding_length" -> embeddingLength = value.toIntOrNull() ?: embeddingLength
                 "$architecture.block_count" -> blockCount = value.toIntOrNull() ?: blockCount
                 "$architecture.attention.head_count" -> headCount = value.toIntOrNull() ?: headCount
-                "$architecture.attention.head_count_kv" -> headCountKv = value.toIntOrNull() ?: headCountKv
+                "$architecture.attention.head_count_kv" -> headCountKv = value.toIntOrNull()
+                    ?: value.takeIf { it.startsWith("[") && !it.endsWith("items]") }
+                        ?.trim('[', ']')?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.maxOrNull() ?: headCountKv
                 "$architecture.feed_forward_length" -> feedForwardLength = value.toIntOrNull() ?: feedForwardLength
                 "$architecture.rope.freq_base" -> ropeFreqBase = value.toFloatOrNull() ?: ropeFreqBase
                 "tokenizer.ggml.tokens" -> {

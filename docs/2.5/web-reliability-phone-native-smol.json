@@ -1,0 +1,31 @@
+[
+  {
+    "question": "How do birds fly?",
+    "status": "LOCAL_UNVERIFIED",
+    "state": "LENGTH_LIMIT",
+    "answer": "Birds are flightless birds that have evolved to fly using their powerful wings. They have wings that are covered with feathers and are shaped like wings, with the skin folded over the feathers, and the feathers are covered with skin. Birds have wings that are covered with feathers and are shaped like wings, with the skin folded over the feathers, and the feathers are covered with skin. They are able to produce sound using their wings and are able to fly using their wings. They also have powerful muscles in their wings to generate lift, and they have feathers on their wings to help them fly. They are able to fly using their wings and are able to fly using their wings. They are able to fly using their wings and are able to fly using their wings. They are able to fly using their wings and are able to fly using their wings. They are able to fly using their wings and are able to fly using their wings. They are able to fly using their\n\nLive sources weren't checked; this answer uses on-device knowledge. Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source.",
+    "sources": [],
+    "model": "Smollm2 135M 8k Lc100K Mix1 Ep2"
+  },
+  {
+    "question": "What's the current Jubilee line status?",
+    "status": "PROVIDER_RATE_LIMITED",
+    "state": "COMPLETE",
+    "answer": "I couldn't check the current information right now. Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source.",
+    "sources": [],
+    "model": "Smollm2 135M 8k Lc100K Mix1 Ep2"
+  },
+  {
+    "question": "Explain inflation and tell me the latest UK inflation rate.",
+    "status": "LOCAL_WITH_WEB_GAP",
+    "state": "LENGTH_LIMIT",
+    "answer": "1. Inflation is a general term used to describe a rise in the general level of prices of goods and services in an economy. Inflation is often confused with inflation of money, but the two are not the same thing. Inflation is a change in the general level of prices of goods and services. Inflation is not a change in the price level of goods and services, but rather changes in the general level of prices.\n\n2. Inflation is not caused by a change in the money supply. Inflation is not a change in the money supply, because the money supply is not the cause of inflation. Inflation is a change in the general level of prices, and the money supply is not the cause of inflation. Inflation is a change in the general level of prices, and the money supply is not the cause of inflation.\n\n3. Inflation is caused by changes in the general level of prices. Inflation is caused by changes in the general level of prices, and the\n\nI couldn't check the current information right now. Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source.",
+    "sources": [],
+    "model": "Smollm2 135M 8k Lc100K Mix1 Ep2"
+  },
+  {
+    "question": "Cancellation during discovery",
+    "state": "STOPPED",
+    "status": "USER_CANCELLED"
+  }
+]

@@ -64,8 +64,8 @@ else()
 endif()
 set(Vulkan_LIBRARY "${ANDROID_NDK}/toolchains/llvm/prebuilt/${_shader_host}/sysroot/usr/lib/${_vulkan_triple}/29/libvulkan.so" CACHE FILEPATH "Optional Vulkan loader stub" FORCE)
 FetchContent_Declare(llama
-    URL https://codeload.github.com/ggml-org/llama.cpp/tar.gz/refs/tags/v0.7.0
-    URL_HASH SHA256=55d67acf3ad2ad747a9bbeb75f9f0e173dbcc0d1753a471038a90c819421c5e1
+    URL https://codeload.github.com/ggml-org/llama.cpp/tar.gz/refs/tags/v0.8.0
+    URL_HASH SHA256=51b1e025d7b12e83fa55736e65bc254acd9d23e49f546be7531368fef82210ee
 )
 FetchContent_MakeAvailable(llama)
 target_link_libraries(ggml-vulkan PRIVATE SPIRV-Headers::SPIRV-Headers)

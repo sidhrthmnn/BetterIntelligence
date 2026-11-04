@@ -1,0 +1,86 @@
+{
+  "date": "2026-11-04",
+  "productCommit": "7a9a0b14c5ba46629083f0d4b448232adefca6e8",
+  "baseline": "22a2f72d66f64eb52753dd17d7ecdda4197821e4",
+  "scope": "Development after v27; feature PR, not an uploaded Play app release. Static Play listing icon submitted separately by user.",
+  "phone": {
+    "model": "HONOR VKP-NX9",
+    "android": "16",
+    "physicalRamMiB": 11238,
+    "package": "com.aistudio.betterintelligence.mobile.validation",
+    "productionAppPreserved": true
+  },
+  "build": {
+    "debugAndTestApks": "PASS",
+    "releaseLint": "PASS",
+    "jvmTests": 291,
+    "jvmFailures": 0,
+    "jvmErrors": 0,
+    "jvmSkipped": 0,
+    "abis": [
+      "arm64-v8a",
+      "x86_64"
+    ],
+    "packagedNativeLibraries": 20,
+    "zipAlignment16KiB": "PASS",
+    "llamaCpp": "0.8.0"
+  },
+  "phoneSuites": {
+    "WebReliabilityDeviceTest": {
+      "passed": 2,
+      "nativeModel": "LFM3 1.7B QAD Q4",
+      "scope": "Simulated provider limits plus real native local fallback; separate live public retrieval/citation checks."
+    },
+    "MobileModelComparisonTest": {
+      "passed": 1,
+      "measuredGenerations": 56,
+      "scope": "CPU-only, 7 synthetic tasks twice per model. Rubric failures remain in raw results."
+    },
+    "ChatFirstNavigationTest": {
+      "passed": 2
+    },
+    "ChatKeyboardTest": {
+      "passed": 1
+    },
+    "RustIntelligenceDeviceTest": {
+      "passed": 9,
+      "rustInferenceEnabled": true,
+      "nativeParityGenerations": 6,
+      "scope": "Includes actual JNI inference cancellation/reuse/unload/reload plus policy/context/persistence parity."
+    },
+    "HardwareAccelerationDeviceTest": {
+      "passed": 1,
+      "scope": "Real native CPU, GPU preflight rejection and CPU fallback, history isolation, cleanup."
+    }
+  },
+  "gpu": {
+    "device": "Adreno 830",
+    "modelExecutionVerified": false,
+    "preflightError": "vk::Device::createComputePipeline: ErrorUnknown",
+    "cpuFallbackVerified": true,
+    "actualGpuLayersOnFallback": 0
+  },
+  "limits": [
+    "No NPU, vision, audio or sustained battery benchmark for new GGUF models.",
+    "Anonymous Exa limited requests during the second live corpus; both healthy and rate-limited runs retained.",
+    "BI source directory has limited topic coverage.",
+    "LFM3 sometimes emits reasoning markers despite fast prefix; Qwen2B failed the subtraction task.",
+    "No separate TypeRight application end-to-end run in this change."
+  ],
+  "artifacts": {
+    "debugApk": {
+      "bytes": 147703870,
+      "sha256": "52acc3386ab36bae781276b3a3deb9c854a834e973fcc446a5faa82992d863a6"
+    },
+    "testApk": {
+      "bytes": 1571166,
+      "sha256": "5a411bcfb3b7275fe5d95cc38e52d7caecdabbb70e4ea0aa96889b13859241f6"
+    }
+  },
+  "avatar": {
+    "physicalRecordingInspected": true,
+    "blinkOpenAndClosedFramesObserved": true,
+    "answeringStateObserved": true,
+    "frames": "screenshots/avatar-blink-frames.png"
+  }
+}

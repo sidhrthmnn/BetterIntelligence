@@ -35,6 +35,9 @@ object WebPageExtractor {
         doc.select("noscript").forEach { it.unwrap() }
         doc.select(boilerplate).remove()
         doc.select(".reflist, .mw-references-wrap, .references, [class*=weather-watchers], [class*=WeatherWatchers], [class*=socialShare]").remove()
+        // Publisher footnote IDs are not BI citation IDs. Preserve ordinary
+        // technical text/array indices; remove only actual reference elements.
+        doc.select("sup.reference, a[href^='#cite_note'], a[href^='#cite_ref']").remove()
         doc.select(cookieOverlaySelector).filter { el ->
             el.tagName() !in setOf("html", "body", "main", "article") &&
                 el.selectFirst("main, [role=main], article, h1") == null

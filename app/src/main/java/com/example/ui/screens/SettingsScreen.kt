@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -120,30 +124,61 @@ fun AppearanceScreen(viewModel: AiCoreViewModel) {
 @Composable
 fun WebSettingsScreen(viewModel: AiCoreViewModel) {
     val allowed by viewModel.webAllowed.collectAsState()
-    LazyColumn(Modifier.fillMaxSize().testTag("web_settings_list"), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    val diagnostics by viewModel.researchDiagnosticReport.collectAsState()
+    var more by rememberSaveable { mutableStateOf(false) }
+    LazyColumn(Modifier.fillMaxSize().testTag("web_settings_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text("Allow web search", style = MaterialTheme.typography.titleMedium); Text("Off by default", style = MaterialTheme.typography.bodySmall) }
-                Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
+            OutlinedCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Web research", style = MaterialTheme.typography.titleMedium)
+                            Text(if (allowed) "On · Checks public factual answers" else "Off · Answers stay on this device", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
+                    }
+                    Text("Uses Exa to find links, then reads public websites. Your search question and IP address are visible to those services.", style = MaterialTheme.typography.bodyMedium)
+                    Text("Private requests, saved memories and connected apps stay local. Don't include secrets in a web-enabled question.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            Spacer(Modifier.height(12.dp))
-            Text("Research sends focused public questions to Exa's free search service to find relevant links. BI reads the publisher pages and writes the answer using your on-device model. Exa and visited sites receive your question or requested URL and connection information, including your IP address. Saved memories and connected-app requests are not sent. A short reply such as a city or OK can complete the current public task using your own question and location from this chat. Locations guessed by the model are not used. Do not include secrets or sensitive information in a web-enabled question.")
         }
         item {
-            Text("Fact check public answers", style = MaterialTheme.typography.titleMedium)
-            Text("When enabled, BI searches and reads public sources before answering factual questions, including explanations, reviews, ratings, casting, prices and service status. Short follow-ups keep the subject you named in this chat. Writing-only tasks, calculations, private input and explicit offline requests stay on device. Missing subjects are clarified. Incomplete evidence gets a short attributed explanation, without inventing a complete answer.", style = MaterialTheme.typography.bodySmall)
-            Text("No API key or account is required. Exa's free service has usage limits and may be unavailable. BI uses no paid fallback or other search engine. You can also give BI a public HTTPS source to read directly.", style = MaterialTheme.typography.bodySmall)
+            OutlinedCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
+                    Text("1. Find relevant pages\n2. Read and compare information\n3. Answer with sources")
+                    Text("If Exa cannot help, BI can check its small public-source directory on device. It does not use another search engine.", style = MaterialTheme.typography.bodySmall)
+                    Text("Search can take up to a minute. You can stop it at any time.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
         item {
-            Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
-            Text("Search highlights and summaries only help find pages; they are not answer evidence. BI reads publisher text, keeps source dates when available, and cites the passages used. No cloud answer model or weather API is used. Public sites can block access.")
-            Text("Search can be blocked or unavailable. Pages requiring sign-in, scripts, CAPTCHA or unsupported file formats are skipped. Sources can be incomplete or wrong; citations show where text came from, not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
+            Text("When sources don't settle it", style = MaterialTheme.typography.titleSmall)
+            Text("BI keeps useful supported details. General knowledge can use a labelled local answer. Current facts are marked unverified when they cannot be checked.", style = MaterialTheme.typography.bodyMedium)
         }
         item {
-            Text("Questions and retrieved text are excluded from system logs. To diagnose research errors, BI keeps up to 48 recent public questions, resolved search topics and outcomes in a local temporary record. It contains no answer text or private history. Clearing search data removes it; deleting a chat removes its records. Temporary evidence expires within 15 minutes, or sooner for live information. Sources attached to an answer stay with that chat until you delete it.", style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
+            TextButton(onClick = { more = !more }, modifier = Modifier.testTag("research_details")) {
+                Text(if (more) "Hide privacy and tools" else "Privacy and tools")
+                Icon(if (more) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+            }
+        }
+        if (more) item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("No API key, account or cloud answer model. Exa has free-service limits. Sites can block access or require sign-in; BI does not bypass restrictions. Its own directory has limited coverage. Source citations show provenance, not guaranteed accuracy.", style = MaterialTheme.typography.bodySmall)
+                Text("Only the focused public topic from this chat is searched. Temporary evidence expires within 15 minutes, sooner for live information. Source cards remain with the chat until deleted.", style = MaterialTheme.typography.bodySmall)
+                Text("Up to 48 local diagnostic records help identify failures. The report below excludes questions, URLs, chat IDs and page text. Clearing data or disabling web removes the records.", style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { viewModel.inspectResearchDiagnostics() }, modifier = Modifier.testTag("view_research_diagnostics")) { Text("View research diagnostics") }
+                TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
+            }
         }
     }
+    diagnostics?.let { report -> AlertDialog(onDismissRequest = viewModel::dismissResearchDiagnostics,
+        title = { Text("Research diagnostics") }, text = {
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                Text("Timing and outcome codes only. Select to copy.")
+                SelectionContainer { Text(report, modifier = Modifier.testTag("research_diagnostics_report"), style = MaterialTheme.typography.bodySmall) }
+            }
+        }, confirmButton = { TextButton(onClick = viewModel::dismissResearchDiagnostics) { Text("Close") } }) }
 }
 
 @Composable

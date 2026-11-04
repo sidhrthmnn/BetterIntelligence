@@ -343,7 +343,13 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         viewModelScope.launch { repository.preferencesRepository.saveWebAllowed(value)
             if (!value) withContext(Dispatchers.IO) { ResearchDiagnostics.clear(getApplication()) } }
     }
-    fun clearSearchData() { grounding.clearTemporaryData(); viewModelScope.launch(Dispatchers.IO) { ResearchDiagnostics.clear(getApplication()) }; _userMessage.value = "Temporary search data cleared." }
+    private val _researchDiagnosticReport = MutableStateFlow<String?>(null)
+    val researchDiagnosticReport = _researchDiagnosticReport.asStateFlow()
+    fun inspectResearchDiagnostics() { viewModelScope.launch {
+        _researchDiagnosticReport.value = withContext(Dispatchers.IO) { ResearchDiagnostics.export(getApplication()) }
+    } }
+    fun dismissResearchDiagnostics() { _researchDiagnosticReport.value = null }
+    fun clearSearchData() { _researchDiagnosticReport.value = null; grounding.clearTemporaryData(); viewModelScope.launch(Dispatchers.IO) { ResearchDiagnostics.clear(getApplication()) }; _userMessage.value = "Temporary search data cleared." }
     @androidx.annotation.VisibleForTesting
     internal fun setGroundingMode(mode: GroundingMode) {
         _groundingMode.value = mode
@@ -938,7 +944,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     route.reusedSources.isNotEmpty() -> GroundingResult("SOURCES_RETRIEVED", route.reusedSources)
                     route.path == AnswerPath.WEB_GROUNDED -> {
                         _chatStatus.value = "Finding and reading public sources"
-                        grounding.retrieve(researchQuestion, allowed, effectiveMode, SearchProviderId.WEB) { stage -> _chatStatus.value = stage.label }
+                        retrieveForChat(researchQuestion, allowed, effectiveMode)
                     }
                     else -> GroundingResult()
                 }
@@ -946,7 +952,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     result = evidence.notice
                     return@launch
                 }
-                if (evidence.status == "SEARCH_FAILED" || evidence.sources.isEmpty() && (route.requiresLive || route.requiresVerification || route.privacyBlocked)) {
+                if (evidence.failure != null || evidence.status == "SEARCH_FAILED" || evidence.sources.isEmpty() && (route.requiresLive || route.requiresVerification || route.privacyBlocked)) {
                     val recovery = AnswerRoutingPolicy.recover(route, evidence.failure)
                     evidence = evidence.copy(status = recovery.status, sources = emptyList())
                     if (recovery.localQuestion == null) { result = recovery.notice; return@launch }
@@ -1023,9 +1029,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     }
                     researchQuestion = currentRoute.question
                     effectiveQuestion = researchQuestion
-                    val researched = grounding.retrieve(researchQuestion, allowed, GroundingMode.ON, SearchProviderId.WEB) {
-                        stage -> _chatStatus.value = stage.label
-                    }
+                    val researched = retrieveForChat(researchQuestion, allowed, GroundingMode.ON)
                     if (researched.sources.isEmpty()) {
                         val recovery = AnswerRoutingPolicy.recover(currentRoute, researched.failure)
                         evidence = researched.copy(status = recovery.status)
@@ -1095,13 +1099,13 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     partialWriter?.cancelAndJoin()
                     try { if (savedUser && pendingId != null) {
                         val interruptedDraft = (cancelled || error != null) && evidence.sources.isNotEmpty() && result.isNotBlank()
-                        val checked = if (interruptedDraft) null else resolvedAnswer ?: if (evidence.sources.isNotEmpty()) withContext(Dispatchers.Default) {
+                        val checked = if (cancelled || interruptedDraft) null else resolvedAnswer ?: if (evidence.sources.isNotEmpty()) withContext(Dispatchers.Default) {
                             GroundingPolicy.checkAnswer(result, evidence.sources, researchQuestion)
                         } else null
-                        val status = if (interruptedDraft) "UNVERIFIED_PARTIAL" else if (checked == null) evidence.status else if (checked.sourceBrief) "SOURCE_BRIEF" else if (checked.sourceExtract) "SOURCE_EXCERPTS" else when (checked.support) {
+                        val status = if (cancelled) "USER_CANCELLED" else if (interruptedDraft) "UNVERIFIED_PARTIAL" else if (checked == null) evidence.status else if (checked.sourceBrief) "SOURCE_BRIEF" else if (checked.sourceExtract) "SOURCE_EXCERPTS" else when (checked.support) {
                             AnswerSupport.CITED -> "EVIDENCE_CITED"
                             AnswerSupport.PARTIAL -> "PARTIALLY_SUPPORTED"
-                            AnswerSupport.INSUFFICIENT -> "INSUFFICIENT_EVIDENCE"
+                            AnswerSupport.INSUFFICIENT -> "GROUNDING_VERIFICATION_FAILED"
                         }
                         val invalid = error == com.example.engine.InvalidModelOutputException().message
                         val content = if (invalid) error!! else NewsIntent.withReportTimes(researchQuestion,
@@ -1113,12 +1117,25 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                             messageState = if (cancelled) "STOPPED" else if (error != null) "ERROR" else if (reachedOutputLimit) "LENGTH_LIMIT" else "COMPLETE"))
                         withContext(Dispatchers.IO) { if (repository.preferencesRepository.webAllowed.first())
                             ResearchDiagnostics.record(getApplication(), conversation, pendingId!!, text,
-                                diagnosticRoute, evidence, checked, error != null, diagnosticGeneration) }
+                                diagnosticRoute, if (cancelled) evidence.copy(failure = ResearchFailure.USER_CANCELLED) else evidence, checked, error != null, diagnosticGeneration) }
                     } else if (error != null) { _userMessage.value = error; if (_draft.value.isBlank()) updateDraft(text) }
                     } finally { _streamingChatText.value = ""; _chatStatus.value = ""; _isChatGenerating.value = false }
                 }
             }
         }
+    }
+
+    /** Stage order never moves backwards during query expansion; a quiet slow indicator
+     * appears only while the same phase has lasted eight seconds. */
+    private suspend fun retrieveForChat(question: String, allowed: Boolean, mode: GroundingMode): GroundingResult = kotlinx.coroutines.coroutineScope {
+        val progress = ResearchProgress()
+        _chatStatus.value = progress.label()
+        val ticker = launch {
+            while (true) { kotlinx.coroutines.delay(1000); _chatStatus.value = progress.label() }
+        }
+        try { grounding.retrieve(question, allowed, mode, SearchProviderId.WEB) { stage ->
+            progress.advance(stage); _chatStatus.value = progress.label()
+        } } finally { ticker.cancelAndJoin() }
     }
 
     fun toggleForegroundService(enabled: Boolean) {

@@ -17,8 +17,6 @@ class ChatFirstNavigationTest {
         require(compose.activity.packageName.endsWith(".validation"))
         compose.onNodeWithTag("open_settings").performClick()
         openSetting("Models")
-        compose.onNodeWithTag("models_list").performScrollToNode(hasText("Experimental"))
-        compose.onNodeWithText("Experimental").performClick()
         compose.onNodeWithTag("models_list").performScrollToNode(hasText("Qwen 3 1.7B"))
         compose.onNodeWithText("Qwen 3 1.7B").assertIsDisplayed()
         screenshot("qwen-1.7b-beta.png")

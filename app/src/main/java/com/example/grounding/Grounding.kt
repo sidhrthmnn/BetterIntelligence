@@ -22,17 +22,33 @@ import kotlin.coroutines.resumeWithException
 enum class GroundingMode { OFF, AUTO, ON }
 enum class SearchProviderId { WEB }
 enum class ResearchStage(val label: String) {
-    UNDERSTANDING("Understanding question"), SEARCHING("Searching relevant sources"),
-    READING("Reading articles"), COMPARING("Comparing evidence"), PREPARING("Preparing answer")
+    UNDERSTANDING("Understanding question"), SEARCHING("Searching the web"),
+    READING("Reading sources"), COMPARING("Checking information"), PREPARING("Preparing answer")
 }
 enum class ResearchFailure(val notice: String) {
-    INSUFFICIENT("I couldn't find enough relevant evidence to answer this question. Try a more specific question or a public HTTPS source."),
-    INACCESSIBLE("The sources could not be read. They may be restricted or temporarily unavailable. Try another public HTTPS source."),
-    DISCOVERY_UNAVAILABLE("Web discovery is unavailable. You can still provide a public HTTPS source to read directly."),
-    TIMEOUT("Web research timed out. Try a narrower question or a public HTTPS source."),
-    BLOCKED("The search provider is temporarily blocking requests. Try a public HTTPS source instead.")
+    PROVIDER_TIMEOUT("Search took too long. Try again or provide a public HTTPS source."),
+    PROVIDER_RATE_LIMITED("Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source."),
+    PROVIDER_UNAVAILABLE("Web search is temporarily unavailable. You can still provide a public HTTPS source to read directly."),
+    PROVIDER_ACCESS_DENIED("The search service denied access. Try a public HTTPS source instead."),
+    PROVIDER_RESPONSE_INVALID("Search returned a response BI couldn't read. Try again or provide a public HTTPS source."),
+    NETWORK_UNAVAILABLE("The network couldn't be reached. Check your connection and try again."),
+    NO_SEARCH_RESULTS("Couldn't find relevant sources. Try a more specific subject or a public HTTPS source."),
+    PUBLISHER_BLOCKED("The source couldn't be opened because it restricts access. Try another public HTTPS source."),
+    PUBLISHER_TIMEOUT("The sources took too long to open. Try again or provide a different public HTTPS source."),
+    PUBLISHER_UNAVAILABLE("Search found links, but the source pages couldn't be read. Try another public HTTPS source."),
+    INSUFFICIENT_EVIDENCE("The sources didn't provide enough relevant evidence. Try a more specific question or another public HTTPS source."),
+    GROUNDING_VERIFICATION_FAILED("Sources were read, but the answer couldn't be verified against them."),
+    USER_CANCELLED("Research stopped.");
+    companion object {
+        // Source compatibility for integrations/tests; persisted status strings are handled separately.
+        val INSUFFICIENT = INSUFFICIENT_EVIDENCE
+        val INACCESSIBLE = PUBLISHER_UNAVAILABLE
+        val DISCOVERY_UNAVAILABLE = PROVIDER_UNAVAILABLE
+        val TIMEOUT = PROVIDER_TIMEOUT
+        val BLOCKED = PROVIDER_RATE_LIMITED
+    }
 }
-data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: ResearchFailure? = null, val conflicts: List<String> = emptyList(), val clarification: String = "")
+data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: ResearchFailure? = null, val conflicts: List<String> = emptyList(), val clarification: String = "", val metrics: ResearchMetrics = ResearchMetrics())
 
 data class EvidenceSource(val id: Int, val title: String, val url: String, val excerpt: String,
     val retrievedAt: Long, val updatedAt: String = "", val kind: String = "ARTICLE_SUMMARY", val dateKind: String = "",
@@ -40,7 +56,7 @@ data class EvidenceSource(val id: Int, val title: String, val url: String, val e
 
 data class PreparedEvidence(val prompt: String, val sources: List<EvidenceSource>)
 
-data class GroundingResult(val status: String = "LOCAL", val sources: List<EvidenceSource> = emptyList(), val notice: String = "", val failure: ResearchFailure? = null) {
+data class GroundingResult(val status: String = "LOCAL", val sources: List<EvidenceSource> = emptyList(), val notice: String = "", val failure: ResearchFailure? = null, val metrics: ResearchMetrics = ResearchMetrics()) {
     fun json(): String = JSONArray().apply { sources.forEach { source -> put(JSONObject()
         .put("id", source.id).put("title", source.title).put("url", source.url).put("excerpt", source.excerpt)
         .put("retrievedAt", source.retrievedAt).put("updatedAt", source.updatedAt).put("kind", source.kind).put("dateKind", source.dateKind)
@@ -204,19 +220,20 @@ object GroundingPolicy {
 interface SearchProvider {
     suspend fun search(question: String): List<EvidenceSource>
     suspend fun research(question: String, progress: (ResearchStage) -> Unit): ResearchOutcome = ResearchOutcome(search(question))
+    fun clearTemporaryData() {}
 }
 
 /** Public HTTPS only in production, with bounded bodies, redirects and cancellation. */
 class SearchHttp internal constructor(
     private val client: OkHttpClient = OkHttpClient.Builder().dns(PublicWebDns)
-        .connectTimeout(8, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(18, TimeUnit.SECONDS)
+        .connectTimeout(8, TimeUnit.SECONDS).readTimeout(18, TimeUnit.SECONDS).callTimeout(60, TimeUnit.SECONDS)
         .followRedirects(false).followSslRedirects(false).build(),
     private val allowTestUrls: Boolean = false,
     private val quota: java.util.concurrent.atomic.AtomicInteger? = null,
     private val onRequest: ((String) -> Unit)? = null
 ) : WebFetcher {
     override fun session(maxRequests: Int): WebFetcher = SearchHttp(client, allowTestUrls, java.util.concurrent.atomic.AtomicInteger(maxRequests), onRequest)
-    private data class Reply(val code: Int, val location: String?, val page: WebDocument)
+    private data class Reply(val code: Int, val location: String?, val page: WebDocument, val retryAfterMs: Long)
     override suspend fun fetch(url: String): WebDocument = fetchChecked(url, null)
     override suspend fun fetchPage(url: String, permitted: suspend (String) -> Boolean): WebDocument = fetchChecked(url, permitted)
     override suspend fun postJson(url: String, json: String, permitted: suspend (String) -> Boolean): WebDocument {
@@ -228,14 +245,14 @@ class SearchHttp internal constructor(
             .header("Accept", "application/json, text/event-stream")
             .post(json.toRequestBody("application/json; charset=utf-8".toMediaType())).build())
         // Never replay a question-bearing POST to a redirect destination.
-        check(reply.code == 200) { "Search endpoint unavailable (HTTP ${reply.code})" }
+        if (reply.code != 200) throw WebRequestException(reply.code, reply.retryAfterMs)
         return reply.page
     }
     private suspend fun fetchChecked(url: String, permitted: (suspend (String) -> Boolean)?): WebDocument {
         var current = url
         repeat(4) { hop ->
             require(allowTestUrls || GroundingPolicy.publicHttpsUrl(current)) { "A public HTTPS website is required" }
-            check(permitted?.invoke(current) != false) { "Publisher does not permit this read" }
+            if (permitted?.invoke(current) == false) throw PublisherPermissionException()
             val reply = request(Request.Builder().url(current).header("User-Agent",
                 "BetterIntelligence/2.2 (+https://github.com/sidhrthmnn/BetterIntelligence)")
                 .header("Accept", "text/html, application/xhtml+xml, text/plain;q=0.8").build())
@@ -244,7 +261,7 @@ class SearchHttp internal constructor(
                 current = current.toHttpUrl().resolve(checkNotNull(reply.location))?.toString()
                     ?: error("Invalid website redirect")
             } else {
-                check(reply.code == 200) { "Website unavailable (HTTP ${reply.code})" }
+                if (reply.code != 200) throw WebRequestException(reply.code, reply.retryAfterMs)
                 return reply.page
             }
         }
@@ -253,14 +270,18 @@ class SearchHttp internal constructor(
     // Used by transport regression tests; all production research uses fetch().
     internal suspend fun json(request: Request): JSONObject = JSONObject(fetch(request.url.toString()).text)
     private suspend fun request(request: Request): Reply {
+        val deadline = kotlinx.coroutines.currentCoroutineContext()[ResearchDeadline]
+        if (deadline != null && !deadline.permits(50)) throw java.net.SocketTimeoutException("Research deadline reached")
         check(quota?.getAndDecrement()?.let { it > 0 } != false) { "Research request budget exhausted" }
         onRequest?.invoke(request.url.toString())
         val call = client.newCall(request)
+        call.timeout().timeout(minOf(60_000, deadline?.remainingMs() ?: 60_000), TimeUnit.MILLISECONDS)
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    if (continuation.isActive) continuation.resumeWithException(IOException("Website could not be reached"))
+                    // Preserve the category for retry/classification; no exception text is persisted.
+                    if (continuation.isActive) continuation.resumeWithException(e)
                 }
                 override fun onResponse(call: Call, response: Response) {
                     val result = runCatching { response.use {
@@ -272,25 +293,38 @@ class SearchHttp internal constructor(
                                 val count = stream.read(buffer, 0, minOf(buffer.size, 1024 * 1024 + 1 - output.size()))
                                 if (count < 0) break
                                 output.write(buffer, 0, count)
+                                // A terminal MCP event is sufficient; don't wait for a
+                                // heartbeat/connection close after receiving the reply.
+                                if (request.method == "POST" && body.contentType()?.toString()?.startsWith("text/event-stream") == true &&
+                                    ExaDiscovery.responseReceived(String(output.toByteArray(), Charsets.UTF_8))) break
                             }
                         }
                         check(output.size() <= 1024 * 1024) { "Search response is too large" }
                         val charset = body.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
                         Reply(it.code, it.header("Location"), WebDocument(it.request.url.toString(),
-                            String(output.toByteArray(), charset), body.contentType()?.toString().orEmpty(), it.headers.values("X-Robots-Tag").joinToString(",")))
+                            String(output.toByteArray(), charset), body.contentType()?.toString().orEmpty(), it.headers.values("X-Robots-Tag").joinToString(",")), retryAfter(it.header("Retry-After")))
                     } }
                     if (continuation.isActive) result.fold(continuation::resume, continuation::resumeWithException)
                 }
             })
         }
     }
+    companion object {
+        internal fun retryAfter(value: String?, now: Long = System.currentTimeMillis()): Long {
+            if (value == null) return 0
+            return (value.trim().toLongOrNull()?.coerceIn(0, 86_400)?.times(1000) ?: runCatching {
+                java.time.ZonedDateTime.parse(value, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() - now
+            }.getOrDefault(0)).coerceIn(0, 86_400_000)
+        }
+    }
 }
 
 /** Chat-only, bounded public evidence cache; live observations expire quickly. */
-class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchProvider>, private val now: () -> Long = System::currentTimeMillis) {
+class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchProvider>, private val timeouts: ResearchTimeouts = ResearchTimeouts(),
+    private val now: () -> Long = System::currentTimeMillis) {
     private val cache = LinkedHashMap<String, Pair<Long, List<EvidenceSource>>>()
     private var epoch = 0L
-    @Synchronized fun clearTemporaryData() { epoch++; cache.clear() }
+    @Synchronized fun clearTemporaryData() { epoch++; cache.clear(); providers.values.forEach { it.clearTemporaryData() } }
     suspend fun retrieve(question: String, allowed: Boolean, mode: GroundingMode, provider: SearchProviderId,
         progress: (ResearchStage) -> Unit = {}): GroundingResult {
         if (GroundingPolicy.containsCredential(question)) return GroundingResult("PRIVACY_BLOCKED", notice = "This question appears to contain credentials. Search was skipped; this answer is local-only.")
@@ -310,9 +344,12 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
         val lifetime = if (ConversationalResearch.isWeather(question)) 60_000L else if (AnswerRoutingPolicy.decide(question).requiresLive) 300_000L else 900_000L
         val cached = synchronized(this) { cache[key]?.takeIf { mode != GroundingMode.ON && !recheck && now() - it.first in 0 until lifetime }?.second }
         return try {
-            val outcome = if (cached != null) ResearchOutcome(cached) else kotlinx.coroutines.withTimeoutOrNull(30_000) {
-                checkNotNull(providers[provider]).research(question, progress)
-            } ?: return GroundingResult("SEARCH_FAILED", notice = ResearchFailure.TIMEOUT.notice, failure = ResearchFailure.TIMEOUT)
+            val deadline = kotlinx.coroutines.currentCoroutineContext()[ResearchDeadline] ?: ResearchDeadline(timeouts.overallMs)
+            val outcome = if (cached != null) ResearchOutcome(cached) else kotlinx.coroutines.withContext(deadline) {
+                kotlinx.coroutines.withTimeoutOrNull(minOf(timeouts.absoluteMs, deadline.remainingMs() + 1000)) {
+                    checkNotNull(providers[provider]).research(question, progress)
+                }
+            } ?: return GroundingResult(ResearchFailure.PROVIDER_TIMEOUT.name, notice = ResearchFailure.PROVIDER_TIMEOUT.notice, failure = ResearchFailure.PROVIDER_TIMEOUT)
             // Retain only the focused topic already used for public research.
             // Follow-ups can reuse it without sending unsent chat/history.
             val publicQuery = if (ResearchPlanner.plan(question).explicitUrls.isNotEmpty()) "" else
@@ -322,8 +359,11 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
             } != false }
             val sources = ConversationalResearch.bindPublicPlace(question, eligible).map { it.copy(publicQuery = publicQuery) }
             if (sources.isEmpty() && outcome.clarification.isNotBlank() && !GroundingPolicy.containsCredential(outcome.clarification))
-                GroundingResult("NEEDS_SUBJECT", notice = outcome.clarification.take(400))
-            else if (sources.isEmpty()) GroundingResult("SEARCH_FAILED", notice = (outcome.failure ?: ResearchFailure.INSUFFICIENT).notice, failure = outcome.failure ?: ResearchFailure.INSUFFICIENT)
+                GroundingResult("NEEDS_SUBJECT", notice = outcome.clarification.take(400), metrics = outcome.metrics)
+            else if (sources.isEmpty()) {
+                val failure = outcome.failure ?: ResearchFailure.INSUFFICIENT_EVIDENCE
+                GroundingResult(failure.name, notice = failure.notice, failure = failure, metrics = outcome.metrics.copy(failure = failure))
+            }
             else {
                 synchronized(this) {
                     if (epoch == startedEpoch && cached == null && mode != GroundingMode.ON) {
@@ -331,12 +371,13 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
                         cache[key] = now() to sources
                     }
                 }
-                GroundingResult("SOURCES_RETRIEVED", sources)
+                GroundingResult("SOURCES_RETRIEVED", sources, metrics = outcome.metrics)
             }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
             // Deliberately omit exception causes: HTTP exceptions can include private request URLs.
-            GroundingResult("SEARCH_FAILED", notice = "Live sources unavailable. Check your connection or try a public HTTPS link.", failure = ResearchFailure.DISCOVERY_UNAVAILABLE)
+            val failure = ResearchErrors.provider(e)
+            GroundingResult(failure.name, notice = failure.notice, failure = failure)
         }
     }
 }

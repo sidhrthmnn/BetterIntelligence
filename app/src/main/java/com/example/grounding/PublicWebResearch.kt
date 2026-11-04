@@ -54,26 +54,32 @@ fun interface WebFetcher {
  * No cloud model, API key, proxy, account, scripts, cookies or background crawling.
  */
 class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private val discoveryOverride: DiscoveryProvider? = null,
-    private val discoveryAllowed: suspend () -> Boolean = { true }, private val researchBudgetMs: Long = 26_000) : SearchProvider {
+    private val discoveryAllowed: suspend () -> Boolean = { true }, private val researchBudgetMs: Long = 55_000,
+    private val timeouts: ResearchTimeouts = ResearchTimeouts(), private val biFallback: Boolean = true) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
     private val discoveryCircuit = DiscoveryCircuit()
+    private val biIndex = BiDiscovery(fetcher, robots, discoveryAllowed, timeouts)
+    override fun clearTemporaryData() { biIndex.clear() }
     companion object {
         fun article(page: WebDocument, id: Int, question: String): EvidenceSource? = WebPageExtractor.article(page, id, question)
     }
 
     override suspend fun search(question: String): List<EvidenceSource> = research(question) {}.sources
 
-    override suspend fun research(question: String, progress: (ResearchStage) -> Unit): ResearchOutcome = withContext(Dispatchers.IO) {
+    override suspend fun research(question: String, progress: (ResearchStage) -> Unit): ResearchOutcome {
+        val inherited = kotlinx.coroutines.currentCoroutineContext()[ResearchDeadline]
+        return withContext(Dispatchers.IO + (inherited ?: ResearchDeadline(minOf(researchBudgetMs, timeouts.overallMs)))) {
         progress(ResearchStage.UNDERSTANDING)
         // Finish with the evidence already read before the outer deadline.
         // Previously a slow final page could discard all successful earlier reads.
-        val deadline = System.nanoTime() / 1_000_000 + researchBudgetMs.coerceIn(2_000, 26_000)
-        fun remaining() = (deadline - System.nanoTime() / 1_000_000).coerceAtLeast(1)
+        val started = System.nanoTime() / 1_000_000
+        val deadline = checkNotNull(kotlinx.coroutines.currentCoroutineContext()[ResearchDeadline])
+        fun remaining() = deadline.remainingMs()
         require(!GroundingPolicy.containsCredential(question)) { "Do not search for credentials" }
         if (ConversationalResearch.needsSubject(question)) return@withContext ResearchOutcome(emptyList(), ResearchFailure.INSUFFICIENT)
         val plan = ResearchPlanner.plan(question)
         val transport = fetcher.session(24)
-        val permitted: suspend (String) -> Boolean = { robots.allowed(it, transport) }
+        val permitted: suspend (String) -> Boolean = { discoveryAllowed() && robots.allowed(it, transport) }
         val explicit = plan.explicitUrls
         val query = ResearchQuery(question)
         val possibleSpellings = linkedSetOf<String>()
@@ -86,33 +92,44 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 provider.discover(request, broad).also { discovered[key] = it }
             }
         }
-        val discovery = discoveryOverride ?: bounded(ExaDiscovery(transport, discoveryAllowed))
+        val discovery = bounded(discoveryOverride ?: ExaDiscovery(transport, discoveryAllowed, timeouts))
+        var providerFailure: ResearchFailure? = null
+        var discoveredCount = 0
+        var retryCount = 0
+        var httpCategory = ""
+        var fallbackUsed = false
+        val publisherFailures = java.util.Collections.synchronizedList(mutableListOf<ResearchFailure>())
         var discoveryFailed = false
         var blocked = false
         var discoveryTimedOut = false
         val readTimeouts = java.util.concurrent.atomic.AtomicInteger()
         val failedReads = java.util.concurrent.atomic.AtomicInteger()
         var rounds = 0
+        fun eligible(candidates: List<ResearchCandidate>) = candidates.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) && query.candidateRelevant("${it.title} ${it.url}", it.routingHint) && !query.isPrediction(it.title) &&
+                (!FactualResearch.speculativeCasting(question, it.title) || Regex("(?i)screen[- ]?tests?|auditions?|shortlist|not (?:yet )?(?:confirmed|announced)").containsMatchIn(it.title)) }
         suspend fun discover(search: String, broad: Boolean): List<ResearchCandidate>? {
-            if (discoveryOverride == null && !discoveryAllowed()) { discoveryFailed = true; return null }
+            if (discoveryOverride == null && !discoveryAllowed()) { discoveryFailed = true; providerFailure = ResearchFailure.PROVIDER_ACCESS_DENIED; return null }
             if (rounds++ >= 3) return emptyList()
-            if (remaining() < 1000) { discoveryTimedOut = true; return null }
+            if (!deadline.permits()) { discoveryTimedOut = true; providerFailure = ResearchFailure.PROVIDER_TIMEOUT; return null }
             val paused = discoveryCircuit.unavailable()
-            val result = if (paused != null) DiscoveryResult(emptyList(), paused) else withTimeoutOrNull(minOf(8_000, remaining())) {
+            val result = if (paused != null) DiscoveryResult(emptyList(), paused) else withTimeoutOrNull(minOf(timeouts.discoveryMs + timeouts.retryMs + timeouts.backoffMs + 1000, remaining())) {
                 try { discovery.discover(ResearchQuery(question, searchOverride = search), broad) }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
             } ?: DiscoveryResult(emptyList(), DiscoveryState.TIMEOUT)
-            if (paused == null) discoveryCircuit.record(result.state)
+            if (paused == null) discoveryCircuit.record(result)
+            discoveredCount += result.candidates.size
+            retryCount += (result.attempts - 1).coerceAtLeast(0)
+            if (result.httpCategory.isNotEmpty()) httpCategory = result.httpCategory
+            if (result.failure != null) providerFailure = result.failure
             if (result.state == DiscoveryState.TIMEOUT) { discoveryTimedOut = true; return null }
-            if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.UNAVAILABLE)) {
-                discoveryFailed = true; blocked = result.state == DiscoveryState.BLOCKED; return null
+            if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.RATE_LIMITED, DiscoveryState.UNAVAILABLE, DiscoveryState.NETWORK_UNAVAILABLE, DiscoveryState.MALFORMED)) {
+                discoveryFailed = true; blocked = result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.RATE_LIMITED); return null
             }
             query.publicTopic?.let { topic -> result.candidates.forEach { candidate ->
                 PublicTopics.possibleSpelling(topic, candidate.title)?.let(possibleSpellings::add)
             } }
-            return result.candidates.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) && query.candidateRelevant("${it.title} ${it.url}", it.routingHint) && !query.isPrediction(it.title) &&
-                (!FactualResearch.speculativeCasting(question, it.title) || Regex("(?i)screen[- ]?tests?|auditions?|shortlist|not (?:yet )?(?:confirmed|announced)").containsMatchIn(it.title)) }
+            return eligible(result.candidates)
         }
 
         val links = if (explicit.isNotEmpty()) explicit.map { ResearchCandidate(it, "") } else {
@@ -163,13 +180,13 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         if (ordered.isNotEmpty()) progress(ResearchStage.READING)
         // Read in waves: stop after enough evidence instead of fetching every result.
         for (wave in ordered.chunked(2)) {
-            if (remaining() < 1000) break
+            if (!deadline.permits()) break
             val admitted = wave.filter { attempted.add(it.url) && domains.merge(domain(it.url), 1, Int::plus)!! <= 2 }
             readCount += admitted.size
             val fetched = admitted.map { candidate -> async {
                 reads.withPermit {
                     var finished = false
-                    val result = withTimeoutOrNull(minOf(6_000, remaining())) {
+                    val result = withTimeoutOrNull(minOf(timeouts.publisherMs, remaining())) {
                         try {
                             val page = transport.fetchPage(candidate.url, permitted)
                             val source = article(page, 0, question)?.copy(discoveryProvider = candidate.provider)
@@ -183,10 +200,10 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                                         ?.copy(discoveryProvider = candidate.provider)?.takeIf(::acceptable)
                                 else null
                             }
-                        } catch (e: CancellationException) { throw e } catch (_: Exception) { failedReads.incrementAndGet(); null }
+                        } catch (e: CancellationException) { throw e } catch (e: Exception) { failedReads.incrementAndGet(); publisherFailures += ResearchErrors.publisher(e); null }
                         .also { finished = true }
                     }
-                    if (!finished) readTimeouts.incrementAndGet()
+                    if (!finished) { readTimeouts.incrementAndGet(); publisherFailures += ResearchFailure.PUBLISHER_TIMEOUT }
                     result ?: candidate.instantAnswer?.takeIf {
                         LegacyTopicEvidence.summaryAllowed(question) && EvidenceRanking.acceptable(it, plan)
                     }
@@ -200,24 +217,41 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         // Expand only after actual passages fail to cover the requested facets.
         if (explicit.isEmpty() && !enough() && !blocked && !discoveryFailed && !discoveryTimedOut) {
             for (search in plan.searches.drop(1)) {
-                if (readCount >= 8 || remaining() < 1000) break
+                if (readCount >= 8 || !deadline.permits()) break
                 progress(ResearchStage.SEARCHING)
                 readCandidates(discover(search, false).orEmpty())
                 if (enough() || blocked || discoveryFailed || discoveryTimedOut) break
             }
         }
+        if (explicit.isEmpty() && biFallback && discoveryOverride == null && sources.isEmpty() && biIndex.supports(query) && readCount < 8 &&
+            deadline.permits(1000) && discoveryAllowed() && providerFailure != ResearchFailure.NETWORK_UNAVAILABLE) {
+            fallbackUsed = true
+            progress(ResearchStage.READING)
+            val own = biIndex.session(transport).discover(query, false)
+            discoveredCount += own.candidates.size
+            readCandidates(eligible(own.candidates))
+        }
         progress(ResearchStage.COMPARING)
         val selected = EvidenceRanking.select(sources, plan)
-        ResearchOutcome(selected, when {
+        val failure = when {
             selected.isNotEmpty() -> null
-            discoveryTimedOut || readTimeouts.get() > 0 -> ResearchFailure.TIMEOUT
-            readCount == 0 && blocked -> ResearchFailure.BLOCKED
-            readCount == 0 && discoveryFailed -> ResearchFailure.DISCOVERY_UNAVAILABLE
-            readCount > 0 && failedReads.get() >= readCount -> ResearchFailure.INACCESSIBLE
-            else -> ResearchFailure.INSUFFICIENT
-        }, EvidenceRanking.conflicts(selected), if (selected.isEmpty() && possibleSpellings.size == 1)
+            readCount == 0 && providerFailure != null && providerFailure != ResearchFailure.NO_SEARCH_RESULTS -> providerFailure
+            readTimeouts.get() > 0 -> ResearchFailure.PUBLISHER_TIMEOUT
+            readCount > 0 && publisherFailures.contains(ResearchFailure.PUBLISHER_BLOCKED) -> ResearchFailure.PUBLISHER_BLOCKED
+            readCount > 0 && publisherFailures.contains(ResearchFailure.NETWORK_UNAVAILABLE) -> ResearchFailure.NETWORK_UNAVAILABLE
+            readCount > 0 && failedReads.get() >= readCount -> ResearchFailure.PUBLISHER_UNAVAILABLE
+            discoveredCount == 0 && explicit.isEmpty() -> ResearchFailure.NO_SEARCH_RESULTS
+            else -> ResearchFailure.INSUFFICIENT_EVIDENCE
+        }
+        val metrics = ResearchMetrics(provider = if (explicit.isNotEmpty()) "Direct website" else if (fallbackUsed) "Exa + BI source index" else ExaDiscovery.providerName,
+            durationMs = System.nanoTime() / 1_000_000 - started, discoveredResults = discoveredCount,
+            readPublishers = sources.size, attemptedPublishers = readCount, retries = retryCount, httpCategory = httpCategory,
+            timeoutStage = if (readTimeouts.get() > 0) "PUBLISHER" else if (discoveryTimedOut) "PROVIDER" else "",
+            failure = failure ?: publisherFailures.firstOrNull() ?: providerFailure?.takeUnless { it == ResearchFailure.NO_SEARCH_RESULTS })
+        ResearchOutcome(selected, failure, EvidenceRanking.conflicts(selected), if (selected.isEmpty() && possibleSpellings.size == 1)
             "I couldn't identify ${query.publicTopic?.subject} confidently. Search found a possible spelling, ${possibleSpellings.single()}. Please name the intended film with its language or release year, or share a public HTTPS source."
-        else "")
+        else "", metrics)
+        }
     }
 
     private fun domain(url: String): String = url.toHttpUrl().topPrivateDomain() ?: url.toHttpUrl().host

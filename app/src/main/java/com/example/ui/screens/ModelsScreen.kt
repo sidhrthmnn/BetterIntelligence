@@ -48,8 +48,6 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val deletingId by viewModel.deletingModelId.collectAsState()
     val context = LocalContext.current
     var source by rememberSaveable { mutableStateOf("library") }
-    var tier by rememberSaveable { mutableStateOf("ALL") }
-    var otherModels by rememberSaveable { mutableStateOf(false) }
     var advanced by rememberSaveable { mutableStateOf(false) }
     var details by remember { mutableStateOf<ModelEntity?>(null) }
     var deleting by remember { mutableStateOf<ModelEntity?>(null) }
@@ -192,25 +190,14 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Mobile-friendly library", style = MaterialTheme.typography.titleSmall)
-                TextButton(
-                    onClick = { otherModels = !otherModels; tier = "ALL" },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                    modifier = Modifier.heightIn(max = 30.dp)
-                ) {
-                    Text(if (otherModels) "Hide other models" else "Other models", style = MaterialTheme.typography.labelMedium)
-                }
+                Text("All models · Lowest RAM first", style = MaterialTheme.typography.titleSmall)
             }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("ALL" to "All", "FAST" to "Fast", "BALANCED" to "Balanced", "ADVANCED" to "Advanced", "EXPERIMENTAL" to "Experimental").forEach { (key, label) ->
-                    FilterChip(tier == key, { tier = key }, label = { Text(label, style = MaterialTheme.typography.labelSmall) })
-                }
-            }
+            Text("RAM is an estimate. Other apps affect what fits. New downloads stay at the top.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val visibleModels = models.filter {
             if (it.id in pinnedDownloads || it.downloadState == "DOWNLOADING") true else when (source) {
-                "library" -> !it.isCustom && (otherModels || ModelLibrary.category(it) != null || it.isInstalled || it.id == recommended?.id) &&
-                    (tier == "ALL" || ModelLibrary.category(it) == tier)
+                "library" -> true
                 "my_models" -> ModelPresentation.hasDownload(it) || it.isCustom
                 else -> false
             }
@@ -218,7 +205,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         if (source == "my_models" && visibleModels.isEmpty()) item {
             Text("Your downloads and imports will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        items(ModelPresentation.ordered(visibleModels, pinnedDownloads, active?.id, recommended?.id), key = { it.id }) { model ->
+        items(ModelPresentation.byRam(visibleModels, generationParams.contextSize, pinnedDownloads), key = { it.id }) { model ->
             val installed = model.isInstalled
             val downloading = model.downloadState == "DOWNLOADING"
             val selected = active?.id == model.id && telemetry.isModelLoaded
@@ -233,7 +220,6 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        ModelLibrary.categoryLabel(model)?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary) }
                         if (isSecondary) {
                             Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
                                 Text("Fallback", Modifier.padding(horizontal = 8.dp, vertical = 1.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
@@ -256,11 +242,10 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     Text(
                         ModelPresentation.memoryLabel(model, loadProfile, selected, memoryContext),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (fits || selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (fits || selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                         modifier = Modifier.testTag("model_memory_${model.id}")
                     )
-                    if (ModelLibrary.category(model) == "EXPERIMENTAL") Text("Unverified on this phone. Manually test CPU/GPU, memory, chat and TypeRight correctness before relying on it. Not selected automatically.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    if (selected) Text("Selected · available to approved apps", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    if (ModelLibrary.category(model) == "EXPERIMENTAL") Text("Experimental · May be unstable", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     if (!installed && !canDownload) Text("Free more storage before downloading this model.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     if (model.downloadState == "ERROR") Text(downloadErrors[model.id] ?: "Download interrupted. Retry to resume or check the model publisher’s access requirements.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     if (downloading) {
@@ -297,13 +282,13 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                                 modifier = Modifier.heightIn(max = 34.dp).testTag("download_model_${model.id}")
                             ) { Text(if (model.downloadState == "ERROR") "Retry download" else if (model.downloadState == "PAUSED") "Resume download" else "Download", style = MaterialTheme.typography.labelMedium) }
                         }
-                        if (installed && !selected && ModelLibrary.category(model) != "EXPERIMENTAL") {
+                        if (installed && !selected && !isSecondary && ModelLibrary.category(model) != "EXPERIMENTAL") {
                             OutlinedButton(
-                                onClick = { viewModel.setSecondaryModel(if (isSecondary) null else model) },
+                                onClick = { viewModel.setSecondaryModel(model) },
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                                 modifier = Modifier.heightIn(max = 34.dp)
                             ) {
-                                Text(if (isSecondary) "Clear standby" else "Set fallback", style = MaterialTheme.typography.labelMedium)
+                                Text("Set fallback", style = MaterialTheme.typography.labelMedium)
                             }
                         }
                         TextButton(

@@ -98,7 +98,7 @@ class FilmResearchTopicTest {
         assertEquals(AnswerSupport.INSUFFICIENT, EvidenceAnswer.resolve("The iPhone has a great camera [1].", listOf(unrelated), q).support)
         val provider = object : SearchProvider { override suspend fun search(question: String) = listOf(unrelated) }
         val result = GroundingCoordinator(mapOf(SearchProviderId.WEB to provider)).retrieve(q, true, GroundingMode.AUTO, SearchProviderId.WEB)
-        assertEquals("SEARCH_FAILED", result.status); assertTrue(result.sources.isEmpty())
+        assertEquals("INSUFFICIENT_EVIDENCE", result.status); assertTrue(result.sources.isEmpty())
         val castOnly = source(body = "Batha is a Tamil film directed by Example Director. Its cast includes Example Actor and Example Actress.")
         assertFalse(FactualResearch.usable(castOnly, q)); assertNull(SourceBrief.build(q, listOf(castOnly), emptyList()))
         assertTrue(FactualResearch.usable(source(), q))
@@ -128,7 +128,7 @@ class FilmResearchTopicTest {
         val failure = AnswerRoutingPolicy.recover(route, ResearchFailure.INSUFFICIENT)
         assertNull(failure.localQuestion); assertTrue(failure.notice.contains("batha", true)); assertTrue(failure.notice.contains("release year"))
         assertFalse(failure.notice.contains("iPhone"))
-        assertTrue(AnswerRoutingPolicy.recover(route, ResearchFailure.TIMEOUT).notice.contains("timed out"))
+        assertTrue(AnswerRoutingPolicy.recover(route, ResearchFailure.TIMEOUT).notice.contains("too long"))
     }
     @Test fun alwaysSearchDoesNotReuseAQueryCacheInsteadOfCheckingAgain() = runBlocking {
         var calls = 0
