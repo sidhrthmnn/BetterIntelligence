@@ -176,7 +176,10 @@ class WebReliabilityDeviceTest {
                 assertTrue(answer.content,GroundingPolicy.validateCitations(answer.content,GroundingResult.sources(answer.sourcesJson)).second)
                 if (question.contains("Road Atlas")) assertTrue(answer.content,answer.content.contains(ReleaseAnswerScope.missingOtt))
                 if (question.contains("i'm game")) assertTrue(answer.content,answer.content.contains("November 18, 2026"))
-                if (question.startsWith("Which shoe")) assertTrue(answer.content,answer.content.contains("cushioning",true))
+                if (question.startsWith("Which shoe")) {
+                    assertTrue(answer.content,answer.content.contains("Swift",true) && answer.content.contains("running shoe",true))
+                    assertFalse(answer.content.contains("Design Picture")); assertFalse(answer.content.contains("See all our test results"))
+                }
                 assertEquals("No grounded draft should reach the display before checking",0,leaks.get())
             }
             val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()

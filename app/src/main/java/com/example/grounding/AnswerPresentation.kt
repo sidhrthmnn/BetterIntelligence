@@ -6,7 +6,8 @@ object AnswerPresentation {
     fun paragraphs(text: String): String {
         val kept = mutableListOf<String>()
         for (part in text.split(Regex("\\n\\s*\\n")).map(String::trim).filter(String::isNotEmpty)) {
-            fun key(value: String) = citation.replace(value, "").lowercase().replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+            fun key(value: String) = citation.replace(value, "").lowercase().replace(Regex("^the source (?:explicitly )?states that\\s+"), "")
+                .replace(Regex("[^\\p{L}\\p{N}%°+−-]+"), " ").trim()
             val ids = citation.findAll(part).map { it.value }.toSet()
             val prior = kept.indexOfFirst { old ->
                 ids.isNotEmpty() && citation.findAll(old).map { it.value }.toSet() == ids &&

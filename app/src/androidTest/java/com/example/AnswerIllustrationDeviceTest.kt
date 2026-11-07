@@ -2,7 +2,10 @@ package com.example
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
@@ -25,10 +28,10 @@ class AnswerIllustrationDeviceTest {
         val allowed=mutableStateOf(true); var selected=0
         val source=EvidenceSource(1,"Illustration fixture","https://publisher.example/article","Fictional fixture, not a public discovery.",1,kind="WEB_PAGE",imageUrl="https://publisher.example/image.png")
         val text="Source fact [1, 2]"
-        compose.setContent { MaterialTheme { Column(Modifier.padding(20.dp)) {
+        compose.setContent { MaterialTheme { Surface(Modifier.fillMaxSize()) { Column(Modifier.statusBarsPadding().padding(20.dp)) {
             MarkdownText("## From the sources\n\n$text\n\n| Item | Evidence |\n|---|---|\n| Example | [1] |",setOf(1,2),onCitation={selected=it})
             SourceImageCard(source,allowed.value) {selected=1}
-        } } }
+        } } } }
         compose.onNodeWithText("Show source image").assertIsDisplayed()
         val node=compose.onNodeWithText(text)
         val layouts=mutableListOf<TextLayoutResult>()

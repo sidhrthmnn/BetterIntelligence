@@ -15,7 +15,12 @@ object EvidenceAnswer {
         val checked = resolveStrict(prose, aligned, question)
         val resolved = if (checked.support == AnswerSupport.INSUFFICIENT)
             MovieRatingEvidence.summary(question, aligned, checked.claims) ?: SourceBrief.build(question, aligned, checked.claims) ?: checked else checked
-        val focused = ReleaseAnswerScope.apply(question, aligned, focusReview(resolved, question))
+        // When a recommendation draft only repeats a product name, the actual
+        // review paragraph can offer useful qualifications without another run.
+        val recommendation = Regex("(?i)^which .{1,60} (?:is|are) (?:good|best) for\\b|^(?:recommend|suggest) .{1,80}\\b").containsMatchIn(question)
+        val fuller = if (resolved.support == AnswerSupport.PARTIAL && recommendation)
+            SourceBrief.build(question, aligned, resolved.claims) ?: resolved else resolved
+        val focused = ReleaseAnswerScope.apply(question, aligned, focusReview(fuller, question))
         return focused.copy(text = AnswerPresentation.paragraphs(focused.text))
     }
 

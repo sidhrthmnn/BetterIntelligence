@@ -73,11 +73,21 @@ class ReadableAnswersTest {
         val text = "Road Atlas released in theaters on October 2, 2026 [1].\n\nRoad Atlas released in theaters on October 2, 2026, only in selected cities [1]."
         val result = AnswerPresentation.paragraphs(text)
         assertEquals(1, result.split("\n\n").size); assertTrue(result.contains("only in selected cities")); assertTrue(result.contains("[1]"))
+        assertEquals(2,AnswerPresentation.paragraphs("Temperature -4 C [1].\n\nTemperature +4 C [1].").split("\n\n").size)
     }
     @Test fun decorativePhotoLabelsAndButtonsAreExcludedFromArticleEvidence() {
         val html = "<title>Running shoes</title><main><h2>Budget running shoes</h2><img alt='Design Picture'><img alt='Stack Height Photo'><button>See all our test results</button><p>The Swift trainer is a budget running shoe. Our testers found its cushioning comfortable for easy daily runs.</p></main>"
         val s = WebPageExtractor.article(WebDocument("https://publisher.example/shoes", html, "text/html"),1,"Which shoe is good for running")!!
         assertTrue(s.excerpt.contains("cushioning comfortable")); assertFalse(s.excerpt.contains("Design Picture"));assertFalse(s.excerpt.contains("Stack Height Photo"));assertFalse(s.excerpt.contains("See all our test results"))
+    }
+    @Test fun partialRecommendationShowsSourceMeritsInsteadOfRepeatedProductName() {
+        val s = source("The Swift trainer is a budget running shoe. Our testers found its cushioning comfortable for easy daily runs.").copy(title="Running shoe tests")
+        val partial=CheckedAnswer("The source explicitly states that the Swift trainer is a budget running shoe [1].\n\nThe Swift trainer is a budget running shoe. [1]",AnswerSupport.PARTIAL,emptyList())
+        assertEquals(1,AnswerPresentation.paragraphs(partial.text).split("\n\n").size)
+        val result=EvidenceAnswer.resolve(partial.text + "\n\nSwift makes every runner faster [1].",listOf(s),"Which shoe is good for running?")
+        assertTrue(result.text,result.text.contains("cushioning comfortable"))
+        assertFalse(result.text.contains("every runner faster"));assertFalse(result.text.contains("do not cover every"))
+        assertTrue(result.text,GroundingPolicy.validateCitations(result.text,listOf(s)).second)
     }
     @Test fun metadataImageIsPublisherProvidedBoundedAndRespectsImagePolicy() {
         val doc = Jsoup.parse("<meta property='og:image' content='/photos/trainer.png'><meta property='og:image:alt' content='Swift running shoe'>")
