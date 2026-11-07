@@ -4,6 +4,12 @@ package com.example.grounding
  * a claim of semantic fact checking: a cited publisher can still be wrong.
  */
 object CitationSupport {
+    /** Explicit source labels only. Bare parenthesised numbers are not citations. */
+    fun normalize(text: String): String {
+        val labels = Regex("(?i)[\\[(](?:source(?:s)?|id|reference)\\s*[:#]?\\s*(\\d+(?:\\s*,\\s*(?:(?:source|id)\\s*[:#]?\\s*)?\\d+)*)[\\])]")
+        val explicit = labels.replace(text) { m -> Regex("\\d+").findAll(m.groupValues[1]).joinToString(", ", "[", "]") { it.value } }
+        return Regex("(?i)\\bsource\\s+(?:id\\s*|#\\s*)?(\\d{1,3})\\b").replace(explicit) { "[${it.groupValues[1]}]" }
+    }
     private val marker = Regex("\\[(\\d+(?:,\\s*\\d+)*)]")
     private val listPrefix = Regex("(?m)^\\s*\\d{1,2}[.)]\\s+")
     private val number = Regex("(?<![\\p{L}\\p{N}])[-−]?\\d+(?:[,.]\\d+)*(?:%|°)?(?![\\p{L}\\p{N}])")
@@ -15,13 +21,17 @@ object CitationSupport {
         runCatching { java.math.BigDecimal(normalized).stripTrailingZeros().toPlainString() }.getOrDefault(normalized)
     }.toSet()
 
+    fun hasFactNumber(text: String): Boolean = values(marker.replace(normalize(text), "")).isNotEmpty()
+
     /** Reliably checkable missing-attribution boundary, not semantic verification.
      * Headings, short connective labels and explicit uncertainty can be uncited;
      * substantial prose paragraphs and list items require an actual source ID. */
     fun citedParagraphs(text: String): Boolean = Regex("```[\\s\\S]*?(?:```|$)|`[^`\\n]*`").replace(text, "")
         .split(Regex("\\n\\s*\\n|\\n(?=[-*] )")).all { paragraph ->
             val prose = paragraph.trim()
-            prose.length < 45 || prose.startsWith('#') || marker.containsMatchIn(prose) ||
+            prose in setOf("Some details were omitted because the supplied evidence did not support them.",
+                "Some documentation is older or undated; it does not establish when these features were added.") ||
+                prose.length < 45 || prose.startsWith('#') || marker.containsMatchIn(prose) ||
                 Regex("(?i)^(I (?:cannot|can't|couldn't)|(?:The )?(?:sources?|evidence) (?:do not|does not|don't|doesn't)|There (?:is|are) (?:not enough|insufficient))").containsMatchIn(prose)
         }
 

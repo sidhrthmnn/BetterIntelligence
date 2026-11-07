@@ -141,7 +141,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val groundingMode = _groundingMode.asStateFlow()
     private val _chatStatus = MutableStateFlow("")
     val chatStatus = _chatStatus.asStateFlow()
-    val appearance = repository.preferencesRepository.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, "DARK")
+    val appearance = repository.preferencesRepository.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, "AMOLED")
     val webAllowed = repository.preferencesRepository.webAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     private var grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(
         discoveryAllowed = { repository.preferencesRepository.webAllowed.first() })))
@@ -1054,9 +1054,13 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 promptTokens = repository.engine.telemetry.value.promptTokens
                 outputTokens = repository.engine.telemetry.value.completionTokens
                 reachedOutputLimit = outputTokens >= autoMaxTokens
-                if (error == null && evidence.sources.isNotEmpty() && result.isNotBlank()) {
+                if ((error == null || error == com.example.engine.InvalidModelOutputException().message) && evidence.sources.isNotEmpty()) {
                     _chatStatus.value = "Checking answer against sources"
-                    val assessed = withContext(Dispatchers.Default) { GroundingPolicy.checkAnswer(result, evidence.sources, effectiveQuestion) }
+                    val assessed = withContext(Dispatchers.Default) { com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion).copy(generationFailed = error != null) }
+                    if (assessed.support != AnswerSupport.INSUFFICIENT) {
+                        if (result.isBlank() || error != null) result = assessed.text
+                        error = null
+                    }
                     val resources = repository.engine.hardware.resources()
                     val repair = EvidenceRepair.prompt(effectiveQuestion, result, prepared, assessed, effectiveContext,
                         resources.availableMb, resources.lowMemory, resources.thermal, repository.engine.telemetry.value.timeToFirstTokenMs, speed) {
@@ -1071,8 +1075,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                         if (corrected != null && withContext(Dispatchers.Default) { GroundingPolicy.checkAnswer(corrected, evidence.sources, effectiveQuestion).support } != AnswerSupport.INSUFFICIENT)
                             result = corrected
                     }
-                    resolvedAnswer = withContext(Dispatchers.Default) {
-                        com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion)
+                    resolvedAnswer = if (repair == null) assessed else withContext(Dispatchers.Default) {
+                        com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion).copy(repairAttempted = true)
                     }
                 }
                 if (error == null && localNeedsLive) {
@@ -1090,6 +1094,17 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             } catch (e: Exception) {
                 error = e.message ?: "Unable to prepare this answer. Try again."
                 result = _streamingChatText.value
+                // Generation failure must not erase already-collected evidence.
+                // Cancellation has its own branch and never enters this recovery.
+                if (evidence.sources.isNotEmpty()) {
+                    val recovered = withContext(Dispatchers.Default) {
+                        com.example.grounding.EvidenceAnswer.resolve("", evidence.sources, researchQuestion)
+                            .copy(generationFailed = true, recoveryAttempted = true)
+                    }
+                    if (recovered.support != AnswerSupport.INSUFFICIENT) {
+                        resolvedAnswer = recovered; result = recovered.text; error = null
+                    }
+                }
             } finally {
                 // Join native cancellation before changing conversation/model ownership or clearing UI state.
                 withContext(NonCancellable) {
@@ -1102,7 +1117,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                         val checked = if (cancelled || interruptedDraft) null else resolvedAnswer ?: if (evidence.sources.isNotEmpty()) withContext(Dispatchers.Default) {
                             GroundingPolicy.checkAnswer(result, evidence.sources, researchQuestion)
                         } else null
-                        val status = if (cancelled) "USER_CANCELLED" else if (interruptedDraft) "UNVERIFIED_PARTIAL" else if (checked == null) evidence.status else if (checked.sourceBrief) "SOURCE_BRIEF" else if (checked.sourceExtract) "SOURCE_EXCERPTS" else when (checked.support) {
+                        val status = if (cancelled) "USER_CANCELLED" else if (interruptedDraft) "UNVERIFIED_PARTIAL" else if (checked == null) evidence.status else if (checked.sourceBrief) "SOURCE_BRIEF" else if (checked.sourceExtract && checked.support != AnswerSupport.CITED) "SOURCE_EXCERPTS" else when (checked.support) {
                             AnswerSupport.CITED -> "EVIDENCE_CITED"
                             AnswerSupport.PARTIAL -> "PARTIALLY_SUPPORTED"
                             AnswerSupport.INSUFFICIENT -> "GROUNDING_VERIFICATION_FAILED"

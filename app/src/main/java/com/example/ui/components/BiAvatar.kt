@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -53,7 +55,7 @@ fun BiAvatar(answering: Boolean, modifier: Modifier = Modifier) {
         contentDescription = "Better Intelligence"
         stateDescription = if (answering) "Looking down while answering" else "Ready"
     }) {
-        Image(painterResource(R.drawable.bi_avatar_base), contentDescription = null, modifier = Modifier.fillMaxSize())
+        Image(painterResource(if (MaterialTheme.colorScheme.background.luminance() > .5f) R.drawable.bi_avatar_light else R.drawable.bi_avatar_base), contentDescription = null, modifier = Modifier.fillMaxSize())
         Canvas(Modifier.fillMaxSize()) {
             val height = size.height * .060f * eyeOpen.value
             val y = size.height * (.449f + .025f * gaze) + size.height * .030f * (1 - eyeOpen.value)

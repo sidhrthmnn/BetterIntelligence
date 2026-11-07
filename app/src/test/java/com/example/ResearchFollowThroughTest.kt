@@ -66,7 +66,7 @@ class ResearchFollowThroughTest {
         val a = page("Orion memory", "Orion requires 4 GB of shared memory only on the tested device.")
         val b = page("Nova memory", "Nova requires 6 GB of shared memory only on the tested device.", "https://second.example/nova").copy(id = 2)
         val result = EvidenceAnswer.resolve("Orion is always better than Nova [1].", listOf(a, b), "Compare Orion vs Nova memory requirements")
-        assertTrue(result.text, result.sourceBrief); assertTrue(result.text.contains("4 GB")); assertTrue(result.text.contains("6 GB"))
+        assertTrue(result.text, result.sourceExtract); assertEquals(AnswerSupport.CITED, result.support); assertTrue(GroundingPolicy.validateCitations(result.text, listOf(a, b)).second); assertTrue(result.text.contains("4 GB")); assertTrue(result.text.contains("6 GB"))
         assertTrue(result.text.contains("only on the tested device")); assertFalse(result.text.contains("always better"))
     }
     @Test fun noProperBodyStillCannotBecomeASourceBrief() {

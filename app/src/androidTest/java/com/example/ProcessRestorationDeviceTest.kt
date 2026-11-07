@@ -87,7 +87,7 @@ class ProcessRestorationDeviceTest {
                 assertEquals("Synthetic preserved partial 73", messages.single { it.role == "assistant" }.content)
                 assertEquals("Synthetic draft after process restart 73", repository.conversation(id)!!.draft)
                 assertEquals(id, preferences.activeConversation.first())
-                assertEquals("DARK", preferences.appearance.first())
+                assertEquals("AMOLED", preferences.appearance.first())
                 assertTrue(repository.clientPolicies.first().single { it.packageName == client }.isWhitelisted)
                 withTimeout(60_000) { while (!repository.engine.isReady()) kotlinx.coroutines.delay(100) }
                 assertEquals(state.getString("model"), repository.engine.activeModelName)

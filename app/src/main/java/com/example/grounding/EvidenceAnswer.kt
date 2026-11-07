@@ -32,17 +32,25 @@ object EvidenceAnswer {
     }
 
     private fun resolveStrict(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
-        val checked = GroundingPolicy.checkAnswer(draft, sources, question)
+        var checked = GroundingPolicy.checkAnswer(draft, sources, question)
+        val comparisonRequested = ResearchIntent.COMPARISON in ResearchPlanner.plan(question).intents
+        val numericMissing = Regex("(?i)how (?:much|many)\\b").containsMatchIn(question) && (!CitationSupport.hasFactNumber(checked.text) || !ClaimLanguage.answerScopeMatches(question, checked.text))
         val weather = ConversationalResearch.isWeather(question)
         val missingTemperature = weather && !hasTemperature(checked.text)
         val labelledWeather = weather && sources.any { Regex("(?i)observed temperature:|(?:today|tonight) forecast: (?:high|low)").containsMatchIn(it.excerpt) }
         val definitionMissing = FactualResearch.definitionTopic(question) != null && !FactualResearch.definitionLine(checked.text, question)
         val focusMissing = sources.any { FactualResearch.answerFocusScore(it.excerpt, question) >= 65 } && FactualResearch.answerFocusScore(checked.text, question) < 65
-        if (checked.support != AnswerSupport.INSUFFICIENT && !missingTemperature && !labelledWeather && !definitionMissing && !focusMissing) return checked
+        if (checked.support == AnswerSupport.CITED && (!comparisonRequested || EvidenceRecovery.complete(question, checked.claims.filter { it.supported }.map { it.text })) && !numericMissing && !missingTemperature && !labelledWeather && !definitionMissing && !focusMissing) return checked
+        checked = checked.copy(recoveryAttempted = true)
         val query = ResearchQuery(question)
         val plan = ResearchPlanner.plan(question)
         val office = ResearchQuery.isCurrentIncumbentQuery(question)
-        // A source excerpt cannot resolve a comparison or stale/current conflict.
+        if (!weather && !definitionMissing && !focusMissing) {
+            // Remove an erroneous generic failure tail when all requested facts
+            // have verified mappings, even if an unrelated draft claim failed.
+            EvidenceRecovery.recover(question, sources, checked)?.let { return it }
+        }
+        // Conflicts still need attributed reporting, not an invented winner.
         if (ResearchIntent.COMPARISON in plan.intents || EvidenceRanking.conflicts(sources).isNotEmpty()) return checked
         data class Extract(val source: EvidenceSource, val text: String, val score: Int)
         val extracts = sources.flatMap { source -> source.excerpt.split(Regex("\\n\\s*\\n")).mapNotNull { block ->
@@ -85,6 +93,7 @@ object EvidenceAnswer {
                 (if (Regex("(?i)observed temperature").containsMatchIn(text)) 30 else 0) + FactualResearch.answerFocusScore(text, question))
         } }.sortedByDescending { it.score }.distinctBy { it.text.lowercase() }.take(if (weather) 2 else 1)
         if (extracts.isEmpty()) {
+            if (numericMissing && checked.support != AnswerSupport.INSUFFICIENT) return checked.copy(text = checked.text + "\n\nThe sources do not establish the requested amount.", support = AnswerSupport.PARTIAL)
             if (definitionMissing) return CheckedAnswer(GroundingPolicy.unavailableAnswer, AnswerSupport.INSUFFICIENT, checked.claims)
             if (!missingTemperature || checked.support == AnswerSupport.INSUFFICIENT) return checked
             return checked.copy(text = "${checked.text}\n\nTemperature was not available in the pages I could read.", support = AnswerSupport.PARTIAL)

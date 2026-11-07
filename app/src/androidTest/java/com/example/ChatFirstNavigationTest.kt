@@ -28,7 +28,7 @@ class ChatFirstNavigationTest {
         compose.onNodeWithText("Brave configuration").assertDoesNotExist()
         screenshot("web-research-beta.png")
     }
-    @Test fun chatFirstDraftSurvivesNavigationAndThreeThemesCoverSettingsDestinations() {
+    @Test fun chatFirstDraftSurvivesNavigationAndTwoThemesCoverSettingsDestinations() {
         require(compose.activity.packageName.endsWith(".validation"))
         compose.onNodeWithTag("chat_input_field").assertIsDisplayed()
         compose.onNodeWithTag("bottom_navigation").assertDoesNotExist()
@@ -41,9 +41,10 @@ class ChatFirstNavigationTest {
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("chat_input_field").assertTextContains("Synthetic unsent draft: keep this text.")
         compose.onNodeWithTag("chat_input_field").performTextClearance()
-        for (theme in listOf("LIGHT", "DARK", "AMOLED")) {
+        for (theme in listOf("LIGHT", "AMOLED")) {
             compose.onNodeWithTag("open_settings").performClick()
             openSetting("Appearance")
+            compose.onNodeWithTag("appearance_DARK").assertDoesNotExist()
             compose.onNodeWithTag("appearance_$theme").performClick()
             compose.waitForIdle()
             screenshot("appearance-$theme.png")

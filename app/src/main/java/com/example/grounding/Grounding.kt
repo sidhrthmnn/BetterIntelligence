@@ -127,11 +127,7 @@ object GroundingPolicy {
     const val unavailableAnswer = "I couldn't verify an answer from relevant web sources. Try a more specific question or provide a public HTTPS source."
 
     fun checkAnswer(text: String, sources: List<EvidenceSource>, question: String = ""): CheckedAnswer {
-        // Normalize explicit source-ID spelling; never invent missing citations.
-        val explicitIds = Regex("(?i)\\[ID\\s*:\\s*(\\d+(?:\\s*,\\s*(?:ID\\s*:\\s*)?\\d+)*)]").replace(text) { match ->
-            Regex("\\d+").findAll(match.groupValues[1]).joinToString(", ", "[", "]") { it.value }
-        }
-        val normalized = Regex("(?i)\\bsource\\s+(?:id\\s*|#\\s*)?(\\d{1,3})\\b").replace(explicitIds) { "[${it.groupValues[1]}]" }
+        val normalized = CitationSupport.normalize(text)
         val checked = ClaimVerification.check(normalized, sources.filter { FactualResearch.usable(it, question) }, question)
         if (checked.support == AnswerSupport.INSUFFICIENT || question.isBlank()) return checked
         val plan = ResearchPlanner.plan(question)

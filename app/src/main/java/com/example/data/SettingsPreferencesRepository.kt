@@ -69,11 +69,11 @@ class SettingsPreferencesRepository(private val context: Context) {
         .map { it[KEY_DARK_THEME]?.toBooleanStrictOrNull() ?: true }
 
     suspend fun saveDarkTheme(dark: Boolean) {
-        saveAppearance(if (dark) "DARK" else "LIGHT")
+        saveAppearance(if (dark) "AMOLED" else "LIGHT")
     }
 
     private val preferences = context.dataStore.data.catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-    val appearance = preferences.map { it[KEY_APPEARANCE] ?: if (it[KEY_DARK_THEME] == "false") "LIGHT" else "DARK" }
+    val appearance = preferences.map { if (it[KEY_APPEARANCE] == "LIGHT" || it[KEY_APPEARANCE] == null && it[KEY_DARK_THEME] == "false") "LIGHT" else "AMOLED" }
     // A new search destination needs a new disclosure; never expand an old consent silently.
     val webAllowed = preferences.map { webConsentAccepted(it[KEY_WEB_ALLOWED], it[KEY_WEB_RESEARCH_CONSENT]) }
     val webMode = preferences.map { it[KEY_WEB_MODE] ?: "OFF" }
@@ -96,7 +96,7 @@ class SettingsPreferencesRepository(private val context: Context) {
     suspend fun saveForegroundEnabled(enabled: Boolean) { context.dataStore.edit { it[KEY_FOREGROUND_SERVICE] = enabled.toString() } }
     suspend fun saveAppearance(value: String) {
         require(value in setOf("LIGHT", "DARK", "AMOLED"))
-        context.dataStore.edit { it[KEY_APPEARANCE] = value; it[KEY_DARK_THEME] = (value != "LIGHT").toString() }
+        context.dataStore.edit { it[KEY_APPEARANCE] = if (value == "DARK") "AMOLED" else value; it[KEY_DARK_THEME] = (value != "LIGHT").toString() }
     }
     suspend fun saveWebAllowed(value: Boolean) { context.dataStore.edit { it[KEY_WEB_ALLOWED] = value.toString(); it[KEY_WEB_RESEARCH_CONSENT] = "6" } }
     suspend fun saveWebMode(value: String) { require(value in setOf("OFF", "AUTO", "ON")); context.dataStore.edit { it[KEY_WEB_MODE] = value } }

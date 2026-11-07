@@ -99,7 +99,7 @@ class ResearchReliabilityTest {
         val s = WebPageExtractor.article(WebDocument("https://city.example/mayors", html, "text/html"), 1, "Who is the mayor in London?")!!
         assertTrue(s.excerpt, s.excerpt.indexOf("Sadiq Khan") < s.excerpt.indexOf("Dame Example"))
         val resolved = EvidenceAnswer.resolve("Sadiq Khan is Mayor of London.", listOf(s), "Who is the mayor in London?")
-        assertTrue(resolved.sourceExtract); assertTrue(resolved.text.contains("Sadiq Khan")); assertFalse(resolved.text.contains("Dame Example"))
+        assertEquals(AnswerSupport.CITED, resolved.support); assertTrue(GroundingPolicy.validateCitations(resolved.text, listOf(s)).second); assertTrue(resolved.text.contains("Sadiq Khan")); assertFalse(resolved.text.contains("Dame Example"))
     }
 
     @Test fun currentOfficeQuestionsCannotBeAnsweredWithAFormerHolder() {

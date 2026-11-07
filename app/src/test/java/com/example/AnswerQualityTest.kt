@@ -157,12 +157,12 @@ class AnswerQualityTest {
         assertEquals("What about memory usage?", ConversationalResearch.question("What about memory usage?", history + ChatMessageEntity(role = "user", content = "New chat", conversationId = 2)))
     }
 
-    @Test fun correctionIsBoundedOptionalAndNeverUsedOnSlowHotOrSimpleCases() {
-        val prepared = PreparedEvidence("evidence", listOf(source()))
+    @Test fun correctionIsBoundedOptionalAndAllowedOnOrdinaryFacts() {
+        val prepared = PreparedEvidence("evidence", listOf(source(text = "Orion requires 4 GB RAM. Orion and Vega support Android runtime integration.")))
         val insufficient = CheckedAnswer("", AnswerSupport.INSUFFICIENT, emptyList())
         fun repair(first: Long = 100, speed: Float = 40f, thermal: Int = 0, memory: Long = 2000, question: String = "Compare Orion vs Vega Android") =
             EvidenceRepair.prompt(question, "bad draft", prepared, insufficient, 2048, memory, false, thermal, first, speed) { true }
-        assertNotNull(repair()); assertNull(repair(first = 15000)); assertNull(repair(thermal = 3)); assertNull(repair(memory = 200)); assertNull(repair(question = "Orion RAM?"))
+        assertNotNull(repair()); assertNull(repair(first = 15000)); assertNull(repair(thermal = 3)); assertNull(repair(memory = 200)); assertNotNull(repair(question = "Orion RAM?"))
     }
 
     @Test fun clearingCacheDuringAnActiveReadDoesNotRepopulateIt() = runBlocking {

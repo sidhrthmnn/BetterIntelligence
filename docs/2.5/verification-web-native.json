@@ -1,0 +1,31 @@
+[
+  {
+    "question": "How do birds fly?",
+    "status": "LOCAL_UNVERIFIED",
+    "state": "LENGTH_LIMIT",
+    "answer": "Birds fly through a combination of four primary mechanisms, often working together:\n\n1.  **Wings**: The wings are the main propulsion and lift-generating surface. They are typically long and curved (an airfoil shape), allowing them to generate lift at low speeds and thrust at high speeds.\n2.  **Flight Muscles**: Birds possess powerful flight muscles (usually located in the pectoral muscles) that contract to pull the wing bones down, creating the downward stroke that generates thrust.\n3.  **Respiration**: Birds have a highly efficient respiratory system with air sacs that allow for continuous airflow through the lungs, even during the rapid flapping of flight.\n4.  **Balance and Stability**: The body is often streamlined, and the tail acts as a rudder to stabilize the flight path.\n\nTo actually fly, a bird must generate enough **thrust** (forward motion) to overcome **drag** (air\n\nLive sources weren't checked; this answer uses on-device knowledge. Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source.",
+    "sources": [],
+    "model": "Qwen3.5-2B"
+  },
+  {
+    "question": "What's the current Jubilee line status?",
+    "status": "PROVIDER_RATE_LIMITED",
+    "state": "COMPLETE",
+    "answer": "I couldn't check the current information right now. Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source.",
+    "sources": [],
+    "model": "Qwen3.5-2B"
+  },
+  {
+    "question": "Explain inflation and tell me the latest UK inflation rate.",
+    "status": "LOCAL_WITH_WEB_GAP",
+    "state": "LENGTH_LIMIT",
+    "answer": "**Inflation** is the sustained increase in the general price level of goods and services over time. It occurs when the value of money decreases, meaning you can buy less with the same amount of currency.\n\n### Key Concepts\n\n*   **Rate of Inflation**: This is typically expressed as a percentage (e.g., 2.5% monthly). It is calculated as the percentage change in the price index (like the Consumer Price Index, or CPI) over a specific period.\n*   **Inflation vs. Deflation**:\n    *   **Inflation**: Prices rise (e.g., a loaf of bread costs $1.50 today and $1.75 next month).\n    *   **Deflation**: Prices fall (e.g., a loaf of bread costs $1.50 next month and $1.40 the following month).\n*   **The \"Sticky\" Inflation Problem**:\n\nI couldn't check the current information right now. Search is temporarily limited. Wait a little before trying again, or provide a public HTTPS source.",
+    "sources": [],
+    "model": "Qwen3.5-2B"
+  },
+  {
+    "question": "Cancellation during discovery",
+    "state": "STOPPED",
+    "status": "USER_CANCELLED"
+  }
+]
