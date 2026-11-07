@@ -10,7 +10,7 @@ data class CheckedAnswer(val text: String, val support: AnswerSupport, val claim
 object ClaimVerification {
     private val marker = Regex("\\[(\\d+(?:,\\s*\\d+)*)]")
     private val url = Regex("(?i)https?://[^\\s)>]+")
-    private val negative = Regex("(?i)\\b(?:not|no|never|cannot|can't|doesn't|don't|unavailable|unsupported|without|neither|lacks|lacking|unable)\\b")
+    private val negative = Regex("(?i)\\b(?:not|no|never|cannot|can't|doesn't|don't|unavailable|unsupported|without|neither|lacks|lacking|unable|rejects?|rejected|denies|excludes?|disallows?|forbids?|isn't|aren't|won't|didn't|wasn't|weren't)\\b")
     private val comparator = Regex("(?i)\\b(?:faster|slower|better|worse|higher|lower|more|less)\\s+(?:\\w+\\s+){0,2}than\\b")
     private val ignored = ResearchQuery.words("a an the is are was were be been being it its this that these those they their for of on in with and or to from by as at can could does do has have use uses used require requires required support supports supported source sources according also only about both however therefore information available unavailable not no cannot which who what when where how than")
     private val uncertainty = Regex("(?i)^(?:I (?:cannot|can't|couldn't)|(?:The )?(?:sources?|evidence) (?:do not|does not|don't|doesn't)|There (?:is|are) (?:not enough|insufficient))")
@@ -88,8 +88,12 @@ object ClaimVerification {
                 else -> "Passage checks passed"
             }
             if (reason == "Passage checks passed") {
-                ids = supportingIds.ifEmpty { ids }.toSet()
-                rendered = marker.replace(rendered, "").trim() + ids.sorted().joinToString(", ", " [", "]")
+                ids = supportingIds.toSet()
+                var inserted = false
+                rendered = marker.replace(rendered) {
+                    if (inserted) "" else { inserted = true; ids.sorted().joinToString(", ", "[", "]") }
+                }
+                if (!inserted) rendered += ids.sorted().joinToString(", ", " [", "]")
             }
             ClaimCheck(rendered, ids, reason in setOf("Passage checks passed", "Explicit uncertainty", "Heading"), reason, missingCitation && ids.isNotEmpty())
         }

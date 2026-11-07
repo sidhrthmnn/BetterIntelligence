@@ -436,5 +436,22 @@
       }
     ],
     "complete": true
+  },
+  {
+    "id": "opposite-vocabulary",
+    "question": "Does Nova support image input?",
+    "draft": "Nova rejects pictures [2].",
+    "expected": "supports image input",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 2,
+        "title": "Nova requirements",
+        "url": "https://nova.example/specs",
+        "excerpt": "Nova requires 6 GB RAM only with the vendor SDK. Nova supports image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
   }
 ]

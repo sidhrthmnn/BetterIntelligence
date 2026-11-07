@@ -82,7 +82,7 @@ object ResearchDiagnostics {
             val checks = row.optJSONObject("claimChecks") ?: JSONObject()
             clean.put("claimChecks", JSONObject().apply { VerificationDiagnostics.keys.forEach { put(it, checks.optInt(it).coerceIn(0, 100)) } })
             clean.put("verification", row.optString("verification").takeIf { it in AnswerSupport.entries.map { s -> s.name } }.orEmpty())
-            clean.put("fallback", row.optString("fallbackReason").takeIf { it in ResearchFailure.entries.map { f -> f.name } + listOf("REQUEST_FAILED", "PARTIAL_SOURCE_SUMMARY") }.orEmpty())
+            clean.put("fallback", row.optString("fallbackReason").takeIf { it in ResearchFailure.entries.map { f -> f.name } + listOf("REQUEST_FAILED", "PARTIAL_SOURCE_SUMMARY", "VERIFIED_EVIDENCE_RECOVERY") }.orEmpty())
             output.put(clean)
         }
         return JSONObject().put("format", 1).put("reports", output).toString(2)
