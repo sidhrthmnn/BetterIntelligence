@@ -1,0 +1,123 @@
+{
+  "testedApplicationRevision": "7147187aa0a4d65cc9349e5b18aab4663488b262",
+  "jvm": {
+    "tests": 319,
+    "passed": 318,
+    "skipped": 1,
+    "failures": 0
+  },
+  "rustPassed": 31,
+  "phone": {
+    "device": "HONOR VKP-NX9 / Android 16",
+    "model": "Qwen3.5-2B-Q4_K_M.gguf / CPU",
+    "initialSuite": {
+      "tests": 18,
+      "passed": 17,
+      "failed": 1
+    },
+    "initialFailure": "Recommendation retained citations but repeated the product name and omitted useful review detail. Source-summary recovery and same-citation deduplication were improved.",
+    "finalTargetedTestsPassed": 2,
+    "distinctRelevantMethodsPassedAcrossRuns": 18,
+    "finalScope": "Final-build real-Qwen 3-question ViewModel workflow and citation/image UI; remaining 16 methods passed in the earlier complete run, with inference/runtime/IPC unchanged.",
+    "emulatorTestsRun": 0,
+    "productionAppAndChatsUntouched": true
+  },
+  "nativeRegressionCases": [
+    {
+      "question": "When is malayalam movie i'm game releasing on ott",
+      "status": "SOURCE_EXCERPTS",
+      "state": "COMPLETE",
+      "sourceCount": 1,
+      "hasCitations": true,
+      "reviewMeritsPresent": false,
+      "preciseOttGap": false
+    },
+    {
+      "question": "When is Road Atlas Hindi movie releasing on OTT?",
+      "status": "SOURCE_EXCERPTS",
+      "state": "COMPLETE",
+      "sourceCount": 1,
+      "hasCitations": true,
+      "reviewMeritsPresent": false,
+      "preciseOttGap": true
+    },
+    {
+      "question": "Which shoe is good for running",
+      "status": "SOURCE_BRIEF",
+      "state": "COMPLETE",
+      "sourceCount": 1,
+      "hasCitations": true,
+      "reviewMeritsPresent": true,
+      "preciseOttGap": false
+    }
+  ],
+  "live": [
+    {
+      "question": "How does Android Vulkan graphics initialization work?",
+      "scope": "Live phone retrieval plus deterministic synthesis; no model run",
+      "failure": "",
+      "readSources": 2,
+      "supported": "PARTIAL",
+      "elapsedMs": 10881
+    },
+    {
+      "question": "Weather in London today",
+      "scope": "Live phone retrieval plus deterministic synthesis; no model run",
+      "failure": "",
+      "readSources": 2,
+      "supported": "PARTIAL",
+      "elapsedMs": 3204
+    },
+    {
+      "scope": "Optional live publisher image",
+      "host": "BBC",
+      "decoded": true
+    },
+    {
+      "question": "Who is acting as Doom in Avengers Doomsday?",
+      "scope": "Live phone retrieval plus deterministic synthesis; no model run",
+      "failure": "",
+      "readSources": 1,
+      "supported": "PARTIAL",
+      "elapsedMs": 3562
+    },
+    {
+      "scope": "Optional live publisher image",
+      "host": "abc7.com",
+      "decoded": false
+    },
+    {
+      "question": "Which shoe is good for running?",
+      "scope": "Live phone retrieval plus deterministic synthesis; no model run",
+      "failure": "",
+      "readSources": 2,
+      "supported": "CITED",
+      "elapsedMs": 7630
+    },
+    {
+      "scope": "Optional live publisher image",
+      "host": "rtings.com",
+      "decoded": false
+    },
+    {
+      "question": "When is Malayalam movie I'm Game releasing on OTT?",
+      "scope": "Live phone retrieval plus deterministic synthesis; no model run",
+      "failure": "",
+      "readSources": 2,
+      "supported": "PARTIAL",
+      "elapsedMs": 4493
+    },
+    {
+      "scope": "Optional live publisher image",
+      "host": "malayalamtv9.com",
+      "decoded": true
+    },
+    {
+      "question": "How does Android Vulkan graphics initialization work?",
+      "scope": "Simulated Exa rate limit; real publisher requests through BI fallback",
+      "provider": "Exa + BI source index",
+      "readSources": 1
+    }
+  ],
+  "limits": "Live run measured retrieval plus deterministic synthesis, not general factual accuracy or a live model end-to-end benchmark. Controlled real-model facts are fictional fixtures. Images are illustrations, and two of four live image attempts were unavailable."
+}
