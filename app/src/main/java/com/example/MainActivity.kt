@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
                 if (generating) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
-            MyApplicationTheme(darkTheme = appearance != "LIGHT", amoled = appearance == "AMOLED") { MainAppContent(viewModel) }
+            MyApplicationTheme(darkTheme = appearance != "LIGHT") { MainAppContent(viewModel) }
         }
     }
 }

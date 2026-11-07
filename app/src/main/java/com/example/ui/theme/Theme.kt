@@ -64,12 +64,11 @@ private val ModernLightColorScheme = lightColorScheme(
 fun MyApplicationTheme(
     darkTheme: Boolean = true,
     dynamicColor: Boolean = false,
-    amoled: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = if (darkTheme) ModernDarkColorScheme.copy(
-        background = if (amoled) Color.Black else Color(0xFF141318),
-        surface = if (amoled) Color(0xFF08070B) else Color(0xFF141318),
+        background = Color.Black,
+        surface = Color(0xFF08070B),
         surfaceVariant = Color(0xFF25232C), outlineVariant = Color(0xFF3E3A47),
         onBackground = Color(0xFFEEEAF3), onSurface = Color(0xFFEEEAF3), onSurfaceVariant = Color(0xFFC0BBC9)
     ) else ModernLightColorScheme.copy(background = Color(0xFFFAF9FC), surface = Color(0xFFFAF9FC),

@@ -4,6 +4,12 @@ package com.example.grounding
  * a claim of semantic fact checking: a cited publisher can still be wrong.
  */
 object CitationSupport {
+    /** Explicit source labels only. Bare parenthesised numbers are not citations. */
+    fun normalize(text: String): String {
+        val labels = Regex("(?i)[\\[(](?:source(?:s)?|id|reference)\\s*[:#]?\\s*(\\d+(?:\\s*,\\s*(?:(?:source|id)\\s*[:#]?\\s*)?\\d+)*)[\\])]")
+        val explicit = labels.replace(text) { m -> Regex("\\d+").findAll(m.groupValues[1]).joinToString(", ", "[", "]") { it.value } }
+        return Regex("(?i)\\bsource\\s+(?:id\\s*|#\\s*)?(\\d{1,3})\\b").replace(explicit) { "[${it.groupValues[1]}]" }
+    }
     private val marker = Regex("\\[(\\d+(?:,\\s*\\d+)*)]")
     private val listPrefix = Regex("(?m)^\\s*\\d{1,2}[.)]\\s+")
     private val number = Regex("(?<![\\p{L}\\p{N}])[-−]?\\d+(?:[,.]\\d+)*(?:%|°)?(?![\\p{L}\\p{N}])")

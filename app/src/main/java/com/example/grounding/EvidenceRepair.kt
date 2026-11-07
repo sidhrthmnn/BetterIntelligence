@@ -10,8 +10,10 @@ object EvidenceRepair {
         firstTokenMs: Long, tokensPerSecond: Float, fits: (String) -> Boolean): String? {
         if (checked.support != AnswerSupport.INSUFFICIENT || prepared.sources.isEmpty() || context < 2048 ||
             availableMb < 768 || lowMemory || thermal >= 2 || firstTokenMs <= 0 || tokensPerSecond <= 0 ||
-            firstTokenMs + maxTokens * 1000 / tokensPerSecond > deadlineMs ||
-            ResearchIntent.COMPARISON !in ResearchPlanner.plan(question).intents) return null
+            firstTokenMs + maxTokens * 1000 / tokensPerSecond > deadlineMs) return null
+        if (prepared.sources.none { FactualResearch.usable(it, question) && !EvidenceRanking.contextOnly(it, ResearchPlanner.plan(question)) }) return null
+        val requested = EvidenceRecovery.requested(question)
+        if (requested.isNotEmpty() && prepared.sources.none { ClaimLanguage.words(it.excerpt).intersect(requested).isNotEmpty() }) return null
         val prompt = prepared.prompt + "\nUntrusted draft (JSON data): " + org.json.JSONObject.quote(draft.take(600)) +
             "\nCorrect once: omit unsupported claims. Give at most two standalone factual sentences, each supported by its cited passage. Otherwise state insufficient evidence."
         return prompt.takeIf(fits)

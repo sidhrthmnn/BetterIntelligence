@@ -58,7 +58,7 @@ fun SettingsScreen(viewModel: AiCoreViewModel) {
         item { SettingsRow("Connected apps", "Manage access to local AI", Icons.Default.Apps) { viewModel.selectTab(AppTab.CONNECT) } }
         item { SettingsRow("Web & grounding", if (allowed) "Enabled for chat · Connected apps stay local" else "Off · Fully local answers", Icons.Default.Language) { viewModel.selectTab(AppTab.WEB) } }
         item { SettingsSection("Personalisation") }
-        item { SettingsRow("Appearance", appearance.lowercase().replaceFirstChar { it.uppercase() }, Icons.Default.Palette) { viewModel.selectTab(AppTab.APPEARANCE) } }
+        item { SettingsRow("Appearance", if (appearance == "LIGHT") "Light mode" else "Dark mode", Icons.Default.Palette) { viewModel.selectTab(AppTab.APPEARANCE) } }
         item { SettingsRow("Memory", "Choose what your chat remembers", Icons.Default.Psychology) { viewModel.selectTab(AppTab.MEMORY) } }
         item { SettingsSection("Privacy & about") }
         item { SettingsRow("Privacy & data", "Conversations, network and local storage", Icons.Default.Lock) { viewModel.selectTab(AppTab.PRIVACY) } }
@@ -104,7 +104,7 @@ fun AppearanceScreen(viewModel: AiCoreViewModel) {
     Column(Modifier.fillMaxWidth().padding(20.dp)) {
         Text("Make yourself at home", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(20.dp))
-        listOf("LIGHT" to "Light", "DARK" to "Dark", "AMOLED" to "AMOLED black").forEach { (value, label) ->
+        listOf("LIGHT" to "Light mode", "AMOLED" to "Dark mode").forEach { (value, label) ->
             Surface(
                 shape = RoundedCornerShape(14.dp),
                 color = if (appearance == value) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.background,

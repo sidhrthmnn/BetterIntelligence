@@ -1,0 +1,416 @@
+[
+  {
+    "id": "paraphrase",
+    "question": "What RAM does Orion require?",
+    "draft": "Orion needs 4 GB memory only with the vendor SDK [1].",
+    "expected": "4 GB",
+    "claimSupport": "CITED",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "missing-citation",
+    "question": "What RAM does Orion require?",
+    "draft": "Orion requires 4 GB RAM only with the vendor SDK.",
+    "expected": "4 GB",
+    "claimSupport": "CITED",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "citation-format",
+    "question": "Does Orion support image input?",
+    "draft": "Orion does not support image input (ID: 1).",
+    "expected": "not support",
+    "claimSupport": "CITED",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "unusable-draft",
+    "question": "What RAM does Orion require?",
+    "draft": "??? <unused15><unused26>",
+    "expected": "4 GB",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "empty-draft",
+    "question": "What RAM does Orion require?",
+    "draft": "",
+    "expected": "4 GB",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "comparison",
+    "question": "Compare Orion and Nova RAM requirements",
+    "draft": "I cannot verify the answer.",
+    "expected": "6 GB",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      },
+      {
+        "id": 2,
+        "title": "Nova requirements",
+        "url": "https://nova.example/specs",
+        "excerpt": "Nova requires 6 GB RAM only with the vendor SDK. Nova supports image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "swapped-values",
+    "question": "Compare Orion and Nova RAM requirements",
+    "draft": "Orion requires 6 GB RAM only with the vendor SDK [1], while Nova requires 4 GB RAM only with the vendor SDK [2].",
+    "expected": "6 GB",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      },
+      {
+        "id": 2,
+        "title": "Nova requirements",
+        "url": "https://nova.example/specs",
+        "excerpt": "Nova requires 6 GB RAM only with the vendor SDK. Nova supports image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "negative",
+    "question": "Does Orion support image input?",
+    "draft": "Orion does not support image input [1].",
+    "expected": "not support",
+    "claimSupport": "CITED",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "false-positive",
+    "question": "Does Orion support image input?",
+    "draft": "Orion supports image input [1].",
+    "expected": "not support",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "condition-omitted",
+    "question": "What RAM does Orion require?",
+    "draft": "Orion requires 4 GB RAM [1].",
+    "expected": "only with the vendor SDK",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "condition-swapped",
+    "question": "What RAM does Orion require?",
+    "draft": "Orion requires 4 GB RAM only with Android [1].",
+    "expected": "only with the vendor SDK",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "fabricated",
+    "question": "Is Orion waterproof?",
+    "draft": "Orion is waterproof [1].",
+    "expected": "",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": false
+  },
+  {
+    "id": "partial-comparison",
+    "question": "Compare Orion and Nova RAM requirements",
+    "draft": "Unknown",
+    "expected": "4 GB",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": false
+  },
+  {
+    "id": "invalid-id",
+    "question": "What RAM does Orion require?",
+    "draft": "Orion requires 4 GB RAM only with the vendor SDK [99].",
+    "expected": "4 GB",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion requirements",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion requires 4 GB RAM only with the vendor SDK. Orion does not support image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "outdated",
+    "question": "Who is the current CEO of Orion?",
+    "draft": "Ada Example is the current CEO of Orion [1].",
+    "expected": "",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion historical leadership",
+        "url": "https://orion.example/history",
+        "excerpt": "Ada Example was the CEO of Orion in 2019. She left the role in 2020.",
+        "updatedAt": "2020-01-01"
+      }
+    ],
+    "complete": false
+  },
+  {
+    "id": "different-vocabulary",
+    "question": "Does Nova support image input?",
+    "draft": "Nova accepts pictures [2].",
+    "expected": "pictures",
+    "claimSupport": "CITED",
+    "sources": [
+      {
+        "id": 2,
+        "title": "Nova requirements",
+        "url": "https://nova.example/specs",
+        "excerpt": "Nova requires 6 GB RAM only with the vendor SDK. Nova supports image input.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "unrelated-relationship",
+    "question": "Does Orion replace Nova?",
+    "draft": "Orion replaces Nova [1].",
+    "expected": "",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion compatibility",
+        "url": "https://orion.example/specs",
+        "excerpt": "Orion supports Nova. Orion and Nova are compatible.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": false
+  },
+  {
+    "id": "phone-wrong-borrower",
+    "question": "How much loan does Aurora have?",
+    "draft": "Aurora borrowed 40 billion dollars [1].",
+    "expected": "",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Aurora financial report",
+        "url": "https://aurora.example/report",
+        "excerpt": "Meridian borrowed 40 billion dollars for its stake in Aurora. Meridian is repaying its bridge loan.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": false
+  },
+  {
+    "id": "phone-credit-not-debt",
+    "question": "How much loan does Aurora have?",
+    "draft": "Aurora owes 4 billion dollars [1].",
+    "expected": "",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Aurora financial report",
+        "url": "https://aurora.example/report",
+        "excerpt": "Aurora has a 4 billion dollar credit facility. This is a borrowing limit and does not establish how much debt Aurora has drawn.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": false
+  },
+  {
+    "id": "phone-loan-recovery",
+    "question": "How much loan does Aurora have?",
+    "draft": "I cannot verify the answer.",
+    "expected": "4 billion",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Aurora financial report",
+        "url": "https://aurora.example/report",
+        "excerpt": "Aurora has 4 billion dollars of outstanding debt. Aurora borrowed this loan for its infrastructure program.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "phone-provider-blocked",
+    "question": "Does Aurora or Nova have more users?",
+    "draft": "Aurora has 999 million users [1].",
+    "expected": "",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [],
+    "complete": false
+  },
+  {
+    "id": "phone-user-period",
+    "question": "How many monthly users does Aurora have?",
+    "draft": "Aurora has 50 million monthly active users [1].",
+    "expected": "",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Aurora users",
+        "url": "https://aurora.example/report",
+        "excerpt": "Aurora has 50 million weekly active users. This figure counts weekly users, not monthly users.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": false
+  },
+  {
+    "id": "user-scale-swapped",
+    "question": "How many weekly users does Aurora have?",
+    "draft": "Aurora has 50 billion weekly active users [1].",
+    "expected": "50 million",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Aurora users",
+        "url": "https://aurora.example/report",
+        "excerpt": "Aurora has 50 million weekly active users. This figure counts weekly users.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  },
+  {
+    "id": "multi-row-value-binding",
+    "question": "Compare Orion and Nova RAM requirements",
+    "draft": "Orion requires 6 GB RAM [1].",
+    "expected": "4 GB",
+    "claimSupport": "INSUFFICIENT",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Orion and Nova specifications",
+        "url": "https://aurora.example/report",
+        "excerpt": "Memory\nOrion requires 4 GB RAM.\nNova requires 6 GB RAM.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
+  }
+]
