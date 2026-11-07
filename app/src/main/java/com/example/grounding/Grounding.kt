@@ -52,7 +52,8 @@ data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: Resea
 
 data class EvidenceSource(val id: Int, val title: String, val url: String, val excerpt: String,
     val retrievedAt: Long, val updatedAt: String = "", val kind: String = "ARTICLE_SUMMARY", val dateKind: String = "",
-    val publicPlace: String = "", val discoveryProvider: String = "", val publicQuery: String = "")
+    val publicPlace: String = "", val discoveryProvider: String = "", val publicQuery: String = "",
+    val imageUrl: String = "", val imageAlt: String = "")
 
 data class PreparedEvidence(val prompt: String, val sources: List<EvidenceSource>)
 
@@ -62,7 +63,8 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
         .put("retrievedAt", source.retrievedAt).put("updatedAt", source.updatedAt).put("kind", source.kind).put("dateKind", source.dateKind)
         .apply { if (source.publicPlace.isNotBlank()) put("publicPlace", source.publicPlace)
             if (source.discoveryProvider.isNotBlank()) put("discoveryProvider", source.discoveryProvider)
-            if (ConversationalResearch.validPublicQuery(source.publicQuery)) put("publicQuery", source.publicQuery) }) } }.toString()
+            if (ConversationalResearch.validPublicQuery(source.publicQuery)) put("publicQuery", source.publicQuery)
+            if (GroundingPolicy.publicHttpsUrl(source.imageUrl)) { put("imageUrl", source.imageUrl); put("imageAlt", source.imageAlt.take(160)) } }) } }.toString()
     companion object {
         fun sources(json: String): List<EvidenceSource> = runCatching {
             val array = JSONArray(json)
@@ -73,7 +75,8 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
                         item.optLong("retrievedAt"), item.optString("updatedAt"), item.optString("kind"), item.optString("dateKind"),
                         item.optString("publicPlace").takeIf(ConversationalResearch::validPublicPlace).orEmpty(),
                         item.optString("discoveryProvider").takeIf { it in setOf("DuckDuckGo", "Exa", "Mwmbl") }.orEmpty(),
-                        item.optString("publicQuery").takeIf(ConversationalResearch::validPublicQuery).orEmpty())
+                        item.optString("publicQuery").takeIf(ConversationalResearch::validPublicQuery).orEmpty(),
+                        item.optString("imageUrl").takeIf(GroundingPolicy::publicHttpsUrl).orEmpty(), item.optString("imageAlt").take(160))
                 }
             }
         }.getOrDefault(emptyList())
@@ -233,7 +236,26 @@ class SearchHttp internal constructor(
     private val onRequest: ((String) -> Unit)? = null
 ) : WebFetcher {
     override fun session(maxRequests: Int): WebFetcher = SearchHttp(client, allowTestUrls, java.util.concurrent.atomic.AtomicInteger(maxRequests), onRequest)
-    private data class Reply(val code: Int, val location: String?, val page: WebDocument, val retryAfterMs: Long)
+    private data class Reply(val code: Int, val location: String?, val page: WebDocument, val retryAfterMs: Long, val image: ByteArray? = null)
+    /** Uses the same public-address DNS, redirect, permission and bounded-body
+     * transport as research. Binary data is never interpreted as source text. */
+    internal suspend fun fetchImage(url: String, permitted: suspend (String) -> Boolean): ByteArray {
+        var current = url
+        repeat(4) { hop ->
+            require(allowTestUrls || GroundingPolicy.publicHttpsUrl(current)) { "A public HTTPS image is required" }
+            if (!permitted(current)) throw PublisherPermissionException()
+            val reply = request(Request.Builder().url(current).header("User-Agent", "BetterIntelligence/2.5")
+                .header("Accept", "image/jpeg, image/png, image/webp").build(), image = true)
+            if (reply.code in setOf(301, 302, 303, 307, 308)) {
+                check(hop < 3) { "Too many image redirects" }
+                current = current.toHttpUrl().resolve(checkNotNull(reply.location))?.toString() ?: error("Invalid image redirect")
+            } else {
+                if (reply.code != 200) throw WebRequestException(reply.code, reply.retryAfterMs)
+                return checkNotNull(reply.image)
+            }
+        }
+        error("Image unavailable")
+    }
     override suspend fun fetch(url: String): WebDocument = fetchChecked(url, null)
     override suspend fun fetchPage(url: String, permitted: suspend (String) -> Boolean): WebDocument = fetchChecked(url, permitted)
     override suspend fun postJson(url: String, json: String, permitted: suspend (String) -> Boolean): WebDocument {
@@ -269,13 +291,13 @@ class SearchHttp internal constructor(
     }
     // Used by transport regression tests; all production research uses fetch().
     internal suspend fun json(request: Request): JSONObject = JSONObject(fetch(request.url.toString()).text)
-    private suspend fun request(request: Request): Reply {
+    private suspend fun request(request: Request, image: Boolean = false): Reply {
         val deadline = kotlinx.coroutines.currentCoroutineContext()[ResearchDeadline]
         if (deadline != null && !deadline.permits(50)) throw java.net.SocketTimeoutException("Research deadline reached")
         check(quota?.getAndDecrement()?.let { it > 0 } != false) { "Research request budget exhausted" }
         onRequest?.invoke(request.url.toString())
         val call = client.newCall(request)
-        call.timeout().timeout(minOf(60_000, deadline?.remainingMs() ?: 60_000), TimeUnit.MILLISECONDS)
+        call.timeout().timeout(minOf(if (image) 6_000 else 60_000, deadline?.remainingMs() ?: 60_000), TimeUnit.MILLISECONDS)
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
@@ -286,6 +308,7 @@ class SearchHttp internal constructor(
                 override fun onResponse(call: Call, response: Response) {
                     val result = runCatching { response.use {
                         val body = checkNotNull(it.body) { "Empty website response" }
+                        if (image && it.code == 200) check(body.contentType()?.toString()?.substringBefore(';') in setOf("image/jpeg", "image/png", "image/webp")) { "Unsupported image type" }
                         val output = java.io.ByteArrayOutputStream()
                         if (it.code == 200) body.byteStream().use { stream ->
                             val buffer = ByteArray(8192)
@@ -302,7 +325,7 @@ class SearchHttp internal constructor(
                         check(output.size() <= 1024 * 1024) { "Search response is too large" }
                         val charset = body.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
                         Reply(it.code, it.header("Location"), WebDocument(it.request.url.toString(),
-                            String(output.toByteArray(), charset), body.contentType()?.toString().orEmpty(), it.headers.values("X-Robots-Tag").joinToString(",")), retryAfter(it.header("Retry-After")))
+                            if (image) "" else String(output.toByteArray(), charset), body.contentType()?.toString().orEmpty(), it.headers.values("X-Robots-Tag").joinToString(",")), retryAfter(it.header("Retry-After")), if (image) output.toByteArray() else null)
                     } }
                     if (continuation.isActive) result.fold(continuation::resume, continuation::resumeWithException)
                 }

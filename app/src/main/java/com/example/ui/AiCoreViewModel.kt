@@ -990,7 +990,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val rawDraft = StringBuilder()
                 var lastDraftUiAt = 0L
                 fun publishDraft() {
-                    if (localNeedsLive) return
+                    if (localNeedsLive || evidence.sources.isNotEmpty()) return
                     val draft = rawDraft.toString()
                     _streamingChatText.value = if (AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(route, draft)) ""
                         else LocalAnswerUncertainty.visible(draft)
@@ -1001,7 +1001,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                         if (localNeedsLive) return
                         rawDraft.append(token)
                         if (android.os.SystemClock.elapsedRealtime() - lastDraftUiAt >= 40) publishDraft()
-                        _chatStatus.value = if (evidence.sources.isEmpty()) "" else "Draft · Checking against sources"
+                        _chatStatus.value = if (evidence.sources.isEmpty()) "" else "Writing answer from sources"
                     }
                     override fun onComplete(fullText: String, latencyMs: Long, tokensPerSec: Float, promptTokens: Int, completionTokens: Int) {
                         publishDraft()

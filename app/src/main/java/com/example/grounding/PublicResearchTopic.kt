@@ -9,19 +9,19 @@ enum class PublicTopicIntent { REVIEW, RATING, CAST, RELEASE, SEQUEL, INFORMATIO
 /** Derived from bounded USER turns in one chat, never assistant text or sources.
  * The original message remains in Room; this contains only a public identity. */
 data class PublicResearchTopic(val subject: String, val type: PublicEntityType, val language: String = "",
-    val intent: PublicTopicIntent, val conversationId: Long = 0, val userMessageId: Long = 0) {
+    val intent: PublicTopicIntent, val conversationId: Long = 0, val userMessageId: Long = 0, val releaseChannel: String = "") {
     val identity get() = listOf(subject, language, if (type == PublicEntityType.FILM) "film" else "").filter(String::isNotBlank).joinToString(" ")
     fun question() = when (intent) {
         PublicTopicIntent.REVIEW -> "$identity reviews audience reception"
         PublicTopicIntent.RATING -> "What is the rating of $identity?"
         PublicTopicIntent.CAST -> "Who starred in $identity?"
-        PublicTopicIntent.RELEASE -> "When was $identity released?"
+        PublicTopicIntent.RELEASE -> if (releaseChannel == "OTT") "When is $identity releasing on streaming services (OTT)?" else "When was $identity released?"
         PublicTopicIntent.SEQUEL -> "Is there a sequel to $identity?"
         PublicTopicIntent.INFORMATION -> "Information about $identity"
     }
     fun subjectMatches(text: String): Boolean = ResearchQuery.words(subject).let { it.isNotEmpty() && ResearchQuery.words(text).containsAll(it) }
     fun sourceMatches(title: String, body: String, url: String): Boolean {
-        if (!subjectMatches("$title $url") || !subjectMatches("$title $body")) return false
+        if (!subjectMatches("$title $body")) return false
         if (type != PublicEntityType.FILM) return true
         val text = "$title $body"
         if (!Regex("(?i)\\b(?:films?|movies?|cinema|screenplay|director|starring|cast|verdict)\\b").containsMatchIn(text)) return false
@@ -37,7 +37,7 @@ data class PublicResearchTopic(val subject: String, val type: PublicEntityType, 
             PublicTopicIntent.REVIEW -> "reviews audience reception"
             PublicTopicIntent.RATING -> "rating review"
             PublicTopicIntent.CAST -> "cast actors"
-            PublicTopicIntent.RELEASE -> "release date"
+            PublicTopicIntent.RELEASE -> if (releaseChannel == "OTT") "OTT streaming digital release date" else "release date"
             PublicTopicIntent.SEQUEL -> "sequel announcement"
             else -> "information"
         }
@@ -76,7 +76,9 @@ object PublicTopics {
     private val language = Regex("(?i)\\b(tamil|hindi|malayalam|telugu|kannada|bengali|marathi|english|korean|japanese)\\b")
     private val generic = Regex("(?i)^\\s*(?:(?:please|can you|could you)\\s+)?(?:(?:find|search(?: for)?|show(?: me)?|give me|check|look up)\\s+)?(?:(?:a|the|its|some)\\s+)?(?:reviews?|ratings?|sources?|search|tell me more|more information)\\s*[.!?]*$")
     private val reference = Regex("(?i)^(?:who (?:acted|starred|stars|made|directed|owns).{0,35}\\b(?:it|this|that)\\b|what.{0,25}\\b(?:its rating|rating of it|rating|release date)\\b|when (?:is|was|did) (?:it|this|that).{0,25}releas\\w*|is (?:it|this|that) (?:any )?good|(?:what|how) about (?:the )?sequel|(?:does|did|will) (?:it|this|that).{0,30}sequel)\\b")
-    fun followUp(text: String) = generic.matches(normalize(text)) || reference.containsMatchIn(normalize(text))
+    private fun description(text: String) = Regex("(?i)^it[’']?s (?:a |the )?(?:recent |new |latest )?(?:malayal(?:am|m)|hindi|tamil|telugu|kannada) (?:movie|film)\\b").containsMatchIn(normalize(text))
+    fun followUp(text: String) = generic.matches(normalize(text)) || reference.containsMatchIn(normalize(text)) ||
+        description(text) || Regex("(?i)^when (?:will|does) it\\b").containsMatchIn(normalize(text))
     fun missingSubject(text: String) = !text.contains("(Public source topic:") && parse(text) == null && (followUp(text) ||
         Regex("(?i)^(?:how (?:is|was) |review (?:of )?)?(?:(?:the|tamil|hindi|malayalam|telugu)\\s+)*(?:movie|film)\\s*[?!]*$").matches(normalize(text)))
     fun intent(text: String): PublicTopicIntent {
@@ -99,13 +101,19 @@ object PublicTopics {
         if (film == null && (product == null || intent(q) !in setOf(PublicTopicIntent.REVIEW, PublicTopicIntent.RATING))) return null
         val type = if (film != null) PublicEntityType.FILM else PublicEntityType.PRODUCT
         var name = if (film != null) q.take(film.range.first) else q
-        val lang = if (film != null) language.find(name)?.value.orEmpty() else ""
+        val lang = if (film != null) language.find(q)?.value.orEmpty() else ""
+        if (film != null && description(q)) return null
+        // A title may follow the film label: "Malayalam movie I'm Game".
+        val prefix = name.replace(language, " ").replace(Regex("(?i)^(?:when (?:is|was)|what is|the)\\s*"), "").trim()
+        if (film != null && prefix.isBlank()) name = q.substring(film.range.last + 1)
         name = name.replace(Regex("(?i)^(?:is there (?:a )?sequel to|what is (?:the )?rating of|what (?:is|was) (?:the )?release date of|when (?:is|was)|who (?:acted|starred|stars) in|who (?:is|was) in|(?:find |search for |show me )?(?:reviews?|rating|cast|release date|information)(?: of| for| about)?|tell me about|how (?:is|was)|is|was)\\s+"), "")
-            .replace(language, " ").replace(Regex("(?i)\\s+(?:a |the )?(?:good|new|latest)$|\\s+(?:released|releasing)$|\\s+reviews?$"), "")
+            .replace(language, " ").replace(Regex("(?i)\\s+(?:releas(?:e|ed|ing)|available|coming)\\b.*$"), "")
+            .replace(Regex("(?i)\\s+(?:a |the )?(?:good|new|latest)$|\\s+(?:released|releasing)$|\\s+reviews?$"), "")
             .trim(' ', '"', '“', '”', ':', '?', '.', '!').replace(Regex("\\s+"), " ")
         if (name.length !in 2..90 || !Regex("[\\p{L}\\p{N}][\\p{L}\\p{M}\\p{N} &'’.,:()_-]*").matches(name) ||
             name.lowercase() in setOf("it", "this", "that", "the", "a", "review", "reviews", "rating", "tamil", "good")) return null
-        return PublicResearchTopic(name, type, lang, intent(q), conversationId, userMessageId)
+        return PublicResearchTopic(name, type, lang, intent(q), conversationId, userMessageId,
+            if (Regex("(?i)\\b(?:ott|streaming|digital)\\b").containsMatchIn(q)) "OTT" else "")
     }
     fun resolve(text: String, history: List<ChatMessageEntity>, conversationId: Long? = null): PublicResearchTopic? {
         val chat = conversationId ?: history.lastOrNull()?.conversationId ?: 0
@@ -119,7 +127,8 @@ object PublicTopics {
         }
         if (!followUp(text)) return null
         for (turn in history.asReversed().asSequence().filter { it.conversationId == chat && it.role == "user" }.take(12)) {
-            parse(turn.content, chat, turn.id)?.let { return it.copy(intent = intent(text).takeUnless { it == PublicTopicIntent.INFORMATION } ?: it.intent) }
+            parse(turn.content, chat, turn.id)?.let { return it.copy(intent = intent(text).takeUnless { it == PublicTopicIntent.INFORMATION || description(text) } ?: it.intent,
+                releaseChannel = if (Regex("(?i)\\b(?:ott|streaming|digital)\\b").containsMatchIn(text)) "OTT" else it.releaseChannel) }
             // An explicit new local/other task ends this topic. Never revive an
             // old film across a poem, a private request or an unrelated subject.
             if (!followUp(turn.content) && !ConversationalResearch.isRecheck(turn.content)) return null

@@ -29,7 +29,7 @@ object CitationSupport {
     fun citedParagraphs(text: String): Boolean = Regex("```[\\s\\S]*?(?:```|$)|`[^`\\n]*`").replace(text, "")
         .split(Regex("\\n\\s*\\n|\\n(?=[-*] )")).all { paragraph ->
             val prose = paragraph.trim()
-            prose in setOf("Some details were omitted because the supplied evidence did not support them.",
+            prose in setOf(ReleaseAnswerScope.missingOtt, "Some details were omitted because the supplied evidence did not support them.",
                 "Some documentation is older or undated; it does not establish when these features were added.") ||
                 prose.length < 45 || prose.startsWith('#') || marker.containsMatchIn(prose) ||
                 Regex("(?i)^(I (?:cannot|can't|couldn't)|(?:The )?(?:sources?|evidence) (?:do not|does not|don't|doesn't)|There (?:is|are) (?:not enough|insufficient))").containsMatchIn(prose)

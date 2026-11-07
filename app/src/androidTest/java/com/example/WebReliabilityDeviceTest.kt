@@ -112,7 +112,7 @@ class WebReliabilityDeviceTest {
     }
     @Test fun livePublicSourcesAndOnDeviceFallbackUseTheSameReaderAndCitationChecks(): Unit = runBlocking {
         admit()
-        val questions = listOf("How does Android Vulkan graphics initialization work?", "Weather in London today", "Who is acting as Doom in Avengers Doomsday?")
+        val questions = listOf("How does Android Vulkan graphics initialization work?", "Weather in London today", "Who is acting as Doom in Avengers Doomsday?", "Which shoe is good for running?", "When is Malayalam movie I'm Game releasing on OTT?")
         var successful = 0
         for (question in questions) {
             val start = android.os.SystemClock.elapsedRealtime()
@@ -125,6 +125,12 @@ class WebReliabilityDeviceTest {
                 .put("failure", outcome.failure?.name.orEmpty()).put("readSources", outcome.sources.size)
                 .put("supported", answer?.support?.name.orEmpty()).put("elapsedMs", android.os.SystemClock.elapsedRealtime() - start))
             assertTrue(android.os.SystemClock.elapsedRealtime() - start < 65_000)
+            outcome.sources.firstOrNull { it.imageUrl.isNotBlank() }?.let { image ->
+                val decoded = runCatching { SourceImages.load(image) { true } }
+                rows.put(JSONObject().put("scope", "Optional live publisher image").put("host", ReadableSourceSummary.publisher(image.url))
+                    .put("decoded", decoded.isSuccess))
+                decoded.getOrNull()?.let { bitmap -> assertTrue(bitmap.width <= 768 && bitmap.height <= 768); bitmap.recycle() }
+            }
         }
         // Force only Exa to fail; actual public source fetches remain live.
         val actual = SearchHttp()
@@ -140,4 +146,42 @@ class WebReliabilityDeviceTest {
         File(context.filesDir, "web-reliability-live.json").writeText(rows.toString(2))
         assertTrue("None of the live phone questions had readable supported sources", successful > 0)
     }
+    @Test fun phoneRegressionQuestionsUseSourcesAndNeverExposeUncheckedDrafts(): Unit = runBlocking {
+        admit()
+        val model = withTimeout(90_000) { repo.allModels.first { models -> models.any { it.filename == "Qwen3.5-2B-Q4_K_M.gguf" && it.isInstalled } } }
+            .single { it.filename == "Qwen3.5-2B-Q4_K_M.gguf" }
+        repo.engine.setProcessingMode(ProcessingMode.CPU); repo.switchActiveModel(model)
+        repo.preferencesRepository.saveWebAllowed(true)
+        compose.waitUntil(20_000) { vm.webAllowed.value && vm.conversationId.value != 0L && !repo.isModelLoading }
+        compose.runOnUiThread {
+            vm.toggleForegroundService(false)
+            vm.updateGenerationParams(GenerationParams(contextSize=2048,maxTokens=160,temperature=0f,threads=4))
+        }
+        // Fictional source facts exercise the real model + full ViewModel path.
+        val cases = listOf(
+            Triple("When is malayalam movie i'm game releasing on ott", "I'm Game Malayalam film", "I'm Game Malayalam film starts streaming on November 18, 2026."),
+            Triple("When is Road Atlas Hindi movie releasing on OTT?", "Road Atlas Hindi film", "Road Atlas Hindi film was released in theaters on October 2, 2026."),
+            Triple("Which shoe is good for running", "Running shoe tests", "The Swift trainer is a budget running shoe. Our testers found its cushioning comfortable for easy daily runs.")
+        )
+        val leaks=java.util.concurrent.atomic.AtomicInteger()
+        val observer=launch(Dispatchers.Default) { vm.streamingChatText.collect { if (it.isNotBlank()) leaks.incrementAndGet() } }
+        try {
+            for ((question,title,body) in cases) {
+                fresh()
+                compose.runOnUiThread { vm.useSearchProviderForTesting(object : SearchProvider {
+                    override suspend fun search(question:String):List<EvidenceSource> = listOf(EvidenceSource(1,title,"https://publisher.example/regression",body,System.currentTimeMillis(),java.time.LocalDate.now().toString(),"WEB_PAGE","PUBLISHED"))
+                }) }
+                val answer=ask(question)
+                assertFalse(answer.content,answer.content.contains("couldn't verify an answer"))
+                assertTrue(answer.content,GroundingPolicy.validateCitations(answer.content,GroundingResult.sources(answer.sourcesJson)).second)
+                if (question.contains("Road Atlas")) assertTrue(answer.content,answer.content.contains(ReleaseAnswerScope.missingOtt))
+                if (question.contains("i'm game")) assertTrue(answer.content,answer.content.contains("November 18, 2026"))
+                if (question.startsWith("Which shoe")) assertTrue(answer.content,answer.content.contains("cushioning",true))
+                assertEquals("No grounded draft should reach the display before checking",0,leaks.get())
+            }
+            val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+            File(context.filesDir,"readable-answer.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) };bitmap.recycle()
+        } finally { observer.cancel(); repo.engine.unloadActiveModel();File(context.filesDir,"readable-native.json").writeText(rows.toString(2)) }
+    }
+
 }

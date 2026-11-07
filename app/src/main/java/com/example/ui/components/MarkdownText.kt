@@ -16,7 +16,7 @@ import androidx.compose.ui.text.style.TextDecoration
 
 sealed interface MarkdownBlock {
     data class Paragraph(val text: String) : MarkdownBlock
-    data class Heading(val text: String) : MarkdownBlock
+    data class Heading(val text: String, val level: Int = 1) : MarkdownBlock
     data class Code(val text: String) : MarkdownBlock
     data class Table(val rows: List<List<String>>) : MarkdownBlock
     data class Quote(val text: String) : MarkdownBlock
@@ -25,7 +25,7 @@ sealed interface MarkdownBlock {
 
 /** Bounded, text-only Markdown. HTML and model-authored URLs never execute. */
 object ChatMarkdown {
-    fun parse(text: String): List<MarkdownBlock> {
+    fun parse(text: String, collapseSoftLines: Boolean = true): List<MarkdownBlock> {
         val lines = text.take(100_000).lines(); val result = mutableListOf<MarkdownBlock>(); var index = 0
         while (index < lines.size) {
             val line = lines[index]
@@ -43,7 +43,7 @@ object ChatMarkdown {
                     }
                     result += MarkdownBlock.Table(rows)
                 }
-                line.startsWith("#") -> { result += MarkdownBlock.Heading(line.trimStart('#', ' ')); index++ }
+                Regex("^#{1,6} ").containsMatchIn(line) -> { result += MarkdownBlock.Heading(line.trimStart('#', ' '), line.takeWhile { it == '#' }.length); index++ }
                 line.startsWith("> ") -> { result += MarkdownBlock.Quote(line.removePrefix("> ")); index++ }
                 Regex("^\\s*(?:[-*+] |\\d+[.)] ).+").matches(line) -> {
                     val entry = Regex("^\\s*([-*+]|\\d+[.)]) (.*)").find(line)!!
@@ -53,15 +53,30 @@ object ChatMarkdown {
                 else -> {
                     val paragraph = StringBuilder()
                     while (index < lines.size && lines[index].isNotBlank() && !lines[index].startsWith("> ") &&
-                        !Regex("^\\s*(?:[-*+] |\\d+[.)] ).+").matches(lines[index]) && !lines[index].startsWith("```") && !lines[index].startsWith("#") &&
+                        !Regex("^\\s*(?:[-*+] |\\d+[.)] ).+").matches(lines[index]) && !lines[index].startsWith("```") && !Regex("^#{1,6} ").containsMatchIn(lines[index]) &&
                         !(lines[index].trimStart().startsWith("|") && index + 1 < lines.size && Regex("[| :\\-]+").matches(lines[index + 1].trim()))) {
                         paragraph.append(lines[index++]).append('\n')
                     }
-                    if (paragraph.isNotBlank()) result += MarkdownBlock.Paragraph(paragraph.toString().trimEnd())
+                    if (paragraph.isNotBlank()) result += MarkdownBlock.Paragraph(paragraph.toString().trimEnd().let {
+                        if (collapseSoftLines) it.replace(Regex("(?<!  )\\n"), " ") else it
+                    })
                 }
             }
         }
         return result
+    }
+    fun citations(text: String, ids: Set<Int>): AnnotatedString {
+      val base = inline(text)
+      return buildAnnotatedString {
+        append(base)
+        Regex("(?<![\\p{L}\\p{N}_])\\[(\\d+(?:,\\s*\\d+)*)]").findAll(base.text).forEach { group ->
+            if (base.spanStyles.any { it.item.fontFamily == FontFamily.Monospace && it.start <= group.range.first && it.end > group.range.last }) return@forEach
+            Regex("\\d+").findAll(group.value).forEach { number ->
+                val id = number.value.toIntOrNull()
+                if (id in ids) addStringAnnotation("source", id.toString(), group.range.first + number.range.first, group.range.first + number.range.last + 1)
+            }
+        }
+      }
     }
     fun inline(text: String): AnnotatedString = buildAnnotatedString {
         val pattern = Regex("\\*\\*(.+?)\\*\\*|`([^`]+)`")
@@ -78,28 +93,24 @@ object ChatMarkdown {
 }
 
 @Composable
-fun MarkdownText(text: String, sourceIds: Set<Int> = emptySet(), onCitation: (Int) -> Unit = {}) {
-    val blocks = remember(text) { ChatMarkdown.parse(text) }
+fun MarkdownText(text: String, sourceIds: Set<Int> = emptySet(), collapseSoftLines: Boolean = true, onCitation: (Int) -> Unit = {}) {
+    val blocks = remember(text, collapseSoftLines) { ChatMarkdown.parse(text, collapseSoftLines) }
     val linkColor = MaterialTheme.colorScheme.primary
-    @Composable fun prose(value: String, heading: Boolean = false) {
-        val base = remember(value) { ChatMarkdown.inline(value) }
+    @Composable fun prose(value: String, level: Int = 0) {
+        val base = remember(value, sourceIds) { ChatMarkdown.citations(value, sourceIds) }
         val annotated = remember(base, sourceIds, linkColor) { buildAnnotatedString {
             append(base)
-            Regex("(?<![\\p{L}\\p{N}_])\\[(\\d+)]").findAll(base.text).forEach { match ->
-                val id = match.groupValues[1].toIntOrNull()
-                if (id in sourceIds) {
-                    addStringAnnotation("source", id.toString(), match.range.first, match.range.last + 1)
-                    addStyle(SpanStyle(color = linkColor, fontWeight = FontWeight.Medium, textDecoration = TextDecoration.Underline), match.range.first, match.range.last + 1)
-                }
+            base.getStringAnnotations("source", 0, base.length).forEach { match ->
+                addStyle(SpanStyle(color = linkColor, fontWeight = FontWeight.Medium, textDecoration = TextDecoration.Underline), match.start, match.end)
             }
         } }
         ClickableText(annotated, modifier = Modifier.fillMaxWidth(),
-            style = (if (heading) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge).copy(color = MaterialTheme.colorScheme.onSurface),
+            style = (when (level) { 0 -> MaterialTheme.typography.bodyLarge; 1 -> MaterialTheme.typography.titleLarge; 2 -> MaterialTheme.typography.titleMedium; else -> MaterialTheme.typography.titleSmall }).copy(color = MaterialTheme.colorScheme.onSurface),
             onClick = { offset -> annotated.getStringAnnotations("source", offset, offset).firstOrNull()?.item?.toIntOrNull()?.let(onCitation) })
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         blocks.forEach { block -> when (block) {
-            is MarkdownBlock.Heading -> prose(block.text, true)
+            is MarkdownBlock.Heading -> prose(block.text, block.level)
             is MarkdownBlock.Paragraph -> prose(block.text)
             is MarkdownBlock.Quote -> Row(Modifier.fillMaxWidth()) {
                 Text("│", color = MaterialTheme.colorScheme.outline); Spacer(Modifier.width(12.dp)); Box(Modifier.weight(1f)) { prose(block.text) }
@@ -113,8 +124,7 @@ fun MarkdownText(text: String, sourceIds: Set<Int> = emptySet(), onCitation: (In
             is MarkdownBlock.Table -> Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                 block.rows.forEachIndexed { index, row ->
                     Row(Modifier.background(if (index == 0) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.background)) {
-                        row.forEach { cell -> Text(ChatMarkdown.inline(cell), Modifier.width(168.dp).padding(12.dp),
-                            style = MaterialTheme.typography.bodyMedium, fontWeight = if (index == 0) FontWeight.SemiBold else FontWeight.Normal) }
+                        row.forEach { cell -> Box(Modifier.width(168.dp).padding(12.dp)) { prose(cell) } }
                     }
                     HorizontalDivider()
                 }

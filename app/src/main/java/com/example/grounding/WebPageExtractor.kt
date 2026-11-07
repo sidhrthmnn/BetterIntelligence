@@ -63,6 +63,7 @@ object WebPageExtractor {
         doc.select("[class*=devsite-banner], [class*=site-banner]").remove()
         // Keep article headers: their subject/date often disambiguates the answer.
         doc.select("body > header").remove()
+        doc.select("button, [role=button], select, .breadcrumbs, [aria-label=Breadcrumb]").remove()
         val explicitContent = doc.selectFirst("#mw-content-text, .markdown-body")?.takeIf { it.text().length >= 200 }
         val articles = doc.select("article").filter { it.text().length >= 200 }
         val bestArticle = articles.maxByOrNull { contentScore(it) }
@@ -74,9 +75,17 @@ object WebPageExtractor {
             bestArticle != null -> bestArticle
             else -> doc.body()
         }
+        // Editorial recommendation cards often use <ol><li><h2>...<p>...</li>.
+        // They are article sections, not one giant list entry. Preserve their
+        // paragraphs and heading scope instead of flattening scores + prose.
+        root.select("ul, ol").filter { list -> list.children().any { item ->
+            item.tagName() == "li" && item.selectFirst("h2, h3, h4") != null && item.select("p").sumOf { it.text().length } >= 80
+        } }.forEach { list -> list.children().filter { it.tagName() == "li" }.forEach { it.unwrap() }; list.unwrap() }
+        root.select("a").filter { Regex("(?i)^(?:see all our test results|see our review|learn more)[\\s ]*$").matches(it.text()) }.forEach { it.remove() }
         if (type != "text/plain") {
             root.select("img[alt]").forEach { img ->
                 val alt = img.attr("alt").trim()
+                if (Regex("(?i)\\b(?:picture|photo|image|icon|thumbnail)\\b").containsMatchIn(alt)) return@forEach
                 if (alt.length in 3..60 && !Regex("(?i)^(icon|image|logo|photo|avatar|placeholder|banner|arrow|close)\\b|\\b(?:rating|star) icon\\b").containsMatchIn(alt)) {
                     img.appendText(" $alt ")
                 }
@@ -215,7 +224,9 @@ object WebPageExtractor {
         val text = focused(usable, dateLines, question, minOf(if (ResearchPlanner.plan(question).focuses.size > 1 || ResearchIntent.TECHNICAL in ResearchPlanner.plan(question).intents) 8000 else 4000, snippetLimit)).trim()
         if (text.length < 80 && !(PublicQuestionIntent.statusValue(text, question) &&
                 PublicQuestionIntent.serviceScope(title + " " + page.url + " " + text, question))) return null
-        return EvidenceSource(id, title, HtmlDiscovery.canonicalUrl(page.url), text, System.currentTimeMillis(), date.first, "WEB_PAGE", date.second)
+        val image = SourceImages.metadata(doc, page.url, policies)
+        return EvidenceSource(id, title, HtmlDiscovery.canonicalUrl(page.url), text, System.currentTimeMillis(), date.first, "WEB_PAGE", date.second,
+            imageUrl = image?.first.orEmpty(), imageAlt = image?.second.orEmpty())
     }
 
     /** Re-focus a cached excerpt when shrinking it for a small model context.

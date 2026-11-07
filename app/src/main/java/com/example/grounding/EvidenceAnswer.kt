@@ -15,7 +15,8 @@ object EvidenceAnswer {
         val checked = resolveStrict(prose, aligned, question)
         val resolved = if (checked.support == AnswerSupport.INSUFFICIENT)
             MovieRatingEvidence.summary(question, aligned, checked.claims) ?: SourceBrief.build(question, aligned, checked.claims) ?: checked else checked
-        return focusReview(resolved, question)
+        val focused = ReleaseAnswerScope.apply(question, aligned, focusReview(resolved, question))
+        return focused.copy(text = AnswerPresentation.paragraphs(focused.text))
     }
 
     /** Keep verified review conclusions ahead of tangential production facts.

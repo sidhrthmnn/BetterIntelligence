@@ -42,7 +42,7 @@ object ReadableSourceSummary {
         val lines = selected.mapNotNull { (source, text) -> sentence(source, text, question) }.distinct().take(2)
         if (lines.isEmpty()) return null
         val tail = if (conflict) "I couldn't establish a single conclusion because the reports differ."
-            else "I couldn't verify the remaining details; these sources provide a partial answer."
-        return lines.joinToString("\n\n") + "\n\n" + tail
+            else ""
+        return lines.joinToString("\n\n") + if (tail.isBlank()) "" else "\n\n$tail"
     }
 }

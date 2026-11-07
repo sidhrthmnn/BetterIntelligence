@@ -43,3 +43,7 @@ Connected-app requests always stay on-device in Better Intelligence and never in
 ## Diagnostics and support
 
 Hardware monitoring shows local performance, memory and thermal information. Better Intelligence does not automatically upload chats, keyboard text, local model outputs or hardware benchmark reports to a developer server. If you choose to share diagnostic information, review it first. Questions and deletion/support requests can be sent to siddharthpazhoor@gmail.com or raised through the [project's GitHub issues](https://github.com/sidhrthmnn/BetterIntelligence/issues); do not post secrets or personal text in public issues.
+
+### Optional source images
+
+When web research is enabled, read publisher pages may provide an illustration URL. BI stores that URL with the source, but does not download the image unless you tap **Show source image**. That request (including the publisher image host and its robots policy) reveals your IP address to the host. Images are limited in size, held in memory only, and are not sent to the local language model. Turning web access off cancels image loading. Publisher images are illustrative; BI does not claim to verify their visual content.
