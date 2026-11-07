@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What RAM does Orion require?",
+    "rawAnswer": "Orion requires **4 GB of shared RAM** only when using the vendor SDK.\n\n**Evidence:**\nThe provided JSON evidence explicitly states: \"Orion requires 4 GB of shared RAM only with the vendor SDK.\" It further clarifies that the software does not support image input, but this limitation does not affect the RAM requirement for the supported functionality.",
+    "finalAnswer": "publisher.example reports: Orion requires 4 GB of shared RAM only with the vendor SDK. Orion does not support image input. [1]\n\nI couldn't verify the remaining details; these sources provide a partial answer.",
+    "support": "PARTIAL",
+    "citationValid": true,
+    "promptTokens": 244,
+    "nativeFirstTokenMs": 11327,
+    "nativeTokensPerSecond": 13.474738
+  },
+  {
+    "question": "Does Orion support image input?",
+    "rawAnswer": "No, Orion does not support image input.\n\nEvidence:\n*   The provided JSON data explicitly states that \"Orion does not support image input\" (ID: 1).\n*   The same entry specifies that Orion requires \"4 GB of shared RAM only with the vendor SDK\" (ID: 1).\n*   The entry also notes that the requirements are \"Unrelated archive gardening entry\" (ID: 1).",
+    "finalAnswer": "publisher.example reports: Orion requires 4 GB of shared RAM only with the vendor SDK. Orion does not support image input. [1]\n\nI couldn't verify the remaining details; these sources provide a partial answer.",
+    "support": "PARTIAL",
+    "citationValid": true,
+    "promptTokens": 244,
+    "nativeFirstTokenMs": 11202,
+    "nativeTokensPerSecond": 14.070163
+  }
+]

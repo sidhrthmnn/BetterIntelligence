@@ -19,7 +19,7 @@ object ClaimVerification {
     fun sentences(text: String, limit: Int = 40): List<String> {
         val normalized = text.replace(Regex("(?m)^\\s*\\d{1,2}[.)]\\s+"), "")
             .replace(Regex("([.!?])\\s+(\\[\\d+(?:,\\s*\\d+)*])"), "$2$1")
-        val boundaries = Regex("\\n+|(?<=])(?:\\s*;\\s*|,?\\s+(?:and|but|whereas)\\s+)|(?<=[.!?])\\s+(?=[\\p{L}\\p{N}*\\[])")
+        val boundaries = Regex("\\n+|(?<=])(?:\\s*;\\s*|,?\\s+(?:and|but|whereas|while)\\s+)|(?<=[.!?])\\s+(?=[\\p{L}\\p{N}*\\[])")
             .findAll(normalized).filterNot { boundary ->
                 '\n' !in boundary.value && Regex("\\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|[A-Z])\\.$")
                     .containsMatchIn(normalized.substring(0, boundary.range.first).takeLast(12))

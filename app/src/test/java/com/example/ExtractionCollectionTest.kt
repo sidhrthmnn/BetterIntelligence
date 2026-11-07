@@ -46,4 +46,24 @@ class ExtractionCollectionTest {
         assertNull(DocumentEvidence.normalize(WebDocument("https://publisher.example/a", "[".repeat(1000) + "0" + "]".repeat(1000), "application/json")))
         assertTrue(DocumentEvidence.collect(List(2000) { "Passage $it about memory." }).size <= 1024)
     }
+
+    @Test fun comparisonClausesKeepSeparateCitationAndQuantityBindings() {
+        val sources = listOf(
+            EvidenceSource(1, "Orion memory", "https://orion.example/specs", "Orion requires 4 GB RAM.", 1),
+            EvidenceSource(2, "Nova memory", "https://nova.example/specs", "Nova requires 6 GB RAM.", 1))
+        val question = "Compare Orion and Nova memory requirements"
+        val good = ClaimVerification.check("Orion requires 4 GB RAM [1], while Nova requires 6 GB RAM [2].", sources, question)
+        assertEquals(good.text, AnswerSupport.CITED, good.support)
+        val wrong = ClaimVerification.check("Orion requires 6 GB RAM [1], while Nova requires 4 GB RAM [2].", sources, question)
+        assertEquals(AnswerSupport.INSUFFICIENT, wrong.support)
+    }
+
+    @Test fun structuredFieldLimitsKeepTrailingConditionsOrOmitTheWholeField() {
+        val condition = "Orion requires " + "shared ".repeat(190) + "RAM only with the vendor SDK."
+        val body = JSONObject().put("model", "Orion").put("requirements", condition).toString()
+        val normalized = DocumentEvidence.normalize(WebDocument("https://publisher.example/a", body, "application/json"))!!
+        assertTrue(normalized.text, normalized.text.contains(condition))
+        val invalidKey = JSONObject().put("x".repeat(2000), "untrusted value").toString()
+        assertFalse(DocumentEvidence.normalize(WebDocument("https://publisher.example/a", invalidKey, "application/json"))!!.text.contains("untrusted value"))
+    }
 }

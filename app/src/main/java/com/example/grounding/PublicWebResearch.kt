@@ -203,7 +203,9 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                             else {
                                 // A landing/hub page may link to the actual article or benchmark sub-page.
                                 val child = WebPageExtractor.relevantLinks(page, question).firstOrNull()
-                                if (child != null && attempted.add(HtmlDiscovery.canonicalUrl(child.url)) && childReads.getAndDecrement() > 0)
+                                // Do not mark an unread child as attempted when
+                                // its quota is exhausted: it may be a later result.
+                                if (child != null && childReads.getAndDecrement() > 0 && attempted.add(HtmlDiscovery.canonicalUrl(child.url)))
                                     extract(transport.fetchPage(child.url, permitted), candidate.provider)?.takeIf(::acceptable)
                                 else null
                             }

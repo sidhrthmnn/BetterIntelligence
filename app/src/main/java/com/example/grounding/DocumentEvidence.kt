@@ -42,16 +42,21 @@ object DocumentEvidence {
                 if (depth > 6 || rows.size >= 256) return
                 when (item) {
                     is JSONObject -> item.keys().asSequence().take(64).forEach { key ->
-                        if (!Regex("(?i)token|password|secret|cookie|script|instruction|prompt").containsMatchIn(key)) visit(item.opt(key), "$label $key".trim(), depth + 1)
+                        if (key.length <= 120 && !Regex("(?i)token|password|secret|cookie|script|instruction|prompt").containsMatchIn(key)) visit(item.opt(key), "$label $key".trim(), depth + 1)
                     }
                     is JSONArray -> (0 until minOf(item.length(), 32)).forEach { visit(item.opt(it), label, depth + 1) }
                     null, JSONObject.NULL -> Unit
-                    else -> rows += "$label: ${item.toString().take(1200)}"
+                    else -> {
+                        // Keep a whole field before passage selection. A prefix can
+                        // omit a trailing condition and change the publisher's claim.
+                        val row = "$label: $item"
+                        if (row.length <= MAX_CHARS) rows += row
+                    }
                 }
             }
             val identity = (value as? JSONObject)?.let { it.optString("name").ifBlank { it.optString("model") } }.orEmpty().take(180)
             visit(value, identity, 0)
-            return page.copy(text = rows.joinToString("\n").take(MAX_CHARS), contentType = "text/plain")
+            return page.copy(text = collect(rows).joinToString("\n"), contentType = "text/plain")
         }
         return page
     }
@@ -73,9 +78,10 @@ object DocumentEvidence {
                         val properties = value.optJSONArray("additionalProperty")
                         for (i in 0 until minOf(properties?.length() ?: 0, 64)) {
                             val property = properties?.optJSONObject(i) ?: continue
-                            val label = property.optString("name").take(120)
-                            val number = property.optString("value").take(300)
-                            if (label.isNotBlank() && number.isNotBlank()) rows += "$name\n$label: $number ${property.optString("unitText").take(30)}"
+                            val label = property.optString("name")
+                            val number = property.optString("value")
+                            val unit = property.optString("unitText")
+                            if (label.isNotBlank() && label.length <= 120 && number.isNotBlank() && number.length <= 1200 && unit.length <= 60) rows += "$name\n$label: $number $unit"
                         }
                     }
                     for (key in listOf("@graph", "mainEntity", "mainEntityOfPage", "itemReviewed")) visit(value.opt(key), depth + 1)
