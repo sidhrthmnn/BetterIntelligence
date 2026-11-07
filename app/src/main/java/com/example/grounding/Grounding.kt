@@ -156,8 +156,8 @@ object GroundingPolicy {
         // source down to a few words. The returned sources are exactly those in the prompt.
         val researchPlan = ResearchPlanner.plan(question)
         val complex = researchPlan.focuses.size > 1 || ResearchIntent.COMPARISON in researchPlan.intents
-        val plans = if (complex) listOf(3 to 900, 3 to 600, 2 to 900, 2 to 600, 1 to 1200, 1 to 600, 1 to 350)
-            else listOf(1 to 700, 2 to 450, 1 to 450, 1 to 250)
+        val plans = if (complex) listOf(3 to 2000, 2 to 2400, 3 to 1400, 3 to 900, 3 to 600, 2 to 900, 2 to 600, 1 to 1200, 1 to 600, 1 to 350)
+            else listOf(1 to 1600, 2 to 900, 1 to 700, 2 to 450, 1 to 450, 1 to 250)
         val options = mutableListOf<PreparedEvidence>()
         val eligibleSources = sources.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) }
         for ((count, excerptBudget) in plans) {
@@ -168,6 +168,10 @@ object GroundingPolicy {
             val evidence = JSONArray().apply { included.forEach { source -> put(JSONObject()
                 .put("id", source.id).put("title", bounded(source.title, 120))
                 .put("publisher", source.url.toHttpUrl().host)
+                .apply { if (characterBudget >= 2500) {
+                    put("url", source.url)
+                    put("objectives", JSONArray(researchPlan.coverage(source.excerpt).map { researchPlan.focuses[it].question }))
+                } }
                 .apply { if (source.kind == "INSTANT_ANSWER") put("provenance", "DuckDuckGo API topic summary; publisher page not independently read") }
                 .apply { if (source.updatedAt.isNotBlank()) {
                     put("sourceDate", source.updatedAt.take(40))
@@ -255,7 +259,7 @@ class SearchHttp internal constructor(
             if (permitted?.invoke(current) == false) throw PublisherPermissionException()
             val reply = request(Request.Builder().url(current).header("User-Agent",
                 "BetterIntelligence/2.2 (+https://github.com/sidhrthmnn/BetterIntelligence)")
-                .header("Accept", "text/html, application/xhtml+xml, text/plain;q=0.8").build())
+                .header("Accept", "text/html, application/xhtml+xml, application/json;q=0.9, text/plain;q=0.8").build())
             if (reply.code in setOf(301, 302, 303, 307, 308)) {
                 check(hop < 3) { "Too many website redirects" }
                 current = current.toHttpUrl().resolve(checkNotNull(reply.location))?.toString()

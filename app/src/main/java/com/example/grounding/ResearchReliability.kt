@@ -28,7 +28,7 @@ data class ResearchTimeouts(val discoveryMs: Long = 12_000, val retryMs: Long = 
 data class ResearchMetrics(val provider: String = "", val durationMs: Long = 0,
     val discoveredResults: Int = 0, val readPublishers: Int = 0, val attemptedPublishers: Int = 0,
     val retries: Int = 0, val httpCategory: String = "", val timeoutStage: String = "",
-    val failure: ResearchFailure? = null)
+    val failure: ResearchFailure? = null, val extraction: Map<String, Int> = emptyMap())
 
 class WebRequestException(val statusCode: Int, val retryAfterMs: Long = 0) : IOException("Website HTTP $statusCode")
 class PublisherPermissionException : IOException("Publisher does not permit this read")

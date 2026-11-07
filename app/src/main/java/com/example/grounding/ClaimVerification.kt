@@ -16,7 +16,7 @@ object ClaimVerification {
     private val uncertainty = Regex("(?i)^(?:I (?:cannot|can't|couldn't)|(?:The )?(?:sources?|evidence) (?:do not|does not|don't|doesn't)|There (?:is|are) (?:not enough|insufficient))")
     private fun terms(text: String): Set<String> = ResearchQuery.words(marker.replace(text, "")) - ignored
     private fun prose(text: String) = text.replace(Regex("(?m)^\\s*(?:[-*]|\\d{1,2}[.)])\\s+"), "").trim()
-    fun sentences(text: String): List<String> {
+    fun sentences(text: String, limit: Int = 40): List<String> {
         val normalized = text.replace(Regex("(?m)^\\s*\\d{1,2}[.)]\\s+"), "")
             .replace(Regex("([.!?])\\s+(\\[\\d+(?:,\\s*\\d+)*])"), "$2$1")
         val boundaries = Regex("\\n+|(?<=])(?:\\s*;\\s*|,?\\s+(?:and|but|whereas)\\s+)|(?<=[.!?])\\s+(?=[\\p{L}\\p{N}*\\[])")
@@ -27,7 +27,7 @@ object ClaimVerification {
         val result = mutableListOf<String>(); var start = 0
         for (boundary in boundaries) { result += normalized.substring(start, boundary.range.first); start = boundary.range.last + 1 }
         result += normalized.substring(start)
-        return result.map(String::trim).filter(String::isNotBlank).take(40)
+        return result.map(String::trim).filter(String::isNotBlank).take(limit.coerceIn(1, 1024))
     }
 
     fun check(text: String, sources: List<EvidenceSource>, question: String = ""): CheckedAnswer {

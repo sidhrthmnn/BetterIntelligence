@@ -26,7 +26,7 @@ pub struct RankingRequest {
     pub subject_goals: usize,
 }
 pub fn select(req: RankingRequest) -> Result<Vec<usize>, CoreError> {
-    if req.passages.len() > 350
+    if req.passages.len() > 1024
         || req.budget > 65536
         || req.coverage_goals > 64
         || req.subject_goals > 64
@@ -60,7 +60,7 @@ pub fn select(req: RankingRequest) -> Result<Vec<usize>, CoreError> {
             .ok_or(CoreError::InternalFailure)?;
         remaining.remove(&i);
         let p = &req.passages[i];
-        if size.saturating_add(p.cost).saturating_add(2) > req.budget && !selected.is_empty() {
+        if size.saturating_add(p.cost).saturating_add(2) > req.budget {
             continue;
         }
         selected.insert(i);
@@ -76,4 +76,23 @@ pub fn select(req: RankingRequest) -> Result<Vec<usize>, CoreError> {
         }
     }
     Ok(selected.into_iter().collect())
+}
+
+#[cfg(test)]
+mod extraction_tests {
+    use super::*;
+    fn request(count: usize) -> RankingRequest {
+        RankingRequest { passages: (0..count).map(|_| Passage { cost: 20, score: 1.0, coverage: vec![], subjects: vec![], allowed: true }).collect(), budget: 100, initial_cost: 0, coverage_goals: 0, subject_goals: 0 }
+    }
+    #[test]
+    fn skips_oversized_first_passage_instead_of_exhausting_packet() {
+        let mut r = request(2); r.passages[0].cost = 200; r.passages[0].score = 100.0;
+        assert_eq!(select(r).unwrap(), vec![1]);
+    }
+    #[test]
+    fn bounded_larger_document_keeps_late_ranked_answer() {
+        let mut r = request(1024); r.passages[1000].score = 999.0;
+        assert!(select(r).unwrap().contains(&1000));
+        assert!(select(request(1025)).is_err());
+    }
 }

@@ -18,7 +18,24 @@ object WebPageExtractor {
     private val cookieTextPattern = Regex("(?i)\\b(we use cookies|accept(?: all)? cookies|manage cookies|cookie preferences|cookie settings|consent to cookies|reject non-essential|privacy and cookie policy|cookies on the bbc|take control of your data)\\b")
     private val utilityHeading = Regex("(?i)^(search(\\s+for\\s+a\\s+location)?|find\\s+a\\s+forecast|navigation|menu|accessibility(\\s+links)?|skip\\s+to.*|share|more|related|cookie.*)$")
 
-    fun article(page: WebDocument, id: Int, question: String): EvidenceSource? {
+    data class Extraction(val source: EvidenceSource?, val category: String, val passages: Int)
+    fun extract(page: WebDocument, id: Int, question: String): Extraction {
+        val source = article(page, id, question)
+        val type = page.contentType.substringBefore(';').trim().lowercase()
+        val category = when {
+            source != null -> if (type == "application/json" || type.endsWith("+json")) "JSON" else if (type == "text/plain") "TEXT" else "HTML"
+            type !in setOf("text/html", "application/xhtml+xml", "text/plain", "application/json", "application/ld+json") -> "UNSUPPORTED_TYPE"
+            page.text.isBlank() -> "EMPTY"
+            blocked.containsMatchIn(page.text.take(8000)) -> "ACCESS_RESTRICTED"
+            type.contains("json") -> "JSON_INVALID_OR_NO_EVIDENCE"
+            Jsoup.parse(page.text).text().length < 160 && page.text.contains("<script", true) -> "JAVASCRIPT_REQUIRED"
+            else -> "NO_USABLE_PASSAGES"
+        }
+        return Extraction(source, category, source?.excerpt?.split(Regex("\\n\\s*\\n"))?.size ?: 0)
+    }
+
+    fun article(input: WebDocument, id: Int, question: String): EvidenceSource? {
+        val page = DocumentEvidence.normalize(input) ?: return null
         if (!GroundingPolicy.publicHttpsUrl(page.url)) return null
         val type = page.contentType.substringBefore(';').trim().lowercase()
         if (type !in setOf("text/html", "application/xhtml+xml", "text/plain")) return null
@@ -26,9 +43,10 @@ object WebPageExtractor {
         val doc = Jsoup.parse(if (type == "text/plain") "" else page.text, page.url)
         val policies = listOf(page.robotsTag) + doc.select("meta[name=robots], meta[name=betterintelligence]").map { it.attr("content") }
         if (policies.any(::snippetDenied)) return null
-        val snippetLimit = policies.flatMap { policy -> Regex("(?i)max-snippet\\s*:\\s*(\\d+)").findAll(policy).map { it.groupValues[1].toIntOrNull() ?: 0 }.toList() }.minOrNull() ?: 2200
+        val snippetLimit = policies.flatMap { policy -> Regex("(?i)max-snippet\\s*:\\s*(\\d+)").findAll(policy).map { it.groupValues[1].toIntOrNull() ?: 0 }.toList() }.minOrNull() ?: 8000
         val query = ResearchQuery(question)
         val metadataDate = reportedDate(doc, query)
+        val structured = DocumentEvidence.structured(doc)
         // A non-JavaScript reader should see the publisher's noscript fallback.
         // Apple and other catalogues put their actual product cards here.
         // This only retains static text/markup; scripts/iframes are still removed.
@@ -104,7 +122,7 @@ object WebPageExtractor {
                         node.children().none { PublicQuestionIntent.statusValue(it.text(), question) }
                 } else if (tag in setOf("div", "section")) {
                     val ownLen = node.text().trim().length
-                    ownLen in 15..360 &&
+                    ownLen in 15..1800 &&
                         node.parents().takeWhile { it != root }.none { it.tagName() in setOf("ul", "ol", "pre", "table", "p", "dd", "dt") } &&
                         node.selectFirst("p, h1, h2, h3, h4, ul, ol, pre, table, dd, dt") == null &&
                         node.children().none { child -> child.tagName() in setOf("div", "section") && child.text().trim().length >= 25 }
@@ -181,20 +199,20 @@ object WebPageExtractor {
         val priceRequest = Regex("(?i)\\b(?:prices?|costs?|how much)\\b").containsMatchIn(question)
         val financeRequest = Regex("(?i)\\b(?:finance|financing|loan|APR|interest|repayment|example|monthly)\\b").containsMatchIn(question)
         val prices = if (priceRequest) priceCards(root, title, question, page.url) else emptyList()
-        val clean = (weatherBlocks + prices + blocks).flatMap { block ->
+        val clean = DocumentEvidence.collect(weatherBlocks + prices + blocks + structured).flatMap { block ->
             val normalized = block.replace(Regex("[\\u200B\\uFEFF]"), "").replace(Regex("[\\t ]+"), " ").trim()
-            if (normalized.length <= 1800) listOf(normalized) else ClaimVerification.sentences(normalized)
+            if (normalized.length <= 1800) listOf(normalized) else ClaimVerification.sentences(normalized, 1024)
         }
             .filter { it.length >= 12 && !FactualResearch.headlineOnly(it, title) &&
                 !(PublicQuestionIntent.serviceStatus(question) && PublicQuestionIntent.statusPlaceholder(it)) &&
                 !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) &&
                 (!priceRequest || financeRequest || !ClaimVerification.financeExample(it)) }
-            .distinct().take(350)
+            .distinct().take(1024)
         // Do not reintroduce a rejected subscription/app-promotion screen by
         // flattening the same controls back into one apparent body paragraph.
         if (clean.isEmpty() && blocks.isNotEmpty()) return null
-        val usable = clean.ifEmpty { listOf(body.trim().take(2200)) }
-        val text = focused(usable, dateLines, question, minOf(2200, snippetLimit)).trim()
+        val usable = clean.ifEmpty { listOf(body.trim().take(64_000)) }
+        val text = focused(usable, dateLines, question, minOf(if (ResearchPlanner.plan(question).focuses.size > 1 || ResearchIntent.TECHNICAL in ResearchPlanner.plan(question).intents) 8000 else 4000, snippetLimit)).trim()
         if (text.length < 80 && !(PublicQuestionIntent.statusValue(text, question) &&
                 PublicQuestionIntent.serviceScope(title + " " + page.url + " " + text, question))) return null
         return EvidenceSource(id, title, HtmlDiscovery.canonicalUrl(page.url), text, System.currentTimeMillis(), date.first, "WEB_PAGE", date.second)
@@ -224,8 +242,15 @@ object WebPageExtractor {
     private fun focused(blocks: List<String>, dates: List<String>, question: String, budget: Int): String {
         val plan = ResearchPlanner.plan(question)
         val query = ResearchQuery(question)
-        val candidates = blocks.filter { it.isNotBlank() && !FactualResearch.incomplete(it.substringAfter('\n', it)) &&
-            !FactualResearch.headlineOnly(it, if ('\n' in it) it.substringBefore('\n') else "") }.distinct().take(350)
+        val candidates = blocks.flatMap { block ->
+            if (block.toByteArray(Charsets.UTF_8).size <= budget) listOf(block) else {
+                val first = block.substringBefore('\n')
+                val heading = first.takeIf { '\n' in block && it.length < 180 && !it.endsWith('.') }
+                val body = if (heading == null) block else block.substringAfter('\n')
+                ClaimVerification.sentences(body, 1024).map { sentence -> if (heading == null) sentence else "$heading\n$sentence" }
+            }
+        }.filter { it.isNotBlank() && !FactualResearch.incomplete(it.substringAfter('\n', it)) &&
+            !FactualResearch.headlineOnly(it, if ('\n' in it) it.substringBefore('\n') else "") }.distinct().take(1024)
         if (candidates.isEmpty()) return dates.joinToString("\n").take(budget)
         val docFreqs = mutableMapOf<String, Int>()
         var totalWords = 0
@@ -306,7 +331,7 @@ object WebPageExtractor {
                 mentions[i].size * 6 + (mentions[i] - subjects).size * 20 }
             remaining.remove(index)
             val block = candidates[index]
-            if (size + block.length + 2 > budget && selected.isNotEmpty()) continue
+            if (size + block.length + 2 > budget) continue
             selected += index; covered += plan.coverage(block); subjects += mentioned(index); size += block.length + 2
             // Nearby blocks preserve subject/pronoun qualifications. Only add
             // a neighbour after covering the requested facets where possible.
