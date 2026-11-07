@@ -87,8 +87,8 @@ android {
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
     targetSdk = 36
-    versionCode = 28
-    versionName = "2.5.0-beta3"
+    versionCode = 29
+    versionName = "2.5.0-beta4"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders["localAiExported"] = "true"

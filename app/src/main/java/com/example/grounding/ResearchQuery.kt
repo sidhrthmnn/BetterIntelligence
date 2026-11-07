@@ -155,9 +155,16 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         val parsed = ResearchQuery.date(date) ?: return earliest == null
         return parsed <= today.plusDays(1) && (earliest == null || parsed >= earliest)
     }
+    // Retrieval-only aliases; claim entailment, identity and numerical checks
+    // continue to use exact normalized words. This is not an embedding model.
+    private fun variants(term: String): Set<String> = listOf(
+        setOf("latency", "delay"), setOf("initialization", "initialize", "startup"),
+        setOf("compatibility", "compatible"), setOf("requirement", "prerequisite"),
+        setOf("memory", "ram")
+    ).firstOrNull { term in it } ?: setOf(term)
     fun score(text: String): Int {
         val found = words(text)
-        return terms.count { it in found } * 3 + years.count { it in found } * 2
+        return terms.count { variants(it).any(found::contains) } * 3 + years.count { it in found } * 2
     }
     /** Deterministic BM25F-style passage score with IDF across candidate blocks and bigram proximity bonus. */
     fun bm25Score(text: String, docFreqs: Map<String, Int>, totalDocs: Int, avgWords: Double): Int {
@@ -168,7 +175,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         val b = 0.75
         var total = 0.0
         for (term in terms + years) {
-            val tf = freqs[term] ?: 0
+            val tf = variants(term).maxOf { freqs[it] ?: 0 }
             if (tf == 0) continue
             val df = (docFreqs[term] ?: 1).coerceAtLeast(1)
             val idf = ln(1.0 + (totalDocs - df + 0.5) / (df + 0.5)).coerceAtLeast(0.4)

@@ -17,7 +17,7 @@ data class EvidencePacket(val source: EvidenceSource, val objectives: List<Strin
                 var started = false
                 for (line in block.split(Regex("(?<=[.!?])\\s+(?=\\p{L})|\\n+"))) {
                     val separator = if (output.isEmpty()) "" else if (started) "\n" else "\n\n"
-                    if ((output.toString() + separator + line).toByteArray().size > bytes) return output.toString()
+                    if ((output.toString() + separator + line).toByteArray().size > bytes) continue
                     output.append(separator).append(line)
                     started = true
                 }

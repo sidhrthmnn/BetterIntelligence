@@ -12,6 +12,26 @@ import java.net.InetAddress
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class PublicWebResearchTest {
+    @Test fun exhaustedChildQuotaDoesNotHideALaterDiscoveredPage() = runBlocking {
+        val target = "https://c.example/orion/memory"
+        val requests = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val candidates = listOf("a", "b", "c", "d").map {
+            ResearchCandidate("https://$it.example/orion", "Orion memory")
+        } + ResearchCandidate(target, "Orion memory")
+        val reader = PublicWebResearch(WebFetcher { url ->
+            requests += url
+            when {
+                url.endsWith("robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
+                url == target -> WebDocument(url, "<title>Orion memory requirements</title><main><p>Orion requires 4 GB RAM for Android inference only with the vendor SDK. These published memory requirements describe the supported mobile inference configuration.</p></main>", "text/html")
+                url.endsWith("/orion") -> WebDocument(url, "<main><a href='/orion/memory'>Orion memory requirements</a></main>", "text/html")
+                else -> WebDocument(url, "<main>Empty index</main>", "text/html")
+            }
+        }, DiscoveryProvider { _, _ -> DiscoveryResult(candidates, DiscoveryState.FOUND) })
+        val result = reader.research("What RAM does Orion require?") {}
+        assertEquals(1, requests.count { it == target })
+        assertTrue(result.sources.toString(), result.sources.any { it.excerpt.contains("4 GB RAM") })
+    }
+
     @Test fun disabledDiscoveryMakesNoRequestAndFeedDenialsBackOff() = runBlocking {
         val requests = mutableListOf<String>()
         val fetcher = WebFetcher { url ->

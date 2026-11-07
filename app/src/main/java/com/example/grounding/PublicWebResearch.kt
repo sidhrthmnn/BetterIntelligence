@@ -149,11 +149,18 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             candidates
         }
         val seen = mutableSetOf<String>()
-        val attempted = mutableSetOf<String>()
+        val attempted = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
         val domains = mutableMapOf<String, Int>()
         val reads = Semaphore(2)
         val childReads = java.util.concurrent.atomic.AtomicInteger(2)
         val sources = mutableListOf<EvidenceSource>()
+        val extraction = java.util.concurrent.ConcurrentHashMap<String, Int>()
+        fun extract(page: WebDocument, provider: String): EvidenceSource? {
+            val result = WebPageExtractor.extract(page, 0, question)
+            extraction.merge(result.category, 1, Int::plus)
+            extraction.merge("PASSAGES", result.passages, Int::plus)
+            return result.source?.copy(discoveryProvider = provider)
+        }
         var readCount = 0
         fun enough(): Boolean {
             val selected = EvidenceRanking.select(sources, plan)
@@ -164,7 +171,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 (explicit.isNotEmpty() || EvidenceRanking.primaryRelevance(selected.single().url, question) > 0)) && EvidenceRanking.conflicts(selected).isEmpty()
         }
         suspend fun readCandidates(candidates: List<ResearchCandidate>) {
-        val unique = candidates.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }.filter { it.url !in attempted }
+        val unique = candidates.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }.filter { HtmlDiscovery.canonicalUrl(it.url) !in attempted }
         val ordered = unique
             .sortedWith(compareBy<ResearchCandidate> { candidate ->
                 // Prefer the first result from each publisher before a second.
@@ -181,7 +188,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         // Read in waves: stop after enough evidence instead of fetching every result.
         for (wave in ordered.chunked(2)) {
             if (!deadline.permits()) break
-            val admitted = wave.filter { attempted.add(it.url) && domains.merge(domain(it.url), 1, Int::plus)!! <= 2 }
+            val admitted = wave.filter { attempted.add(HtmlDiscovery.canonicalUrl(it.url)) && domains.merge(domain(it.url), 1, Int::plus)!! <= 2 }
             readCount += admitted.size
             val fetched = admitted.map { candidate -> async {
                 reads.withPermit {
@@ -189,18 +196,20 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                     val result = withTimeoutOrNull(minOf(timeouts.publisherMs, remaining())) {
                         try {
                             val page = transport.fetchPage(candidate.url, permitted)
-                            val source = article(page, 0, question)?.copy(discoveryProvider = candidate.provider)
-                            fun acceptable(value: EvidenceSource) = EvidenceRanking.acceptable(value, plan)
+                            extraction.merge("FETCH_2XX", 1, Int::plus)
+                            val source = extract(page, candidate.provider)
+                            fun acceptable(value: EvidenceSource): Boolean = EvidenceRanking.acceptable(value, plan).also { if (!it) extraction.merge("REJECTED_RELEVANCE_OR_DATE", 1, Int::plus) }
                             if (source != null && acceptable(source)) source
                             else {
                                 // A landing/hub page may link to the actual article or benchmark sub-page.
                                 val child = WebPageExtractor.relevantLinks(page, question).firstOrNull()
-                                if (child != null && childReads.getAndDecrement() > 0)
-                                    article(transport.fetchPage(child.url, permitted), 0, question)
-                                        ?.copy(discoveryProvider = candidate.provider)?.takeIf(::acceptable)
+                                // Do not mark an unread child as attempted when
+                                // its quota is exhausted: it may be a later result.
+                                if (child != null && childReads.getAndDecrement() > 0 && attempted.add(HtmlDiscovery.canonicalUrl(child.url)))
+                                    extract(transport.fetchPage(child.url, permitted), candidate.provider)?.takeIf(::acceptable)
                                 else null
                             }
-                        } catch (e: CancellationException) { throw e } catch (e: Exception) { failedReads.incrementAndGet(); publisherFailures += ResearchErrors.publisher(e); null }
+                        } catch (e: CancellationException) { throw e } catch (e: Exception) { extraction.merge(if (e is WebRequestException) "FETCH_${e.statusCode / 100}XX" else "FETCH_ERROR", 1, Int::plus); failedReads.incrementAndGet(); publisherFailures += ResearchErrors.publisher(e); null }
                         .also { finished = true }
                     }
                     if (!finished) { readTimeouts.incrementAndGet(); publisherFailures += ResearchFailure.PUBLISHER_TIMEOUT }
@@ -247,7 +256,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             durationMs = System.nanoTime() / 1_000_000 - started, discoveredResults = discoveredCount,
             readPublishers = sources.size, attemptedPublishers = readCount, retries = retryCount, httpCategory = httpCategory,
             timeoutStage = if (readTimeouts.get() > 0) "PUBLISHER" else if (discoveryTimedOut) "PROVIDER" else "",
-            failure = failure ?: publisherFailures.firstOrNull() ?: providerFailure?.takeUnless { it == ResearchFailure.NO_SEARCH_RESULTS })
+            extraction = extraction.toMap(), failure = failure ?: publisherFailures.firstOrNull() ?: providerFailure?.takeUnless { it == ResearchFailure.NO_SEARCH_RESULTS })
         ResearchOutcome(selected, failure, EvidenceRanking.conflicts(selected), if (selected.isEmpty() && possibleSpellings.size == 1)
             "I couldn't identify ${query.publicTopic?.subject} confidently. Search found a possible spelling, ${possibleSpellings.single()}. Please name the intended film with its language or release year, or share a public HTTPS source."
         else "", metrics)

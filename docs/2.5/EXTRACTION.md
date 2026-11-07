@@ -1,0 +1,103 @@
+# Extraction and evidence collection after version 28
+
+This change targets the pipeline **after URL discovery**. Exa, BI's source directory, web consent, robots, public HTTPS/DNS checks, bounded requests, inference engines and app navigation remain in place.
+
+## Findings and implementation
+
+1. `WebPageExtractor` discarded blocks after the first 350, before relevance ranking. A relevant answer late in a long reference page could never reach selection. Collection now admits at most 1024 distinct blocks and 64,000 characters, under the unchanged one-MiB transport response limit. Heading/list/table/definition associations from the existing extractor remain intact. These are bounded document contents, not an unlimited crawl.
+2. The initial 2200-character excerpt was an irreversible bottleneck. Selection now retains up to 4000 characters for ordinary questions or 8000 for technical/multipart questions, respecting publisher snippet restrictions. These are source-evidence limits, not a larger model context window.
+3. Unfamiliar leaf cards longer than 360 characters were omitted. Leaf div/section content can now contribute up to 1800 characters while nested paragraph/list/table containers remain deduplicated.
+4. Public JSON and useful JSON-LD were previously unsupported or stripped with all scripts. `DocumentEvidence` performs bounded non-executing JSON parsing. Public JSON is capped at 256 Ki characters and depth 32 before recursive parsing; JSON-LD blocks are capped at 64 Ki characters. Public JSON retains field labels, model/name identity, values and units. Whole fields enter collection before passage selection; field-length limits do not cut off trailing conditions. Oversized JSON-LD property values/units and excessively long JSON keys are omitted as whole fields. JSON-LD admits reviewed Article/NewsArticle/BlogPosting/TechArticle/Product/Review/Dataset/FAQPage fields, article bodies/descriptions and labelled additional properties. Arbitrary script/configuration is not promoted to evidence. Normal relevance/date/claim checks still apply. Open Graph titles/dates remain provenance; descriptions are not used to fabricate a page read.
+5. Oversized early passages could consume the first selection slot and leave no complete evidence in the final packet. Kotlin and Rust now skip over-budget blocks, and `EvidencePacket.completeExcerpt` continues to later complete sentences/rows instead of abandoning the packet at the first oversized unit. No sentence is shortened to remove its condition or negation.
+6. The Rust passage admission limit now matches the 1024-block document bound, avoiding an avoidable legacy fallback for long documents. Numeric metadata, the existing JSON protocol limit and seven selected passages remain bounded. No native inference algorithm or neural model was added.
+7. Prompt preparation tries larger evidence options only when the existing byte/token budget permits them, then retains the smaller alternatives. Source IDs, dates, publisher and exact selected text remain coupled. Larger packets also include canonical URLs and covered question components. Small packets retain URL provenance in `PreparedEvidence.sources` rather than spending their scarce prompt budget repeating it. Verification continues against the exact sources actually advertised to the model.
+8. Retrieval scores add a small explicit technical vocabulary (e.g. startup/initialization, latency/delay). This affects ranking only, not claim entailment, subject identity or numerical verification. The existing BM25, coverage, answer specificity, freshness and source checks remain. There is no packaged embedding model; no neural semantic reranker is claimed.
+9. Main and child URL admission now use one thread-safe canonical-URL set. A child page is not downloaded again as a later candidate during the same request. Exhausting the child-read quota does not mark an unvisited page as read or prevent it from being admitted as a later discovered result; a simulated multi-hub regression covers this case. Successful evidence remains accumulated across later timeouts, denials and insufficient pages. No new persistent HTML cache or default network requests were added.
+10. Privacy-safe counters distinguish HTML/text/JSON extraction, usable passage counts, empty/unsupported/dynamic/denied/invalid content and relevance/date rejection. Publisher HTTP classes and final included source count supplement existing discovery, timeout and verification diagnostics. New diagnostic records no longer retain even public question text by default; scoped deletion IDs remain internal for existing removal controls. Exports remain an explicit allowlist.
+
+## Limits and recovery
+
+The 12-second discovery / 18-second transient retry / 8-second publisher / 55-second shared research / 60-second absolute budgets, two concurrent reads, eight candidate pages and transport request quota are unchanged. No new cloud, paid, search or embedding service is introduced.
+
+JavaScript-dependent shells are classified rather than reported as a provider outage. BI tries other eligible pages under its existing collection budget. An embedded renderer was deliberately not added: running arbitrary scripts would introduce subrequests, trackers, credential state and a second navigation/security surface. This release does not bypass authentication, CAPTCHAs, paywalls, robots or nosnippet. PDF/binary content remains unsupported and is classified accordingly; a safe PDF text decoder would need separately measured size/page/font/time controls. Public JSON is supported, not arbitrary binary decoding.
+
+Structured publisher data remains untrusted. JSON-LD can itself be inaccurate. Numerical, subject, polarity, qualification, recency, contradictory-source and citation checks were not relaxed. Citation-bound comparison clauses joined by “while” are verified separately, matching existing and/but/whereas handling. A regression accepts Orion 4 GB [1] versus Nova 6 GB [2], while rejecting swapped values bound to those same sources. Existing bounded correction and cited extractive partial-answer recovery remain. Lexical verification can still reject valid paraphrases; the ranking aliases are not represented as semantic entailment.
+
+## Validation scope
+
+The frozen version-28 Kotlin extractor and complete-excerpt helper are test-only classes, never included in the app. The same 15-input corpus covers leadership, technology, comparisons, casting, documentation, government data, reference material, a table, unfamiliar cards, JSON, JSON-LD, weather, transport, a JavaScript-only shell and access denial. Thirteen have expected factual text; two must not yield evidence. The first JVM run retained **4/13 expected facts before and 13/13 after**, with both negative controls still rejected. This is fixture extraction success, not a live search or LLM answer-quality claim.
+
+`ExtractionDeviceTest` repeats the same corpus twice with old/new order alternated. Both use the same current verifier and packaged native ranker; the baseline freezes Kotlin extraction and packet completion, not the entire old APK or Rust binary. It records extraction latency, after-extraction process PSS samples, expected-fact retention, deterministic answer support and citation validity. It then fetches three real public pages once each (subject to robots/access) and applies both extractors to the identical responses. The recorded publisher-step latency includes the comparison work and is not an isolated network-latency measurement. Discovery success is not measured by this direct-URL comparison. Failed live reads are retained as classified failures.
+
+PSS samples can miss transient peaks; they are not an isolated allocation or battery measurement. The fixture corpus deliberately stresses late-content cases, so its improvement is not a predicted general-web success rate. A native local-model smoke test and Rust compatibility checks are separate from deterministic answer checks. Measured results and their scopes are given below; the release journal records final validation and submission.
+
+## Changed files
+
+Production: `ClaimVerification.kt` (bounded collection sentence count and separately cited comparison clauses; default verification bound unchanged), `DocumentEvidence.kt`, `WebPageExtractor.kt`, `EvidencePacket.kt`, `Grounding.kt`, `PublicWebResearch.kt`, `ResearchQuery.kt`, `ResearchReliability.kt`, `ResearchDiagnostics.kt`, and `rust-core/src/search/ranking.rs`. Tests add frozen baseline helpers, `ExtractionCollectionTest`, `ExtractionDeviceTest`, `ExtractionNativeGroundingTest`, the shared extraction corpus and native ranker boundary regressions. The diagnostics regression test now requires public queries to remain absent rather than expecting them in the cache.
+
+Recommended follow-ups: expand independently maintained publisher fixtures, evaluate a small already-installed embedding runtime before adding neural reranking, and investigate isolated rendering/PDF decoding as separately measured capabilities. Neither should weaken the current access controls or be labelled functional before device validation.
+
+## Measured results on the connected HONOR phone (7 November 2026)
+
+Device: HONOR VKP-NX9, Android 16, approximately 12 GB physical RAM. The separate `.validation` installation was used; the Play Store installation and its chats were preserved. These results concern extraction and grounding, not a CPU/GPU/NPU performance comparison.
+
+| Same-input test | Frozen v28 extractor | Revised extractor |
+| --- | ---: | ---: |
+| Useful extracted sources, all 15 fixtures, two trials | 22/30 | 26/30 |
+| Expected facts retained, 13 positive fixtures, two trials | 8/26 | 26/26 |
+| Deterministic supported answers, all 15 fixtures, two trials | 6/30 | 20/30 |
+| Citation-valid deterministic answers, same 30 trials | 6/30 | 20/30 |
+| Extraction median / p95, fixture corpus | 53.5 / 975 ms | 783 / 1290 ms |
+| Highest after-extraction process PSS sample, fixtures | 321 MiB | 312 MiB |
+| Live same-response extraction median / p95, four trials | 420.5 / 655 ms | 436.5 / 589 ms |
+| Supported and cited deterministic answers, live four trials | 4/4 | 4/4 |
+| Highest after-extraction process PSS sample, live | 229 MiB | 225 MiB |
+
+Both negative controls (JavaScript-only shell and denied content) still yield no evidence. The stress corpus deliberately places useful facts late; the improved fact-retention rate is not a general-web success-rate estimate. Long-document extraction consumes more CPU than early truncation. The unchanged publisher/research deadlines remain enforced. PSS is sampled after extraction; these figures are neither transient peak allocations nor evidence of a causal memory reduction. Battery impact was not measured.
+
+Direct publisher reads: 3 attempted, 2 succeeded (Android Vulkan documentation and BBC Weather), Wikipedia unavailable. Both extractors consumed identical successful responses. Discovery is outside this comparison. Separate real Exa/BI research checks retrieved two sources each for Android Vulkan and London weather; film casting returned `PUBLISHER_BLOCKED`, no sources. Simulating an Exa rate limit still retrieved one real publisher source through BI's built-in fallback. This does not claim blocked publishers became accessible.
+
+The actual Qwen3.5-2B Q4 CPU test used the real tokenizer, a 2048-token model context and a bounded evidence packet (244 prompt tokens) containing synthetic Orion requirements. Two questions (4 GB with the vendor SDK; no image support) produced grounded final answers with valid source IDs through the existing extractive partial-answer recovery. Raw model output did not consistently follow citation formatting and included an unrelated archive reference in one response. These are successful pipeline recovery checks, not a claim of fully supported free-form model synthesis. In the final phone run, first-token times were 8.84 and 6.81 seconds, with generation at approximately 21.9 and 18.0 tokens/s. Raw and final answers are preserved in `extraction-native-grounding.json`. No matched before/after native-LLM end-to-end latency, energy or transient-memory benchmark was performed.
+
+Reports: `extraction-device.json` (same-input rows), `extraction-native-grounding.json` (actual Qwen generation/recovery), `extraction-rust-inference.json` (native legacy/Rust lifecycle parity), `extraction-live-research.json` (actual network and explicit simulated-provider-failure scopes). Only synthetic test questions, public test URLs and telemetry are in these reports; no user chats were exported.
+
+## Remaining limits
+
+No renderer, PDF decoder, embedding model or universal semantic entailment system is added. JSON-LD supports an explicit subset rather than every Schema.org type; review ratings/FAQ nested answers may still require ordinary HTML. Model generation/context failures retain some coarse existing failure categories. Main/child duplicate reads are prevented, but source-index discovery can separately read seed pages; this is not a global HTML-cache guarantee. The lexical verifier can still fall back to a cited partial extract rather than accepting a fluent but incompletely supported model answer. Recommended next improvements are broader independently maintained fixtures, measured semantic verification using an already available compatible runtime, and isolated rendering/PDF work with separate resource/security tests.
+
+## Exact repository paths
+
+- `app/build.gradle.kts`
+- `app/src/androidTest/java/com/example/Baseline28EvidencePacket.kt`
+- `app/src/androidTest/java/com/example/Baseline28Extractor.kt`
+- `app/src/androidTest/java/com/example/ExtractionDeviceTest.kt`
+- `app/src/androidTest/java/com/example/ExtractionNativeGroundingTest.kt`
+- `app/src/main/java/com/example/grounding/ClaimVerification.kt`
+- `app/src/main/java/com/example/grounding/DocumentEvidence.kt`
+- `app/src/main/java/com/example/grounding/EvidencePacket.kt`
+- `app/src/main/java/com/example/grounding/Grounding.kt`
+- `app/src/main/java/com/example/grounding/PublicWebResearch.kt`
+- `app/src/main/java/com/example/grounding/ResearchDiagnostics.kt`
+- `app/src/main/java/com/example/grounding/ResearchQuery.kt`
+- `app/src/main/java/com/example/grounding/ResearchReliability.kt`
+- `app/src/main/java/com/example/grounding/WebPageExtractor.kt`
+- `app/src/test/java/com/example/Baseline28EvidencePacket.kt`
+- `app/src/test/java/com/example/Baseline28Extractor.kt`
+- `app/src/test/java/com/example/ExtractionCollectionTest.kt`
+- `app/src/test/java/com/example/FilmResearchTopicTest.kt`
+- `app/src/test/java/com/example/PublicWebResearchTest.kt`
+- `app/src/test/resources/extraction-corpus.json`
+- `docs/2.5/EXTRACTION.md`
+- `docs/2.5/extraction-device.json`
+- `docs/2.5/extraction-live-research.json`
+- `docs/2.5/extraction-native-grounding.json`
+- `docs/2.5/extraction-rust-inference.json`
+- `rust-core/src/search/ranking.rs`
+
+## Final validation
+
+- Debug APK and Android test APK built; release lint passed.
+- 297 JVM tests: **296 passed, 1 opt-in live test skipped, 0 failures**. Controlled live checks ran separately on the phone. One earlier run hit an existing chat-scroll `AppNotIdleException`; subsequent full runs passed that unchanged test. The initial new multi-hub fixture was too short to meet extraction admission; it was expanded to a complete publisher paragraph, keeping both the one-read and retained-evidence assertions.
+- Rust host suite: **31 passed** (2 unit and 29 integration).
+- Physical phone: **18 distinct tests passed** across bounded extraction, actual Qwen evidence generation/recovery, structured-field conditions, separate-source comparison values, Rust/native lifecycle compatibility, controlled/live web recovery and cancellation, privacy diagnostics, navigation/draft recreation and keyboard insets. The final combined invocation omitted the web opt-in flag, so its two web tests were assumption-skipped; both were immediately rerun with `webReliability=true` and passed. No skipped test is counted as a pass.
+- No inference algorithm, Binder contract or acceleration backend changed. GPU/NPU performance is not claimed from these CPU/extraction checks. Detailed package/signature/alignment and Play submission results are in the release journal.
