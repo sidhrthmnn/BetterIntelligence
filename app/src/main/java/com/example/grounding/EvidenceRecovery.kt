@@ -49,7 +49,7 @@ object EvidenceRecovery {
                 }
             }
         }.sortedByDescending { it.score }.distinctBy { it.text }.take(16)
-        val kept = checked.claims.filter { it.supported && it.reason == "Passage checks passed" && !Regex("(?i)^(?:it|they|this|that|therefore|thus|however)\\b").containsMatchIn(it.text.trim()) }.map { it.text }.toMutableList()
+        val kept = checked.claims.filter { it.supported && it.reason == "Passage checks passed" && ClaimLanguage.words(it.text).intersect(requested).isNotEmpty() && ClaimLanguage.answerScopeMatches(question, it.text) && !Regex("(?i)^(?:it|they|this|that|therefore|thus|however)\\b").containsMatchIn(it.text.trim()) }.map { it.text }.toMutableList()
         var added = 0
         for (candidate in candidates) {
             if (kept.size >= 4 || complete(question, kept)) break

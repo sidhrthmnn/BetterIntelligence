@@ -62,8 +62,9 @@ object ClaimVerification {
                 }?.let { ids = setOf(it.id) }
             }
             val renderedBase = if (inherited) "$sectionSubject — ${prose(line)}" else line
-            val rendered = if (missingCitation && ids.isNotEmpty()) "$renderedBase [${ids.single()}]" else renderedBase
+            var rendered = if (missingCitation && ids.isNotEmpty()) "$renderedBase [${ids.single()}]" else renderedBase
             val failures = mutableListOf<String>()
+            val supportingIds = mutableSetOf<Int>()
             val reason = when {
                 body.none { it.isLetterOrDigit() } -> "Empty claim"
                 isHeading -> "Heading"
@@ -75,14 +76,20 @@ object ClaimVerification {
                 Regex("(?i)\\b(?:the following|as follows|listed below|two parts)\\b").containsMatchIn(body) && !body.substringAfter(':', "").any { it.isLetterOrDigit() } -> "Incomplete referential claim"
                 Regex("(?i)\\bI (?:have |just )?(?:accessed|opened|downloaded|sent|installed|contacted|browsed)\\b").containsMatchIn(body) -> "Unperformed tool action"
                 url.findAll(line).any { match -> sources.none { it.id in ids && it.url == match.value.trimEnd('.', ',') } } -> "Unprovided URL"
-                ids.mapNotNull(byId::get).none { source ->
+                ids.mapNotNull(byId::get).map { source ->
                     val found = ResearchQuery.words(source.title + " " + source.excerpt) + EvidenceRanking.localeWords(source.url)
                     val requestedSubject = comparison || ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in found } }
                     val mismatch = failure(body, source, entities, ResearchQuery.isCurrentIncumbentQuery(question), source.id in contextOnly)
                     if (!requestedSubject) failures += "Entity mismatch" else if (mismatch != null) failures += mismatch
-                    requestedSubject && mismatch == null
-                } -> failures.firstOrNull() ?: "Lexical mismatch"
+                    val supported = requestedSubject && mismatch == null
+                    if (supported) supportingIds += source.id
+                    supported
+                }.none { it } -> failures.firstOrNull() ?: "Lexical mismatch"
                 else -> "Passage checks passed"
+            }
+            if (reason == "Passage checks passed") {
+                ids = supportingIds.ifEmpty { ids }.toSet()
+                rendered = marker.replace(rendered, "").trim() + ids.sorted().joinToString(", ", " [", "]")
             }
             ClaimCheck(rendered, ids, reason in setOf("Passage checks passed", "Explicit uncertainty", "Heading"), reason, missingCitation && ids.isNotEmpty())
         }

@@ -412,5 +412,29 @@
       }
     ],
     "complete": true
+  },
+  {
+    "id": "phone-tangential-numberless-answer",
+    "question": "How much loan does Aurora have?",
+    "draft": "The credit line was granted because reputational cost was higher than credit risk [2].",
+    "expected": "4 billion",
+    "claimSupport": "CITED",
+    "sources": [
+      {
+        "id": 1,
+        "title": "Aurora financial report",
+        "url": "https://aurora.example/report",
+        "excerpt": "Aurora has 4 billion dollars of outstanding debt. Aurora borrowed this loan for its infrastructure program.",
+        "updatedAt": "2026-11-07"
+      },
+      {
+        "id": 2,
+        "title": "Aurora credit line background",
+        "url": "https://publisher.example/aurora",
+        "excerpt": "The credit line was granted because reputational cost was higher than credit risk.",
+        "updatedAt": "2026-11-07"
+      }
+    ],
+    "complete": true
   }
 ]

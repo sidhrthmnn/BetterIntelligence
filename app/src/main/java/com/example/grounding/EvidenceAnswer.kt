@@ -34,7 +34,7 @@ object EvidenceAnswer {
     private fun resolveStrict(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
         var checked = GroundingPolicy.checkAnswer(draft, sources, question)
         val comparisonRequested = ResearchIntent.COMPARISON in ResearchPlanner.plan(question).intents
-        val numericMissing = Regex("(?i)how (?:much|many)\\b").containsMatchIn(question) && !Regex("\\d").containsMatchIn(checked.text)
+        val numericMissing = Regex("(?i)how (?:much|many)\\b").containsMatchIn(question) && (!CitationSupport.hasFactNumber(checked.text) || !ClaimLanguage.answerScopeMatches(question, checked.text))
         val weather = ConversationalResearch.isWeather(question)
         val missingTemperature = weather && !hasTemperature(checked.text)
         val labelledWeather = weather && sources.any { Regex("(?i)observed temperature:|(?:today|tonight) forecast: (?:high|low)").containsMatchIn(it.excerpt) }

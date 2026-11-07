@@ -21,6 +21,8 @@ object CitationSupport {
         runCatching { java.math.BigDecimal(normalized).stripTrailingZeros().toPlainString() }.getOrDefault(normalized)
     }.toSet()
 
+    fun hasFactNumber(text: String): Boolean = values(marker.replace(normalize(text), "")).isNotEmpty()
+
     /** Reliably checkable missing-attribution boundary, not semantic verification.
      * Headings, short connective labels and explicit uncertainty can be uncited;
      * substantial prose paragraphs and list items require an actual source ID. */
