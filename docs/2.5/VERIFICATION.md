@@ -94,7 +94,6 @@ Twenty-six controlled cases comprise 19 answerable questions and 7 negative/cont
 | Outcome | Version 29 | Revised |
 | --- | ---: | ---: |
 | Answerable cases with some cited supported information (including partial) | 19/19 | 19/19 |
-| Answerable cases retaining the expected requested fact | 16/19 | 19/19 |
 | Answerable cases rated fully cited/complete | 3/19 | 18/19 |
 | Remaining genuinely partial answerable comparison | — | 1/19 |
 | Final syntax/number citation validity on answerable trials | 38/38 | 38/38 |
@@ -102,7 +101,7 @@ Twenty-six controlled cases comprise 19 answerable questions and 7 negative/cont
 | Verification/recovery median / p95 over all 52 trials | 101.96 / 144.82 ms | 258.86 / 386.40 ms |
 | Highest after-call process PSS sample | 478 MiB | 462 MiB |
 
-“Some supported information” does not imply a complete answer. V29 frequently already had partial quotes but used a generic unverified suffix or lost the requested value. The revised result improves requested-fact retention and complete-answer verdicts while removing false confident conclusions. These are controlled fixtures, not a predicted general-web accuracy rate. PSS samples are not peak allocations or proof of a causal memory reduction.
+“Some supported information” does not imply a complete answer. V29 frequently already had partial quotes but used a generic unverified suffix or lost the requested value. The revised result improves complete-answer verdicts while removing the tested false confident conclusions. The raw report’s `expectedFact` flag is an exact substring check, which undercounts some legitimate paraphrases; it is not used here as semantic fact recall. These are controlled fixtures, not a predicted general-web accuracy rate. PSS samples are not peak allocations or proof of a causal memory reduction.
 
 Three actual Qwen generations (RAM requirement, negative image capability, two-model RAM comparison) were processed by both pipelines, with the same prepared sources and actual tokenizer. All three v29 answers were partial; all three revised answers were fully cited with valid source mappings. Final revised outputs were a concise conditional RAM statement, an explicit negative capability statement, and two separately cited comparison values. No second generation or judge model ran for verification. Baseline post-processing was 90.22 / 71.70 / 152.42 ms; revised was 352.95 / 172.82 / 452.24 ms. Shared native first-token times were 6.50 / 4.88 / 9.60 seconds, with 17.76 / 18.09 / 16.51 tokens/s. This is a reliability improvement, not a measured verification-speed improvement. The additional work remained under half a second in these three runs.
 
@@ -118,3 +117,5 @@ Raw controlled reports: `verification-device.json`, `verification-native.json`, 
 - The thin fast path has no separate semantic model. Deterministic equivalences and templates are bounded; unfamiliar paraphrases may use extractive recovery. Publishers can be inaccessible or incorrect. Unavailable live counts, current loans, or ambiguous user metrics must remain unresolved rather than guessed. Live-source outcomes and the final signed package/review status are recorded separately.
 
 The final citation gate recognises exact app-owned omission notices, not arbitrary uncited factual prose. Exported diagnostics distinguish verified evidence recovery from partial source summaries. Search/extraction budgets, web consent, robots/access controls, Binder compatibility and native model ownership remain intact.
+
+Release-only records: `docs/2.5/bundle-v30-validation.json` and `docs/2.5/release-v30.json`. Version 30 was submitted to Closed testing – Alpha with managed publishing off and quick checks pending. No new account declaration or ignore-issue exception was submitted for this version.

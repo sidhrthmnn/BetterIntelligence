@@ -1,0 +1,121 @@
+{
+  "versionCode": 30,
+  "versionName": "2.5.0-beta5",
+  "aabSha256": "5cfee80b48ff136a5c07abd1aeaee6f3937299ca5ec2e1dafc314431c5cc44cd",
+  "aabBytes": 94265953,
+  "buildRevision": "a557fceea131d70e182d33afbee5f0e669c9ee21",
+  "reviewedHead": "c7a248c5775d802e18eb330a3e81d6469d6203a4",
+  "testedApplicationRevision": "7c7298f",
+  "mainMergeCommit": "a557fceea131d70e182d33afbee5f0e669c9ee21",
+  "pullRequest": "https://github.com/sidhrthmnn/BetterIntelligence/pull/20",
+  "track": "Closed testing - Alpha",
+  "trackId": "4700162612789187101",
+  "releaseId": 24,
+  "observedAtUtc": "2026-11-07 13:47:32 UTC",
+  "observedState": "Changes in review",
+  "preliminaryChecks": "Running; changes queued for review as soon as checks complete successfully",
+  "managedPublishing": false,
+  "rolloutPercent": 100,
+  "approvalOrPublicationAwaited": false,
+  "testerConfigurationChanged": false,
+  "declarationActionThisRelease": "No new trader declaration or ignore-issue exception was submitted for version 30.",
+  "warning": "No deobfuscation file; minification is disabled. Play also displays a future February 2027 DEX optimisation deadline; optimisation was not changed in this verification release.",
+  "validationRecord": "VERIFICATION.md",
+  "measurements": [
+    "verification-device.json",
+    "verification-native.json",
+    "verification-web-native.json",
+    "verification-live.json",
+    "verification-rust-native.json"
+  ],
+  "packageValidation": "bundle-v30-validation.json",
+  "localValidation": {
+    "jvmTests": 302,
+    "jvmPassed": 301,
+    "jvmSkipped": 1,
+    "jvmFailed": 0,
+    "rustPassed": 31,
+    "distinctRelevantPhoneTestsPassed": 16,
+    "device": "HONOR VKP-NX9 / Android 16",
+    "localInferenceModel": "Qwen3.5-2B-Q4_K_M.gguf / CPU",
+    "actualNativeMatchedQuestions": 3,
+    "validationPackage": "com.aistudio.betterintelligence.mobile.validation",
+    "productionAppAndChatsPreserved": true,
+    "phoneFinalVerificationMethodsPassed": 2,
+    "phoneFinalWebMethodsPassed": 2,
+    "phoneUnchangedNativeAndUiMethodsPassed": 12,
+    "initialPhoneFailures": "One real final-citation-gate rejection from the app-owned partial notice was fixed and regression tested. A local no-web mixed task with tiny SmolLM2-135M produced unreadable output; final supported-model argument rerun used Qwen and passed. No claim all tiny-model outputs are reliable.",
+    "signedBundleBuild": true,
+    "releaseLint": true,
+    "bundletoolValidate": true,
+    "uploadSignatureVerified": true,
+    "bundleNativeLibraries": 20,
+    "allElfAlignmentAtLeastBytes": 16384,
+    "productionPackageAndBinderManifest": "verified",
+    "testedProductSourceMatchesMain": true,
+    "validatorLicenseReferences": "Compared against identical committed app/src/main/assets/licenses sources because user-owned root-model deletions were preserved."
+  },
+  "matchedComparison": {
+    "scope": "26 controlled questions with identical v29/revised evidence and drafts; two alternating trials per implementation. Frozen v29 verifier/recovery/final citation gate, common unchanged extraction/source-brief helpers; not full old/new APK or general web accuracy.",
+    "answerableCases": 19,
+    "negativeControlCases": 7,
+    "trialsPerImplementation": 52,
+    "someCitedSupportedInformationBefore": 19,
+    "someCitedSupportedInformationAfter": 19,
+    "fullyCitedAnswerableCasesBefore": 3,
+    "fullyCitedAnswerableCasesAfter": 18,
+    "falseFullyCitedNegativeCasesBefore": 3,
+    "falseFullyCitedNegativeCasesAfter": 0,
+    "citationValidAnswerableTrialsBefore": 38,
+    "citationValidAnswerableTrialsAfter": 38,
+    "medianVerificationMsBefore": 101.964844,
+    "medianVerificationMsAfter": 258.8599215,
+    "p95VerificationMsBefore": 144.820677,
+    "p95VerificationMsAfter": 386.396197,
+    "highestAfterCallPssMiBBefore": 478,
+    "highestAfterCallPssMiBAfter": 462,
+    "memoryScope": "After-call process samples, not transient peak memory or causal allocation reduction.",
+    "literalMarkerScope": "The raw expectedFact flag is exact substring matching and undercounts some paraphrases; it is not used as semantic fact recall."
+  },
+  "nativeComparison": {
+    "scope": "One actual CPU generation per question, same draft and token-counted prepared evidence assessed by both versions. Synthetic controlled facts, no extra judge-model generation.",
+    "questions": 3,
+    "fullyCitedBefore": 0,
+    "fullyCitedAfter": 3,
+    "citationValidBefore": 3,
+    "citationValidAfter": 3,
+    "firstTokenMs": [
+      6498,
+      4876,
+      9602
+    ],
+    "tokensPerSecond": [
+      17.758776,
+      18.09111,
+      16.506556
+    ],
+    "verificationMsBefore": [
+      90.21802,
+      71.700573,
+      152.420105
+    ],
+    "verificationMsAfter": [
+      352.950938,
+      172.819375,
+      452.24276
+    ]
+  },
+  "appearance": {
+    "choices": [
+      "Light mode",
+      "Dark mode"
+    ],
+    "darkPalette": "Former AMOLED palette",
+    "legacyDarkPreference": "resolves to AMOLED",
+    "lightLogo": "app/src/main/res/drawable-nodpi/bi_avatar_light.png",
+    "imageGeneration": "Built-in image tool; final prompt and project path documented in VERIFICATION.md"
+  },
+  "limits": "Bounded deterministic vocabulary and relationship templates, not universal semantic entailment. No new search/extraction engine, judge model, GPU/NPU performance, battery or transient-peak-memory claim. Missing or blocked publisher evidence cannot be manufactured.",
+  "localReviewProof": "D:/Codex/bi-v30-publishing.png",
+  "localLightUiProof": "D:/Codex/bi-v30-chat-LIGHT.png"
+}
