@@ -40,6 +40,12 @@ class VerificationRecoveryTest {
   assertEquals(setOf(2),answer.claims.single().sourceIds)
   assertTrue(answer.text,answer.text.contains("[2]"));assertFalse(answer.text.contains("[1"))
  }
+ @Test fun appOwnedPartialNoticesDoNotInvalidateOtherwiseCitedAnswers() {
+  val source=EvidenceSource(1,"Orion requirements","https://orion.example/specs","Orion requires 4 GB RAM.",1)
+  val text="Orion requires 4 GB RAM [1].\n\nSome details were omitted because the supplied evidence did not support them."
+  assertTrue(GroundingPolicy.validateCitations(text,listOf(source)).second)
+  assertFalse(GroundingPolicy.validateCitations(text+" Extra invented unsupported facts follow here.",listOf(source)).second)
+ }
  @Test fun diagnosticExportOnlyIncludesBoundedAggregateCounts() {
   val context=androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
   val file=java.io.File(context.cacheDir,"research-diagnostics.json")

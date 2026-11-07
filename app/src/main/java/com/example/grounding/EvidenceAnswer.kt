@@ -93,7 +93,7 @@ object EvidenceAnswer {
                 (if (Regex("(?i)observed temperature").containsMatchIn(text)) 30 else 0) + FactualResearch.answerFocusScore(text, question))
         } }.sortedByDescending { it.score }.distinctBy { it.text.lowercase() }.take(if (weather) 2 else 1)
         if (extracts.isEmpty()) {
-            if (numericMissing && checked.support != AnswerSupport.INSUFFICIENT) return checked.copy(text = checked.text + "\n\nThe supplied pages do not establish the requested amount.", support = AnswerSupport.PARTIAL)
+            if (numericMissing && checked.support != AnswerSupport.INSUFFICIENT) return checked.copy(text = checked.text + "\n\nThe sources do not establish the requested amount.", support = AnswerSupport.PARTIAL)
             if (definitionMissing) return CheckedAnswer(GroundingPolicy.unavailableAnswer, AnswerSupport.INSUFFICIENT, checked.claims)
             if (!missingTemperature || checked.support == AnswerSupport.INSUFFICIENT) return checked
             return checked.copy(text = "${checked.text}\n\nTemperature was not available in the pages I could read.", support = AnswerSupport.PARTIAL)

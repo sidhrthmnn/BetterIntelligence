@@ -62,7 +62,7 @@ object EvidenceRecovery {
         val missingSubjects = ResearchPlanner.subjects(question).filter { subject -> kept.none { ClaimLanguage.words(it).containsAll(ClaimLanguage.words(subject)) } }
         val tail = if (complete) "" else if (missingSubjects.isNotEmpty())
             "\n\nI couldn't verify the requested information for ${missingSubjects.joinToString(" and ")}." else
-            "\n\nThese sources support part of the answer; some requested details are still missing."
+            "\n\nThe sources do not cover every requested detail."
         return checked.copy(text = kept.distinct().joinToString("\n\n") + tail,
             support = if (complete) AnswerSupport.CITED else AnswerSupport.PARTIAL,
             sourceExtract = added > 0, recoveryAttempted = true, recoveredClaims = added)

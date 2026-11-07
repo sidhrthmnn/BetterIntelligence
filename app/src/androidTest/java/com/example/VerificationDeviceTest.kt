@@ -31,7 +31,7 @@ class VerificationDeviceTest {
      val checked=if(old) V29EvidenceAnswer.resolve(draft,supplied,q) else EvidenceAnswer.resolve(draft,supplied,q)
      val ms=(SystemClock.elapsedRealtimeNanos()-start)/1_000_000.0
      val raw=if(old) V29GroundingPolicy.checkAnswer(draft,supplied,q) else GroundingPolicy.checkAnswer(draft,supplied,q)
-     val cited=checked.support!=AnswerSupport.INSUFFICIENT && GroundingPolicy.validateCitations(checked.text,supplied).second
+     val cited=checked.support!=AnswerSupport.INSUFFICIENT && (if(old) V29GroundingPolicy.validateCitations(checked.text,supplied) else GroundingPolicy.validateCitations(checked.text,supplied)).second
      rows.put(JSONObject().put("case",c.getString("id")).put("baseline",old).put("trial",trial).put("support",checked.support.name)
       .put("cited",cited).put("expectedFact",c.getString("expected").isNotEmpty() && checked.text.contains(c.getString("expected")))
       .put("elapsedMs",ms).put("sampledPssMb",Debug.getPss()/1024).put("draftChecks",VerificationDiagnostics.counts(raw)).put("finalChecks",VerificationDiagnostics.counts(checked)))
@@ -64,7 +64,7 @@ class VerificationDeviceTest {
      val start=SystemClock.elapsedRealtimeNanos()
      val checked=if(old) V29EvidenceAnswer.resolve(raw,prepared.sources,q) else EvidenceAnswer.resolve(raw,prepared.sources,q)
      val ms=(SystemClock.elapsedRealtimeNanos()-start)/1_000_000.0
-     val cited=checked.support!=AnswerSupport.INSUFFICIENT && GroundingPolicy.validateCitations(checked.text,prepared.sources).second
+     val cited=checked.support!=AnswerSupport.INSUFFICIENT && (if(old) V29GroundingPolicy.validateCitations(checked.text,prepared.sources) else GroundingPolicy.validateCitations(checked.text,prepared.sources)).second
      row.put(if(old) "baseline" else "revised",JSONObject().put("answer",checked.text).put("support",checked.support.name).put("cited",cited).put("verificationMs",ms).put("checks",VerificationDiagnostics.counts(checked)))
      if(!old) { assertNotEquals(checked.text,AnswerSupport.INSUFFICIENT,checked.support); assertTrue(checked.text,cited) }
     }
