@@ -48,12 +48,13 @@ object ClaimVerification {
                 sectionSubject = if (comparison) entities.singleOrNull { ResearchQuery.words(it) == headingWords } else null
             }
             val missingSubject = comparison && entities.none { entity -> ResearchQuery.words(entity).all { it in ResearchQuery.words(plain) } }
-            val inherited = !isHeading && missingSubject && sectionSubject != null
+            val inherited = !isHeading && sectionSubject != null && (missingSubject || sectionSubject in setOf("CPU", "GPU", "NPU"))
             val body = if (inherited) "$sectionSubject — $plain" else plain
             val missingCitation = ids.isEmpty()
             // Missing syntax is recoverable only after the full claim passes
             // the very same per-source checks as an explicitly cited claim.
-            if (missingCitation && !isHeading && !uncertainty.containsMatchIn(body) && EvidenceRanking.conflicts(sources).isEmpty()) {
+            if (missingCitation && !isHeading && !uncertainty.containsMatchIn(body) && EvidenceRanking.conflicts(sources).isEmpty() &&
+                ResearchPlanner.subjects(question).all { ClaimLanguage.words(body).containsAll(ClaimLanguage.words(it)) }) {
                 sources.firstOrNull { source ->
                     val found = ResearchQuery.words(source.title + " " + source.excerpt) + EvidenceRanking.localeWords(source.url)
                     (comparison || ResearchPlanner.subjects(question).all { entity -> ResearchQuery.words(entity).all { it in found } }) &&

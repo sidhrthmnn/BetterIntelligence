@@ -158,7 +158,7 @@ class AnswerQualityTest {
     }
 
     @Test fun correctionIsBoundedOptionalAndAllowedOnOrdinaryFacts() {
-        val prepared = PreparedEvidence("evidence", listOf(source()))
+        val prepared = PreparedEvidence("evidence", listOf(source(text = "Orion requires 4 GB RAM. Orion and Vega support Android runtime integration.")))
         val insufficient = CheckedAnswer("", AnswerSupport.INSUFFICIENT, emptyList())
         fun repair(first: Long = 100, speed: Float = 40f, thermal: Int = 0, memory: Long = 2000, question: String = "Compare Orion vs Vega Android") =
             EvidenceRepair.prompt(question, "bad draft", prepared, insufficient, 2048, memory, false, thermal, first, speed) { true }
