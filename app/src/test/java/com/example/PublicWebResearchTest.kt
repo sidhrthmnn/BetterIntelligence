@@ -22,7 +22,7 @@ class PublicWebResearchTest {
             requests += url
             when {
                 url.endsWith("robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
-                url == target -> WebDocument(url, "<main><p>Orion requires 4 GB RAM for Android inference only with the vendor SDK.</p></main>", "text/html")
+                url == target -> WebDocument(url, "<title>Orion memory requirements</title><main><p>Orion requires 4 GB RAM for Android inference only with the vendor SDK. These published memory requirements describe the supported mobile inference configuration.</p></main>", "text/html")
                 url.endsWith("/orion") -> WebDocument(url, "<main><a href='/orion/memory'>Orion memory requirements</a></main>", "text/html")
                 else -> WebDocument(url, "<main>Empty index</main>", "text/html")
             }

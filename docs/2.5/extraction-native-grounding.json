@@ -6,8 +6,8 @@
     "support": "PARTIAL",
     "citationValid": true,
     "promptTokens": 244,
-    "nativeFirstTokenMs": 11327,
-    "nativeTokensPerSecond": 13.474738
+    "nativeFirstTokenMs": 8842,
+    "nativeTokensPerSecond": 21.9145
   },
   {
     "question": "Does Orion support image input?",
@@ -16,7 +16,7 @@
     "support": "PARTIAL",
     "citationValid": true,
     "promptTokens": 244,
-    "nativeFirstTokenMs": 11202,
-    "nativeTokensPerSecond": 14.070163
+    "nativeFirstTokenMs": 6810,
+    "nativeTokensPerSecond": 17.971651
   }
 ]
