@@ -1,0 +1,22 @@
+{
+  "versionCode": 31,
+  "versionName": "2.5.0-beta6",
+  "track": "Closed testing - Alpha",
+  "releaseId": "25",
+  "status": "REVIEW_SUBMISSION_QUEUED",
+  "playOverview": "Changes in review",
+  "quickChecks": "Running; Play sends the change to review when checks complete successfully",
+  "managedPublishing": false,
+  "automaticPublicationAfterApproval": true,
+  "recordedAtUtc": "2026-11-08T11:12:22.181684+00:00",
+  "applicationBuildRevision": "b0ed8e9f8db80e860401cd242956ba7c213d812c",
+  "mergedRevision": "e628e8fb733a22aca8fdbb101562e02cf71f1faf",
+  "pullRequest": "https://github.com/sidhrthmnn/BetterIntelligence/pull/21",
+  "bundleSha256": "f098394e89f3b236f9c019a81b13064d783a814abe4f8796aa4fdda1b9cde232",
+  "bundleBytes": 94302207,
+  "applicationSourceMatchesMerge": true,
+  "validationReport": "readable-validation.json",
+  "bundleValidation": "bundle-v31-validation.json",
+  "releaseNotes": "Clearer sourced answers, website links, optional source images, readable formatting, scoped fact recovery and device-clock answers.",
+  "publicationWaitedFor": false
+}
