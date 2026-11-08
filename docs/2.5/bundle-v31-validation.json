@@ -236,5 +236,9 @@
       "minLoadAlignment": 16384
     }
   ],
-  "bundleSha256": "802a6ac68960e737c43f9739f5ba8fa80ae5ddbaf7d538c1b255fec0a7dcfd75"
+  "bundleSha256": "f098394e89f3b236f9c019a81b13064d783a814abe4f8796aa4fdda1b9cde232",
+  "buildRevision": "b0ed8e9f8db80e860401cd242956ba7c213d812c",
+  "bundletoolValidated": true,
+  "uploadSignatureVerified": true,
+  "licenceReference": "Identical committed app-assets licence copies; user-owned root model deletions preserved."
 }
