@@ -7,6 +7,7 @@ object EvidenceAnswer {
     fun hasTemperature(text: String) = Regex("(?i)(?<![\\p{L}\\p{N}])-?\\d+(?:\\.\\d+)?\\s*(?:°\\s*)?[CF]\\b|\\d+\\s+degrees?\\s+(?:celsius|fahrenheit)").containsMatchIn(text)
 
     fun resolve(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
+        EventAnswer.resolve(question, sources)?.let { return it }
         val aligned = PublicTopics.alignedSources(question, sources)
         if (aligned.any { SourceBrief.reportedRoleContext(it, question) })
             SourceBrief.build(question, aligned, emptyList())?.let { return it }

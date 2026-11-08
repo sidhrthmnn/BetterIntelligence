@@ -8,6 +8,14 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.ui.components.ModelMark
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -75,41 +83,31 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         profile.copy(availableRamMb = available, safeModelRamLimitMb = ModelMemoryPlanner.budget(profile.totalRamMb, available))
     }
 
-    LazyColumn(Modifier.fillMaxSize().testTag("models_list"), state = listState, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("models_list"), state = listState, contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    hardware?.let { "${ModelPresentation.size(it.availableRamMb)} RAM available · ${ModelPresentation.size(it.totalRamMb)} total" }
-                        ?: "Checking your phone’s memory…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("model_ram_summary")
-                )
-                hardware?.takeIf { it.totalRamMb > 0 }?.let { hw ->
-                    val usedFraction = ((hw.totalRamMb - hw.availableRamMb).coerceAtLeast(0).toFloat() / hw.totalRamMb.toFloat()).coerceIn(0f, 1f)
-                    val animatedRam by animateFloatAsState(usedFraction, tween(300, easing = FastOutSlowInEasing), label = "ram_bar")
-                    LinearProgressIndicator(
-                        progress = { animatedRam },
-                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp))
-                    )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(hardware?.let { "${ModelPresentation.size(it.availableRamMb)} RAM free · ${ModelPresentation.size(it.totalRamMb)} total" }
+                        ?: "Checking available RAM…", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("model_ram_summary"))
+                    hardware?.takeIf { it.totalRamMb > 0 }?.let { hw ->
+                        val available = (hw.availableRamMb.toFloat() / hw.totalRamMb).coerceIn(0f, 1f)
+                        val animatedRam by animateFloatAsState(available, tween(300), label = "ram_bar")
+                        LinearProgressIndicator(progress = { animatedRam }, modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(50)))
+                    }
+                }
+                FilledTonalIconButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("import_gguf_btn")) {
+                    Icon(Icons.Default.Add, "Import model")
                 }
             }
         }
         item {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("library" to "Library", "find" to "Find models", "my_models" to "My models").forEach { (key, label) ->
-                    FilterChip(selected = source == key, onClick = { source = key }, label = { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false) },
-                        modifier = Modifier.testTag("model_source_$key"))
+                    FilterChip(selected = source == key, onClick = { source = key }, shape = RoundedCornerShape(50),
+                        label = { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        modifier = Modifier.weight(1f).testTag("model_source_$key"))
                 }
-                AssistChip(
-                    onClick = { picker.launch(arrayOf("*/*")) },
-                    label = { Text("Import GGUF", style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false) },
-                    modifier = Modifier.testTag("import_gguf_btn")
-                )
             }
         }
         if (source == "find") item {
@@ -122,7 +120,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             HuggingFaceDiscoveryCard(query, results, searching, repo, files, loadingFiles,
                 { viewModel.setHfSearchQuery(it) }, { viewModel.searchHuggingFace(it) },
                 { viewModel.selectHfRepo(it) }, { viewModel.clearHfRepoSelection() },
-                { id, file -> viewModel.addAndDownloadHfModel(id, file); source = "my_models" }, initiallyExpanded = true)
+                { id, file -> viewModel.addAndDownloadHfModel(id, file); source = "my_models" }, initiallyExpanded = true, availableRamMb = loadProfile?.safeModelRamLimitMb)
         }
         if (source != "find" && (telemetry.isModelLoaded || loading != null)) item {
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
@@ -134,7 +132,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                if (telemetry.isModelLoaded) "Ready on this device" else if (loading != null) "Loading model…" else "Choose your AI model",
+                                if (telemetry.isModelLoaded) "Ready to chat" else if (loading != null) "Loading model…" else "Choose your AI model",
                                 style = MaterialTheme.typography.labelLarge,
                                 modifier = Modifier.testTag("model_readiness")
                             )
@@ -152,8 +150,8 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                                 Button(
                                     onClick = { viewModel.selectTab(AppTab.CHAT) },
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                    modifier = Modifier.heightIn(max = 34.dp)
-                                ) { Text("Open chat", style = MaterialTheme.typography.labelMedium) }
+                                    modifier = Modifier.heightIn(min = 40.dp)
+                                ) { Text("Chat", style = MaterialTheme.typography.labelMedium) }
                             }
                         }
                     }
@@ -182,7 +180,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         }
         if (source == "library" && recommended != null && !telemetry.isModelLoaded) item {
             Text("Suggested for this device: ${recommended.name}", style = MaterialTheme.typography.titleSmall)
-            Text("Download, then tap Use model to start.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
         }
         if (source == "library") item {
             Row(
@@ -190,9 +188,9 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("All models · Lowest RAM first", style = MaterialTheme.typography.titleSmall)
+                Text("All models · Least RAM first", style = MaterialTheme.typography.titleSmall)
             }
-            Text("RAM is an estimate. Other apps affect what fits. New downloads stay at the top.",
+            Text("RAM is estimated. Downloads stay at the top.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val visibleModels = models.filter {
@@ -214,40 +212,45 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             val fits = loadProfile?.let { ModelLibrary.fits(model, it, memoryContext) } ?: false
             val canDownload = hardware?.let { ModelLibrary.canDownload(model, it) } ?: true
             OutlinedCard(Modifier.fillMaxWidth().testTag("model_card_${model.id}")) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (isSecondary) {
-                            Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
-                                Text("Fallback", Modifier.padding(horizontal = 8.dp, vertical = 1.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                            }
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ModelMark(model.name)
+                        Column(Modifier.weight(1f).clickable { details = model }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(model.name.substringBefore(" · "), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text("${model.filename.substringAfterLast('.').uppercase()} · ${model.quantization}", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            ModelPresentation.status(model),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("model_status_${model.id}")
-                        )
+                        if (installed) Icon(Icons.Default.CheckCircle, "Downloaded", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     }
-                    Text(model.name.substringBefore(" · "), style = MaterialTheme.typography.titleSmall)
+                    if (installed || downloading || model.downloadState in setOf("PAUSED", "ERROR") || isSecondary) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        if (isSecondary) Text("Fallback", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(if (installed) "Downloaded" else ModelPresentation.status(model), style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("model_status_${model.id}"))
+                    }
                     Text(
                         "${ModelPresentation.size(model.fileSizeMb)} ${if (installed) "on device" else "download"} · ~${ModelPresentation.size(ModelLibrary.memoryEstimate(model, memoryContext).totalMb)} RAM",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        ModelPresentation.memoryLabel(model, loadProfile, selected, memoryContext),
+                        ModelPresentation.memoryLabel(model, loadProfile, selected, memoryContext).let {
+                            when {
+                                selected -> "In use"
+                                loadProfile == null -> "Checking available RAM…"
+                                fits -> "Fits available RAM"
+                                it.contains("than this phone") -> "Too large for this phone"
+                                it.contains("64-bit") -> "Requires a supported 64-bit device"
+                                it.startsWith("Can run") -> "Not supported on this device"
+                                else -> "Free more RAM to run"
+                            }
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (fits || selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                         modifier = Modifier.testTag("model_memory_${model.id}")
                     )
                     if (ModelLibrary.category(model) == "EXPERIMENTAL") Text("Experimental · May be unstable", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     if (!installed && !canDownload) Text("Free more storage before downloading this model.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    if (model.downloadState == "ERROR") Text(downloadErrors[model.id] ?: "Download interrupted. Retry to resume or check the model publisher’s access requirements.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    if (model.downloadState == "ERROR") Text(downloadErrors[model.id] ?: "Download interrupted. Tap Retry to resume.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (downloading) {
                         val animatedProgress by animateFloatAsState(
                             targetValue = model.downloadProgress.coerceIn(0f, .99f),
@@ -256,8 +259,8 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                         )
                         if (model.checksumVerificationStatus == "VERIFYING") LinearProgressIndicator(Modifier.fillMaxWidth())
                         else LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth())
-                        Text(if (model.checksumVerificationStatus == "VERIFYING") "Almost ready. Keep the app open while the file is checked."
-                            else "${ModelPresentation.size((model.fileSizeMb * model.downloadProgress.coerceIn(0f, .99f)).toLong())} of ${ModelPresentation.size(model.fileSizeMb)} · You can pause and resume",
+                        Text(if (model.checksumVerificationStatus == "VERIFYING") "Checking the downloaded file…"
+                            else "${ModelPresentation.size((model.fileSizeMb * model.downloadProgress.coerceIn(0f, .99f)).toLong())} of ${ModelPresentation.size(model.fileSizeMb)}",
                             style = MaterialTheme.typography.bodySmall, modifier = Modifier.heightIn(min = 28.dp))
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.Center) {
@@ -265,13 +268,13 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                             downloading -> OutlinedButton(
                                 onClick = { viewModel.cancelDownload(model.id) },
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                modifier = Modifier.heightIn(max = 34.dp)
+                                modifier = Modifier.heightIn(min = 40.dp)
                             ) { Text("Pause", style = MaterialTheme.typography.labelMedium) }
                             installed -> Button(
                                 onClick = { viewModel.switchModel(model) },
                                 enabled = loading == null && deletingId == null && !selected && fits && !telemetry.isRunning,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                modifier = Modifier.heightIn(max = 34.dp).testTag("load_model_${model.id}")
+                                modifier = Modifier.heightIn(min = 40.dp).testTag("load_model_${model.id}")
                             ) {
                                 Text(if (loading == model.id) "Loading…" else if (selected) "In use" else "Use model", style = MaterialTheme.typography.labelMedium)
                             }
@@ -279,34 +282,14 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                                 onClick = { viewModel.downloadModel(model) },
                                 enabled = canDownload,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                modifier = Modifier.heightIn(max = 34.dp).testTag("download_model_${model.id}")
+                                modifier = Modifier.heightIn(min = 40.dp).testTag("download_model_${model.id}")
                             ) { Text(if (model.downloadState == "ERROR") "Retry download" else if (model.downloadState == "PAUSED") "Resume download" else "Download", style = MaterialTheme.typography.labelMedium) }
-                        }
-                        if (installed && !selected && !isSecondary && ModelLibrary.category(model) != "EXPERIMENTAL") {
-                            OutlinedButton(
-                                onClick = { viewModel.setSecondaryModel(model) },
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.heightIn(max = 34.dp)
-                            ) {
-                                Text("Set fallback", style = MaterialTheme.typography.labelMedium)
-                            }
                         }
                         TextButton(
                             onClick = { details = model },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.heightIn(max = 34.dp)
+                            modifier = Modifier.heightIn(min = 40.dp).testTag("model_details_${model.id}")
                         ) { Text("Details", style = MaterialTheme.typography.labelMedium) }
-                        if (installed || (model.isCustom && !downloading)) {
-                            TextButton(
-                                onClick = { deleting = model },
-                                enabled = deletingId == null && loading == null && verifying == null && !(selected && telemetry.isRunning),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                modifier = Modifier.heightIn(max = 34.dp).testTag("delete_model_${model.id}"),
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                            ) {
-                                Text(if (deletingId == model.id) "Deleting…" else "Delete", style = MaterialTheme.typography.labelMedium)
-                            }
-                        }
                     }
                     if (selected && telemetry.isRunning) Text("Stop the current answer before deleting the model.", style = MaterialTheme.typography.bodySmall)
                 }
@@ -347,21 +330,31 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     }
     details?.let { model ->
         AlertDialog(onDismissRequest = { details = null }, title = { Text(model.name) }, text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(model.description)
+            Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(model.description, style = MaterialTheme.typography.bodyMedium)
                 val memoryContext = ModelPresentation.loadContext(model, generationParams.contextSize)
-                Text("Estimated RAM to load: ${ModelPresentation.size(ModelLibrary.memoryEstimate(model, memoryContext).totalMb)}. LiteRT uses your context setting; GGUF starts with a small context and adjusts it for each answer. Actual usage depends on context and backend.")
+                Text("${ModelPresentation.size(model.fileSizeMb)} download · ~${ModelPresentation.size(ModelLibrary.memoryEstimate(model, memoryContext).totalMb)} RAM", style = MaterialTheme.typography.bodyMedium)
+                Text("RAM changes with context size and processor. GPU shares system memory.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 loadProfile?.let { profile -> ModelLibrary.incompatibilityReason(model, profile, memoryContext)?.let { Text(it) } }
                 Text("${model.quantization} · ${model.contextLength} token model context")
-                Text("Integrity: ${model.checksumVerificationStatus}")
+                Text("Integrity: ${model.checksumVerificationStatus}", style = MaterialTheme.typography.bodySmall)
+                downloadErrors[model.id]?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                 model.huggingFaceRepo?.let { repo ->
                     TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://huggingface.co/$repo"))) }) { Text("Model source and license") }
                 }
-                Text("Writing quality depends on the selected model. Review polished text before applying it.")
+
+                if (model.isInstalled && active?.id != model.id && secondary?.id != model.id && ModelLibrary.category(model) != "EXPERIMENTAL") {
+                    TextButton(onClick = { viewModel.setSecondaryModel(model); details = null }) { Text("Use as low-memory fallback") }
+                }
                 if (model.isInstalled) {
                     TextButton(onClick = { viewModel.verifyModelChecksum(model) }, enabled = verifying == null && deletingId == null) { Text(if (verifying == model.id) "Verifying…" else "Verify file") }
+
+                }
+                if (model.isInstalled || model.isCustom) {
                     TextButton(onClick = { details = null; deleting = model },
-                        enabled = deletingId == null && loading == null && verifying == null && !(active?.id == model.id && telemetry.isRunning)) { Text("Delete from device") }
+                        modifier = Modifier.testTag("delete_model_${model.id}"),
+                        enabled = deletingId == null && loading == null && verifying == null && !(active?.id == model.id && telemetry.isRunning),
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete from device") }
                 }
             }
         }, confirmButton = { TextButton(onClick = { details = null }) { Text("Done") } })

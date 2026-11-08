@@ -15,7 +15,8 @@ data class GenerationConfig(
     val gpuLayers: Int = 0,
     val stopSequences: List<String> = listOf("</s>", "<|im_end|>", "<|eot_id|>", "[/INST]"),
     val contextSize: Int = 4096,
-    val history: List<ChatTurn> = emptyList()
+    val history: List<ChatTurn> = emptyList(),
+    val autoContinue: Boolean = false
 )
 
 data class ChatTurn(val role: String, val content: String) {

@@ -159,7 +159,7 @@ fun QuantBadge(
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp
+                fontSize = 11.sp
             ),
             color = MaterialTheme.colorScheme.onSurface
         )

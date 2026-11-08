@@ -26,7 +26,7 @@ import kotlinx.coroutines.ensureActive
 import java.io.File
 
 internal data class LiteRtResult(val text: String, val inputTokens: Int, val outputTokens: Int,
-    val firstTokenMs: Long, val tokensPerSecond: Float, val prefillMs: Long)
+    val firstTokenMs: Long, val tokensPerSecond: Float, val prefillMs: Long, val outputTokenLimit: Int = 1024)
 
 /** Owned exclusively by InferenceEngine's process-wide admission/lifecycle gate.
  * A conversation always finishes cancellation before its engine can be released.
@@ -164,12 +164,13 @@ internal class LiteRtSession(private val context: Context, val file: File,
         }
         usedForConversation = true
         val loaded = checkNotNull(engine) { "LiteRT model is not initialized" }
+        val outputLimit = ChatResponseBudget.liteRtLimit(prompt, params)
         val conversation = loaded.createConversation(ConversationConfig(
             initialMessages = params.history.map { if (it.role == "user") Message.user(it.content) else Message.model(it.content) },
             systemInstruction = params.systemPrompt?.takeIf { it.isNotBlank() }?.let { Contents.of(it) },
             samplerConfig = SamplerConfig(topK = params.topK.coerceIn(1, 100),
                 topP = params.topP.coerceIn(.1f, 1f).toDouble(), temperature = params.temperature.coerceIn(0f, 2f).toDouble()),
-            maxOutputToken = params.maxTokens.coerceIn(1, 1024), thinkingConfig = ThinkingConfig(enableThinking = false), enableSpeculativeDecoding = mtp))
+            maxOutputToken = outputLimit, thinkingConfig = ThinkingConfig(enableThinking = false), enableSpeculativeDecoding = mtp))
         val completion = CompletableDeferred<Unit>()
         val nativeFinished = CompletableDeferred<Unit>()
         val text = StringBuilder()
@@ -200,7 +201,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
             val metrics = conversation.getBenchmarkInfo()
             return LiteRtResult(text.toString(), metrics.lastPrefillTokenCount, metrics.lastDecodeTokenCount,
                 first, metrics.lastDecodeTokensPerSecond.toFloat(),
-                if (metrics.lastPrefillTokensPerSecond > 0) (1000 * metrics.lastPrefillTokenCount / metrics.lastPrefillTokensPerSecond).toLong() else 0)
+                if (metrics.lastPrefillTokensPerSecond > 0) (1000 * metrics.lastPrefillTokenCount / metrics.lastPrefillTokensPerSecond).toLong() else 0, outputLimit)
         } catch (failure: Throwable) {
             resetRequired = true
             throw failure

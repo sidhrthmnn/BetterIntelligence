@@ -79,7 +79,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
             ) {
                 Text(
                     model?.let { selected ->
-                        listOfNotNull(ModelLibrary.categoryLabel(selected), selected.name.substringBefore(" · ")).joinToString(" · ")
+                        selected.name.substringBefore(" · ")
                     } ?: "Choose a model",
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1,
@@ -94,7 +94,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                     color = MaterialTheme.colorScheme.tertiaryContainer
                 ) {
                     Text(
-                        "Secondary · Low RAM",
+                        "Fallback · Low RAM",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -136,7 +136,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
         }
         Surface(Modifier.fillMaxWidth().testTag("chat_composer"), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Surface(shape = RoundedCornerShape(26.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceVariant, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                     Column(Modifier.padding(8.dp)) {
                         AnimatedVisibility(
                             visible = editing,
@@ -163,7 +163,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                                 TextButton(onClick = { viewModel.selectTab(AppTab.WEB) },
                                     modifier = Modifier.testTag("chat_grounding")) {
                                     Icon(Icons.Default.Language, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                                    Text(if (allowed) "Research: On · Fact check" else "Enable web research", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(if (allowed) "Web research · On" else "Web research · Off", maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                             FilledIconButton(onClick = { if (generating) viewModel.cancelGeneration() else { keyboard?.hide(); viewModel.sendChatMessage(draft) } },
@@ -308,7 +308,7 @@ private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: 
             SourceReferences(sources, selectedSource) { selectedSource = null }
             if (message.messageState != "COMPLETE") Text(when (message.messageState) {
                 "STOPPED" -> "Response stopped"
-                "LENGTH_LIMIT" -> "Response length limit reached. Ask it to continue, or increase the response length in Advanced settings."
+                "LENGTH_LIMIT" -> "This reply reached the model’s limit. Ask it to continue."
                 else -> "Unable to complete this response. You can retry."
             },
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

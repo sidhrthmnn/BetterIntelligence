@@ -23,6 +23,10 @@ object PublicQuestionIntent {
         (Regex("(?i)^\\s*(?:who|where|when|which)\\b").containsMatchIn(q) ||
             Regex("(?i)^\\s*what\\b.{0,100}\\b(?:capital|address|opening hours|schedule|release date|cast|owner)\\b").containsMatchIn(q))
     fun externalRequest(q: String) = Regex("(?i)^\\s*(?:please\\s+)?(?:find|check|get|show|tell me)\\b.{0,120}\\b(?:online|websites?|internet|public sources|from the web)\\b").containsMatchIn(q)
-    fun upcoming(q: String) = Regex("(?i)\\b(?:upcoming|scheduled)\\b").containsMatchIn(q) ||
-        lookup(q) && Regex("(?i)\\bnext\\b").containsMatchIn(q)
+    fun upcoming(q: String): Boolean {
+        if (EventQuery.parse(q) != null) return true
+        if (Regex("(?i)^(?:explain|define|what(?: is|['’]s) (?:a|an|the meaning of)|what does .{1,50} mean)\\b").containsMatchIn(q)) return false
+        return Regex("(?i)\\b(?:upcoming|scheduled|tomorrow|tonight|this weekend|next week|later today|currently open|next available|recently announced)\\b").containsMatchIn(q) ||
+            lookup(q) && Regex("(?i)\\bnext\\b").containsMatchIn(q)
+    }
 }

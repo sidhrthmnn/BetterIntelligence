@@ -118,15 +118,16 @@ class WebSearchReliabilityTest {
             else if (blocked) throw WebRequestException(403) else { delay(500); page(url) }
         }, DiscoveryProvider { _, _ -> DiscoveryResult((if (withGood) listOf(ResearchCandidate("https://good.example/orion", "Orion Android memory")) else emptyList()) + ResearchCandidate("https://slow.example/orion", "Orion Android memory"), DiscoveryState.FOUND) }, timeouts = quick)
         val partial = reader(false, true).research(q.question) {}
-        assertNull(partial.failure); assertEquals(1, partial.sources.size); assertEquals(ResearchFailure.PUBLISHER_TIMEOUT, partial.metrics.failure)
-        assertEquals(ResearchFailure.PUBLISHER_BLOCKED, reader(true, false).research(q.question) {}.failure)
+        assertNull(partial.failure); assertEquals(1, partial.sources.size); assertNull(partial.metrics.failure)
+        assertEquals(1, partial.metrics.publisherAccess["PUBLISHER_TIMEOUT"])
+        assertEquals(ResearchFailure.PUBLISHER_FORBIDDEN, reader(true, false).research(q.question) {}.failure)
         assertEquals(ResearchFailure.PUBLISHER_TIMEOUT, reader(false, false).research(q.question) {}.failure)
     }
     @Test fun emptyResultsAndInsufficientTextDoNotBecomeProviderOutages() = runBlocking {
         val empty = PublicWebResearch(WebFetcher { error("No publisher expected") }, DiscoveryProvider { _, _ -> DiscoveryResult(emptyList(), DiscoveryState.EMPTY) }).research(q.question) {}
         assertEquals(ResearchFailure.NO_SEARCH_RESULTS, empty.failure)
         val insufficient = PublicWebResearch(WebFetcher { url -> if (url.endsWith("robots.txt")) WebDocument(url, "", "text/plain") else WebDocument(url, "<title>Gardening</title><p>Flowers and gardening</p>", "text/html") }, DiscoveryProvider { _, _ -> DiscoveryResult(listOf(ResearchCandidate("https://docs.example/orion", "Orion Android memory")), DiscoveryState.FOUND) }).research(q.question) {}
-        assertEquals(ResearchFailure.INSUFFICIENT_EVIDENCE, insufficient.failure)
+        assertEquals(ResearchFailure.EMPTY_EXTRACTION, insufficient.failure)
     }
     @Test fun generalMixedAndCurrentFallbacksHaveDifferentSafetyRequirements() {
         val general = AnswerRoutingPolicy.recover(AnswerRoutingPolicy.decide("How does a neural network work?", mode = GroundingMode.ON), ResearchFailure.NO_SEARCH_RESULTS)

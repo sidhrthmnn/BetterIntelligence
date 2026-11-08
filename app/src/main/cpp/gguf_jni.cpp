@@ -232,6 +232,9 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
         auto onText = env->GetMethodID(observerClass, "onText", "([BII)V");
         auto resourceThreads = env->GetMethodID(observerClass, "resourceThreads", "()I");
         auto onPerformance = env->GetMethodID(observerClass, "onPerformance", "(DDII)V");
+        auto expansion = env->GetMethodID(observerClass, "allowResponseExpansion", "()Z");
+        auto onOutputLimit = env->GetMethodID(observerClass, "onOutputLimit", "(ZI)V");
+        const bool autoExpand = env->CallBooleanMethod(observer, expansion);
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
         auto check = [&] {
             if (env->ExceptionCheck()) throw std::runtime_error("Callback failed");
@@ -338,10 +341,17 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
             if (llama_decode(context.get(), batch)) throw std::runtime_error("Prompt evaluation failed");
         }
         std::string output;
-        for (int i = 0; i < maxTokens; ++i) {
+        // Grow the decode budget in-place. KV/context allocation, cancellation,
+        // thermal checks and the request deadline stay unchanged. No replay of
+        // the prompt, secondary model or duplicated streamed prefix.
+        const int ceiling = autoExpand ? std::max<int>(maxTokens, std::min<int>(1024, contextSize - count)) : maxTokens;
+        int outputLimit = maxTokens;
+        int generated = 0;
+        bool ended = false;
+        for (int i = 0; i < outputLimit; ++i) {
             resources();
             auto token = llama_sampler_sample(sampler.get(), context.get(), -1);
-            if (llama_vocab_is_eog(vocab, token)) break;
+            if (llama_vocab_is_eog(vocab, token)) { ended = true; break; }
             std::vector<char> piece(256);
             int length = llama_token_to_piece(vocab, token, piece.data(), piece.size(), 0, false);
             if (length < 0) { piece.resize(-length); length = llama_token_to_piece(vocab, token, piece.data(), piece.size(), 0, false); }
@@ -352,11 +362,14 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
             env->CallVoidMethod(observer, onText, value, count, i + 1);
             env->DeleteLocalRef(value);
             check();
-            if (i + 1 < maxTokens) {
+            generated = i + 1;
+            if (generated == outputLimit && outputLimit < ceiling) outputLimit = std::min(ceiling, outputLimit * 2);
+            if (i + 1 < outputLimit) {
                 auto batch = llama_batch_get_one(&token, 1);
                 if (llama_decode(context.get(), batch)) throw std::runtime_error("Generation failed");
             }
         }
+        env->CallVoidMethod(observer, onOutputLimit, static_cast<jboolean>(!ended && generated >= outputLimit), outputLimit);
         const auto perf = llama_perf_context(context.get());
         env->CallVoidMethod(observer, onPerformance, perf.t_p_eval_ms, perf.t_eval_ms, perf.n_p_eval, perf.n_eval);
         check();

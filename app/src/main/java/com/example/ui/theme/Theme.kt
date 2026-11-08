@@ -3,6 +3,9 @@ package com.example.ui.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.Shapes
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
@@ -68,15 +71,28 @@ fun MyApplicationTheme(
 ) {
     val colorScheme = if (darkTheme) ModernDarkColorScheme.copy(
         background = Color.Black,
-        surface = Color(0xFF08070B),
-        surfaceVariant = Color(0xFF25232C), outlineVariant = Color(0xFF3E3A47),
-        onBackground = Color(0xFFEEEAF3), onSurface = Color(0xFFEEEAF3), onSurfaceVariant = Color(0xFFC0BBC9)
-    ) else ModernLightColorScheme.copy(background = Color(0xFFFAF9FC), surface = Color(0xFFFAF9FC),
-        surfaceVariant = Color(0xFFF0EEF5), onSurface = Color(0xFF22212A), onBackground = Color(0xFF22212A),
-        onSurfaceVariant = Color(0xFF615D6C), outlineVariant = Color(0xFFDEDBE5))
+        primary = Color(0xFFA5BFFF), onPrimary = Color(0xFF082758),
+        primaryContainer = Color(0xFF142649), onPrimaryContainer = Color(0xFFD8E5FF),
+        secondary = Color(0xFFC9B6FF), secondaryContainer = Color(0xFF282040), onSecondaryContainer = Color(0xFFEADDFF),
+        surface = Color(0xFF0B0C10), surfaceVariant = Color(0xFF171A22),
+        surfaceContainerLowest = Color.Black, surfaceContainerLow = Color(0xFF0B0C10),
+        surfaceContainer = Color(0xFF11131A), surfaceContainerHigh = Color(0xFF171A22), surfaceContainerHighest = Color(0xFF20232D),
+        outline = Color(0xFF394150), outlineVariant = Color(0xFF252B36),
+        onBackground = Color(0xFFF3F5FB), onSurface = Color(0xFFF3F5FB), onSurfaceVariant = Color(0xFFAAB2C2)
+    ) else ModernLightColorScheme.copy(
+        primary = Color(0xFF1859EF), onPrimary = Color.White,
+        primaryContainer = Color(0xFFEAF0FF), onPrimaryContainer = Color(0xFF14316B),
+        secondary = Color(0xFF7353CE), secondaryContainer = Color(0xFFF0EBFF), onSecondaryContainer = Color(0xFF352258),
+        background = Color(0xFFF7F8FC), surface = Color.White,
+        surfaceContainerLowest = Color.White, surfaceContainerLow = Color.White,
+        surfaceContainer = Color(0xFFF4F6FB), surfaceContainerHigh = Color(0xFFEEF1F7), surfaceContainerHighest = Color(0xFFE5EAF4),
+        surfaceVariant = Color(0xFFF0F3FA), onSurface = Color(0xFF131B2B), onBackground = Color(0xFF131B2B),
+        onSurfaceVariant = Color(0xFF606C80), outline = Color(0xFFB4BECE), outlineVariant = Color(0xFFE1E6EF))
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = Shapes(extraSmall = RoundedCornerShape(10.dp), small = RoundedCornerShape(12.dp),
+            medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(24.dp), extraLarge = RoundedCornerShape(28.dp)),
         content = content
     )
 }

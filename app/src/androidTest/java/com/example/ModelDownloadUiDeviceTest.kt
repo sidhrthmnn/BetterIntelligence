@@ -32,8 +32,7 @@ class ModelDownloadUiDeviceTest {
         compose.runOnUiThread { vm.selectTab(AppTab.MODELS) }
         compose.onNodeWithTag("model_ram_summary").assertExists()
         if (!model.isInstalled) {
-            compose.onNodeWithTag("models_list").performScrollToNode(hasText("Other models"))
-            compose.onNodeWithText("Other models").performClick()
+            compose.onNodeWithTag("model_source_library").performClick()
             compose.onNodeWithTag("models_list").performScrollToNode(hasTestTag("download_model_${model.id}"))
             compose.onNodeWithTag("download_model_${model.id}").performClick()
             compose.waitUntil(15_000) { vm.allModels.value.any { it.id == model.id && (it.downloadState == "DOWNLOADING" || it.isInstalled) } }
@@ -42,7 +41,7 @@ class ModelDownloadUiDeviceTest {
             compose.waitUntil(180_000) { vm.allModels.value.any { it.id == model.id && it.isInstalled } }
         }
         compose.onNodeWithTag("models_list").performScrollToNode(hasTestTag("model_status_${model.id}"))
-        compose.onNodeWithTag("model_status_${model.id}").assertTextEquals("Downloaded · Ready to use")
+        compose.onNodeWithTag("model_status_${model.id}").assertTextEquals("Downloaded")
         compose.onNodeWithTag("load_model_${model.id}").assertExists()
         val installed = repository.allModels.first().single { it.id == model.id }
         assertEquals("DOWNLOADED", installed.downloadState)

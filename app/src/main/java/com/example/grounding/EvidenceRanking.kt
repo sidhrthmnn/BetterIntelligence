@@ -55,6 +55,9 @@ object EvidenceRanking {
             minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question, source.url) / 2 + weatherPlaceScore(source.title, plan.question) + FactualResearch.reviewPriority(source.title, source.url, plan.question)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
+        plan.event?.let { event -> return VenueContext.profile(source, event) || source.kind == "EVENT_LISTING" && source.events.any {
+            it.sourceUrl == source.url && VenueContext.potential(it, event) && !it.cancelled() && it.date() != null
+        } }
         if (PublicTopics.parse(plan.question)?.sourceMatches(source.title, source.excerpt, source.url, source.publicLanguage) == false) return false
         if (!WeatherPageEvidence.requestedDay(source.title, plan.question)) return false
         if (SourceBrief.predictionMarket(source.title, source.url, plan.question)) return false
@@ -92,6 +95,27 @@ object EvidenceRanking {
         return Regex("(?i)\\b(documentation|reference|overview|guide|get started|API)\\b").containsMatchIn(source.title)
     }
     fun select(sources: List<EvidenceSource>, plan: ResearchPlan, limit: Int = 3): List<EvidenceSource> {
+        if (plan.event != null) {
+            val unique = sources.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }
+            val eventSources = unique.filter { it.events.isNotEmpty() }
+            val profiles = unique.filter { VenueContext.profile(it, plan.event) }.sortedByDescending { profile ->
+                eventSources.maxOfOrNull { source ->
+                    if (source.events.any { VenueContext.corroborates(it, source, profile, plan.event) })
+                        VenueContext.publisherHint(source) + (if (publisher(source.url) == publisher(profile.url)) 1000 else 0) else 0
+                } ?: 0
+            }.take(1)
+            val ranked = eventSources.sortedByDescending { source ->
+                val matched = source.events.count { plan.event.matches(it) || profiles.any { profile -> VenueContext.corroborates(it, source, profile, plan.event) } }
+                // A plausible first-party domain cannot displace the only page
+                // whose read fields actually establish the requested district.
+                (if (matched > 0) 1000 else 0) + matched + VenueContext.publisherHint(source)
+            }
+            // Reserve alternative-publisher evidence before another page of the
+            // same calendar; otherwise an earlier incomplete lead can vanish.
+            val diverse = ranked.distinctBy { publisher(it.url) }
+            return ((diverse + ranked.filterNot { it in diverse }).take((limit - profiles.size).coerceAtLeast(1)) + profiles)
+                .mapIndexed { i, source -> source.copy(id = i + 1) }
+        }
         val unique = sources.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }.distinctBy {
             // Preserve even single digits/units: a token set that omits them
             // merged contradictory "4 GB" and "6 GB" reports in evaluation.

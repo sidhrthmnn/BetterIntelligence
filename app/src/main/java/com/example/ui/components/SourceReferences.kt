@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.grounding.EvidenceSource
 import com.example.grounding.LegacyTopicEvidence
 import androidx.compose.foundation.Image
@@ -67,15 +68,14 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
         Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)) {
             sources.forEach { source ->
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { selected = source }
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { selected = source }
                 ) {
-                    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                        Text("[${source.id}] ${source.title}", style = MaterialTheme.typography.bodyMedium)
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text("[${source.id}] ${source.title}", style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(source.url.toHttpUrl().host, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (source.kind == "INSTANT_ANSWER") Text("DuckDuckGo topic summary · Publisher page not checked", style = MaterialTheme.typography.labelSmall)
-                        else if (source.discoveryProvider.isNotBlank()) Text("Found via ${source.discoveryProvider}", style = MaterialTheme.typography.labelSmall)
                         if (sources.size > 1) TextButton(onClick = { runCatching { website.openUri(source.url) } }, contentPadding = PaddingValues(0.dp)) {
                             Text("Open website", style = MaterialTheme.typography.labelSmall)
                         }

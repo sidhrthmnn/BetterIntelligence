@@ -121,7 +121,7 @@ fun HardwarePerformanceComparisonCard(
         modifier = modifier
             .fillMaxWidth()
             .animateContentSize(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
@@ -151,8 +151,8 @@ fun HardwarePerformanceComparisonCard(
                             text = "GGUF QUANTIZATION BENCHMARKS",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp,
-                                fontFamily = FontFamily.Monospace
+                                letterSpacing = 0.sp,
+                                fontFamily = FontFamily.Default
                             ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -198,7 +198,7 @@ fun HardwarePerformanceComparisonCard(
                 // Device Hardware Baseline Badge
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
@@ -213,8 +213,8 @@ fun HardwarePerformanceComparisonCard(
                                 text = "ACTIVE TEST PLATFORM",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    fontFamily = FontFamily.Monospace
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Default
                                 ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -239,7 +239,7 @@ fun HardwarePerformanceComparisonCard(
                                 text = "${performanceLogs.size} LOGS",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Default
                                 ),
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -251,7 +251,7 @@ fun HardwarePerformanceComparisonCard(
                 // Interactive Benchmark Runner Strip
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
@@ -270,7 +270,7 @@ fun HardwarePerformanceComparisonCard(
                                     text = "TEST & LOG MODEL PERFORMANCE",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
-                                        fontFamily = FontFamily.Monospace
+                                        fontFamily = FontFamily.Default
                                     ),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -293,7 +293,7 @@ fun HardwarePerformanceComparisonCard(
                                     label = {
                                         Text(
                                             text = "${m.name.substringBefore(" Instruct").substringBefore(" IT")} (${m.quantization})",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp)
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp)
                                         )
                                     },
                                     shape = RoundedCornerShape(6.dp),
@@ -316,7 +316,7 @@ fun HardwarePerformanceComparisonCard(
                                     selectedModelToBenchmark?.let { onRunBenchmarkForModel(it) }
                                 },
                                 enabled = !isBenchmarking && selectedModelToBenchmark != null,
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -354,8 +354,8 @@ fun HardwarePerformanceComparisonCard(
                                 text = "QUANTIZATION FILTER",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    fontFamily = FontFamily.Monospace
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Default
                                 ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -384,7 +384,7 @@ fun HardwarePerformanceComparisonCard(
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { onFilterChange(q) },
-                                label = { Text(q, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp)) },
+                                label = { Text(q, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp)) },
                                 shape = RoundedCornerShape(6.dp),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -404,7 +404,7 @@ fun HardwarePerformanceComparisonCard(
                     ) {
                         Text(
                             text = "Sort:",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
@@ -428,7 +428,7 @@ fun HardwarePerformanceComparisonCard(
                                 Text(
                                     text = label,
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 10.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     ),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
@@ -490,7 +490,7 @@ fun PerformanceLogItemCard(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
@@ -518,7 +518,7 @@ fun PerformanceLogItemCard(
                     }
                     Text(
                         text = "${log.parameterCount} • ${log.architecture.uppercase()} • ${log.chipsetAbi}",
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -551,7 +551,7 @@ fun PerformanceLogItemCard(
                         text = "${String.format("%.1f", log.tokensPerSecond)} tok/s",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
+                            fontFamily = FontFamily.Default
                         ),
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -578,11 +578,11 @@ fun PerformanceLogItemCard(
             ) {
                 // Peak RAM
                 Column {
-                    Text("RAM Footprint", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("RAM Footprint", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         text = "${log.peakRamMb} MB",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp
                         ),
@@ -592,11 +592,11 @@ fun PerformanceLogItemCard(
 
                 // TTFT / Latency
                 Column {
-                    Text("Time to 1st Token", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Time to 1st Token", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         text = "${log.timeToFirstTokenMs} ms",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp
                         ),
@@ -606,11 +606,11 @@ fun PerformanceLogItemCard(
 
                 // Prefill Speed
                 Column {
-                    Text("Prompt Speed", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Prompt Speed", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         text = "${log.promptProcessingTokSec.toInt()} tok/s",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp
                         ),
@@ -620,11 +620,11 @@ fun PerformanceLogItemCard(
 
                 // Thermal & Threads
                 Column {
-                    Text("Thermal / CPU", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Thermal / CPU", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         text = "${log.batteryTemperatureC}°C (${log.threadCount}T)",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp
                         ),
@@ -642,16 +642,16 @@ fun PerformanceLogItemCard(
                 Text(
                     text = "Efficiency: ${String.format("%.1f", log.efficiencyScore)} tok/s/GB",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Default
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = formattedDate,
                     style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Default
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

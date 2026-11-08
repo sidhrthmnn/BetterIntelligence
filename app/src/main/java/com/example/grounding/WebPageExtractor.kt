@@ -46,6 +46,18 @@ object WebPageExtractor {
         val snippetLimit = policies.flatMap { policy -> Regex("(?i)max-snippet\\s*:\\s*(\\d+)").findAll(policy).map { it.groupValues[1].toIntOrNull() ?: 0 }.toList() }.minOrNull() ?: 8000
         val query = ResearchQuery(question)
         val metadataDate = reportedDate(doc, query)
+        if (EventQuery.parse(question) != null) {
+            if (blocked.containsMatchIn(doc.title()) || doc.text().length < 1500 && blocked.containsMatchIn(doc.text())) return null
+            var remaining = snippetLimit
+            val events = EventEvidence.extract(input).filter { event ->
+                val cost = event.fields().length + 2
+                (cost <= remaining).also { if (it) remaining -= cost }
+            }
+            if (events.isNotEmpty()) return EvidenceSource(id,
+                doc.title().ifBlank { events.first().venue }.take(200), HtmlDiscovery.canonicalUrl(page.url),
+                events.joinToString("\n\n") { it.fields() }.take(snippetLimit), System.currentTimeMillis(),
+                metadataDate.first, "EVENT_LISTING", metadataDate.second, events = events)
+        }
         val structured = DocumentEvidence.structured(doc)
         // A non-JavaScript reader should see the publisher's noscript fallback.
         // Apple and other catalogues put their actual product cards here.
@@ -374,6 +386,21 @@ object WebPageExtractor {
             else -> selected.sortedWith(compareByDescending<Int> { FactualResearch.answerFocusScore(candidates[it], question) }.thenBy { it })
         }
         return EvidencePacket.completeExcerpt((dates + orderedSelected.map { candidates[it] }).distinct().joinToString("\n\n"), budget)
+    }
+
+    /** A venue's own directions/profile can establish a district alias missing
+     * from its calendar. Only actual same-origin links, never guessed URLs. */
+    fun venueLinks(page: WebDocument): List<ResearchCandidate> {
+        val base = page.url.toHttpUrl()
+        val doc = Jsoup.parse(page.text, page.url)
+        return doc.select("a[href]").take(600).mapNotNull { link ->
+            val label = link.text().trim()
+            if (!Regex("(?i)getting (?:here|to)|directions|find us|venue (?:information|address)|visit us|contact us|about (?:the|our)").containsMatchIn(label)) return@mapNotNull null
+            val url = base.resolve(link.attr("href")) ?: return@mapNotNull null
+            if (url.host != base.host || !GroundingPolicy.publicHttpsUrl(url.toString()) || url.encodedPath == base.encodedPath ||
+                url.queryParameterNames.any { it.lowercase() in setOf("token", "key", "email", "password", "auth") }) null
+            else ResearchCandidate(HtmlDiscovery.canonicalUrl(url.toString()), label.take(200))
+        }.distinctBy { it.url }.sortedByDescending { Regex("(?i)getting (?:here|to)|venue address|directions").containsMatchIn(it.title) }.take(2)
     }
 
     /** At most one useful same-origin child may be followed by the caller. */

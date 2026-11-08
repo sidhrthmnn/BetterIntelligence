@@ -3,10 +3,10 @@ package com.example.grounding
 import java.time.LocalDate
 import java.text.Normalizer
 
-enum class ResearchIntent { FACT, RECENT, COMPARISON, EXPLANATION, DIRECT_URL, MULTI_PART, NUMERICAL, HISTORICAL, LOCATION, VERIFICATION, TECHNICAL, FOLLOW_UP }
+enum class ResearchIntent { FACT, RECENT, COMPARISON, EXPLANATION, DIRECT_URL, MULTI_PART, NUMERICAL, HISTORICAL, LOCATION, VERIFICATION, TECHNICAL, FOLLOW_UP, EVENT_SCHEDULE }
 data class ResearchFocus(val question: String, val terms: Set<String>)
 data class ResearchPlan(val question: String, val intents: Set<ResearchIntent>, val entities: List<String>,
-    val focuses: List<ResearchFocus>, val searches: List<String>, val explicitUrls: List<String>) {
+    val focuses: List<ResearchFocus>, val searches: List<String>, val explicitUrls: List<String>, val event: EventQuery? = null) {
     fun coverage(text: String): Set<Int> {
         val found = ResearchQuery.words(text)
         return focuses.indices.filter { index ->
@@ -31,6 +31,7 @@ object ResearchPlanner {
         require(urls.all(GroundingPolicy::publicHttpsUrl)) { "Use a public HTTPS link" }
         val plain = Normalizer.normalize(ConversationalResearch.weatherResearchQuestion(question).replace(Regex("https?://\\S+"), " "), Normalizer.Form.NFC).trim().take(700)
         val query = ResearchQuery(plain, today)
+        val event = EventQuery.parse(plain)
         val comparison = Regex("(?i)\\b(vs\\.?|versus|compare|comparison|better than|difference between)\\b|തമ്മിൽ|താരതമ്യം").containsMatchIn(plain)
         val explanation = Regex("(?i)^(how|why|explain)\\b|എങ്ങനെ|എന്തുകൊണ്ട്").containsMatchIn(plain)
         val entities = entities(plain)
@@ -59,6 +60,7 @@ object ResearchPlanner {
         val searches = when {
             ConversationalResearch.needsSubject(question) -> emptyList()
             urls.isNotEmpty() -> emptyList()
+            event != null -> event.searches
             query.publicTopic != null -> query.publicTopic.searches()
             FinancialAnswerScope.requested(plain) && FinancialAnswerScope.borrower(plain) != null -> FinancialAnswerScope.borrower(plain)!!.let {
                 listOf("$it outstanding debt loans", "$it credit facility announced official", "$it borrowing amount credit line")
@@ -79,6 +81,7 @@ object ResearchPlanner {
         }.map { it.trim().take(400) }.filter { it.isNotBlank() }.distinctBy { ResearchQuery.words(it).sorted() }.take(3)
         val intents = buildSet {
             add(ResearchIntent.FACT)
+            if (event != null) { add(ResearchIntent.EVENT_SCHEDULE); add(ResearchIntent.RECENT) }
             if (query.relative) add(ResearchIntent.RECENT)
             if (comparison) add(ResearchIntent.COMPARISON)
             if (explanation) add(ResearchIntent.EXPLANATION)
@@ -91,7 +94,7 @@ object ResearchPlanner {
             if (Regex("(?i)\\b(Android|API|runtime|GPU|NPU|documentation)\\b").containsMatchIn(plain)) add(ResearchIntent.TECHNICAL)
             if ("(Public source topic:" in plain) add(ResearchIntent.FOLLOW_UP)
         }
-        return ResearchPlan(question, intents, entities, focuses, searches, urls.take(3))
+        return ResearchPlan(question, intents, entities, focuses, searches, urls.take(3), event)
     }
 
     fun entities(text: String): List<String> {

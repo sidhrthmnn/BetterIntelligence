@@ -76,7 +76,7 @@ fun MainAppContent(viewModel: AiCoreViewModel) {
         topBar = {
             TopAppBar(title = {
                 if (destination == AppTab.CHAT) BiAvatar(answering)
-                else Text(destination.title, style = MaterialTheme.typography.titleMedium,
+                else Text(destination.title, style = MaterialTheme.typography.titleLarge,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }, navigationIcon = {
                 IconButton(onClick = { if (destination == AppTab.CHAT) viewModel.selectTab(AppTab.HISTORY) else back() },

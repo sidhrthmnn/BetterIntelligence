@@ -6,11 +6,17 @@ import kotlinx.coroutines.Job
 @Keep
 class NativeObserver(private val job: Job?, private val resources: () -> Int = { 1 },
     private val performance: (Double, Double, Int, Int) -> Unit = { _, _, _, _ -> },
+    private val autoContinue: Boolean = false,
+    private val outputLimit: (Boolean, Int) -> Unit = { _, _ -> },
     private val update: (ByteArray, Int, Int) -> Unit) {
+    constructor(job: Job?, resources: () -> Int, performance: (Double, Double, Int, Int) -> Unit,
+        update: (ByteArray, Int, Int) -> Unit) : this(job, resources, performance, false, { _, _ -> }, update)
     @Keep fun isCancelled(): Boolean = job?.isActive == false
     @Keep fun onText(text: ByteArray, promptTokens: Int, completionTokens: Int) = update(text, promptTokens, completionTokens)
     @Keep fun resourceThreads(): Int = resources()
     @Keep fun onPerformance(promptMs: Double, decodeMs: Double, promptTokens: Int, decodedTokens: Int) = performance(promptMs, decodeMs, promptTokens, decodedTokens)
+    @Keep fun allowResponseExpansion(): Boolean = autoContinue
+    @Keep fun onOutputLimit(reached: Boolean, limit: Int) = outputLimit(reached, limit)
 }
 
 @Keep
