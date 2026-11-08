@@ -1,0 +1,21 @@
+{
+  "versionCode": 32,
+  "versionName": "2.5.0-beta7",
+  "track": "Closed testing - Alpha",
+  "releaseId": "26",
+  "status": "REVIEW_SUBMISSION_QUEUED",
+  "playOverview": "Changes in review",
+  "quickChecks": "Running; changes go to review when checks complete successfully",
+  "managedPublishing": false,
+  "automaticPublicationAfterApproval": true,
+  "recordedAtUtc": "2026-11-08T21:16:45.574279+00:00",
+  "applicationBuildRevision": "2049112",
+  "mergedRevision": "c3111757bd0629908452df5551e7c501c5017777",
+  "pullRequest": "https://github.com/sidhrthmnn/BetterIntelligence/pull/22",
+  "bundleSha256": "9b19262b81a0766433ae3512fdc142cf689956b3749fa29d7ee41fec51fc7ce8",
+  "bundleBytes": 94338042,
+  "bundleValidation": "bundle-v32-validation.json",
+  "validationReport": "../research/VALIDATION.md",
+  "releaseNotes": "Simpler screens, clearer model RAM/download states, event research recovery and bounded automatic long replies.",
+  "publicationWaitedFor": false
+}
