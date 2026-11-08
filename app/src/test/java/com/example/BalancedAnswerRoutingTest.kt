@@ -127,7 +127,7 @@ class BalancedAnswerRoutingTest {
         val refused = PublicWebResearch(WebFetcher { error("Page inaccessible") }, DiscoveryProvider { _, _ ->
             DiscoveryResult(listOf(ResearchCandidate(source.url, source.title)), DiscoveryState.FOUND)
         }).research("Search for Orion Android runtime GPU support") {}
-        assertEquals(ResearchFailure.INACCESSIBLE, refused.failure)
+        assertEquals(ResearchFailure.ROBOTS_UNAVAILABLE, refused.failure)
     }
 
     @Test fun circuitSkipsRepeatedFailuresAndRecoversAfterBoundedPause() {

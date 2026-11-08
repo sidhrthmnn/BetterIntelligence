@@ -117,6 +117,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         (if (FactualResearch.isCasting(userPlain)) listOf("actor", "cast") else emptyList()) +
         if (relative && years.isEmpty() && !currentRoleLookup) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
     val earliest: LocalDate? = when {
+        EventQuery.parse(question) != null -> null // Validate event startDate, never calendar publication recency.
         currentRoleLookup -> null
         has("today") || has("ഇന്ന്") -> today
         has("yesterday") -> today.minusDays(1)
@@ -125,6 +126,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         else -> null
     }
     val freshnessFilter: String? = when {
+        EventQuery.parse(question) != null -> null
         currentRoleLookup -> null
         // Forecast pages roll forward without publishing a new news article.
         ConversationalResearch.isWeather(userPlain) -> null

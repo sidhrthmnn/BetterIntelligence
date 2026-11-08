@@ -224,6 +224,63 @@ class WebReliabilityDeviceTest {
         } finally {repo.engine.unloadActiveModel();File(context.filesDir,"readable-live-native.json").writeText(rows.toString(2))}
     }
 
+    @Test fun chatOutputBudgetExpandsWithoutReplayingThePrefix(): Unit = runBlocking {
+        admit()
+        val model = withTimeout(90_000) { repo.allModels.first { it.any { m -> m.filename == "Qwen3.5-2B-Q4_K_M.gguf" && m.isInstalled } } }
+            .single { it.filename == "Qwen3.5-2B-Q4_K_M.gguf" }
+        repo.engine.setProcessingMode(ProcessingMode.CPU); repo.switchActiveModel(model)
+        val prompt = "Write every integer from 1 to 50, in order, separated by commas. Include every number. No explanation."
+        try {
+            val params = GenerationParams(contextSize = 2048, maxTokens = 16, temperature = 0f, threads = 4)
+            repo.engine.generateSync(prompt, params)
+            val fixed = repo.engine.telemetry.value
+            val text = repo.engine.generateSync(prompt, params.copy(autoContinue = true))
+            val expanded = repo.engine.telemetry.value
+            File(context.filesDir, "response-budget-native.json").writeText(JSONObject().put("model", model.filename)
+                .put("fixedTokens", fixed.completionTokens).put("fixedLimit", fixed.outputTokenLimit)
+                .put("expandedTokens", expanded.completionTokens).put("expandedLimit", expanded.outputTokenLimit)
+                .put("expandedHitLimit", expanded.outputLimitReached).put("answer", text).toString(2))
+            assertTrue(fixed.completionTokens <= 16)
+            assertTrue(text, expanded.completionTokens > 16)
+            assertTrue(text, Regex("\\b50\\b").containsMatchIn(text))
+            assertFalse(expanded.outputLimitReached)
+            assertEquals(1, Regex("(?<![0-9])1(?![0-9])").findAll(text).count())
+        } finally { repo.engine.unloadActiveModel() }
+    }
+
+    @Test fun scheduledPublicQuestionsUseLiveResearchAndTheActualModel(): Unit = runBlocking {
+        admit()
+        val model = withTimeout(90_000) { repo.allModels.first { it.any { m -> m.filename == "Qwen3.5-2B-Q4_K_M.gguf" && m.isInstalled } } }
+            .single { it.filename == "Qwen3.5-2B-Q4_K_M.gguf" }
+        repo.engine.setProcessingMode(ProcessingMode.CPU); repo.switchActiveModel(model)
+        repo.preferencesRepository.saveWebAllowed(true)
+        compose.waitUntil(20_000) { vm.webAllowed.value && vm.conversationId.value != 0L && !repo.isModelLoading }
+        compose.runOnUiThread {
+            vm.toggleForegroundService(false)
+            vm.updateGenerationParams(GenerationParams(contextSize = 2048, maxTokens = 160, temperature = 0f, threads = 4))
+            vm.useSearchProviderForTesting(object : SearchProvider {
+                private val delegate = PublicWebResearch(discoveryAllowed = { repo.preferencesRepository.webAllowed.first() })
+                override suspend fun search(question: String): List<EvidenceSource> = research(question) {}.sources
+                override suspend fun research(question: String, progress: (ResearchStage) -> Unit): ResearchOutcome = delegate.research(question, progress).also { outcome ->
+                    File(context.filesDir, "event-chat-public-research.json").writeText(JSONObject().put("question", question)
+                        .put("sources", GroundingResult(sources = outcome.sources).json()).put("failure", outcome.failure)
+                        .put("recovery", outcome.metrics.recoveryAttempts).put("extraction", JSONObject(outcome.metrics.extraction)).toString(2))
+                }
+            })
+        }
+        try {
+            val q = "When is the next event in O2 Greenwich?"
+            fresh(); val answer = ask(q); val sources = GroundingResult.sources(answer.sourcesJson)
+            File(context.filesDir, "event-live-native.json").writeText(rows.toString(2))
+            assertTrue(answer.content, answer.groundingStatus in setOf("EVIDENCE_CITED", "PARTIALLY_SUPPORTED", "SOURCE_EXCERPTS"))
+            assertTrue(answer.content, sources.any { it.events.isNotEmpty() })
+            assertTrue("Official calendar not reached: ${sources.map { it.url }}", sources.any { it.url.startsWith("https://www.theo2.co.uk/events") })
+            assertTrue(answer.content, GroundingPolicy.validateCitations(answer.content, sources).second)
+            assertTrue(answer.content, sources.flatMap { it.events }.any { answer.content.contains(it.name) && it.instant()?.isAfter(java.time.Instant.now()) == true })
+            assertFalse(answer.content, answer.content.contains("couldn't verify"))
+        } finally { repo.engine.unloadActiveModel(); File(context.filesDir, "event-live-native.json").writeText(rows.toString(2)) }
+    }
+
     @Test fun tenEarlierPublicPhoneQuestionsUseTheActualModelAndLiveResearch(): Unit = runBlocking {
         admit()
         val model=withTimeout(90_000) {repo.allModels.first { it.any { m -> m.filename=="Qwen3.5-2B-Q4_K_M.gguf" && m.isInstalled } }}.single {it.filename=="Qwen3.5-2B-Q4_K_M.gguf"}

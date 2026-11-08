@@ -2,507 +2,134 @@ package com.example.ui.components
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.engine.HuggingFaceGgufFile
 import com.example.engine.HuggingFaceModelSearchResult
+import com.example.ui.screens.ModelPresentation
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HuggingFaceDiscoveryCard(
-    searchQuery: String,
-    searchResults: List<HuggingFaceModelSearchResult>,
-    isSearching: Boolean,
-    selectedRepoId: String?,
-    repoGgufFiles: List<HuggingFaceGgufFile>,
-    isLoadingFiles: Boolean,
-    onSearchQueryChange: (String) -> Unit,
-    onSearch: (String) -> Unit,
-    onSelectRepo: (String) -> Unit,
-    onClearRepoSelection: () -> Unit,
-    onDownloadGgufFile: (String, HuggingFaceGgufFile) -> Unit,
-    modifier: Modifier = Modifier,
-    initiallyExpanded: Boolean = false
+    searchQuery: String, searchResults: List<HuggingFaceModelSearchResult>, isSearching: Boolean,
+    selectedRepoId: String?, repoGgufFiles: List<HuggingFaceGgufFile>, isLoadingFiles: Boolean,
+    onSearchQueryChange: (String) -> Unit, onSearch: (String) -> Unit, onSelectRepo: (String) -> Unit,
+    onClearRepoSelection: () -> Unit, onDownloadGgufFile: (String, HuggingFaceGgufFile) -> Unit,
+    modifier: Modifier = Modifier, initiallyExpanded: Boolean = false, availableRamMb: Long? = null
 ) {
     val context = LocalContext.current
-    var isExpanded by remember { mutableStateOf(initiallyExpanded) }
-
-    val quickQueries = listOf(
-        "qwen2.5 1.5b gguf",
-        "gemma-3 270m gguf",
-        "llama-3.2 1b gguf",
-        "smollm2 gguf",
-        "qwen3 0.6b gguf"
-    )
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("hf_discovery_card"),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Header Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isExpanded = !isExpanded },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.CloudDownload,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = "Find a model",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp,
-                                fontFamily = FontFamily.Monospace
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Search or paste a public Hugging Face repository",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
+    var lastSearch by remember { mutableStateOf<String?>(null) }
+    fun search(value: String) { lastSearch = value; onSearch(value) }
+    Column(modifier.fillMaxWidth().testTag("hf_discovery_card"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (!initiallyExpanded) TextButton(onClick = { expanded = !expanded }) {
+            Icon(Icons.Default.Search, null); Spacer(Modifier.width(8.dp)); Text("Find models")
+            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+        }
+        if (expanded) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(searchQuery, onSearchQueryChange, placeholder = { Text("Search models or repository", style = MaterialTheme.typography.bodyMedium) },
+                    leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(20.dp)) },
+                    trailingIcon = { if (searchQuery.isNotEmpty()) IconButton(onClick = { onSearchQueryChange("") }) { Icon(Icons.Default.Close, "Clear search", Modifier.size(18.dp)) } },
+                    singleLine = true, shape = RoundedCornerShape(16.dp), modifier = Modifier.weight(1f).testTag("hf_search_input"))
+                FilledIconButton(onClick = { search(searchQuery) }, enabled = !isSearching && searchQuery.isNotBlank(),
+                    modifier = Modifier.size(48.dp).testTag("hf_search_submit_btn"), shape = RoundedCornerShape(14.dp)) {
+                    if (isSearching) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                    else Icon(Icons.Default.Search, "Search models")
                 }
-
-                Text(
-                    text = if (isExpanded) "Collapse" else "Explore",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                )
             }
-
-            AnimatedVisibility(visible = isExpanded) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    // Search Input and Action
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = onSearchQueryChange,
-                            placeholder = {
-                                Text(
-                                    "Search Hugging Face Hub (e.g. bartowski, Qwen)...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontSize = 12.sp
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = "Search HF",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            },
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { onSearchQueryChange("") }) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = "Clear",
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("hf_search_input"),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                            )
-                        )
-
-                        Button(
-                            onClick = { onSearch(searchQuery) },
-                            enabled = !isSearching && searchQuery.isNotBlank(),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-                            modifier = Modifier.testTag("hf_search_submit_btn")
-                        ) {
-                            if (isSearching) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            } else {
-                                Text(
-                                    "Search",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                                )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf("Qwen" to "qwen3 gguf", "Gemma" to "gemma gguf", "LFM" to "lfm3 gguf", "Small models" to "1b gguf")) { (label, value) ->
+                    SuggestionChip(onClick = { onSearchQueryChange(value); search(value) }, label = { Text(label) }, shape = RoundedCornerShape(50))
+                }
+            }
+            if (isSearching) Text("Finding models…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (searchResults.isNotEmpty()) {
+                Text("${searchResults.size} models", style = MaterialTheme.typography.labelLarge)
+                searchResults.forEach { repo ->
+                    ScreenCard(Modifier.testTag("hf_model_${repo.repoId}")) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            ModelMark(repo.repoId)
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(repo.repoId.substringAfter('/').removeSuffix("-GGUF").replace('-', ' '), style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(repo.author, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
-                    }
-
-                    // Quick Search Chips
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(quickQueries) { query ->
-                            Surface(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
-                                    .clickable {
-                                        onSearchQueryChange(query)
-                                        onSearch(query)
-                                    },
-                                color = MaterialTheme.colorScheme.surfaceVariant
-                            ) {
-                                Text(
-                                    text = query,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 10.sp
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Search Results List
-                    if (searchResults.isNotEmpty()) {
-                        Text(
-                            text = "HUB REPOSITORIES (${searchResults.size})",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 10.sp
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            searchResults.forEach { repo ->
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                                        .clickable { onSelectRepo(repo.repoId) },
-                                    color = MaterialTheme.colorScheme.surfaceVariant
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(10.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = repo.repoId,
-                                                style = MaterialTheme.typography.titleSmall.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontFamily = FontFamily.Monospace,
-                                                    fontSize = 12.sp
-                                                ),
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "Author: ${repo.author} • ${repo.downloads} downloads • ${repo.likes} likes",
-                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-
-                                        Button(
-                                            onClick = { onSelectRepo(repo.repoId) },
-                                            shape = RoundedCornerShape(6.dp),
-                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.primary,
-                                                contentColor = MaterialTheme.colorScheme.onPrimary
-                                            )
-                                        ) {
-                                            Text(
-                                                "View Files",
-                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 11.sp
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            val count = repo.downloads.toLong()
+                            Text(if (count >= 1000000) "${"%.1f".format(count / 1000000.0)}M downloads" else if (count >= 1000) "${count / 1000}K downloads" else "$count downloads",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Button(onClick = { onSelectRepo(repo.repoId) }, contentPadding = PaddingValues(horizontal = 14.dp),
+                                modifier = Modifier.testTag("hf_download_${repo.repoId}")) {
+                                Icon(Icons.Default.Download, null, Modifier.size(17.dp)); Spacer(Modifier.width(6.dp)); Text("Download")
                             }
                         }
                     }
                 }
+                Text("Choose a file size before downloading. Compatibility is checked before loading.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if (!isSearching && lastSearch == searchQuery && searchQuery.isNotBlank()) {
+                ScreenCard { Text("No models found", style = MaterialTheme.typography.titleMedium)
+                    Text("Try another name or a public repository ID.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
     }
-
-    // Modal Sheet for Repo GGUF Files
-    if (selectedRepoId != null) {
-        ModalBottomSheet(
-            modifier = Modifier.fillMaxHeight(0.9f),
-            onDismissRequest = onClearRepoSelection,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Hugging Face GGUF Quantizations",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = selectedRepoId,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        )
-                    }
-
-                    IconButton(onClick = onClearRepoSelection) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
+    if (selectedRepoId != null) ModalBottomSheet(onDismissRequest = onClearRepoSelection,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = MaterialTheme.colorScheme.background) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(.88f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text("Choose a version", style = MaterialTheme.typography.titleLarge)
+                    Text(selectedRepoId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                IconButton(onClick = onClearRepoSelection) { Icon(Icons.Default.Close, "Close model versions") }
+            }
+            TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://huggingface.co/$selectedRepoId"))) }) {
+                Icon(Icons.Default.OpenInNew, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Model card & licence")
+            }
+            when {
+                isLoadingFiles -> Row(Modifier.padding(vertical = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp); Text("Checking available files…")
                 }
-
-                if (isLoadingFiles) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                            Text(
-                                text = "Fetching Hugging Face GGUF files & SHA-256 checksums...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                repoGgufFiles.isEmpty() -> ScreenCard {
+                    Text("No supported download files", style = MaterialTheme.typography.titleMedium)
+                    Text("For gated models, download from the publisher and use Import model.", style = MaterialTheme.typography.bodyMedium)
+                }
+                else -> LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+                    item { Text("Smallest RAM estimate first. Estimates depend on context and model architecture.", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    items(repoGgufFiles.sortedBy { it.recommendedRamMb }, key = { it.filename }) { file -> ScreenCard {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(file.filename, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            QuantBadge(file.quantization)
                         }
-                    }
-                } else if (repoGgufFiles.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No single-file text GGUF downloads found. For gated models, download from the publisher and use Import a GGUF file.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    Text("Review the publisher’s license and model card. Compatibility depends on the model architecture and this device’s memory.",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://huggingface.co/$selectedRepoId"))) }) {
-                        Text("View model card and license")
-                    }
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(repoGgufFiles) { file ->
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = file.filename,
-                                            style = MaterialTheme.typography.titleSmall.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                fontFamily = FontFamily.Monospace,
-                                                fontSize = 12.sp
-                                            ),
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        QuantBadge(text = file.quantization)
-                                    }
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "${file.sizeMb} MB download • About ${file.recommendedRamMb} MB memory",
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                fontFamily = FontFamily.Monospace,
-                                                fontSize = 10.sp
-                                            ),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-
-                                    if (!file.sha256Oid.isNullOrBlank()) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                text = "SHA-256 (LFS): ${file.sha256Oid.take(16)}...",
-                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                    fontFamily = FontFamily.Monospace,
-                                                    fontSize = 9.sp
-                                                ),
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
-
-                                    Button(
-                                        onClick = { onDownloadGgufFile(selectedRepoId, file) },
-                                        shape = RoundedCornerShape(6.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary,
-                                            contentColor = MaterialTheme.colorScheme.onPrimary
-                                        ),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Download,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = if (file.sha256Oid != null) "Download & verify (${file.sizeMb} MB)" else "Download (${file.sizeMb} MB; no publisher checksum)",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                                        )
-                                    }
-                                }
+                        Text("${ModelPresentation.size(file.sizeMb.toLong())} download · ~${ModelPresentation.size(file.recommendedRamMb.toLong())} RAM",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (availableRamMb != null && file.recommendedRamMb > availableRamMb) Text("More free RAM may be needed to run this version.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (file.sha256Oid.isNullOrBlank()) "No publisher checksum" else "Checksum available", Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Button(onClick = { onDownloadGgufFile(selectedRepoId, file); onClearRepoSelection() }, modifier = Modifier.testTag("hf_file_download_${file.filename}")) {
+                                Icon(Icons.Default.Download, null, Modifier.size(17.dp)); Spacer(Modifier.width(6.dp)); Text("Download")
                             }
                         }
-                    }
+                    } }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

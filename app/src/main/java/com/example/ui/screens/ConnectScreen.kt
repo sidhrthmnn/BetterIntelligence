@@ -2,6 +2,11 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.ui.components.ScreenCard
+import com.example.ui.components.DetailDisclosure
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.ui.platform.LocalContext
@@ -29,9 +34,9 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
     val preparing = !telemetry.isModelLoaded && (active != null || loadingModelId != null)
     var developer by rememberSaveable { mutableStateOf(false) }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("connect_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
-            Text("Let supported apps use this device’s model for tasks such as AI Polish. You choose which apps have access.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Your local AI, in the apps you allow.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
             Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
@@ -42,21 +47,17 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
                 }
             }
         }
-        item {
-            Text("How to connect", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            Text("1. Choose Better Intelligence in a supported app’s AI settings.\n2. Request AI Polish or another local AI action.\n3. Return here and allow the app, then retry.", style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(8.dp))
-            Text("Apps such as Typeright need to implement this connection. Installing Better Intelligence alone does not change their AI provider.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        item { Text("App access", style = MaterialTheme.typography.titleLarge) }
+        item { DetailDisclosure("Connect an app", "Set up local AI in TypeRight or another supported app") {
+            Text("1. Select Better Intelligence in the app’s AI settings.\n2. Request a polish or AI action.\n3. Allow the app here, then retry.", style = MaterialTheme.typography.bodyMedium)
+            Text("The other app must support this connection. Installing BI does not change its AI provider.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } }
+        item { Text("App access", style = MaterialTheme.typography.titleMedium) }
         if (policies.isEmpty()) item {
             OutlinedCard(Modifier.fillMaxWidth().testTag("no_connected_apps")) {
                 Column(Modifier.padding(20.dp)) {
                     Text("No apps have requested access yet", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
-                    Text("Connection requests will appear here. Your AI stays private until you allow an app.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Select Better Intelligence in a supported app. Its request will appear here for approval.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -64,7 +65,7 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
             AppAccessCard(policy, viewModel)
         }
         item {
-            Text("Polish requests stay on this device. Text and results are excluded from access logs. Memory sharing is a separate choice.",
+            Text("Requests stay local. Memory sharing needs separate permission.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick = { developer = !developer }) { Text(if (developer) "Hide developer details" else "For app developers") }
             if (developer) {
@@ -84,16 +85,15 @@ private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewMo
             context.packageManager.getApplicationIcon(policy.packageName).toBitmap(48, 48)
         }.getOrNull() }
     }
-    Column(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    ScreenCard {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (icon != null) Image(icon!!.asImageBitmap(), null, Modifier.size(40.dp))
+                if (icon != null) Image(icon!!.asImageBitmap(), null, Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)))
                 else Icon(Icons.Default.Apps, null, Modifier.size(40.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(policy.appName, style = MaterialTheme.typography.titleMedium)
-                    Text(policy.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(if (policy.isBlocked) "Denied" else if (policy.isWhitelisted) "Approved · Local inference" else "Pending approval",
+                    Text(policy.appName, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(if (policy.isBlocked) "Denied" else if (policy.isWhitelisted) "Allowed · On-device AI" else "Needs approval",
                         style = MaterialTheme.typography.labelMedium)
                 }
                 Switch(checked = policy.isWhitelisted && !policy.isBlocked,
@@ -104,6 +104,7 @@ private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewMo
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide permissions" else "Permissions and limits") }
             if (expanded) {
+                Text(policy.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 PermissionRow("AI generation and polish", policy.allowInference) { viewModel.togglePolicyInference(policy) }
                 PermissionRow("Read shared memories", policy.allowReadMemory) { viewModel.togglePolicyReadMemory(policy) }
                 PermissionRow("Write shared memories", policy.allowWriteMemory) { viewModel.togglePolicyWriteMemory(policy) }
@@ -115,7 +116,6 @@ private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewMo
                 }
             }
         }
-        HorizontalDivider()
     }
 }
 

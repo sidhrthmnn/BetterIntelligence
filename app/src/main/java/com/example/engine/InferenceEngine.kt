@@ -37,7 +37,8 @@ data class GenerationParams(
     val stopSequences: List<String> = listOf("</s>", "<|im_end|>", "<|eot_id|>", "[/INST]"),
     val enableSimd: Boolean = true,
     val isAdvancedMode: Boolean = false,
-    val history: List<ChatTurn> = emptyList()
+    val history: List<ChatTurn> = emptyList(),
+    val autoContinue: Boolean = false
 )
 
 /**
@@ -84,7 +85,9 @@ data class HardwareTelemetry(
     val fallbackCount: Int = 0,
     val lastFallback: String = "",
     val backendDecision: String = "Automatic · Selects optimal CPU/GPU backend",
-    val backendStatus: String = "Idle"
+    val backendStatus: String = "Idle",
+    val outputTokenLimit: Int = 0,
+    val outputLimitReached: Boolean = false
 ) {
     fun toJson(): String {
         return JSONObject().apply {
@@ -112,6 +115,8 @@ data class HardwareTelemetry(
             put("lastFallback", lastFallback)
             put("backendDecision", backendDecision)
             put("backendStatus", backendStatus)
+            put("outputTokenLimit", outputTokenLimit)
+            put("outputLimitReached", outputLimitReached)
         }.toString()
     }
 }
@@ -367,7 +372,8 @@ class InferenceEngine internal constructor(private val context: android.content.
                 if (busy.allowToken()) listener?.onToken(delta, index)
             }
             _telemetry.value = _telemetry.value.copy(tokensPerSecond = result.tokensPerSecond, completionTokens = result.outputTokens,
-                promptTokens = result.inputTokens, promptEvaluationTimeMs = result.prefillMs, peakMemoryUsageMb = memoryMb())
+                promptTokens = result.inputTokens, promptEvaluationTimeMs = result.prefillMs, peakMemoryUsageMb = memoryMb(),
+                outputTokenLimit = result.outputTokenLimit, outputLimitReached = result.outputTokens >= result.outputTokenLimit)
             listener?.onComplete(result.text, SystemClock.elapsedRealtime() - started, result.tokensPerSecond, result.inputTokens, result.outputTokens)
             return result.text
         } catch (failure: Exception) {
@@ -438,10 +444,10 @@ class InferenceEngine internal constructor(private val context: android.content.
                         check(!initialized.lowMemory && initialized.availableMb >= 512 && initialized.thermal < (if (candidate == ProcessingMode.GPU) 3 else 5)) {
                             "Memory or thermal pressure after backend initialization; release this graph before generating"
                         }
-                        session.generate("Hi", effective.copy(maxTokens = 1, temperature = 0f, history = emptyList(), systemPrompt = null))
+                        session.generate("Hi", effective.copy(maxTokens = 1, temperature = 0f, history = emptyList(), systemPrompt = null, autoContinue = false))
                         val probes = if (session.needsThoughtBudget) BackendValidation.probes.take(1) else BackendValidation.probes
                         val results = probes.map { probe ->
-                            session.generate(probe.prompt, effective.copy(maxTokens = if (session.needsThoughtBudget) 96 else 48,
+                            session.generate(probe.prompt, effective.copy(maxTokens = if (session.needsThoughtBudget) 96 else 48, autoContinue = false,
                                 temperature = 0f, topK = 1, topP = 1f, history = emptyList(), systemPrompt = null)).also {
                                 check(BackendValidation.correct(probe, it.text)) { "$candidate returned an incorrect or incomplete controlled arithmetic result" }
                                 check(it.tokensPerSecond.isFinite() && it.tokensPerSecond > 0 && it.firstTokenMs > 0) { "$candidate did not report usable probe timing" }
@@ -533,7 +539,8 @@ class InferenceEngine internal constructor(private val context: android.content.
             if (target == ProcessingMode.GPU) hardware.liteRtGpuStatus(true, "LiteRT OpenCL initialization and model decode succeeded")
             _telemetry.value = _telemetry.value.copy(tokensPerSecond = result.tokensPerSecond,
                 completionTokens = result.outputTokens, promptTokens = result.inputTokens,
-                promptEvaluationTimeMs = result.prefillMs, peakMemoryUsageMb = memoryMb())
+                promptEvaluationTimeMs = result.prefillMs, peakMemoryUsageMb = memoryMb(),
+                outputTokenLimit = result.outputTokenLimit, outputLimitReached = result.outputTokens >= result.outputTokenLimit)
             listener?.onComplete(result.text, SystemClock.elapsedRealtime() - started, result.tokensPerSecond, result.inputTokens, result.outputTokens)
             return result.text
         } catch (failure: Exception) {
@@ -612,10 +619,10 @@ class InferenceEngine internal constructor(private val context: android.content.
         try {
             // Equalise cold mmap/shader effects before the timed trial.
             runtime.generate("Hi", "", NativeObserver(job, { hardware.threads(params.threads) }) { _, _, _ -> },
-                params.copy(maxTokens = 1, temperature = 0f), 8_000)
+                params.copy(maxTokens = 1, temperature = 0f, autoContinue = false), 8_000)
             start = SystemClock.elapsedRealtime()
             val generated = runtime.generate("Count from one to fifty, separated by commas.", "", observer,
-                params.copy(maxTokens = 8, temperature = 0f, history = emptyList(), systemPrompt = null), 8_000)
+                params.copy(maxTokens = 8, temperature = 0f, history = emptyList(), systemPrompt = null, autoContinue = false), 8_000)
             val after = hardware.resources()
             return BackendMeasurement(if (loadedLayers > 0) ProcessingMode.GPU else ProcessingMode.CPU, loadedLayers, params.threads,
                 if (nativeSpeed > 0) nativeSpeed else if (count > 1) (count - 1) * 1000f / (last - first).coerceAtLeast(1) else 0f,
@@ -743,7 +750,8 @@ class InferenceEngine internal constructor(private val context: android.content.
         var promptCount = 0
         var completionCount = 0
         var firstTokenMs = 0L
-        _telemetry.value = _telemetry.value.copy(isRunning = true, completionTokens = 0, tokensPerSecond = 0f, timeToFirstTokenMs = 0, peakMemoryUsageMb = 0f)
+        _telemetry.value = _telemetry.value.copy(isRunning = true, completionTokens = 0, tokensPerSecond = 0f, timeToFirstTokenMs = 0, peakMemoryUsageMb = 0f,
+            outputTokenLimit = 0, outputLimitReached = false)
         try {
             val system = params.systemPrompt.orEmpty()
             require(prompt.length + system.length <= 65536) { "Prompt is too long" }
@@ -776,6 +784,8 @@ class InferenceEngine internal constructor(private val context: android.content.
             val observer = NativeObserver(kotlinx.coroutines.currentCoroutineContext()[Job], ::resourceThreads, { promptMs, decodeMs, _, decoded ->
                 _telemetry.value = _telemetry.value.copy(promptEvaluationTimeMs = promptMs.toLong(), peakMemoryUsageMb = memoryMb(),
                     tokensPerSecond = if (decodeMs > 0 && decoded > 0) (decoded * 1000 / decodeMs).toFloat() else 0f)
+            }, autoContinue = effective.autoContinue, outputLimit = { reached, limit ->
+                _telemetry.value = _telemetry.value.copy(outputTokenLimit = limit, outputLimitReached = reached)
             }) { bytes, inputTokens, outputTokens ->
                 val full = bytes.toString(Charsets.UTF_8)
                 val delta = full.removePrefix(emitted)

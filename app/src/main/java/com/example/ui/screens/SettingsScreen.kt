@@ -7,68 +7,59 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.BuildConfig
-import com.example.engine.ProcessingMode
 import com.example.ui.AiCoreViewModel
 import com.example.ui.AppTab
-import com.example.ui.components.HardwareDiagnosticCard
-import com.example.ui.components.HardwarePerformanceComparisonCard
+import com.example.ui.components.*
 import java.text.DateFormat
 import java.util.Date
 
 @Composable
 private fun SettingsRow(title: String, subtitle: String, icon: ImageVector? = null, onClick: () -> Unit) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = { Text(subtitle) },
-        leadingContent = icon?.let { { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } },
-        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("setting_$title")
-    )
+    OutlinedCard(Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("setting_$title"),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        ListItem(headlineContent = { Text(title, style = MaterialTheme.typography.titleSmall) },
+            supportingContent = { Text(subtitle, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall) },
+            leadingContent = icon?.let { { Icon(it, null, tint = MaterialTheme.colorScheme.primary) } },
+            trailingContent = { Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface))
+    }
 }
 
 @Composable
 fun SettingsScreen(viewModel: AiCoreViewModel) {
     val active by viewModel.activeModel.collectAsState()
-    val secondary by viewModel.secondaryModel.collectAsState()
     val allowed by viewModel.webAllowed.collectAsState()
     val appearance by viewModel.appearance.collectAsState()
-    val modelSubtitle = buildString {
-        append(active?.name?.substringBefore(" · ") ?: "Choose, download and manage storage")
-        secondary?.takeIf { it.id != active?.id }?.let {
-            append(" · Fallback: ${it.name.substringBefore(" · ")}")
-        }
-    }
-    LazyColumn(Modifier.fillMaxSize().testTag("settings_list"), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)) {
-        item { SettingsSection("AI & models") }
-        item { SettingsRow("Models", modelSubtitle, Icons.Default.Memory) { viewModel.selectTab(AppTab.MODELS) } }
-        item { SettingsRow("Connected apps", "Manage access to local AI", Icons.Default.Apps) { viewModel.selectTab(AppTab.CONNECT) } }
-        item { SettingsRow("Web & grounding", if (allowed) "Enabled for chat · Connected apps stay local" else "Off · Fully local answers", Icons.Default.Language) { viewModel.selectTab(AppTab.WEB) } }
-        item { SettingsSection("Personalisation") }
+    LazyColumn(Modifier.fillMaxSize().testTag("settings_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { SettingsSection("Your AI") }
+        item { SettingsRow("Models", active?.name?.substringBefore(" · ") ?: "Find, download and manage models", Icons.Default.Memory) { viewModel.selectTab(AppTab.MODELS) } }
+        item { SettingsRow("Connected apps", "Choose which apps can use your AI", Icons.Default.Apps) { viewModel.selectTab(AppTab.CONNECT) } }
+        item { SettingsRow("Web & grounding", if (allowed) "On · Answers with sources" else "Off · Local answers", Icons.Default.Language) { viewModel.selectTab(AppTab.WEB) } }
+        item { SettingsSection("Personalise") }
         item { SettingsRow("Appearance", if (appearance == "LIGHT") "Light mode" else "Dark mode", Icons.Default.Palette) { viewModel.selectTab(AppTab.APPEARANCE) } }
-        item { SettingsRow("Memory", "Choose what your chat remembers", Icons.Default.Psychology) { viewModel.selectTab(AppTab.MEMORY) } }
+        item { SettingsRow("Memory", "Chat context and saved memories", Icons.Default.Psychology) { viewModel.selectTab(AppTab.MEMORY) } }
         item { SettingsSection("Privacy & about") }
-        item { SettingsRow("Privacy & data", "Conversations, network and local storage", Icons.Default.Lock) { viewModel.selectTab(AppTab.PRIVACY) } }
-        item { SettingsRow("Advanced & about", "Response settings, processing, diagnostics and licences", Icons.Default.Tune) { viewModel.selectTab(AppTab.ADVANCED) } }
+        item { SettingsRow("Privacy & data", "Your data, storage and permissions", Icons.Default.Lock) { viewModel.selectTab(AppTab.PRIVACY) } }
+        item { SettingsRow("Advanced & about", "Processing, performance and app details", Icons.Default.Tune) { viewModel.selectTab(AppTab.ADVANCED) } }
     }
 }
 
 @Composable
-private fun SettingsSection(text: String) { Text(text, Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
-    style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+private fun SettingsSection(text: String) { Text(text, Modifier.padding(top = 12.dp, bottom = 4.dp),
+    style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
 @Composable
 fun HistoryScreen(viewModel: AiCoreViewModel) {
@@ -76,109 +67,85 @@ fun HistoryScreen(viewModel: AiCoreViewModel) {
     var deleting by remember { mutableStateOf<Long?>(null) }
     var renaming by remember { mutableStateOf<com.example.data.ConversationEntity?>(null) }
     var name by remember { mutableStateOf("") }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
-        item { Text("Your conversations stay on this device.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    LazyColumn(Modifier.fillMaxSize().testTag("history_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item { Text("Saved on this device.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (conversations.isEmpty()) item { ScreenCard { Text("No conversations yet", style = MaterialTheme.typography.titleMedium)
+            Text("Start a chat and it will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = { viewModel.selectTab(AppTab.CHAT) }) { Text("Open chat") } } }
         items(conversations, key = { it.id }) { conversation ->
-            ListItem(headlineContent = { Text(conversation.title) }, supportingContent = {
-                Text((if (conversation.draft.isNotEmpty()) "Draft · " else "") + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(conversation.updatedAt)))
-            }, trailingContent = { Row {
-                IconButton(onClick = { renaming = conversation; name = conversation.title }) { Icon(Icons.Default.Edit, "Rename ${conversation.title}") }
-                IconButton(onClick = { deleting = conversation.id }) { Icon(Icons.Default.DeleteOutline, "Delete ${conversation.title}") }
-            } },
-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
-                modifier = Modifier.clickable { viewModel.openConversation(conversation.id) }.testTag("conversation_${conversation.id}"))
+            OutlinedCard(Modifier.fillMaxWidth().clickable { viewModel.openConversation(conversation.id) }.testTag("conversation_${conversation.id}"),
+                colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                ListItem(headlineContent = { Text(conversation.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall) },
+                    supportingContent = { Text((if (conversation.draft.isNotEmpty()) "Draft · " else "") + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(conversation.updatedAt)), style = MaterialTheme.typography.bodySmall) },
+                    trailingContent = { Row {
+                        IconButton(onClick = { renaming = conversation; name = conversation.title }) { Icon(Icons.Default.Edit, "Rename ${conversation.title}", Modifier.size(19.dp)) }
+                        IconButton(onClick = { deleting = conversation.id }) { Icon(Icons.Default.DeleteOutline, "Delete ${conversation.title}", Modifier.size(19.dp)) }
+                    } }, colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface))
+            }
         }
     }
     renaming?.let { conversation -> AlertDialog(onDismissRequest = { renaming = null }, title = { Text("Rename conversation") },
         text = { OutlinedTextField(name, { name = it.take(100) }, label = { Text("Conversation name") }, singleLine = true) },
         confirmButton = { TextButton(onClick = { viewModel.renameConversation(conversation.id, name); renaming = null }, enabled = name.isNotBlank()) { Text("Save") } },
         dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } }) }
-    deleting?.let { id -> DeleteDialog("Delete conversation?", "This removes its messages and draft from this device.", { deleting = null }) {
-        viewModel.deleteConversation(id); deleting = null
-    } }
+    deleting?.let { id -> DeleteDialog("Delete conversation?", "This removes its messages and draft from this device.", { deleting = null }) { viewModel.deleteConversation(id); deleting = null } }
 }
 
 @Composable
 fun AppearanceScreen(viewModel: AiCoreViewModel) {
     val appearance by viewModel.appearance.collectAsState()
-    Column(Modifier.fillMaxWidth().padding(20.dp)) {
-        Text("Make yourself at home", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(20.dp))
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Choose your look", style = MaterialTheme.typography.titleMedium)
         listOf("LIGHT" to "Light mode", "AMOLED" to "Dark mode").forEach { (value, label) ->
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (appearance == value) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.background,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { viewModel.setAppearance(value) }
-            ) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedCard(Modifier.fillMaxWidth().clickable { viewModel.setAppearance(value) },
+                colors = CardDefaults.outlinedCardColors(containerColor = if (appearance == value) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)) {
+                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(appearance == value, { viewModel.setAppearance(value) }, modifier = Modifier.testTag("appearance_$value"))
-                    Text(label, style = MaterialTheme.typography.bodyLarge)
+                    Text(label, style = MaterialTheme.typography.titleSmall)
                 }
             }
         }
-        Text("Text follows your Android font and display size settings.", Modifier.padding(top = 24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Uses your Android font and display size.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WebSettingsScreen(viewModel: AiCoreViewModel) {
     val allowed by viewModel.webAllowed.collectAsState()
     val diagnostics by viewModel.researchDiagnosticReport.collectAsState()
-    var more by rememberSaveable { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize().testTag("web_settings_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item {
-            OutlinedCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Web research", style = MaterialTheme.typography.titleMedium)
-                            Text(if (allowed) "On · Checks public factual answers" else "Off · Answers stay on this device", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
-                    }
-                    Text("Uses Exa to find links, then reads public websites. Your search question and IP address are visible to those services.", style = MaterialTheme.typography.bodyMedium)
-                    Text("Private requests, saved memories and connected apps stay local. Don't include secrets in a web-enabled question.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+    LazyColumn(Modifier.fillMaxSize().testTag("web_settings_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { ScreenCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Language, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) { Text("Web research", style = MaterialTheme.typography.titleMedium)
+                    Text(if (allowed) "On · Check public facts" else "Off · Local answers", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                Switch(allowed, { viewModel.setWebAllowed(it) }, modifier = Modifier.testTag("allow_web"))
             }
-        }
-        item {
-            OutlinedCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Find, read and cite", style = MaterialTheme.typography.titleMedium)
-                    Text("1. Find relevant pages\n2. Read and compare information\n3. Answer with sources")
-                    Text("If Exa cannot help, BI can check its small public-source directory on device. It does not use another search engine.", style = MaterialTheme.typography.bodySmall)
-                    Text("Search can take up to a minute. You can stop it at any time.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            Text("Your public question goes to Exa. Visited websites see your IP address.", style = MaterialTheme.typography.bodyMedium)
+            Text("Private memories and connected-app requests stay local. Keep secrets out of web questions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } }
+        item { ScreenCard {
+            Text("Find. Read. Answer.", style = MaterialTheme.typography.titleMedium)
+            listOf(Icons.Default.Search to "Find relevant websites", Icons.Default.Article to "Read and compare evidence", Icons.Default.Link to "Answer with sources").forEach { (icon, label) ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { Icon(icon, null, Modifier.size(19.dp), tint = MaterialTheme.colorScheme.primary); Text(label, style = MaterialTheme.typography.bodyMedium) }
             }
-        }
-        item {
-            Text("When sources don't settle it", style = MaterialTheme.typography.titleSmall)
-            Text("BI keeps useful supported details. General knowledge can use a labelled local answer. Current facts are marked unverified when they cannot be checked.", style = MaterialTheme.typography.bodyMedium)
-        }
-        item {
-            TextButton(onClick = { more = !more }, modifier = Modifier.testTag("research_details")) {
-                Text(if (more) "Hide privacy and tools" else "Privacy and tools")
-                Icon(if (more) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
-            }
-        }
-        if (more) item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("No API key, account or cloud answer model. Exa has free-service limits. Sites can block access or require sign-in; BI does not bypass restrictions. Its own directory has limited coverage. Source citations show provenance, not guaranteed accuracy.", style = MaterialTheme.typography.bodySmall)
-                Text("Only the focused public topic from this chat is searched. Temporary evidence expires within 15 minutes, sooner for live information. Source cards remain with the chat until deleted.", style = MaterialTheme.typography.bodySmall)
-                Text("Up to 48 local diagnostic records help identify failures. The report below excludes questions, URLs, chat IDs and page text. Clearing data or disabling web removes the records.", style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { viewModel.inspectResearchDiagnostics() }, modifier = Modifier.testTag("view_research_diagnostics")) { Text("View research diagnostics") }
-                TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
-            }
-        }
+            Text("Missing details stay uncertain. Useful supported facts are kept.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } }
+        item { DetailDisclosure("Privacy and tools", "Search limits, stored data and diagnostics", Modifier.testTag("research_details")) {
+            Text("No API key, account or cloud answer model. Exa has free-service limits. BI can also check its small public-source directory. Websites may restrict access; BI does not bypass them. Citations are not a guarantee of accuracy.", style = MaterialTheme.typography.bodySmall)
+            Text("Only this chat’s focused public topic is searched. Temporary evidence expires within 15 minutes, sooner for live information. Source cards stay with the chat until deleted.", style = MaterialTheme.typography.bodySmall)
+            Text("Up to 48 local diagnostic records contain timing and outcome codes. Exports omit questions, URLs, chat IDs and page text. Disabling web or clearing data removes them.", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = viewModel::inspectResearchDiagnostics, modifier = Modifier.testTag("view_research_diagnostics")) { Text("View diagnostics") }
+            TextButton(onClick = viewModel::clearSearchData) { Text("Clear temporary search data") }
+        } }
     }
-    diagnostics?.let { report -> AlertDialog(onDismissRequest = viewModel::dismissResearchDiagnostics,
-        title = { Text("Research diagnostics") }, text = {
-            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                Text("Timing and outcome codes only. Select to copy.")
-                SelectionContainer { Text(report, modifier = Modifier.testTag("research_diagnostics_report"), style = MaterialTheme.typography.bodySmall) }
-            }
-        }, confirmButton = { TextButton(onClick = viewModel::dismissResearchDiagnostics) { Text("Close") } }) }
+    diagnostics?.let { report -> AlertDialog(onDismissRequest = viewModel::dismissResearchDiagnostics, title = { Text("Research diagnostics") }, text = {
+        Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+            Text("Timing and outcome codes only. Select to copy.")
+            SelectionContainer { Text(report, modifier = Modifier.testTag("research_diagnostics_report"), style = MaterialTheme.typography.bodySmall) }
+        }
+    }, confirmButton = { TextButton(onClick = viewModel::dismissResearchDiagnostics) { Text("Close") } }) }
 }
 
 @Composable
@@ -186,28 +153,20 @@ fun MemoryScreen(viewModel: AiCoreViewModel) {
     val enabled by viewModel.isAutoMemoryCaptureEnabled.collectAsState()
     val memories by viewModel.allMemories.collectAsState()
     var clear by remember { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item {
-            Text("Context for each chat", style = MaterialTheme.typography.titleMedium)
-            Text("Each conversation automatically keeps its own local history and compact context notes, including after restarting or changing models. Other chats and connected apps do not receive that context. Delete a conversation to remove it.")
-            HorizontalDivider()
-        }
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Memory shared across chats", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                Switch(enabled, { viewModel.toggleAutoMemoryCapture(it) })
-            }
-            Text("Off by default. When enabled, explicit reminders and brief profile statements can be saved and used in chat. Connected apps need a separate memory permission. Web search never receives saved memories.", style = MaterialTheme.typography.bodyMedium)
-        }
-        items(memories, key = { it.id }) { memory ->
-            Column {
-                Text(memory.title, style = MaterialTheme.typography.titleMedium)
-                Text(memory.content)
-                Row { TextButton(onClick = { viewModel.toggleMemoryActive(memory) }) { Text(if (memory.isActive) "Pause" else "Use in chat") }
-                    TextButton(onClick = { viewModel.deleteMemorySnippet(memory.id) }) { Text("Delete") } }
-                HorizontalDivider()
-            }
-        }
+    LazyColumn(Modifier.fillMaxSize().testTag("memory_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { ScreenCard { Text("Each chat remembers itself", style = MaterialTheme.typography.titleMedium)
+            Text("History and compact context notes stay in that conversation, even after changing models or restarting.", style = MaterialTheme.typography.bodyMedium)
+            Text("Other chats and connected apps do not receive this context. Delete a conversation to remove it.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { ScreenCard {
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Remember across chats", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium); Switch(enabled, { viewModel.toggleAutoMemoryCapture(it) }) }
+            Text("Save explicit reminders and brief profile details for future chats. Off by default.", style = MaterialTheme.typography.bodyMedium)
+            Text("Web search never receives saved memories. Connected apps need separate memory permission.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } }
+        items(memories, key = { it.id }) { memory -> ScreenCard {
+            Text(memory.title, style = MaterialTheme.typography.titleSmall); Text(memory.content, style = MaterialTheme.typography.bodyMedium)
+            Row { TextButton(onClick = { viewModel.toggleMemoryActive(memory) }) { Text(if (memory.isActive) "Pause" else "Use in chat") }
+                TextButton(onClick = { viewModel.deleteMemorySnippet(memory.id) }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete") } }
+        } }
         if (memories.isNotEmpty()) item { TextButton(onClick = { clear = true }) { Text("Delete all memories") } }
     }
     if (clear) DeleteDialog("Delete all memories?", "This removes every saved memory from this device.", { clear = false }) { viewModel.clearAllMemories(); clear = false }
@@ -217,17 +176,22 @@ fun MemoryScreen(viewModel: AiCoreViewModel) {
 fun PrivacyScreen(viewModel: AiCoreViewModel) {
     var clear by remember { mutableStateOf(false) }
     val uri = LocalUriHandler.current
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        item { Text("You control your data", style = MaterialTheme.typography.headlineSmall) }
-        item { Text("Conversations, drafts, model files and app approvals are stored locally. Android backup may include settings and conversations according to your system backup preferences; model files and provider credentials are excluded.") }
-        item { Text("AI inference stays on this device with no automatic cloud fallback. Internet is used for model discovery and downloads. Optional web research uses Exa's key-free search to find links, then reads publisher websites directly. Connected-app inference, including TypeRight AI Polish, never invokes search.") }
-        item { Text("Deleting a model frees its storage and leaves your conversations intact. Revoking app access prevents new requests. Personal memory sharing has separate app permissions.") }
-        item { TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Manage model storage") }
-            TextButton(onClick = { viewModel.selectTab(AppTab.CONNECT) }) { Text("Manage app access") }
-            TextButton(onClick = { viewModel.clearSearchData() }) { Text("Clear temporary search data") }
-            TextButton(onClick = { clear = true }) { Text("Delete all conversations") }
-            TextButton(onClick = { runCatching { uri.openUri("https://haveanidea-privacy-policy.ai.studio") } }) { Text("Privacy policy") }
-        }
+    LazyColumn(Modifier.fillMaxSize().testTag("privacy_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { ScreenCard { Text("Your AI stays on your device", style = MaterialTheme.typography.titleMedium)
+            Text("Chats, drafts, models and app approvals are stored locally. Inference has no automatic cloud fallback.", style = MaterialTheme.typography.bodyMedium)
+            Text("Connected-app inference, including TypeRight polish, never uses web search. Memory sharing needs separate permission.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        item { DetailDisclosure("Internet and backups", "What leaves the device") {
+            Text("Internet is used to find and download models. Optional research sends your public question to Exa, then reads publisher websites directly.", style = MaterialTheme.typography.bodyMedium)
+            Text("Android backup may include settings and conversations according to your system preferences. Model files and provider credentials are excluded.", style = MaterialTheme.typography.bodyMedium)
+        } }
+        item { ScreenCard { Text("Manage your data", style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Model storage") }
+            TextButton(onClick = { viewModel.selectTab(AppTab.CONNECT) }) { Text("App permissions") }
+            TextButton(onClick = viewModel::clearSearchData) { Text("Clear temporary search data") }
+            TextButton(onClick = { clear = true }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete all conversations") }
+            Text("Deleting a model keeps chats. Revoking app access prevents new requests.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } }
+        item { TextButton(onClick = { runCatching { uri.openUri("https://haveanidea-privacy-policy.ai.studio") } }) { Text("Privacy policy") } }
     }
     if (clear) DeleteDialog("Delete all conversations?", "All saved messages and drafts will be removed. Models, app approvals and memories are kept.", { clear = false }) { viewModel.clearChat(); clear = false }
 }
@@ -238,7 +202,6 @@ private fun DeleteDialog(title: String, body: String, dismiss: () -> Unit, confi
         confirmButton = { TextButton(confirm) { Text("Delete") } }, dismissButton = { TextButton(dismiss) { Text("Cancel") } })
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
     val telemetry by viewModel.telemetry.collectAsState()
@@ -251,92 +214,47 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
     val sort by viewModel.selectedSortMetric.collectAsState()
     val benchmarking by viewModel.isBenchmarking.collectAsState()
     val uri = LocalUriHandler.current
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        item {
-            Text("AI Processing Mode", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
-                modifier = Modifier.fillMaxWidth().testTag("processing_AUTO")
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(Icons.Default.AutoMode, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Column(Modifier.weight(1f)) {
-                        Text("Automatic", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) "Compares compatible CPU, GPU and Qualcomm NPU paths using measured correctness, speed, RAM and thermal headroom. Compiled NPU models must match this phone."
-                            else "Automatically benchmarks and selects the optimal CPU or GPU backend, thread count, and layer offload based on live RAM and thermal headroom.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+    LazyColumn(Modifier.fillMaxSize().testTag("advanced_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { ScreenCard(Modifier.testTag("processing_AUTO")) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.AutoMode, null, tint = MaterialTheme.colorScheme.primary)
+                Column { Text("AI processing", style = MaterialTheme.typography.titleMedium); Text("Automatic · Recommended", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
             }
-            TextButton(onClick = { viewModel.resetBackendDecisions() }, enabled = !telemetry.isRunning) {
-                Text(if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) "Reset backend measurements and retry accelerators" else "Reset backend measurements and retry GPU")
-            }
-            if (com.example.BuildConfig.QUALCOMM_NPU_ENABLED) {
-                Text(if (acceleration.npuAvailable) "Qualcomm NPU validation passed for this model. Automatic compares its performance with other compatible processors."
-                    else acceleration.npuReason, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("qualcomm_npu_status"))
-            }
-        }
-        item {
-            Text("Response preferences", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
-                modifier = Modifier.fillMaxWidth().testTag("response_preferences_AUTO")
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Automatic", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Context window (up to 2048 tokens), response length, and factual vs. creative temperature are tuned automatically for each question and available RAM.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            secondary?.let { "Standby secondary model: ${it.name.substringBefore(" · ")} · Background generation active." }
-                                ?: "Automatic RAM context step-down and background generation are active.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-        item {
-            Text("Hardware monitoring", style = MaterialTheme.typography.titleLarge)
-            Text("${telemetry.modelName} · ${if (telemetry.isModelLoaded) telemetry.activeBackend else "No model loaded"}")
-            Text("${"%.1f".format(telemetry.tokensPerSecond)} tokens/s · First token ${telemetry.timeToFirstTokenMs} ms")
-            Text("${telemetry.activeThreads} CPU threads · ${telemetry.activeGpuLayers} GGUF GPU layers · ${telemetry.memoryUsageMb.toInt()} MB app PSS")
-            Text("Thermal: ${telemetry.thermalState} · Backend init ${telemetry.backendInitializationMs} ms")
-            Text(telemetry.backendStatus)
+            Text("Chooses compatible processors using measured performance and available memory.", style = MaterialTheme.typography.bodyMedium)
+        } }
+        item { ScreenCard(Modifier.testTag("response_preferences_AUTO")) {
+            Text("Longer replies, automatically", style = MaterialTheme.typography.titleMedium)
+            Text("Replies can continue within the model’s context, memory and time limits.", style = MaterialTheme.typography.bodyMedium)
+            Text(secondary?.let { "Low-memory fallback: ${it.name.substringBefore(" · ")}" } ?: "Context and response settings adapt to your device.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } }
+        item { DetailDisclosure("Hardware monitoring", if (telemetry.isModelLoaded) "${telemetry.activeBackend} · ${"%.1f".format(telemetry.tokensPerSecond)} tokens/s" else "No model loaded") {
+            Text(telemetry.modelName, style = MaterialTheme.typography.titleSmall)
+            Text("${telemetry.activeBackend} · First token ${telemetry.timeToFirstTokenMs} ms · ${telemetry.memoryUsageMb.toInt()} MB app RAM", style = MaterialTheme.typography.bodyMedium)
+            Text("${telemetry.activeThreads} CPU threads · ${telemetry.activeGpuLayers} GPU layers · Thermal: ${telemetry.thermalState}", style = MaterialTheme.typography.bodySmall)
+            Text(telemetry.backendStatus, style = MaterialTheme.typography.bodySmall)
             if (telemetry.backendDecision.isNotBlank()) Text(telemetry.backendDecision, style = MaterialTheme.typography.bodySmall)
-            if (telemetry.fallbackCount > 0) Text("Fallbacks: ${telemetry.fallbackCount} · ${telemetry.lastFallback}")
-            Text("App PSS excludes some GPU/driver allocations. GPU memory is shared, not extra RAM.", style = MaterialTheme.typography.bodySmall)
-        }
-        item { HardwareDiagnosticCard(hardware, { viewModel.refreshHardwareDiagnostics() }) }
-        item { HardwarePerformanceComparisonCard(logs, models, hardware, quantization, sort, benchmarking,
-            { viewModel.setQuantizationFilter(it) }, { viewModel.setSortMetric(it) }, { viewModel.runBenchmarkForModel(it) },
-            { viewModel.deletePerformanceLog(it) }, { viewModel.clearAllPerformanceLogs() }) }
-        item {
-            TextButton(onClick = { viewModel.unloadActiveModel() }, enabled = !telemetry.isRunning) { Text("Unload model from memory") }
-            TextButton(onClick = { viewModel.clearIpcLogs() }) { Text("Clear app access logs") }
-            Text("Better Intelligence ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · API v2", style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = { runCatching { uri.openUri("https://github.com/sidhrthmnn/BetterIntelligence/blob/main/docs/THIRD_PARTY_NOTICES.md") } }) { Text("Open-source licences and model terms") }
-        }
+            if (telemetry.fallbackCount > 0) Text("Fallbacks: ${telemetry.fallbackCount} · ${telemetry.lastFallback}", style = MaterialTheme.typography.bodySmall)
+            Text("GPU memory is shared. App RAM measurements exclude some driver allocations.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HardwareDiagnosticCard(hardware, { viewModel.refreshHardwareDiagnostics() })
+        } }
+        item { DetailDisclosure("Processing details", "Compatibility and saved measurements") {
+            Text("CPU and supported GPU backends are measured for correctness, speed, memory and thermal headroom. GGUF and LiteRT use their compatible runtimes.", style = MaterialTheme.typography.bodyMedium)
+            if (BuildConfig.QUALCOMM_NPU_ENABLED) Text(if (acceleration.npuAvailable) "Qualcomm NPU validated for this model." else acceleration.npuReason,
+                style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("qualcomm_npu_status"))
+            else Text("NPU requires a compatible runtime, device and compiled model; it is unavailable in this build.", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = viewModel::resetBackendDecisions, enabled = !telemetry.isRunning) { Text("Reset backend measurements") }
+        } }
+        item { DetailDisclosure("Benchmarks", "Compare installed models") {
+            HardwarePerformanceComparisonCard(logs, models, hardware, quantization, sort, benchmarking,
+                { viewModel.setQuantizationFilter(it) }, { viewModel.setSortMetric(it) }, { viewModel.runBenchmarkForModel(it) },
+                { viewModel.deletePerformanceLog(it) }, { viewModel.clearAllPerformanceLogs() })
+        } }
+        item { ScreenCard {
+            Text("About Better Intelligence", style = MaterialTheme.typography.titleMedium)
+            Text("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = viewModel::unloadActiveModel, enabled = !telemetry.isRunning) { Text("Free model memory") }
+            TextButton(onClick = viewModel::clearIpcLogs) { Text("Clear app access logs") }
+            TextButton(onClick = { runCatching { uri.openUri("https://github.com/sidhrthmnn/BetterIntelligence/blob/main/docs/THIRD_PARTY_NOTICES.md") } }) { Text("Licences and model terms") }
+        } }
     }
 }

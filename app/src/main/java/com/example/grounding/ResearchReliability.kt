@@ -28,10 +28,12 @@ data class ResearchTimeouts(val discoveryMs: Long = 12_000, val retryMs: Long = 
 data class ResearchMetrics(val provider: String = "", val durationMs: Long = 0,
     val discoveredResults: Int = 0, val readPublishers: Int = 0, val attemptedPublishers: Int = 0,
     val retries: Int = 0, val httpCategory: String = "", val timeoutStage: String = "",
-    val failure: ResearchFailure? = null, val extraction: Map<String, Int> = emptyMap())
+    val failure: ResearchFailure? = null, val extraction: Map<String, Int> = emptyMap(), val recoveryAttempts: Int = 0,
+    val providers: Set<String> = emptySet(), val publisherAccess: Map<String, Int> = emptyMap())
 
 class WebRequestException(val statusCode: Int, val retryAfterMs: Long = 0) : IOException("Website HTTP $statusCode")
 class PublisherPermissionException : IOException("Publisher does not permit this read")
+class RobotsAccessException(val temporarilyUnavailable: Boolean) : IOException("Publisher robots policy prevents this read")
 
 class ResearchProgress(private val now: () -> Long = { System.nanoTime() / 1_000_000 }) {
     private var stage = ResearchStage.SEARCHING
@@ -54,9 +56,18 @@ object ResearchErrors {
     }
     fun publisher(error: Exception): ResearchFailure = when (error) {
         is SocketTimeoutException, is java.io.InterruptedIOException -> ResearchFailure.PUBLISHER_TIMEOUT
-        is UnknownHostException, is NoRouteToHostException, is ConnectException -> ResearchFailure.NETWORK_UNAVAILABLE
+        is UnknownHostException -> ResearchFailure.PUBLISHER_DNS_FAILED
+        is javax.net.ssl.SSLException -> ResearchFailure.PUBLISHER_TLS_FAILED
+        is NoRouteToHostException, is ConnectException -> ResearchFailure.NETWORK_UNAVAILABLE
+        is RobotsAccessException -> if (error.temporarilyUnavailable) ResearchFailure.ROBOTS_UNAVAILABLE else ResearchFailure.ROBOTS_DISALLOWED
         is PublisherPermissionException -> ResearchFailure.PUBLISHER_BLOCKED
-        is WebRequestException -> if (error.statusCode in setOf(401, 403, 429, 451)) ResearchFailure.PUBLISHER_BLOCKED else ResearchFailure.PUBLISHER_UNAVAILABLE
+        is WebRequestException -> when (error.statusCode) {
+            401 -> ResearchFailure.PUBLISHER_UNAUTHORIZED
+            403 -> ResearchFailure.PUBLISHER_FORBIDDEN
+            429 -> ResearchFailure.PUBLISHER_RATE_LIMITED
+            451 -> ResearchFailure.PUBLISHER_LEGALLY_RESTRICTED
+            else -> ResearchFailure.PUBLISHER_UNAVAILABLE
+        }
         else -> ResearchFailure.PUBLISHER_UNAVAILABLE
     }
     fun retryable(error: Exception): Boolean = error !is CancellationException && when (error) {

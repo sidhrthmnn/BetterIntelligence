@@ -71,7 +71,7 @@ fun HardwareDiagnosticCard(
             modifier = modifier
                 .fillMaxWidth()
                 .testTag("hardware_diagnostic_card_loading"),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
@@ -110,7 +110,7 @@ fun HardwareDiagnosticCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("hardware_diagnostic_card"),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
@@ -133,8 +133,8 @@ fun HardwareDiagnosticCard(
                         text = "HARDWARE DIAGNOSTICS",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            fontFamily = FontFamily.Monospace
+                            letterSpacing = 0.sp,
+                            fontFamily = FontFamily.Default
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -168,8 +168,8 @@ fun HardwareDiagnosticCard(
                                 .testTag("diagnostic_health_badge"),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 9.sp
+                                fontFamily = FontFamily.Default,
+                                fontSize = 11.sp
                             ),
                             color = healthBadgeColor
                         )
@@ -201,7 +201,7 @@ fun HardwareDiagnosticCard(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("diagnostic_ram_box"),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
@@ -223,7 +223,7 @@ fun HardwareDiagnosticCard(
                                 text = "RAM",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Default
                                 ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -233,7 +233,7 @@ fun HardwareDiagnosticCard(
                             text = "${hardwareProfile.availableRamMb} MB",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace
+                                fontFamily = FontFamily.Default
                             ),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -241,8 +241,8 @@ fun HardwareDiagnosticCard(
                         Text(
                             text = "Free / ${hardwareProfile.totalRamMb} MB",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
-                                fontFamily = FontFamily.Monospace
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Default
                             ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -254,7 +254,7 @@ fun HardwareDiagnosticCard(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("diagnostic_cpu_box"),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
@@ -276,7 +276,7 @@ fun HardwareDiagnosticCard(
                                 text = "CPU",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Default
                                 ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -286,7 +286,7 @@ fun HardwareDiagnosticCard(
                             text = "${hardwareProfile.cpuCores} Cores",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace
+                                fontFamily = FontFamily.Default
                             ),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -294,8 +294,8 @@ fun HardwareDiagnosticCard(
                         Text(
                             text = if (hardwareProfile.supportsNeon) "ARM64 NEON" else hardwareProfile.cpuAbi,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
-                                fontFamily = FontFamily.Monospace
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Default
                             ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -307,7 +307,7 @@ fun HardwareDiagnosticCard(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("diagnostic_thermal_box"),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
@@ -329,7 +329,7 @@ fun HardwareDiagnosticCard(
                                 text = "THERMAL",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Default
                                 ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -339,7 +339,7 @@ fun HardwareDiagnosticCard(
                             text = hardwareProfile.thermalStatus.split(" ").firstOrNull() ?: "Nominal",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace
+                                fontFamily = FontFamily.Default
                             ),
                             color = if (hardwareProfile.isThermalThrottling) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                         )
@@ -351,8 +351,8 @@ fun HardwareDiagnosticCard(
                                 else -> "Battery sensor unavailable"
                             },
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
-                                fontFamily = FontFamily.Monospace
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Default
                             ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -377,7 +377,7 @@ fun HardwareDiagnosticCard(
                     )
                     Text(
                         text = "${hardwareProfile.usedRamPercent}% in use",
-                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Default),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -399,12 +399,12 @@ fun HardwareDiagnosticCard(
                 ) {
                     Text(
                         text = "Safe Model Budget: ~${hardwareProfile.safeModelRamLimitMb} MB",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontFamily = FontFamily.Monospace),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontFamily = FontFamily.Default),
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         text = "OS Reserved: ~${hardwareProfile.osReservedRamMb} MB",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontFamily = FontFamily.Monospace),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontFamily = FontFamily.Default),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -459,8 +459,8 @@ fun HardwareDiagnosticCard(
                     text = if (isExpanded) "Hide Full Diagnostic Spec ▲" else "View Full Diagnostic Spec ▼",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp
+                        fontFamily = FontFamily.Default,
+                        fontSize = 11.sp
                     ),
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -488,7 +488,7 @@ private fun DetailRow(
             text = value,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace
+                fontFamily = FontFamily.Default
             ),
             color = MaterialTheme.colorScheme.onSurface
         )

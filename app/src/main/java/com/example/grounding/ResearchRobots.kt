@@ -10,12 +10,19 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
  * A failed policy fetch is not permission to crawl.
  */
 class ResearchRobots(private val fetcher: WebFetcher) {
+    enum class Decision { ALLOWED, DISALLOWED, UNAVAILABLE }
     private val cache = LinkedHashMap<String, Pair<Long, String?>>()
     private val locks = LinkedHashMap<String, Mutex>()
     suspend fun allowed(url: String): Boolean = allowed(url, fetcher)
-    suspend fun allowed(url: String, transport: WebFetcher): Boolean {
+    suspend fun allowed(url: String, transport: WebFetcher): Boolean = decision(url, transport) == Decision.ALLOWED
+    suspend fun requireAllowed(url: String, transport: WebFetcher): Boolean = when (decision(url, transport)) {
+        Decision.ALLOWED -> true
+        Decision.DISALLOWED -> throw RobotsAccessException(false)
+        Decision.UNAVAILABLE -> throw RobotsAccessException(true)
+    }
+    suspend fun decision(url: String, transport: WebFetcher = fetcher): Decision {
         val parsed = url.toHttpUrl()
-        val origin = "https://${parsed.host}"
+        val origin = parsed.newBuilder().encodedPath("/").query(null).fragment(null).build().toString().trimEnd('/')
         val lock = synchronized(locks) {
             locks.getOrPut(origin) { if (locks.size >= 24) locks.remove(locks.keys.first()); Mutex() }
         }
@@ -32,7 +39,7 @@ class ResearchRobots(private val fetcher: WebFetcher) {
             synchronized(cache) { if (cache.size >= 24) cache.remove(cache.keys.first()); cache[origin] = System.currentTimeMillis() to text }
             text
         }
-        return policy != null && permits(policy, parsed.encodedPath + parsed.encodedQuery?.let { "?$it" }.orEmpty())
+        return if (policy == null) Decision.UNAVAILABLE else if (permits(policy, parsed.encodedPath + parsed.encodedQuery?.let { "?$it" }.orEmpty())) Decision.ALLOWED else Decision.DISALLOWED
     }
     companion object {
         fun permits(text: String, path: String): Boolean {

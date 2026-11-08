@@ -9,7 +9,7 @@ import org.jsoup.nodes.Document
 object DocumentEvidence {
     const val MAX_CHARS = 64_000
     const val MAX_BLOCKS = 1024
-    private fun json(text: String): Any? {
+    internal fun json(text: String): Any? {
         if (text.length > 262_144) return null
         var depth = 0; var quoted = false; var escaped = false
         for (c in text) {

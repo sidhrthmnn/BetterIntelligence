@@ -34,6 +34,19 @@ enum class ResearchFailure(val notice: String) {
     NETWORK_UNAVAILABLE("The network couldn't be reached. Check your connection and try again."),
     NO_SEARCH_RESULTS("Couldn't find relevant sources. Try a more specific subject or a public HTTPS source."),
     PUBLISHER_BLOCKED("The source couldn't be opened because it restricts access. Try another public HTTPS source."),
+    PUBLISHER_UNAUTHORIZED("The selected websites require authorization, and no alternative verified source was available."),
+    PUBLISHER_FORBIDDEN("The selected websites restrict automated access, and no alternative verified source was available."),
+    PUBLISHER_RATE_LIMITED("The selected websites temporarily limited requests, and no alternative verified source was available."),
+    PUBLISHER_LEGALLY_RESTRICTED("The selected websites are unavailable for legal reasons, and no alternative verified source was available."),
+    ROBOTS_DISALLOWED("The selected websites do not permit this automated read, and no alternative verified source was available."),
+    ROBOTS_UNAVAILABLE("Publisher crawling policies could not be retrieved. BI did not read those pages."),
+    PUBLISHER_CHALLENGE("The selected websites require a CAPTCHA or browser challenge, and no alternative verified source was available."),
+    PUBLISHER_DNS_FAILED("The source addresses could not be resolved. Check your connection or try again later."),
+    PUBLISHER_TLS_FAILED("A source's secure connection could not be verified. BI did not bypass certificate checks."),
+    UNSUPPORTED_CONTENT("Search found sources in a format BI cannot read yet."),
+    EMPTY_EXTRACTION("Search found links, but the accessible pages contained no usable evidence."),
+    RELEVANCE_REJECTED("Source pages were read, but did not establish the requested subject or facts."),
+    EVENT_DATES_UNVERIFIED("Search found event listings, but their upcoming dates and venues could not be verified."),
     PUBLISHER_TIMEOUT("The sources took too long to open. Try again or provide a different public HTTPS source."),
     PUBLISHER_UNAVAILABLE("Search found links, but the source pages couldn't be read. Try another public HTTPS source."),
     INSUFFICIENT_EVIDENCE("The sources didn't provide enough relevant evidence. Try a more specific question or another public HTTPS source."),
@@ -53,7 +66,7 @@ data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: Resea
 data class EvidenceSource(val id: Int, val title: String, val url: String, val excerpt: String,
     val retrievedAt: Long, val updatedAt: String = "", val kind: String = "ARTICLE_SUMMARY", val dateKind: String = "",
     val publicPlace: String = "", val discoveryProvider: String = "", val publicQuery: String = "",
-    val imageUrl: String = "", val imageAlt: String = "", val publicLanguage: String = "")
+    val imageUrl: String = "", val imageAlt: String = "", val publicLanguage: String = "", val events: List<ScheduledEvent> = emptyList())
 
 data class PreparedEvidence(val prompt: String, val sources: List<EvidenceSource>)
 
@@ -65,6 +78,7 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
             if (source.discoveryProvider.isNotBlank()) put("discoveryProvider", source.discoveryProvider)
             if (ConversationalResearch.validPublicQuery(source.publicQuery)) put("publicQuery", source.publicQuery)
             if (PublicTopics.validLanguage(source.publicLanguage)) put("publicLanguage", source.publicLanguage)
+            if (source.events.isNotEmpty()) put("events", EventEvidence.json(source.events))
             if (GroundingPolicy.publicHttpsUrl(source.imageUrl)) { put("imageUrl", source.imageUrl); put("imageAlt", source.imageAlt.take(160)) } }) } }.toString()
     companion object {
         fun sources(json: String): List<EvidenceSource> = runCatching {
@@ -78,7 +92,7 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
                         item.optString("discoveryProvider").takeIf { it in setOf("DuckDuckGo", "Exa", "Mwmbl") }.orEmpty(),
                         item.optString("publicQuery").takeIf(ConversationalResearch::validPublicQuery).orEmpty(),
                         item.optString("imageUrl").takeIf(GroundingPolicy::publicHttpsUrl).orEmpty(), item.optString("imageAlt").take(160),
-                        item.optString("publicLanguage").takeIf(PublicTopics::validLanguage).orEmpty())
+                        item.optString("publicLanguage").takeIf(PublicTopics::validLanguage).orEmpty(), EventEvidence.fromJson(item.optJSONArray("events"), url))
                 }
             }
         }.getOrDefault(emptyList())
@@ -146,6 +160,7 @@ object GroundingPolicy {
     fun prepareEvidence(question: String, sources: List<EvidenceSource>, characterBudget: Int,
         tokenBudget: Int = Int.MAX_VALUE, tokenCount: ((String) -> Int)? = null): PreparedEvidence {
         if (sources.isEmpty()) return PreparedEvidence(question, emptyList())
+        if (EventQuery.parse(question) != null) return EventEvidencePacket.prepare(question, sources, characterBudget, tokenBudget, tokenCount)
         fun bounded(value: String, bytes: Int): String {
             val encoded = value.toByteArray(Charsets.UTF_8)
             if (encoded.size <= bytes) return value

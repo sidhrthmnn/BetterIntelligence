@@ -89,6 +89,7 @@ class LlamaCppEngine(
             gpuLayers = config.gpuLayers,
             contextSize = config.contextSize,
             history = config.history,
+            autoContinue = config.autoContinue,
             accelerationMode = "Managed by Better Intelligence"
         )
 
@@ -136,6 +137,7 @@ class LlamaCppEngine(
             gpuLayers = config.gpuLayers,
             contextSize = config.contextSize,
             history = config.history,
+            autoContinue = config.autoContinue,
             accelerationMode = "Managed by Better Intelligence"
         )
 

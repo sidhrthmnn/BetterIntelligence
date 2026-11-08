@@ -972,7 +972,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 _chatStatus.value = if (evidence.sources.isNotEmpty()) "Checking sources" else "Preparing answer"
                 val requestedContext = tierDecision?.effectiveContext ?: params.contextSize
                 val effectiveContext = repository.engine.requestContextLimit(requestedContext)
-                val autoMaxTokens = params.maxTokens.coerceIn(16, if (effectiveContext >= 2048) 384 else 256)
+                val autoMaxTokens = com.example.engine.ChatResponseBudget.initial(params.maxTokens, effectiveContext)
                 val autoTemperature = if (evidence.sources.isNotEmpty()) 0f else 0.4f
                 val baseSystem = com.example.engine.ChatAnswerPolicy.system(generationQuestion, evidence.sources.isNotEmpty(), effectiveContext, params.systemPrompt) +
                     if (recoveryNotice.isNotBlank()) " Web research did not complete. Answer the useful general-knowledge part locally; do not narrate a search, invent citations or assert unverified current information." else ""
@@ -995,7 +995,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val localNeedsLive = evidence.sources.isEmpty() && com.example.engine.ChatAnswerPolicy.requiresLiveData(generationQuestion)
                 val config = GenerationConfig(temperature = autoTemperature, topK = params.topK, topP = params.topP,
                     maxTokens = autoMaxTokens, systemPrompt = system, threads = params.threads,
-                    gpuLayers = params.gpuLayers, contextSize = effectiveContext, history = history)
+                    gpuLayers = params.gpuLayers, contextSize = effectiveContext, history = history, autoContinue = true)
                 _chatStatus.value = "Preparing answer"
                 val rawDraft = StringBuilder()
                 var lastDraftUiAt = 0L
@@ -1055,7 +1055,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                         evidence = evidence.copy(sources = prepared.sources)
                         _chatStatus.value = "Answering from sources"
                         result = repository.engine.generateSync(prepared.prompt, GenerationParams(temperature = 0f, topK = 1, topP = 1f,
-                            maxTokens = autoMaxTokens, contextSize = effectiveContext, threads = params.threads, systemPrompt = system,
+                            maxTokens = autoMaxTokens, contextSize = effectiveContext, threads = params.threads, systemPrompt = system, autoContinue = true,
                             history = ConversationContext.history(com.example.engine.ChatAnswerPolicy.history(previous.map { ChatTurn(it.role, it.content) }, true),
                                 prepared.prompt, system, effectiveContext, autoMaxTokens, repository.engine::contextTokenCount)))
                     }
@@ -1063,7 +1063,9 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 result = LocalAnswerUncertainty.visible(result)
                 promptTokens = repository.engine.telemetry.value.promptTokens
                 outputTokens = repository.engine.telemetry.value.completionTokens
-                reachedOutputLimit = outputTokens >= autoMaxTokens
+                reachedOutputLimit = repository.engine.telemetry.value.let {
+                    if (it.outputTokenLimit > 0) it.outputLimitReached else outputTokens >= autoMaxTokens
+                }
                 if ((error == null || error == com.example.engine.InvalidModelOutputException().message) && evidence.sources.isNotEmpty()) {
                     _chatStatus.value = "Checking answer against sources"
                     val assessed = withContext(Dispatchers.Default) { com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion).copy(generationFailed = error != null) }

@@ -41,9 +41,10 @@ class ExaDiscovery(private val fetcher: WebFetcher, private val allowed: suspend
                 .firstOrNull { it.opt("id")?.toString() == "1" }
                 ?: return DiscoveryResult(emptyList(), DiscoveryState.MALFORMED)
             val result = reply.optJSONObject("result")
-            if (reply.has("error") || result == null || result.optBoolean("isError")) {
+            if (reply.has("error") || result == null || result.optBoolean("isError") || result.optJSONObject("_meta")?.optBoolean("ai.exa/rateLimited") == true) {
                 val message = (reply.optJSONObject("error")?.optString("message").orEmpty() + " " + result?.optJSONArray("content").toString()).take(8000)
                 val state = when {
+                    result?.optJSONObject("_meta")?.optBoolean("ai.exa/rateLimited") == true -> DiscoveryState.RATE_LIMITED
                     Regex("(?i)rate.?limit|quota|too many requests").containsMatchIn(message) -> DiscoveryState.RATE_LIMITED
                     Regex("(?i)unauth|forbidden|permission|payment required|api.?key").containsMatchIn(message) -> DiscoveryState.BLOCKED
                     else -> DiscoveryState.UNAVAILABLE
