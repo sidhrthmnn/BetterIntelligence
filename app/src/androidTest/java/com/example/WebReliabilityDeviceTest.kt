@@ -44,7 +44,7 @@ class WebReliabilityDeviceTest {
         compose.waitUntil(180_000) { !vm.isChatGenerating.value && vm.chatMessages.value.size > count }
         return repo.messages(vm.conversationId.value).first().last { it.role == "assistant" }.also {
             rows.put(JSONObject().put("question", question).put("status", it.groundingStatus).put("state", it.messageState)
-                .put("answer", it.content).put("sources", JSONArray(it.sourcesJson)).put("model", it.modelName))
+                .put("answer", it.content).put("sources", JSONArray(it.sourcesJson)).put("model", it.modelName).put("latencyMs",it.latencyMs).put("tokensPerSecond",it.tokensPerSec))
         }
     }
     @Test fun realNativeModelRecoversGeneralAndMixedTasksKeepsLiveFactsUnverifiedAndCancelsCleanly(): Unit = runBlocking {
@@ -185,6 +185,80 @@ class WebReliabilityDeviceTest {
             val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
             File(context.filesDir,"readable-answer.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) };bitmap.recycle()
         } finally { observer.cancel(); repo.engine.unloadActiveModel();File(context.filesDir,"readable-native.json").writeText(rows.toString(2)) }
+    }
+
+    @Test fun failingPhoneTopicsUseLiveWebAndRealQwen(): Unit = runBlocking {
+        admit()
+        val model=withTimeout(90_000) {repo.allModels.first { it.any { m -> m.filename=="Qwen3.5-2B-Q4_K_M.gguf" && m.isInstalled } }}.single {it.filename=="Qwen3.5-2B-Q4_K_M.gguf"}
+        repo.engine.setProcessingMode(ProcessingMode.CPU);repo.switchActiveModel(model)
+        repo.preferencesRepository.saveWebAllowed(true)
+        compose.waitUntil(20_000) {vm.webAllowed.value && vm.conversationId.value!=0L && !repo.isModelLoading}
+        compose.runOnUiThread {
+            vm.toggleForegroundService(false)
+            vm.updateGenerationParams(GenerationParams(contextSize=2048,maxTokens=192,temperature=0f,threads=4))
+            vm.useSearchProviderForTesting(PublicWebResearch(discoveryAllowed={repo.preferencesRepository.webAllowed.first()}))
+        }
+        try {
+            for(q in listOf("When is malayalam movie i'm game releasing on ott", "When is dhrishyam 3 hindi releasing on ott", "Which shoe is good for running", "How much is on ai worth")) {
+                fresh();val a=ask(q);val sources=GroundingResult.sources(a.sourcesJson)
+                if(q.contains("on ai")) {assertTrue(a.content,a.content.contains("Do you mean"));continue}
+                assertTrue("No live sources for $q: ${a.groundingStatus}: ${a.content}",sources.isNotEmpty())
+                assertTrue(sources.all { !it.url.contains("publisher.example") })
+                assertFalse(a.content,a.content.contains("couldn't verify an answer"))
+                assertTrue(a.content,GroundingPolicy.validateCitations(a.content,sources).second)
+                if(q.contains("ott")) assertTrue(a.content,Regex("(?i)ott|streaming|digital").containsMatchIn(a.content))
+                for(junk in listOf("Daily Crossword","Syndication Service","Copyright ©")) assertFalse(a.content,a.content.contains(junk))
+                if(q.contains("i'm game")) {
+                    assertTrue(a.content,a.content.contains("JioHotstar",true))
+                    assertTrue(a.content,Regex("(?i)November 0?6|0?6 November|Nov\\.? 0?6|2026-11-06").containsMatchIn(a.content))
+                    assertFalse(a.content.contains("do not cover every requested"))
+                }
+                  if(q.contains("dhrishyam")) {
+                      assertTrue(a.content, a.content.contains("Netflix",true))
+                      assertTrue(a.content, Regex("(?i)could|might|expected|not.{0,30}confirmed").containsMatchIn(a.content))
+                      assertFalse(a.content, Regex("(?i)Georgekutty|Jeethu Joseph|Mohanlal").containsMatchIn(a.content))
+                  }
+                if(q.startsWith("Which")) {assertFalse(a.content.contains("Design Picture"));assertFalse(a.content.contains("See all our test results"))}
+            }
+        } finally {repo.engine.unloadActiveModel();File(context.filesDir,"readable-live-native.json").writeText(rows.toString(2))}
+    }
+
+    @Test fun tenEarlierPublicPhoneQuestionsUseTheActualModelAndLiveResearch(): Unit = runBlocking {
+        admit()
+        val model=withTimeout(90_000) {repo.allModels.first { it.any { m -> m.filename=="Qwen3.5-2B-Q4_K_M.gguf" && m.isInstalled } }}.single {it.filename=="Qwen3.5-2B-Q4_K_M.gguf"}
+        repo.engine.setProcessingMode(ProcessingMode.CPU);repo.switchActiveModel(model)
+        repo.preferencesRepository.saveWebAllowed(true)
+        compose.waitUntil(20_000) {vm.webAllowed.value && vm.conversationId.value!=0L && !repo.isModelLoading}
+        compose.runOnUiThread {
+            vm.toggleForegroundService(false)
+            vm.updateGenerationParams(GenerationParams(contextSize=2048,maxTokens=224,temperature=0f,threads=4))
+            vm.useSearchProviderForTesting(PublicWebResearch(discoveryAllowed={repo.preferencesRepository.webAllowed.first()}))
+        }
+        val questions=listOf("How much loan does openai have","Antropic or openai have most number of users","What is the time in india","What time is it now","Why is the iphone duo cracking","What's the wether in london","Who is being cast in the movie Matrubhumi","How's batha tamil movie","Who is the ownsr of L&R HOTELS","Who is the richest person in the world right now")
+        val failures=mutableListOf<String>()
+        try {
+            for(q in questions) {
+                fresh();val a=ask(q);val sources=GroundingResult.sources(a.sourcesJson)
+                val problem=when {
+                    a.messageState=="ERROR" -> "generation error"
+                    a.content.contains("couldn't verify an answer") -> "generic verification failure"
+                    a.content.contains("Daily Crossword") || a.content.contains("For reprint rights") -> "publisher controls leaked"
+                    q.contains("time",true) && (a.groundingStatus!="DEVICE_CLOCK" || !Regex("\\d{2}:\\d{2}").containsMatchIn(a.content)) -> "incorrect clock routing"
+                    sources.isNotEmpty() && !GroundingPolicy.validateCitations(a.content,sources).second -> "invalid final citation"
+                    sources.isEmpty() && !q.contains("time",true) && a.groundingStatus !in setOf("NEEDS_SUBJECT","NEEDS_LOCATION") -> "no supporting sources: ${a.groundingStatus}"
+                      q.contains("loan") && !Regex("[$£€]\\s*\\d").containsMatchIn(a.content) -> "missing borrowing amount/report"
+                      q.contains("iphone") && (a.content.contains("_208") || a.content.contains("Part Of All") || !Regex("(?i)cause|pressure|stress").containsMatchIn(a.content)) -> "caption or unrelated specification instead of cause"
+                      q.contains("wether") && !EvidenceAnswer.hasTemperature(a.content) -> "missing actual weather temperature"
+                      q.contains("Matrubhumi") && (!a.content.contains("Salman",true) || !a.content.contains("Chitrangda",true)) -> "cast names omitted"
+                      q.contains("HOTELS") && !a.content.contains("Livingstone",true) -> "requested owner not identified"
+                      q.contains("richest") && !a.content.contains("Elon Musk",true) -> "global leader not identified"
+                    else -> ""
+                }
+                if(problem.isNotEmpty()) failures += "$q: $problem"
+                File(context.filesDir,"ten-earlier-live-native.json").writeText(rows.toString(2))
+            }
+            assertTrue(failures.joinToString("\n"),failures.isEmpty())
+        } finally {repo.engine.unloadActiveModel();File(context.filesDir,"ten-earlier-live-native.json").writeText(rows.toString(2))}
     }
 
 }

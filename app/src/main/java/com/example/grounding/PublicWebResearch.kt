@@ -258,7 +258,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             timeoutStage = if (readTimeouts.get() > 0) "PUBLISHER" else if (discoveryTimedOut) "PROVIDER" else "",
             extraction = extraction.toMap(), failure = failure ?: publisherFailures.firstOrNull() ?: providerFailure?.takeUnless { it == ResearchFailure.NO_SEARCH_RESULTS })
         ResearchOutcome(selected, failure, EvidenceRanking.conflicts(selected), if (selected.isEmpty() && possibleSpellings.size == 1)
-            "I couldn't identify ${query.publicTopic?.subject} confidently. Search found a possible spelling, ${possibleSpellings.single()}. Please name the intended film with its language or release year, or share a public HTTPS source."
+            "Search found a possible spelling: **${possibleSpellings.single()}**${query.publicTopic?.language?.takeIf(String::isNotBlank)?.let { " ($it film)" }.orEmpty()}. Is that the film you mean?"
         else "", metrics)
         }
     }

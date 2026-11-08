@@ -39,6 +39,12 @@ object ConversationalResearch {
     fun needsPlace(question: String) = Regex("(?i)\\bthere\\b").containsMatchIn(question) &&
         Regex("(?i)\\b(mayor|governor)\\b").containsMatchIn(question)
     fun question(question: String, history: List<ChatMessageEntity>, conversationId: Long? = null): String {
+        // Bounded, reviewed typing corrections; private/offline inputs are
+        // admitted by the caller before any public-query resolution.
+        var normalized = question.replace(Regex("(?i)\\bwether(?=\\s+(?:in|at|for|today|tomorrow|tonight)\\b)"), "weather")
+            .replace(Regex("(?i)\\bownsr\\b"), "owner")
+        if (Regex("(?i)\\b(?:OpenAI|Claude)\\b").containsMatchIn(question)) normalized = normalized.replace(Regex("(?i)\\bAntropic\\b"), "Anthropic")
+        if (normalized != question) return ConversationalResearch.question(normalized, history, conversationId)
         PublicTopics.resolve(question, history, conversationId)?.let { return it.question() }
         // A generic review command cannot inherit a publisher's unrelated title.
         if (PublicTopics.missingSubject(question)) return question

@@ -25,13 +25,16 @@ import java.io.File
 class AnswerIllustrationDeviceTest {
     @get:Rule val compose=createComposeRule()
     @Test fun citationNumbersOpenTheirOwnSourceAndImagesStayOptInAndRespectRevocation() {
-        val allowed=mutableStateOf(true); var selected=0
+        val allowed=mutableStateOf(true); var selected=0; var opened=""
         val source=EvidenceSource(1,"Illustration fixture","https://publisher.example/article","Fictional fixture, not a public discovery.",1,kind="WEB_PAGE",imageUrl="https://publisher.example/image.png")
         val text="Source fact [1, 2]"
-        compose.setContent { MaterialTheme { Surface(Modifier.fillMaxSize()) { Column(Modifier.statusBarsPadding().padding(20.dp)) {
+        compose.setContent { androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalUriHandler provides object : androidx.compose.ui.platform.UriHandler { override fun openUri(uri:String) {opened=uri} }) { MaterialTheme { Surface(Modifier.fillMaxSize()) { Column(Modifier.statusBarsPadding().padding(20.dp)) {
             MarkdownText("## From the sources\n\n$text\n\n| Item | Evidence |\n|---|---|\n| Example | [1] |",setOf(1,2),onCitation={selected=it})
             SourceImageCard(source,allowed.value) {selected=1}
-        } } } }
+            com.example.ui.components.SourceReferences(listOf(source),null) {}
+        } } } } }
+        compose.onNodeWithTag("open_source_website").performClick()
+        compose.runOnIdle {assertEquals(source.url,opened)}
         compose.onNodeWithText("Show source image").assertIsDisplayed()
         val node=compose.onNodeWithText(text)
         val layouts=mutableListOf<TextLayoutResult>()

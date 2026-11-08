@@ -7,7 +7,7 @@ object MovieRatingEvidence {
     fun summary(question: String, sources: List<EvidenceSource>, claims: List<ClaimCheck>): CheckedAnswer? {
         val topic = PublicTopics.parse(question) ?: return null
         if (topic.type != PublicEntityType.FILM || topic.intent !in setOf(PublicTopicIntent.REVIEW, PublicTopicIntent.RATING)) return null
-        val lines = sources.filter { it.kind == "WEB_PAGE" && topic.sourceMatches(it.title, it.excerpt, it.url) }.mapNotNull { source ->
+        val lines = sources.filter { it.kind == "WEB_PAGE" && topic.sourceMatches(it.title, it.excerpt, it.url, it.publicLanguage) }.mapNotNull { source ->
             val values = source.excerpt.split(Regex("\\n\\s*\\n")).flatMap { block ->
                 val heading = if ('\n' in block) block.substringBefore('\n') else source.title
                 val body = block.substringAfter('\n', block)

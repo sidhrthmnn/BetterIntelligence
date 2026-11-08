@@ -34,7 +34,7 @@ object EvidenceRecovery {
                 val financial = Regex("(?i)\\b(?:loan|debt)\\b").containsMatchIn(question)
                 val choices = if (financial && body.length <= 650 && Regex("\\d").containsMatchIn(body)) listOf(body) + units else units
                 choices.distinct().mapNotNull { sentence ->
-                    if (sentence.length !in 12..650 || needsAmount && !Regex("\\d").containsMatchIn(sentence) || FactualResearch.incomplete(sentence) ||
+                    if (sentence.length !in 12..650 || PublisherBoilerplate.unrelatedFooter(block, question) || needsAmount && !Regex("\\d").containsMatchIn(sentence) || FactualResearch.incomplete(sentence) ||
                         FactualResearch.headlineOnly(sentence, source.title) || ClaimVerification.financeExample(block) ||
                         Regex("(?i)ignore.{0,30}instructions|system prompt|https?://|subscribe|sign in|^references\\b").containsMatchIn(sentence)) return@mapNotNull null
                     val scoped = if (heading != null && ResearchPlanner.subjects(question).any { subject ->

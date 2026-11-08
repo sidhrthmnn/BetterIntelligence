@@ -7,7 +7,7 @@ object EvidenceAnswer {
     fun hasTemperature(text: String) = Regex("(?i)(?<![\\p{L}\\p{N}])-?\\d+(?:\\.\\d+)?\\s*(?:°\\s*)?[CF]\\b|\\d+\\s+degrees?\\s+(?:celsius|fahrenheit)").containsMatchIn(text)
 
     fun resolve(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
-        val aligned = sources.filter { PublicTopics.parse(question)?.sourceMatches(it.title, it.excerpt, it.url) != false }
+        val aligned = PublicTopics.alignedSources(question, sources)
         if (aligned.any { SourceBrief.reportedRoleContext(it, question) })
             SourceBrief.build(question, aligned, emptyList())?.let { return it }
         val prose = draft.replace(Regex("(?im)^\\s*(?:From the retrieved pages|Untrusted source evidence|Here are the retrieved excerpts)\\s*:\\s*"), "")
@@ -20,8 +20,9 @@ object EvidenceAnswer {
         val recommendation = Regex("(?i)^which .{1,60} (?:is|are) (?:good|best) for\\b|^(?:recommend|suggest) .{1,80}\\b").containsMatchIn(question)
         val fuller = if (resolved.support == AnswerSupport.PARTIAL && recommendation)
             SourceBrief.build(question, aligned, resolved.claims) ?: resolved else resolved
-        val focused = ReleaseAnswerScope.apply(question, aligned, focusReview(fuller, question))
-        return focused.copy(text = AnswerPresentation.paragraphs(focused.text))
+        val scoped = FinancialAnswerScope.recover(question, aligned, fuller) ?: IdentityAnswerScope.recover(question, aligned, fuller) ?: fuller
+        val focused = ReleaseAnswerScope.apply(question, aligned, focusReview(scoped, question))
+        return focused.copy(text = AnswerPresentation.format(focused.text, question, aligned))
     }
 
     /** Keep verified review conclusions ahead of tangential production facts.
@@ -39,6 +40,7 @@ object EvidenceAnswer {
 
     private fun resolveStrict(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
         var checked = GroundingPolicy.checkAnswer(draft, sources, question)
+        ReleaseAnswerScope.focus(question, sources, checked)?.let { return it }
         val comparisonRequested = ResearchIntent.COMPARISON in ResearchPlanner.plan(question).intents
         val numericMissing = Regex("(?i)how (?:much|many)\\b").containsMatchIn(question) && (!CitationSupport.hasFactNumber(checked.text) || !ClaimLanguage.answerScopeMatches(question, checked.text))
         val weather = ConversationalResearch.isWeather(question)

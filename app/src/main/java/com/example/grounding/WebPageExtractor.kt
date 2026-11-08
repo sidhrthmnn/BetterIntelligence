@@ -75,6 +75,28 @@ object WebPageExtractor {
             bestArticle != null -> bestArticle
             else -> doc.body()
         }
+        // Some articles use bare text + <br> around headings instead of <p>.
+        // Preserve those real paragraph boundaries rather than relying on a
+        // flattened JSON-LD articleBody that glues headings to sentences.
+        root.select("div, section, article, main").filter { node ->
+            node.ownText().length >= 30 && node.children().any { it.tagName() in setOf("br", "h1", "h2", "h3", "h4") } &&
+                node.parents().takeWhile { it != root }.none { it.tagName() in setOf("p", "table", "ul", "ol", "pre", "dd", "dt") }
+        }.forEach { node ->
+            val run = mutableListOf<org.jsoup.nodes.Node>()
+            fun flush() {
+                if (run.any { it is org.jsoup.nodes.TextNode && it.text().isNotBlank() }) {
+                    val paragraph = Element("p")
+                    run.first().before(paragraph)
+                    run.forEach { paragraph.appendChild(it) }
+                }
+                run.clear()
+            }
+            node.childNodes().toList().forEach { child ->
+                if (child is org.jsoup.nodes.TextNode || child is Element && child.tagName() in setOf("a", "b", "strong", "em", "i", "span", "code", "small", "sup", "sub")) run += child
+                else flush()
+            }
+            flush()
+        }
         // Editorial recommendation cards often use <ol><li><h2>...<p>...</li>.
         // They are article sections, not one giant list entry. Preserve their
         // paragraphs and heading scope instead of flattening scores + prose.
@@ -82,15 +104,9 @@ object WebPageExtractor {
             item.tagName() == "li" && item.selectFirst("h2, h3, h4") != null && item.select("p").sumOf { it.text().length } >= 80
         } }.forEach { list -> list.children().filter { it.tagName() == "li" }.forEach { it.unwrap() }; list.unwrap() }
         root.select("a").filter { Regex("(?i)^(?:see all our test results|see our review|learn more)[\\s ]*$").matches(it.text()) }.forEach { it.remove() }
-        if (type != "text/plain") {
-            root.select("img[alt]").forEach { img ->
-                val alt = img.attr("alt").trim()
-                if (Regex("(?i)\\b(?:picture|photo|image|icon|thumbnail)\\b").containsMatchIn(alt)) return@forEach
-                if (alt.length in 3..60 && !Regex("(?i)^(icon|image|logo|photo|avatar|placeholder|banner|arrow|close)\\b|\\b(?:rating|star) icon\\b").containsMatchIn(alt)) {
-                    img.appendText(" $alt ")
-                }
-            }
-        }
+        // Images are optional illustrations, not textual factual evidence.
+        // Do not inject filenames/alt labels into an article's answer passages.
+        root.select("figure:not(:has(table))").remove()
         // Some publishers put bylines in a bare <em>/<time> after malformed <p>
         // markup. Keep these visible dates, rather than substituting URL dates
         // or global site banners for the article's publication/update line.
@@ -208,11 +224,11 @@ object WebPageExtractor {
         val priceRequest = Regex("(?i)\\b(?:prices?|costs?|how much)\\b").containsMatchIn(question)
         val financeRequest = Regex("(?i)\\b(?:finance|financing|loan|APR|interest|repayment|example|monthly)\\b").containsMatchIn(question)
         val prices = if (priceRequest) priceCards(root, title, question, page.url) else emptyList()
-        val clean = DocumentEvidence.collect(weatherBlocks + prices + blocks + structured).flatMap { block ->
+        val clean = DocumentEvidence.collect((weatherBlocks + prices + blocks + structured).map(PublisherBoilerplate::readable)).flatMap { block ->
             val normalized = block.replace(Regex("[\\u200B\\uFEFF]"), "").replace(Regex("[\\t ]+"), " ").trim()
             if (normalized.length <= 1800) listOf(normalized) else ClaimVerification.sentences(normalized, 1024)
         }
-            .filter { it.length >= 12 && !FactualResearch.headlineOnly(it, title) &&
+            .filter { it.length >= 12 && !PublisherBoilerplate.unrelatedFooter(it, question) && !FactualResearch.headlineOnly(it, title) &&
                 !(PublicQuestionIntent.serviceStatus(question) && PublicQuestionIntent.statusPlaceholder(it)) &&
                 !(it.length < 450 && cookieTextPattern.containsMatchIn(it)) &&
                 (!priceRequest || financeRequest || !ClaimVerification.financeExample(it)) }
@@ -226,7 +242,8 @@ object WebPageExtractor {
                 PublicQuestionIntent.serviceScope(title + " " + page.url + " " + text, question))) return null
         val image = SourceImages.metadata(doc, page.url, policies)
         return EvidenceSource(id, title, HtmlDiscovery.canonicalUrl(page.url), text, System.currentTimeMillis(), date.first, "WEB_PAGE", date.second,
-            imageUrl = image?.first.orEmpty(), imageAlt = image?.second.orEmpty())
+            imageUrl = image?.first.orEmpty(), imageAlt = image?.second.orEmpty(), publicLanguage =
+                if (PublicTopics.parse(question)?.type == PublicEntityType.FILM) PublicTopics.primaryLanguage(title, body) else "")
     }
 
     /** Re-focus a cached excerpt when shrinking it for a small model context.

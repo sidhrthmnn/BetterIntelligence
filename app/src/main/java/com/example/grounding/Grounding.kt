@@ -53,7 +53,7 @@ data class ResearchOutcome(val sources: List<EvidenceSource>, val failure: Resea
 data class EvidenceSource(val id: Int, val title: String, val url: String, val excerpt: String,
     val retrievedAt: Long, val updatedAt: String = "", val kind: String = "ARTICLE_SUMMARY", val dateKind: String = "",
     val publicPlace: String = "", val discoveryProvider: String = "", val publicQuery: String = "",
-    val imageUrl: String = "", val imageAlt: String = "")
+    val imageUrl: String = "", val imageAlt: String = "", val publicLanguage: String = "")
 
 data class PreparedEvidence(val prompt: String, val sources: List<EvidenceSource>)
 
@@ -64,6 +64,7 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
         .apply { if (source.publicPlace.isNotBlank()) put("publicPlace", source.publicPlace)
             if (source.discoveryProvider.isNotBlank()) put("discoveryProvider", source.discoveryProvider)
             if (ConversationalResearch.validPublicQuery(source.publicQuery)) put("publicQuery", source.publicQuery)
+            if (PublicTopics.validLanguage(source.publicLanguage)) put("publicLanguage", source.publicLanguage)
             if (GroundingPolicy.publicHttpsUrl(source.imageUrl)) { put("imageUrl", source.imageUrl); put("imageAlt", source.imageAlt.take(160)) } }) } }.toString()
     companion object {
         fun sources(json: String): List<EvidenceSource> = runCatching {
@@ -76,7 +77,8 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
                         item.optString("publicPlace").takeIf(ConversationalResearch::validPublicPlace).orEmpty(),
                         item.optString("discoveryProvider").takeIf { it in setOf("DuckDuckGo", "Exa", "Mwmbl") }.orEmpty(),
                         item.optString("publicQuery").takeIf(ConversationalResearch::validPublicQuery).orEmpty(),
-                        item.optString("imageUrl").takeIf(GroundingPolicy::publicHttpsUrl).orEmpty(), item.optString("imageAlt").take(160))
+                        item.optString("imageUrl").takeIf(GroundingPolicy::publicHttpsUrl).orEmpty(), item.optString("imageAlt").take(160),
+                        item.optString("publicLanguage").takeIf(PublicTopics::validLanguage).orEmpty())
                 }
             }
         }.getOrDefault(emptyList())
@@ -167,6 +169,7 @@ object GroundingPolicy {
             val evidence = JSONArray().apply { included.forEach { source -> put(JSONObject()
                 .put("id", source.id).put("title", bounded(source.title, 120))
                 .put("publisher", source.url.toHttpUrl().host)
+                .apply { if (PublicTopics.validLanguage(source.publicLanguage)) put("sourceLanguage", source.publicLanguage) }
                 .apply { if (characterBudget >= 2500) {
                     put("url", source.url)
                     put("objectives", JSONArray(researchPlan.coverage(source.excerpt).map { researchPlan.focuses[it].question }))
@@ -378,9 +381,9 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
             val publicQuery = if (ResearchPlanner.plan(question).explicitUrls.isNotEmpty()) "" else
                 ResearchQuery(question).topicSearchText.takeIf(ConversationalResearch::validPublicQuery).orEmpty()
             val eligible = outcome.sources.filter { source -> PublicTopics.parse(question)?.let { topic ->
-                topic.sourceMatches(source.title, source.excerpt, source.url) && FactualResearch.usable(source, question)
+                topic.sourceMatches(source.title, source.excerpt, source.url, source.publicLanguage) && FactualResearch.usable(source, question)
             } != false }
-            val sources = ConversationalResearch.bindPublicPlace(question, eligible).map { it.copy(publicQuery = publicQuery) }
+            val sources = ConversationalResearch.bindPublicPlace(question, PublicTopics.alignedSources(question, eligible)).map { it.copy(publicQuery = publicQuery) }
             if (sources.isEmpty() && outcome.clarification.isNotBlank() && !GroundingPolicy.containsCredential(outcome.clarification))
                 GroundingResult("NEEDS_SUBJECT", notice = outcome.clarification.take(400), metrics = outcome.metrics)
             else if (sources.isEmpty()) {

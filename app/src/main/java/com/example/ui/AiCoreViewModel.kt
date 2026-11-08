@@ -906,6 +906,16 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             var foregroundToken = 0L
             var model = repository.engine.activeModelName
             try {
+                com.example.engine.DeviceClock.answer(text)?.let { clock ->
+                    model = "Device clock"
+                    repository.beginChatTurn(ChatMessageEntity(role = "user", content = text, modelName = model, conversationId = conversation), replaceFrom)
+                    savedUser = true
+                    pendingId = repository.insertChatMessage(ChatMessageEntity(role = "assistant", content = "", modelName = model,
+                        conversationId = conversation, messageState = "STREAMING"))
+                    _pendingReplyId.value = pendingId
+                    result = clock; evidence = GroundingResult("DEVICE_CLOCK")
+                    return@launch
+                }
                 // Evaluate available RAM and dynamically route between Primary (full/stepped-down context) and Secondary model.
                 val params = _chatGenerationParams.value
                 val tierDecision = repository.resolveAndActivateForRam(params.contextSize)

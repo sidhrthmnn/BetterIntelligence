@@ -31,6 +31,7 @@ object AnswerSourceStatus {
         "INSUFFICIENT_EVIDENCE" -> "Not enough web evidence"
         "PRIVACY_BLOCKED" -> "On-device · Private input kept local"
         "LOCAL" -> "On-device"
+        "DEVICE_CLOCK" -> "Device clock · No web lookup needed"
         "LOCAL_UNVERIFIED" -> "On-device · Live facts not checked"
         else -> ""
     }

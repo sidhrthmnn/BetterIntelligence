@@ -39,7 +39,7 @@ object AnswerRoutingPolicy {
         val explicit = explicitResearch.containsMatchIn(instruction) || PublicQuestionIntent.externalRequest(instruction) || verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val verify = verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val privateInput = GroundingPolicy.containsCredential(q) || !explicit && Regex("(?i)\\b(?:my|our)\\s+(?:(?:current|recent|latest|private)\\s+)?(?:password|secret|key|token|chat|messages|notes|project|code|email|salary|medical)\\b").containsMatchIn(q)
-        val calculation = com.example.engine.LocalCalculation.evaluate(q) != null
+        val calculation = com.example.engine.LocalCalculation.evaluate(q) != null || com.example.engine.DeviceClock.recognises(q)
         val conversational = Regex("(?i)^\\s*(?:hi|hello|hey|yes|no|ok(?:ay)?|sure|thanks?(?: you)?|thank you|good (?:morning|evening|night)|who are you|what can you do|how are you)[.!? ]*$").matches(q)
         val transform = transformation.containsMatchIn(task) && !explicitResearch.containsMatchIn(q.substringBefore('\n').substringBefore(": ")) && !Regex("https?://").containsMatchIn(q.substringBefore('\n'))
         val resolved = if (transform || calculation || privateInput || localOnly(q)) q else ConversationalResearch.question(q, history, conversationId)
