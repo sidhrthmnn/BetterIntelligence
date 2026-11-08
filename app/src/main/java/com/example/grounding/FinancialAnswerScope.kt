@@ -50,7 +50,26 @@ object FinancialAnswerScope {
         val words = ResearchQuery.words(subject)
         if (words.isEmpty()) return null
         val query = ResearchQuery(question)
-        val reports = sources.filter { it.kind == "WEB_PAGE" && query.currentEnough(it.updatedAt) && GroundingPolicy.publicHttpsUrl(it.url) }
+        val eligible = sources.filter { it.kind == "WEB_PAGE" && query.currentEnough(it.updatedAt) && GroundingPolicy.publicHttpsUrl(it.url) }
+        // A directly stated, individually verified outstanding balance answers
+        // the question. Do not demote it merely because "loan" and "debt" use
+        // different wording or the failed draft had no usable claims.
+        for (source in eligible) for (block in source.excerpt.split(Regex("\\n\\s*\\n"))) {
+            val units = ClaimVerification.sentences(block.substringAfter('\n', block))
+            for ((index, unit) in units.withIndex()) {
+                val qualification = units.getOrNull(index + 1)?.let { Regex("(?i)^(?:The catch|However|But)\\b").containsMatchIn(it) } == true
+                if (money.containsMatchIn(unit) && boundUnit(unit, source.title, subject, source.url) && !qualification &&
+                    Regex("(?i)\\b(?:outstanding (?:debt|loan|balance)|loan balance|owes?)\\b").containsMatchIn(unit) &&
+                    Regex("(?i)\\b(?:has|have|owes?|is|are|stands? at)\\b").containsMatchIn(unit) &&
+                    !Regex("(?i)\\b(?:credit facility|credit line|excluding|off[- ]balance|on paper)\\b").containsMatchIn(unit)) {
+                    val line = "${unit.trimEnd('.', '!', '?')} [${source.id}]."
+                    val proof = GroundingPolicy.checkAnswer(line, listOf(source), question)
+                    if (proof.support == AnswerSupport.CITED && GroundingPolicy.validateCitations(line, listOf(source)).second)
+                        return proof.copy(text = line, sourceExtract = true, recoveryAttempted = true, recoveredClaims = 1)
+                }
+            }
+        }
+        val reports = eligible
             .mapNotNull { source ->
                 val passage = source.excerpt.split(Regex("\\n\\s*\\n")).map { it.substringAfter('\n', it).trim() }.firstOrNull { body ->
                     body.length in 20..600 && money.containsMatchIn(body) && financing.containsMatchIn(body) &&
@@ -60,8 +79,9 @@ object FinancialAnswerScope {
                 val units = ClaimVerification.sentences(passage)
                 val index = units.indexOfFirst { money.containsMatchIn(it) && financing.containsMatchIn(it) && boundUnit(it, source.title, subject, source.url) }
                 val concise = if (index >= 0) listOfNotNull(units[index], units.getOrNull(index + 1)?.takeIf {
-                    Regex("(?i)\\b(?:undrawn|not|only|unless|provided|repay\\w*|matur\\w*|closing|interest|rate)\\b").containsMatchIn(it) &&
-                        (Regex("(?i)^(?:The (?:facility|loan|balance)|This (?:facility|loan)|It)\\b").containsMatchIn(it) || ResearchQuery.words(it).containsAll(words))
+                    Regex("(?i)^(?:The catch|However|But)\\b").containsMatchIn(it) ||
+                        Regex("(?i)\\b(?:undrawn|not|only|unless|provided|repay\\w*|matur\\w*|closing|interest|rate)\\b").containsMatchIn(it) &&
+                        (Regex("(?i)^(?:The (?:facility|loan|balance)|This (?:facility|loan)|This is (?:a |the )?(?:revolving )?(?:credit )?(?:facility|loan|line)|It)\\b").containsMatchIn(it) || ResearchQuery.words(it).containsAll(words))
                 }).joinToString(" ") else passage
                 ReadableSourceSummary.sentence(source, concise, question)?.let { summary ->
                     val date = ResearchQuery.date(source.updatedAt)?.takeIf { source.dateKind in setOf("PUBLISHED", "MODIFIED") }
@@ -83,7 +103,7 @@ object FinancialAnswerScope {
                 support = if (terms.isEmpty()) AnswerSupport.INSUFFICIENT else AnswerSupport.PARTIAL,
                 sourceBrief = terms.isNotEmpty(), sourceExtract = terms.isNotEmpty(), recoveryAttempted = true)
         }
-        return checked.copy(text = reports.joinToString("\n\n") + "\n\nThe sources do not establish the $period or the amount actually drawn from these credit facilities.",
+        return checked.copy(text = reports.joinToString("\n\n") + "\n\nThe sources do not establish the $period or the amount actually borrowed.",
             support = AnswerSupport.PARTIAL, sourceBrief = true, sourceExtract = true, recoveryAttempted = true)
     }
 }

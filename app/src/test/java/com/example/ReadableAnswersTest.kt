@@ -336,7 +336,7 @@ class ReadableAnswersTest {
         val s=WebPageExtractor.article(WebDocument("https://publisher.example/orion",html,"text/html"),1,q)!!
         val focused=WebPageExtractor.focusExcerpt(s.excerpt,q,240,s.url)
         assertTrue(focused,focused.contains("$4 billion"))
-        val own=source("We have established a new $4 billion credit facility. It was undrawn at closing.").copy(title="New credit facility",url="https://orion.example/news")
+        val own=source("We have established a new $4 billion credit facility. This is a revolving credit facility that was undrawn at closing.").copy(title="New credit facility",url="https://orion.example/news")
         assertEquals(100,FinancialAnswerScope.focusScore(own.excerpt,q,own.url))
         assertTrue(EvidenceRanking.acceptable(own,ResearchPlanner.plan(q)))
         val investor=source("Vega borrowed a $40 billion loan to buy a stake in Orion.").copy(id=2,title="Vega borrowing for Orion stake")
@@ -349,6 +349,13 @@ class ReadableAnswersTest {
         assertTrue(partial.text,partial.text.contains("do not establish"));assertFalse(partial.text.contains("$4 billion"));assertFalse(partial.text.contains("100 basis points"))
         assertTrue(partial.text,GroundingPolicy.validateCitations(partial.text,listOf(terms)).second)
         assertTrue(ResearchPlanner.plan(q).searches.any { it.contains("credit facility") })
+        val qualified=source("Orion's books show zero debt and just $46 million of quarterly capital spending. The catch: there are $665 billion of commitments off the balance sheet.").copy(title="Orion balance sheet")
+        val context=EvidenceAnswer.resolve("unusable",listOf(qualified),q)
+        assertTrue(context.text,context.text.contains("commitments off the balance sheet"));assertTrue(context.text.contains("do not establish"))
+        val debt=source("Orion has 4 billion dollars of outstanding debt.")
+        val direct=EvidenceAnswer.resolve("unusable",listOf(debt),q)
+        assertEquals(AnswerSupport.CITED,direct.support)
+        assertTrue(direct.text,GroundingPolicy.validateCitations(direct.text,listOf(debt)).second)
     }
 
     @Test fun globalRankingParaphraseGetsAVisibleSourceDateWithoutLiteralRichestWording() {
