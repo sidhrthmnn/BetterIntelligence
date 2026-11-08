@@ -237,7 +237,7 @@ object WebPageExtractor {
         // flattening the same controls back into one apparent body paragraph.
         if (clean.isEmpty() && blocks.isNotEmpty()) return null
         val usable = clean.ifEmpty { listOf(body.trim().take(64_000)) }
-        val text = focused(usable, dateLines, question, minOf(if (ResearchPlanner.plan(question).focuses.size > 1 || ResearchIntent.TECHNICAL in ResearchPlanner.plan(question).intents) 8000 else 4000, snippetLimit)).trim()
+        val text = focused(usable, dateLines, question, minOf(if (ResearchPlanner.plan(question).focuses.size > 1 || ResearchIntent.TECHNICAL in ResearchPlanner.plan(question).intents) 8000 else 4000, snippetLimit), page.url).trim()
         if (text.length < 80 && !(PublicQuestionIntent.statusValue(text, question) &&
                 PublicQuestionIntent.serviceScope(title + " " + page.url + " " + text, question))) return null
         val image = SourceImages.metadata(doc, page.url, policies)
@@ -248,9 +248,9 @@ object WebPageExtractor {
 
     /** Re-focus a cached excerpt when shrinking it for a small model context.
      * Never add inferred facts or silently drop a table's header/unit. */
-    fun focusExcerpt(text: String, question: String, budget: Int): String = focused(
+    fun focusExcerpt(text: String, question: String, budget: Int, sourceUrl: String = ""): String = focused(
         text.split(Regex("\\n\\s*\\n")).let { blocks -> if (blocks.size > 1) blocks else text.lines().chunked(2).map { it.joinToString("\n") } },
-        text.lines().filter { it.length <= 220 && visibleDate.containsMatchIn(it) }.take(2), question, budget)
+        text.lines().filter { it.length <= 220 && visibleDate.containsMatchIn(it) }.take(2), question, budget, sourceUrl)
 
     /** Bind short visible price fields to their nearest bounded product card.
      * Standalone prices and amounts in general finance examples have no owner. */
@@ -267,7 +267,7 @@ object WebPageExtractor {
         }.distinct().take(6).toList()
     }
 
-    private fun focused(blocks: List<String>, dates: List<String>, question: String, budget: Int): String {
+    private fun focused(blocks: List<String>, dates: List<String>, question: String, budget: Int, sourceUrl: String = ""): String {
         val plan = ResearchPlanner.plan(question)
         val query = ResearchQuery(question)
         val candidates = blocks.flatMap { block ->
@@ -343,7 +343,7 @@ object WebPageExtractor {
                     else -> 0
                 } else 0
                 return query.bm25Score(blockText, docFreqs, candidates.size, avgWords).toDouble() +
-                    incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText) + FactualResearch.answerFocusScore(blockText, question) + SourceBrief.roleReportScore(blockText, question) +
+                    incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText) + FactualResearch.answerFocusScore(blockText, question, sourceUrl) + SourceBrief.roleReportScore(blockText, question) +
                     if (PublicQuestionIntent.statusValue(blockText, question)) 100 else 0
         }
         val scores = candidates.indices.map(::staticScore)

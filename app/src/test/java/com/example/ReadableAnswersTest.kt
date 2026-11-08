@@ -274,7 +274,7 @@ class ReadableAnswersTest {
         assertFalse(a.text.contains("100 basis points"));assertTrue(GroundingPolicy.validateCitations(a.text,listOf(s)).second)
         assertFalse(GroundingPolicy.validateCitations(a.text.replace("page dated ${s.updatedAt}","page dated 2099-01-01"),listOf(s)).second)
         val unrelated=s.copy(excerpt="Example Bank handed Vega a $520 million credit line.")
-        assertNull(FinancialAnswerScope.recover(q,listOf(unrelated),CheckedAnswer("unusable",AnswerSupport.INSUFFICIENT,emptyList())))
+        assertEquals(AnswerSupport.INSUFFICIENT,FinancialAnswerScope.recover(q,listOf(unrelated),CheckedAnswer("unusable",AnswerSupport.INSUFFICIENT,emptyList()))!!.support)
     }
 
     @Test fun whyQuestionsPreferActualCausesOverCaptionsAndFaqPromptsAreNotFacts() {
@@ -327,6 +327,35 @@ class ReadableAnswersTest {
         val a=EvidenceAnswer.resolve("*   **Alice Rowan** stars in Road Atlas [1].\n\n*   **Ben Stone** is listed as a prominent star in Road Atlas [1].\n\n*   The music was composed by Mira Bell [1].",listOf(s),"Who is being cast in Road Atlas Hindi film?")
         assertTrue(a.text,a.text.contains("Alice Rowan") && a.text.contains("Ben Stone"))
         assertFalse(a.text,a.text.contains("Mira Bell") || a.text.contains("- * "))
+        assertTrue(a.text,GroundingPolicy.validateCitations(a.text,listOf(s)).second)
+    }
+
+    @Test fun financingAmountsSurviveFocusingAndCannotBeBorrowedFromAnInvestorOrHeadline() {
+        val q="How much loan does Orion have?"
+        val html="<title>Orion credit facility</title><main><p>Orion has secured a new $4 billion revolving credit facility. The facility was undrawn at closing.</p><p>Orion's interest rate is the overnight rate plus 100 basis points.</p></main>"
+        val s=WebPageExtractor.article(WebDocument("https://publisher.example/orion",html,"text/html"),1,q)!!
+        val focused=WebPageExtractor.focusExcerpt(s.excerpt,q,240,s.url)
+        assertTrue(focused,focused.contains("$4 billion"))
+        val own=source("We have established a new $4 billion credit facility. It was undrawn at closing.").copy(title="New credit facility",url="https://orion.example/news")
+        assertEquals(100,FinancialAnswerScope.focusScore(own.excerpt,q,own.url))
+        assertTrue(EvidenceRanking.acceptable(own,ResearchPlanner.plan(q)))
+        val investor=source("Vega borrowed a $40 billion loan to buy a stake in Orion.").copy(id=2,title="Vega borrowing for Orion stake")
+        assertEquals(0,FinancialAnswerScope.focusScore(investor.excerpt,q,investor.url))
+        assertEquals(0,FinancialAnswerScope.focusScore("Orion has extended Vega a $5 billion loan.",q,"https://publisher.example/loan"))
+        val result=EvidenceAnswer.resolve("unusable",listOf(own,investor),q)
+        assertTrue(result.text,result.text.contains("$4 billion") && result.text.contains("undrawn"));assertFalse(result.text.contains("$40"))
+        val terms=source("The loan is unsecured and can be tapped over three years.\n\nOrion's interest rate is 100 basis points.").copy(title="Orion gets $4 billion credit line")
+        val partial=EvidenceAnswer.resolve("Orion's interest rate is 100 basis points [1].",listOf(terms),q)
+        assertTrue(partial.text,partial.text.contains("do not establish"));assertFalse(partial.text.contains("$4 billion"));assertFalse(partial.text.contains("100 basis points"))
+        assertTrue(partial.text,GroundingPolicy.validateCitations(partial.text,listOf(terms)).second)
+        assertTrue(ResearchPlanner.plan(q).searches.any { it.contains("credit facility") })
+    }
+
+    @Test fun globalRankingParaphraseGetsAVisibleSourceDateWithoutLiteralRichestWording() {
+        val q="Who is the richest person in the world right now?"
+        val s=source("Tesla and SpaceX chief Elon Musk continued to hold the top position in the global billionaire rankings, with an estimated net worth of $878.5 billion.").copy(title="Asia's richest person update")
+        val a=EvidenceAnswer.resolve("unusable",listOf(s),q)
+        assertTrue(a.text,a.text.contains("Elon Musk") && a.text.contains("page dated ${s.updatedAt}"))
         assertTrue(a.text,GroundingPolicy.validateCitations(a.text,listOf(s)).second)
     }
 

@@ -49,11 +49,12 @@ object SourceBrief {
                     val keptBody = if ('\n' in text) text.substringAfter('\n') else text
                     ResearchQuery.words(keptBody).size >= (if (PublicQuestionIntent.statusValue(text, question)) 2 else 4) && !FactualResearch.headlineOnly(text, source.title) &&
                         (q.terms.isEmpty() || q.score(keptBody) > 0 || roleReportScore(text, question) > 0 ||
+                            IdentityAnswerScope.focusScore(text, question) >= 100 || FinancialAnswerScope.focusScore(text, question, source.url) >= 100 ||
                             FactualResearch.answerFocusScore(text, question) >= 65 &&
                             q.terms.count { it in ResearchQuery.words(source.title) } >= minOf(2, q.terms.size))
                 }
             }
-            candidates.maxByOrNull { q.score(it) + FactualResearch.answerFocusScore(it, question) + ReleaseAnswerScope.focusScore(it, question) + roleReportScore(it, question) + if (PublicQuestionIntent.statusValue(it, question)) 100 else 0 }
+            candidates.maxByOrNull { q.score(it) + FactualResearch.answerFocusScore(it, question, source.url) + ReleaseAnswerScope.focusScore(it, question) + roleReportScore(it, question) + if (PublicQuestionIntent.statusValue(it, question)) 100 else 0 }
                 ?.let { source to it }
         }.distinctBy { EvidenceRanking.publisher(it.first.url) }.take(2)
         if (selected.isEmpty()) return null

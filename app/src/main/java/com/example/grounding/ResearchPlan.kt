@@ -60,6 +60,9 @@ object ResearchPlanner {
             ConversationalResearch.needsSubject(question) -> emptyList()
             urls.isNotEmpty() -> emptyList()
             query.publicTopic != null -> query.publicTopic.searches()
+            FinancialAnswerScope.requested(plain) && FinancialAnswerScope.borrower(plain) != null -> FinancialAnswerScope.borrower(plain)!!.let {
+                listOf("$it outstanding debt loans", "$it credit facility announced official", "$it borrowing amount credit line")
+            }
             IdentityAnswerScope.ownerSubject(plain) != null -> IdentityAnswerScope.ownerSubject(plain)!!.let {
                 listOf("$it owners ownership", "\"$it\" owned by", "$it official about")
             }

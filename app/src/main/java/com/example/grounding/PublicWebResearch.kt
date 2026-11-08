@@ -165,9 +165,10 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         fun enough(): Boolean {
             val selected = EvidenceRanking.select(sources, plan)
             val covered = selected.flatMap { plan.coverage(it.excerpt) }.toSet()
-            return (!FactualResearch.needsAnswerFocus(question) || selected.any { FactualResearch.answerFocusScore(it.excerpt, question) >= 65 }) &&
+            val financingAmount = selected.any { FinancialAnswerScope.focusScore(it.excerpt, question, it.url) >= 100 }
+            return (!FactualResearch.needsAnswerFocus(question) || selected.any { FactualResearch.answerFocusScore(it.excerpt, question, it.url) >= 65 }) &&
                 (query.publicTopic?.intent != PublicTopicIntent.REVIEW || selected.any { FactualResearch.reviewKind(it.title, it.url) == "CRITIC" }) &&
-                covered.size == plan.focuses.size && (selected.size >= 2 || selected.size == 1 &&
+                (covered.size == plan.focuses.size || financingAmount) && (selected.size >= 2 || selected.size == 1 &&
                 (explicit.isNotEmpty() || EvidenceRanking.primaryRelevance(selected.single().url, question) > 0)) && EvidenceRanking.conflicts(selected).isEmpty()
         }
         suspend fun readCandidates(candidates: List<ResearchCandidate>) {

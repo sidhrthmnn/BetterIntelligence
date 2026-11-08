@@ -163,7 +163,7 @@ object GroundingPolicy {
         val eligibleSources = sources.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) }
         for ((count, excerptBudget) in plans) {
             val included = eligibleSources.take(count).map { it.copy(
-                excerpt = EvidencePacket.completeExcerpt(WebPageExtractor.focusExcerpt(it.excerpt, question, excerptBudget), excerptBudget)) }
+                excerpt = EvidencePacket.completeExcerpt(WebPageExtractor.focusExcerpt(it.excerpt, question, excerptBudget, it.url), excerptBudget)) }
                 .filter { it.excerpt.isNotBlank() && (FactualResearch.usable(it, question) || SourceBrief.reportedRoleContext(it, question)) }.map { it.copy(title = bounded(it.title, 120)) }
             if (included.isEmpty()) continue
             val evidence = JSONArray().apply { included.forEach { source -> put(JSONObject()

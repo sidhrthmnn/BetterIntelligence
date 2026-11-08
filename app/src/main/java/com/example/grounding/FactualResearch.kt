@@ -16,9 +16,10 @@ object FactualResearch {
     fun isMovieReview(question: String) = Regex("(?i)\\b(?:reviews?|ratings?|audience reception|how (?:is|was) .{1,70}(?:movie|film))\\b").containsMatchIn(PublicTopics.normalize(question))
 
     /** Rank the requested answer facet in actual body text, never in a headline. */
-    fun answerFocusScore(text: String, question: String): Int {
+    fun answerFocusScore(text: String, question: String, sourceUrl: String = ""): Int {
         val body = text.split(Regex("\\n\\s*\\n")).joinToString(" ") { if ('\n' in it) it.substringAfter('\n') else it }
         if (IdentityAnswerScope.requested(question)) return IdentityAnswerScope.focusScore(text, question)
+        if (FinancialAnswerScope.requested(question)) return FinancialAnswerScope.focusScore(text, question, sourceUrl)
         if (Regex("(?i)^\\s*why\\b").containsMatchIn(question)) {
             val phenomenon = ResearchQuery(question).terms.lastOrNull()?.takeIf { it.length >= 4 }
             return text.split(Regex("\\n\\s*\\n")).maxOfOrNull { block ->
@@ -39,7 +40,7 @@ object FactualResearch {
         }
         return 0
     }
-    fun needsAnswerFocus(question: String) = isMovieReview(question) || IdentityAnswerScope.requested(question) || Regex("(?i)^\\s*why\\b").containsMatchIn(question) ||
+    fun needsAnswerFocus(question: String) = isMovieReview(question) || IdentityAnswerScope.requested(question) || FinancialAnswerScope.requested(question) || Regex("(?i)^\\s*why\\b").containsMatchIn(question) ||
         NewsIntent.isLiveRequest(question) && Regex("(?i)\\belections?\\b").containsMatchIn(question)
     private val casting = Regex("(?i)\\b(?:who(?:['’]s|\\s+(?:is|was|will be|has been|was announced as))?\\s+(?:(?:currently|now|actually|really)\\s+)?(?:(?:going to|set to)\\s+)?(?:play(?:s|ed|ing)?|portray(?:s|ed|ing)?|voic(?:e|es|ed|ing)|cast)|(?:which|what)\\s+(?:actor|actress)|(?:actor|actress)\\s+(?:playing|portraying)|who\\s+(?:is|was)\\s+.*\\bcast\\s+as)\\b")
     private val speculative = Regex("(?i)\\b(?:fan theories|fan theory|theory|theories|rumou?rs?|speculat(?:ion|ive)|unconfirmed|fan[- ]?casting|predictions?|might|could|allegedly|reportedly)\\b")

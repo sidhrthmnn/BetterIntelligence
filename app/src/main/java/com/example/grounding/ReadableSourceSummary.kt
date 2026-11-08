@@ -30,7 +30,7 @@ object ReadableSourceSummary {
         }
         val candidates = allCandidates.filter { ReleaseAnswerScope.focusScore(it, question) > 0 }.ifEmpty { allCandidates }
         val q = ResearchQuery(question)
-        val best = candidates.maxByOrNull { FactualResearch.answerFocusScore(it, question) + SourceBrief.roleReportScore(it, question) + q.score(it) } ?: return null
+        val best = candidates.maxByOrNull { FactualResearch.answerFocusScore(it, question, source.url) + SourceBrief.roleReportScore(it, question) + q.score(it) } ?: return null
         // Keep a neighbouring complete sentence when it carries timing,
         // negation, attribution or a condition needed to interpret the value.
         val chosen = candidates.takeIf { it.size <= 3 && it.joinToString(" ").length <= 500 }?.joinToString(" ") ?: best

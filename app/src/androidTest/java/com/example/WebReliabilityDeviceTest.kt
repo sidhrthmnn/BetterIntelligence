@@ -235,7 +235,9 @@ class WebReliabilityDeviceTest {
             vm.updateGenerationParams(GenerationParams(contextSize=2048,maxTokens=224,temperature=0f,threads=4))
             vm.useSearchProviderForTesting(PublicWebResearch(discoveryAllowed={repo.preferencesRepository.webAllowed.first()}))
         }
-        val questions=listOf("How much loan does openai have","Antropic or openai have most number of users","What is the time in india","What time is it now","Why is the iphone duo cracking","What's the wether in london","Who is being cast in the movie Matrubhumi","How's batha tamil movie","Who is the ownsr of L&R HOTELS","Who is the richest person in the world right now")
+          val filters=InstrumentationRegistry.getArguments().getString("reliabilityQuestionFilter")?.split(',')?.filter(String::isNotBlank)
+          val questions=listOf("How much loan does openai have","Antropic or openai have most number of users","What is the time in india","What time is it now","Why is the iphone duo cracking","What's the wether in london","Who is being cast in the movie Matrubhumi","How's batha tamil movie","Who is the ownsr of L&R HOTELS","Who is the richest person in the world right now").filter { q -> filters==null || filters.any { q.contains(it,true) } }
+          assertTrue("Replay filter matched no questions",questions.isNotEmpty())
         val failures=mutableListOf<String>()
         try {
             for(q in questions) {
@@ -247,7 +249,8 @@ class WebReliabilityDeviceTest {
                     q.contains("time",true) && (a.groundingStatus!="DEVICE_CLOCK" || !Regex("\\d{2}:\\d{2}").containsMatchIn(a.content)) -> "incorrect clock routing"
                     sources.isNotEmpty() && !GroundingPolicy.validateCitations(a.content,sources).second -> "invalid final citation"
                     sources.isEmpty() && !q.contains("time",true) && a.groundingStatus !in setOf("NEEDS_SUBJECT","NEEDS_LOCATION") -> "no supporting sources: ${a.groundingStatus}"
-                      q.contains("loan") && !Regex("[$£€]\\s*\\d").containsMatchIn(a.content) -> "missing borrowing amount/report"
+                      q.contains("loan") && !Regex("[$£€]\\s*\\d").containsMatchIn(a.content) && !a.content.contains("do not establish",true) -> "missing borrowing amount/report or precise evidence gap"
+                      q.contains("loan") && a.content.contains("basis points",true) && !Regex("[$£€]\\s*\\d").containsMatchIn(a.content) -> "interest substituted for borrowing amount"
                       q.contains("iphone") && (a.content.contains("_208") || a.content.contains("Part Of All") || !Regex("(?i)pressure|stress|push(?:es|ing)? up").containsMatchIn(a.content)) -> "caption or unrelated experiment instead of reported screen-failure mechanism"
                       q.contains("wether") && !EvidenceAnswer.hasTemperature(a.content) -> "missing actual weather temperature"
                       q.contains("Matrubhumi") && (!a.content.contains("Salman",true) || !a.content.contains("Chitrangda",true)) -> "cast names omitted"

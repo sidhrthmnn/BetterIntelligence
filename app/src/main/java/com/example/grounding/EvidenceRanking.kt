@@ -52,7 +52,7 @@ object EvidenceRanking {
         val directAnswer = if (FactualResearch.isCasting(plan.question) && FactualResearch.usable(source, plan.question)) 25 else 0
         val definition = if (FactualResearch.definitionLine(source.excerpt, plan.question)) 25 else 0
         return q.score(text) + entityCoverage * 8 + plan.coverage(text).size * 5 + provenance + incumbentBonus + weatherQuality + directAnswer + definition + primaryRelevance(source.url, plan.question) +
-            minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question) / 2 + weatherPlaceScore(source.title, plan.question) + FactualResearch.reviewPriority(source.title, source.url, plan.question)
+            minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question, source.url) / 2 + weatherPlaceScore(source.title, plan.question) + FactualResearch.reviewPriority(source.title, source.url, plan.question)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
         if (PublicTopics.parse(plan.question)?.sourceMatches(source.title, source.excerpt, source.url, source.publicLanguage) == false) return false
@@ -72,6 +72,7 @@ object EvidenceRanking {
         if (plan.explicitUrls.isNotEmpty()) return true
         val found = ResearchQuery.words(source.title + " " + source.excerpt)
         if (q.years.isNotEmpty() && !found.containsAll(q.years)) return false
+        if (FinancialAnswerScope.focusScore(source.excerpt, plan.question, source.url) >= 100) return true
         // A comparison source can cover one side/facet. Requiring every term
         // from the original question excluded useful primary documentation.
         val subjectMatch = if (plan.entities.isNotEmpty()) plan.entities.any { entity ->
