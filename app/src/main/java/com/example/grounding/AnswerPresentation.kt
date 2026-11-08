@@ -21,7 +21,8 @@ object AnswerPresentation {
     /** Presentation only: retain entire checked claims, qualifiers and IDs. */
     fun format(text: String, question: String, sources: List<EvidenceSource>): String {
         if ("```" in text || Regex("(?i)\\bjson(?:[- ]only)?\\b").containsMatchIn(question)) return paragraphs(text)
-        val parts = paragraphs(text).split(Regex("\\n\\s*\\n")).map { part ->
+        val parts = paragraphs(text).split(Regex("\\n\\s*\\n")).map { raw ->
+            val part = raw.replace(Regex("^\\s*[*•]\\s+"), "- ")
             if (!Regex("(?i)\\b(?:we|we've|our|I tested)\\b").containsMatchIn(part)) part else {
                 val ids = citation.findAll(part).flatMap { Regex("\\d+").findAll(it.value).mapNotNull { n -> n.value.toIntOrNull() } }.toSet()
                 val source = sources.singleOrNull { it.id in ids }
@@ -40,7 +41,7 @@ object AnswerPresentation {
                 return table + parts.filter { it !in facts }.joinToString("\n\n", prefix = if (parts.size > facts.size) "\n\n" else "")
             }
         }
-        return parts.joinToString("\n\n") { if (it in facts && !it.startsWith("- ")) "- $it" else it }
+        return parts.joinToString("\n\n") { if (it in facts && !it.startsWith("- ") && !Regex("^\\d+[.)]\\s+").containsMatchIn(it)) "- $it" else it }
     }
 }
 

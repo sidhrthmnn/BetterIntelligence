@@ -21,8 +21,11 @@ object ReadableSourceSummary {
             ('›' in first || ResearchQuery.words(source.title).containsAll(ResearchQuery.words(first)) || first == "Read the Full Transcript")
         val body = lines.drop(if (heading) 1 else 0).filter { line -> line.isNotBlank() && line != source.title && '›' !in line &&
             !line.startsWith("Published ") && !line.startsWith("Updated ") && line != "Read the Full Transcript" }.joinToString(" ").trim()
-        val allCandidates = ClaimVerification.sentences(body).filter { text ->
-            text.length in 8..650 && text.any(Char::isLetter) && !PublisherBoilerplate.unrelatedFooter(text, question) && !FactualResearch.incomplete(text) &&
+        // Some publishers flatten JSON-LD headings directly against sentence
+        // punctuation. Restore boundaries without changing names or values.
+        val separated = body.replace(Regex("(?<=[.!?])(?=\\p{Lu}\\p{Ll}|A\\s)"), "\n")
+        val allCandidates = ClaimVerification.sentences(separated).filter { text ->
+            text.length in 8..650 && text.any(Char::isLetter) && !FactualResearch.headlineOnly(text, source.title) && !PublisherBoilerplate.unrelatedFooter(text, question) && !FactualResearch.incomplete(text) &&
                 !Regex("(?i)ignore.{0,30}instructions|system prompt|subscribe|bookmark popover|share this|sign in|click here|https?://|^[{\\[]|^I (?:am|have|can)").containsMatchIn(text)
         }
         val candidates = allCandidates.filter { ReleaseAnswerScope.focusScore(it, question) > 0 }.ifEmpty { allCandidates }

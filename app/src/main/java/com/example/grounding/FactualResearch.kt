@@ -19,8 +19,14 @@ object FactualResearch {
     fun answerFocusScore(text: String, question: String): Int {
         val body = text.split(Regex("\\n\\s*\\n")).joinToString(" ") { if ('\n' in it) it.substringAfter('\n') else it }
         if (IdentityAnswerScope.requested(question)) return IdentityAnswerScope.focusScore(text, question)
-        if (Regex("(?i)^\\s*why\\b").containsMatchIn(question)) return if (
-            Regex("(?i)\\b(?:because|due to|caus(?:e|ed|es|ing)|reason|culprit|results? in|leads? to)\\b").containsMatchIn(body)) 65 else 0
+        if (Regex("(?i)^\\s*why\\b").containsMatchIn(question)) {
+            val phenomenon = ResearchQuery(question).terms.lastOrNull()?.takeIf { it.length >= 4 }
+            return text.split(Regex("\\n\\s*\\n")).maxOfOrNull { block ->
+                val prose = block.substringAfter('\n', block)
+                if (!Regex("(?i)\\b(?:because|due to|caus(?:e|ed|es|ing)|reason|culprit|results? in|leads? to)\\b").containsMatchIn(prose)) 0
+                else if (phenomenon != null && ResearchQuery.words(prose).any { it.startsWith(phenomenon) }) 100 else 65
+            } ?: 0
+        }
         if (isMovieReview(question)) return when {
             Regex("(?i)\\b(?:\\d(?:\\.\\d)?\\s*(?:/\\s*(?:5|10|100)\\b|stars?)|rat(?:ed|ing)\\s*:?\\s*\\d)").containsMatchIn(body) -> 100
             Regex("(?i)\\b(?:verdict|uneven|prais\\w*|criticis\\w*|criticiz\\w*|disappoint\\w*|rousing|compelling|gripping|engaging|entertaining|boring|tedious|predictable|underwhelming|outstanding)\\b").containsMatchIn(body) -> 65
@@ -64,6 +70,7 @@ object FactualResearch {
         .matchEntire(question)?.groupValues?.get(1)?.trim(' ', '.', '?', '!')
     fun incomplete(text: String) = Regex("(?i)\\b(?:because|such as|as follows|the following)\\s*:?$|:\\s*$").containsMatchIn(text.trim())
     fun castingRelation(text: String) = Regex("(?i)\\b(?:play(?:s|ed|ing)?|portray(?:s|ed|ing)?|voic(?:e|es|ed|ing)|cast as|role (?:as|of)|star(?:s|ring)? as)\\b").containsMatchIn(text) ||
+        Regex("(?i)\\b(?:listed|confirmed|announced) as (?:a )?(?:(?:prominent|lead|supporting) )?star\\b").containsMatchIn(text) ||
         Regex("\\b[A-Z][\\p{L}.'’-]+(?:\\s+[A-Z][\\p{L}.'’-]+){0,4}\\s+as\\s+[A-Z][\\p{L}.'’-]+").containsMatchIn(text) ||
         Regex("(?i)\\b(?:stars|starring|cast includes|features)\\s+[\\p{L}]").containsMatchIn(text)
 
@@ -79,7 +86,7 @@ object FactualResearch {
                 .map(String::trim).filter { it.isNotBlank() && !utility.matches(it) }.joinToString(" ")
         }.filter(String::isNotBlank)
         if (bodies.isEmpty()) return true
-        if (bodies.all { Regex("(?i)^(?:who|what|when|where|why|how|which|does|can|is|are)\\b[^\\n]*\\?\\s*$").matches(it) }) return true
+        if (bodies.all { Regex("(?i)^(?:[^.!?\\n:]{1,100}:\\s*)?(?:who|what|when|where|why|how|which|does|can|is|are)\\b[^\\n]*\\?\\s*$").matches(it) }) return true
         val words = ResearchQuery.words(clean)
         return title.isNotBlank() && words.isNotEmpty() && (words - ResearchQuery.words(title)).isEmpty()
     }

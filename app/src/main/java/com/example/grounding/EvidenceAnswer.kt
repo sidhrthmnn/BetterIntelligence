@@ -20,9 +20,22 @@ object EvidenceAnswer {
         val recommendation = Regex("(?i)^which .{1,60} (?:is|are) (?:good|best) for\\b|^(?:recommend|suggest) .{1,80}\\b").containsMatchIn(question)
         val fuller = if (resolved.support == AnswerSupport.PARTIAL && recommendation)
             SourceBrief.build(question, aligned, resolved.claims) ?: resolved else resolved
-        val scoped = FinancialAnswerScope.recover(question, aligned, fuller) ?: IdentityAnswerScope.recover(question, aligned, fuller) ?: fuller
-        val focused = ReleaseAnswerScope.apply(question, aligned, focusReview(scoped, question))
+        val bestCause = if (Regex("(?i)^\\s*why\\b").containsMatchIn(question)) aligned.maxOfOrNull { FactualResearch.answerFocusScore(it.excerpt, question) } ?: 0 else 0
+        val relevant = if (bestCause >= 100 && FactualResearch.answerFocusScore(fuller.text, question) < bestCause)
+            SourceBrief.build(question, aligned.filter { FactualResearch.answerFocusScore(it.excerpt, question) >= bestCause }, fuller.claims) ?: fuller else fuller
+        val scoped = FinancialAnswerScope.recover(question, aligned, relevant) ?: IdentityAnswerScope.recover(question, aligned, relevant) ?: relevant
+        val focused = ReleaseAnswerScope.apply(question, aligned, focusCast(focusReview(scoped, question), question, aligned))
         return focused.copy(text = AnswerPresentation.format(focused.text, question, aligned))
+    }
+
+    private fun focusCast(checked: CheckedAnswer, question: String, sources: List<EvidenceSource>): CheckedAnswer {
+        if (!FactualResearch.isCasting(question)) return checked
+        // A source paragraph can mix cast, directors, composers and dates. Keep
+        // only individually supported cast relations for a casting question.
+        val facts = GroundingPolicy.checkAnswer(checked.text, sources, question).claims.filter {
+            it.supported && FactualResearch.castingRelation(it.text) && !it.text.trim().endsWith('?')
+        }.map { it.text }.distinct().take(8)
+        return if (facts.isEmpty()) checked else checked.copy(text = facts.joinToString("\n\n"))
     }
 
     /** Keep verified review conclusions ahead of tangential production facts.

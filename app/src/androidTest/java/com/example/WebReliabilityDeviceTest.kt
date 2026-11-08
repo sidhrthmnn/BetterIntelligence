@@ -217,6 +217,7 @@ class WebReliabilityDeviceTest {
                       assertTrue(a.content, a.content.contains("Netflix",true))
                       assertTrue(a.content, Regex("(?i)could|might|expected|not.{0,30}confirmed").containsMatchIn(a.content))
                       assertFalse(a.content, Regex("(?i)Georgekutty|Jeethu Joseph|Mohanlal").containsMatchIn(a.content))
+                      assertFalse(a.content,a.content.contains("where to watch?",true) || a.content.contains("What is Drishyam 3 about?",true))
                   }
                 if(q.startsWith("Which")) {assertFalse(a.content.contains("Design Picture"));assertFalse(a.content.contains("See all our test results"))}
             }
@@ -247,9 +248,10 @@ class WebReliabilityDeviceTest {
                     sources.isNotEmpty() && !GroundingPolicy.validateCitations(a.content,sources).second -> "invalid final citation"
                     sources.isEmpty() && !q.contains("time",true) && a.groundingStatus !in setOf("NEEDS_SUBJECT","NEEDS_LOCATION") -> "no supporting sources: ${a.groundingStatus}"
                       q.contains("loan") && !Regex("[$£€]\\s*\\d").containsMatchIn(a.content) -> "missing borrowing amount/report"
-                      q.contains("iphone") && (a.content.contains("_208") || a.content.contains("Part Of All") || !Regex("(?i)cause|pressure|stress").containsMatchIn(a.content)) -> "caption or unrelated specification instead of cause"
+                      q.contains("iphone") && (a.content.contains("_208") || a.content.contains("Part Of All") || !Regex("(?i)pressure|stress|push(?:es|ing)? up").containsMatchIn(a.content)) -> "caption or unrelated experiment instead of reported screen-failure mechanism"
                       q.contains("wether") && !EvidenceAnswer.hasTemperature(a.content) -> "missing actual weather temperature"
                       q.contains("Matrubhumi") && (!a.content.contains("Salman",true) || !a.content.contains("Chitrangda",true)) -> "cast names omitted"
+                      q.contains("Matrubhumi") && (a.content.contains("music",true) || a.content.contains("- * ")) -> "unrelated credits or duplicate bullets in cast answer"
                       q.contains("HOTELS") && !a.content.contains("Livingstone",true) -> "requested owner not identified"
                       q.contains("richest") && !a.content.contains("Elon Musk",true) -> "global leader not identified"
                     else -> ""

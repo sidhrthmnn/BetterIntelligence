@@ -308,4 +308,26 @@ class ReadableAnswersTest {
         assertTrue(a.text,a.text.contains("Elon Musk"))
     }
 
+    @Test fun gluedPublisherQuestionsAreNotAnswersAndReportedFailuresOutrankUnrelatedExperiments() {
+        val q="When is Road Atlas Hindi movie releasing on OTT?"
+        val s=source("Reports say its OTT release might not be near.Road Atlas OTT release: When and where to watch?A publisher report suggests Road Atlas could start streaming on ExampleStream between mid and late November 2026.What is Road Atlas about?The family protects its secrets.")
+        val a=EvidenceAnswer.resolve("unusable output",listOf(s),q)
+        assertTrue(a.text,a.text.contains("could start streaming") && a.text.contains("ExampleStream"))
+        assertFalse(a.text,a.text.contains("where to watch?"));assertFalse(a.text.contains("family protects"))
+        val why="Why is the Orion phone cracking?"
+        val experiment=source("Particles infiltrated the hinge, causing crunching, and that could lead to screen damage.").copy(title="Orion phone teardown")
+        val failure=source("Reported Orion phone cracks may be due to pressure from a part of the hinge pushing against the inside screen.").copy(id=2,title="Why Orion phone screens crack")
+        val result=EvidenceAnswer.resolve(experiment.excerpt+" [1]",listOf(experiment,failure),why)
+        assertTrue(result.text,result.text.contains("pressure") && result.text.contains("may"))
+        assertFalse(result.text,result.text.contains("Particles infiltrated"))
+    }
+
+    @Test fun castRepliesKeepNamedActorsWithoutComposersOrDoubleBullets() {
+        val s=source("Alice Rowan stars in Road Atlas. Ben Stone is listed as a prominent star in Road Atlas. The music was composed by Mira Bell.")
+        val a=EvidenceAnswer.resolve("*   **Alice Rowan** stars in Road Atlas [1].\n\n*   **Ben Stone** is listed as a prominent star in Road Atlas [1].\n\n*   The music was composed by Mira Bell [1].",listOf(s),"Who is being cast in Road Atlas Hindi film?")
+        assertTrue(a.text,a.text.contains("Alice Rowan") && a.text.contains("Ben Stone"))
+        assertFalse(a.text,a.text.contains("Mira Bell") || a.text.contains("- * "))
+        assertTrue(a.text,GroundingPolicy.validateCitations(a.text,listOf(s)).second)
+    }
+
 }

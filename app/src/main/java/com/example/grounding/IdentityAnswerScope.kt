@@ -23,7 +23,7 @@ object IdentityAnswerScope {
     }
 
     fun recover(question: String, sources: List<EvidenceSource>, checked: CheckedAnswer): CheckedAnswer? {
-        if (!requested(question) || checked.support == AnswerSupport.CITED && focusScore(checked.text, question) >= 65) return null
+        if (!requested(question) || !worldRanking(question) && checked.support == AnswerSupport.CITED && focusScore(checked.text, question) >= 65) return null
         val query = ResearchQuery(question)
         val focused = sources.filter { it.kind == "WEB_PAGE" && query.currentEnough(it.updatedAt) && focusScore(it.excerpt, question) >= 65 }
             .sortedByDescending { ResearchQuery.date(it.updatedAt) }.take(2)

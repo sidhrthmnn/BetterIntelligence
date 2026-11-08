@@ -23,7 +23,10 @@ object FinancialAnswerScope {
                         ResearchQuery.words(body).containsAll(words) && !PublisherBoilerplate.unrelatedFooter(body, question) &&
                         !FactualResearch.headlineOnly(body, source.title) && !ClaimVerification.financeExample(body) && !FactualResearch.incomplete(body)
                 } ?: return@mapNotNull null
-                ReadableSourceSummary.sentence(source, passage, question)?.let { summary ->
+                val units = ClaimVerification.sentences(passage)
+                val concise = if (units.firstOrNull()?.let { money.containsMatchIn(it) && financing.containsMatchIn(it) && ResearchQuery.words(it).containsAll(words) } == true)
+                    listOfNotNull(units.first(), units.getOrNull(1)?.takeIf { Regex("(?i)\\b(?:undrawn|not|only|unless|provided|repay\\w*|matur\\w*|closing|interest|rate)\\b").containsMatchIn(it) }).joinToString(" ") else passage
+                ReadableSourceSummary.sentence(source, concise, question)?.let { summary ->
                     val date = ResearchQuery.date(source.updatedAt)?.takeIf { source.dateKind in setOf("PUBLISHED", "MODIFIED") }
                     if (date == null) summary else summary.replaceFirst(" reports", " reports (page dated $date)")
                 }
