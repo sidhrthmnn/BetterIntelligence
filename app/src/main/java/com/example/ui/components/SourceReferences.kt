@@ -31,15 +31,19 @@ import java.util.Date
 @Composable
 fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss: () -> Unit) {
     if (sources.isEmpty()) return
+    val website = LocalUriHandler.current
     var expanded by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<EvidenceSource?>(null) }
     LaunchedEffect(selectedId) { selectedId?.let { id -> selected = sources.firstOrNull { it.id == id } } }
-    TextButton(
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { TextButton(
         onClick = { expanded = !expanded },
         contentPadding = PaddingValues(horizontal = 0.dp),
         modifier = Modifier.testTag("answer_sources")
     ) {
         Text("Sources · ${sources.size} ${if (expanded) "⌃" else "⌄"}", style = MaterialTheme.typography.labelMedium)
+    }
+        if (sources.size == 1) TextButton(onClick = { runCatching { website.openUri(sources.single().url) } },
+            modifier = Modifier.testTag("open_source_website")) { Text("Open website", style = MaterialTheme.typography.labelMedium) }
     }
     sources.firstOrNull { it.discoveryProvider == LegacyTopicEvidence.providerName }?.let {
         DuckDuckGoAttribution(it.title)
@@ -72,6 +76,9 @@ fun SourceReferences(sources: List<EvidenceSource>, selectedId: Int?, onDismiss:
                         Text(source.url.toHttpUrl().host, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (source.kind == "INSTANT_ANSWER") Text("DuckDuckGo topic summary · Publisher page not checked", style = MaterialTheme.typography.labelSmall)
                         else if (source.discoveryProvider.isNotBlank()) Text("Found via ${source.discoveryProvider}", style = MaterialTheme.typography.labelSmall)
+                        if (sources.size > 1) TextButton(onClick = { runCatching { website.openUri(source.url) } }, contentPadding = PaddingValues(0.dp)) {
+                            Text("Open website", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
             }

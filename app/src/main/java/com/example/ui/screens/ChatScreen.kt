@@ -132,7 +132,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
         } else key(conversation) {
             ChatTranscript(messages, generating, stream, model?.name ?: "Better Intelligence",
                 { clipboard.setText(AnnotatedString(it)) }, Modifier.weight(1f).fillMaxWidth(),
-                onEdit = { viewModel.editMessage(it) }, onRegenerate = { viewModel.regenerateResponse() }, status = status, pendingReplyId = pendingReplyId)
+                onEdit = { viewModel.editMessage(it) }, onRegenerate = { viewModel.regenerateResponse() }, status = status, pendingReplyId = pendingReplyId, webAllowed = allowed)
         }
         Surface(Modifier.fillMaxWidth().testTag("chat_composer"), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -185,7 +185,7 @@ internal fun ChatTranscript(
     messages: List<ChatMessageEntity>, isGenerating: Boolean, streamingText: String, modelName: String,
     onCopy: (String) -> Unit, modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
-    onEdit: (ChatMessageEntity) -> Unit = {}, onRegenerate: () -> Unit = {}, status: String = "", pendingReplyId: Long? = null
+    onEdit: (ChatMessageEntity) -> Unit = {}, onRegenerate: () -> Unit = {}, status: String = "", pendingReplyId: Long? = null, webAllowed: Boolean = false
 ) {
     val density = LocalDensity.current
     val showDistance = with(density) { 160.dp.toPx() }
@@ -248,7 +248,7 @@ internal fun ChatTranscript(
             items(messages, key = { "message_${it.id}" }) { message ->
                 if (message.messageState == "STREAMING") StreamingAnswer(streamingText.ifEmpty { message.content }, status)
                 else MessageItem(message, { onCopy(message.content) }, { onEdit(message) },
-                    onRegenerate.takeIf { message.id == messages.lastOrNull()?.id }, !isGenerating)
+                    onRegenerate.takeIf { message.id == messages.lastOrNull()?.id }, !isGenerating, webAllowed)
             }
             if (isGenerating && messages.none { it.messageState == "STREAMING" } &&
                 (pendingReplyId == null || messages.none { it.id == pendingReplyId })) item(key = "streaming") { StreamingAnswer(streamingText, status) }
@@ -263,7 +263,7 @@ internal fun ChatTranscript(
 
 @Composable
 private fun StreamingAnswer(text: String, status: String) {
-    if (text.isNotEmpty()) MarkdownText(text)
+    if (text.isNotEmpty()) MarkdownText(text, collapseSoftLines = false)
     else Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
@@ -287,7 +287,7 @@ private fun StreamingAnswer(text: String, status: String) {
 
 @Composable
 private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: () -> Unit,
-    onRegenerate: (() -> Unit)?, actionsEnabled: Boolean) {
+    onRegenerate: (() -> Unit)?, actionsEnabled: Boolean, webAllowed: Boolean) {
     val user = message.role == "user"
     val sources = remember(message.sourcesJson) { GroundingResult.sources(message.sourcesJson) }
     var selectedSource by remember { mutableStateOf<Int?>(null) }
@@ -297,6 +297,11 @@ private fun MessageItem(message: ChatMessageEntity, onCopy: () -> Unit, onEdit: 
             SelectionContainer { Text(message.content, Modifier.padding(14.dp).fillMaxWidth(), style = MaterialTheme.typography.bodyLarge) }
         } else SelectionContainer { MarkdownText(message.content, sources.map { it.id }.toSet()) { selectedSource = it } }
         if (!user) {
+            val cited = remember(message.content) { Regex("\\[(\\d+(?:,\\s*\\d+)*)]").findAll(message.content)
+                .flatMap { it.groupValues[1].split(',').asSequence().mapNotNull { id -> id.trim().toIntOrNull() } }.toSet() }
+            sources.firstOrNull { it.id in cited && it.kind == "WEB_PAGE" && it.imageUrl.isNotBlank() }?.let { image ->
+                com.example.ui.components.SourceImageCard(image, webAllowed) { selectedSource = image.id }
+            }
             val notice = com.example.grounding.AnswerSourceStatus.label(message.groundingStatus)
             if (notice.isNotEmpty()) Text(notice, Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

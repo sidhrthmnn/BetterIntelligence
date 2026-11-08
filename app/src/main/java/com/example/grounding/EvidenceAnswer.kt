@@ -7,7 +7,7 @@ object EvidenceAnswer {
     fun hasTemperature(text: String) = Regex("(?i)(?<![\\p{L}\\p{N}])-?\\d+(?:\\.\\d+)?\\s*(?:°\\s*)?[CF]\\b|\\d+\\s+degrees?\\s+(?:celsius|fahrenheit)").containsMatchIn(text)
 
     fun resolve(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
-        val aligned = sources.filter { PublicTopics.parse(question)?.sourceMatches(it.title, it.excerpt, it.url) != false }
+        val aligned = PublicTopics.alignedSources(question, sources)
         if (aligned.any { SourceBrief.reportedRoleContext(it, question) })
             SourceBrief.build(question, aligned, emptyList())?.let { return it }
         val prose = draft.replace(Regex("(?im)^\\s*(?:From the retrieved pages|Untrusted source evidence|Here are the retrieved excerpts)\\s*:\\s*"), "")
@@ -15,7 +15,27 @@ object EvidenceAnswer {
         val checked = resolveStrict(prose, aligned, question)
         val resolved = if (checked.support == AnswerSupport.INSUFFICIENT)
             MovieRatingEvidence.summary(question, aligned, checked.claims) ?: SourceBrief.build(question, aligned, checked.claims) ?: checked else checked
-        return focusReview(resolved, question)
+        // When a recommendation draft only repeats a product name, the actual
+        // review paragraph can offer useful qualifications without another run.
+        val recommendation = Regex("(?i)^which .{1,60} (?:is|are) (?:good|best) for\\b|^(?:recommend|suggest) .{1,80}\\b").containsMatchIn(question)
+        val fuller = if (resolved.support == AnswerSupport.PARTIAL && recommendation)
+            SourceBrief.build(question, aligned, resolved.claims) ?: resolved else resolved
+        val bestCause = if (Regex("(?i)^\\s*why\\b").containsMatchIn(question)) aligned.maxOfOrNull { FactualResearch.answerFocusScore(it.excerpt, question) } ?: 0 else 0
+        val relevant = if (bestCause >= 100 && FactualResearch.answerFocusScore(fuller.text, question) < bestCause)
+            SourceBrief.build(question, aligned.filter { FactualResearch.answerFocusScore(it.excerpt, question) >= bestCause }, fuller.claims) ?: fuller else fuller
+        val scoped = FinancialAnswerScope.recover(question, aligned, relevant) ?: IdentityAnswerScope.recover(question, aligned, relevant) ?: relevant
+        val focused = ReleaseAnswerScope.apply(question, aligned, focusCast(focusReview(scoped, question), question, aligned))
+        return focused.copy(text = AnswerPresentation.format(focused.text, question, aligned))
+    }
+
+    private fun focusCast(checked: CheckedAnswer, question: String, sources: List<EvidenceSource>): CheckedAnswer {
+        if (!FactualResearch.isCasting(question)) return checked
+        // A source paragraph can mix cast, directors, composers and dates. Keep
+        // only individually supported cast relations for a casting question.
+        val facts = GroundingPolicy.checkAnswer(checked.text, sources, question).claims.filter {
+            it.supported && FactualResearch.castingRelation(it.text) && !it.text.trim().endsWith('?')
+        }.map { it.text }.distinct().take(8)
+        return if (facts.isEmpty()) checked else checked.copy(text = facts.joinToString("\n\n"))
     }
 
     /** Keep verified review conclusions ahead of tangential production facts.
@@ -33,6 +53,7 @@ object EvidenceAnswer {
 
     private fun resolveStrict(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
         var checked = GroundingPolicy.checkAnswer(draft, sources, question)
+        ReleaseAnswerScope.focus(question, sources, checked)?.let { return it }
         val comparisonRequested = ResearchIntent.COMPARISON in ResearchPlanner.plan(question).intents
         val numericMissing = Regex("(?i)how (?:much|many)\\b").containsMatchIn(question) && (!CitationSupport.hasFactNumber(checked.text) || !ClaimLanguage.answerScopeMatches(question, checked.text))
         val weather = ConversationalResearch.isWeather(question)

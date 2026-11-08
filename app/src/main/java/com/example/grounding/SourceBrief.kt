@@ -25,10 +25,10 @@ object SourceBrief {
         val q = ResearchQuery(question)
         val plan = ResearchPlanner.plan(question)
         val entities = ResearchPlanner.subjects(ConversationalResearch.weatherResearchQuestion(question))
-        val selected = sources.filter { source ->
+        val selected = PublicTopics.alignedSources(question, sources).filter { source ->
             val words = ResearchQuery.words(source.title + " " + source.excerpt + " " + source.url)
             source.kind == "WEB_PAGE" && GroundingPolicy.publicHttpsUrl(source.url) &&
-                PublicTopics.parse(question)?.sourceMatches(source.title, source.excerpt, source.url) != false &&
+                PublicTopics.parse(question)?.sourceMatches(source.title, source.excerpt, source.url, source.publicLanguage) != false &&
                 (PublicTopics.parse(question)?.intent !in setOf(PublicTopicIntent.REVIEW, PublicTopicIntent.RATING) || FactualResearch.usable(source, question)) &&
                 !predictionMarket(source.title, source.url, question) &&
                 !Regex("(?i)\\b(?:fan theor(?:y|ies)|fan[- ]?casting)\\b").containsMatchIn(source.title) &&
@@ -36,22 +36,25 @@ object SourceBrief {
                 (q.currentEnough(source.updatedAt) || ConversationalResearch.isWeather(question) && WeatherPageEvidence.current(source.excerpt, q.today)) &&
                 (plan.explicitUrls.isNotEmpty() || (if (ResearchIntent.COMPARISON in plan.intents) entities.any { entity -> ResearchQuery.words(entity).all { it in words } }
                     else entities.all { entity -> ResearchQuery.words(entity).all { it in words } }) &&
-                    q.terms.count { it in words } >= minOf(2, q.terms.size.coerceAtLeast(1)))
+                    q.terms.any { it in words })
         }.mapNotNull { source ->
             val candidates = source.excerpt.split(Regex("\\n\\s*\\n")).mapNotNull { block ->
                 val body = if ('\n' in block) block.substringAfter('\n').trim() else block.trim()
-                if (PublicQuestionIntent.serviceStatus(question) && (!PublicQuestionIntent.statusValue(block, question) ||
+                if (PublisherBoilerplate.unrelatedFooter(block, question) || PublicQuestionIntent.serviceStatus(question) && (!PublicQuestionIntent.statusValue(block, question) ||
                         !PublicQuestionIntent.serviceScope(source.title + " " + source.url + " " + block, question)) ||
-                    FactualResearch.headlineOnly(block, source.title) || ResearchQuery.words(body).size < (if (PublicQuestionIntent.statusValue(block, question)) 2 else 6) ||
+                    FactualResearch.headlineOnly(block, source.title) || ResearchQuery.words(body).size < (if (PublicQuestionIntent.statusValue(block, question)) 2 else 4) ||
                     FactualResearch.incomplete(body) || Regex("(?i)ignore.{0,30}instructions|system prompt|^references\\b").containsMatchIn(body) ||
                     ConversationalResearch.isWeather(question) && Regex("(?i)weather watchers|photo gallery|historical average").containsMatchIn(body)) null
                 else EvidencePacket.completeExcerpt(block, 600).takeIf { text ->
                     val keptBody = if ('\n' in text) text.substringAfter('\n') else text
-                    ResearchQuery.words(keptBody).size >= (if (PublicQuestionIntent.statusValue(text, question)) 2 else 6) && !FactualResearch.headlineOnly(text, source.title) &&
-                        (q.terms.isEmpty() || q.score(keptBody) > 0 || roleReportScore(text, question) > 0)
+                    ResearchQuery.words(keptBody).size >= (if (PublicQuestionIntent.statusValue(text, question)) 2 else 4) && !FactualResearch.headlineOnly(text, source.title) &&
+                        (q.terms.isEmpty() || q.score(keptBody) > 0 || roleReportScore(text, question) > 0 ||
+                            IdentityAnswerScope.focusScore(text, question) >= 100 || FinancialAnswerScope.focusScore(text, question, source.url) >= 100 ||
+                            FactualResearch.answerFocusScore(text, question) >= 65 &&
+                            q.terms.count { it in ResearchQuery.words(source.title) } >= minOf(2, q.terms.size))
                 }
             }
-            candidates.maxByOrNull { q.score(it) + FactualResearch.answerFocusScore(it, question) + roleReportScore(it, question) + if (PublicQuestionIntent.statusValue(it, question)) 100 else 0 }
+            candidates.maxByOrNull { q.score(it) + FactualResearch.answerFocusScore(it, question, source.url) + ReleaseAnswerScope.focusScore(it, question) + roleReportScore(it, question) + if (PublicQuestionIntent.statusValue(it, question)) 100 else 0 }
                 ?.let { source to it }
         }.distinctBy { EvidenceRanking.publisher(it.first.url) }.take(2)
         if (selected.isEmpty()) return null

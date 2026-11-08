@@ -29,6 +29,9 @@ object AnswerRoutingPolicy {
     fun decide(question: String, allowed: Boolean = true, mode: GroundingMode = GroundingMode.AUTO,
         history: List<ChatMessageEntity> = emptyList(), today: LocalDate = LocalDate.now(), now: Long = System.currentTimeMillis(), conversationId: Long? = null): AnswerRoute {
         val q = question.trim()
+        if (Regex("(?i)^how much is on ai worth[?!. ]*$").matches(q))
+            return AnswerRoute(AnswerPath.CLARIFICATION, q, "Ambiguous company name",
+                clarification = "Do you mean OpenAI, xAI, or a different company? Please give its name.")
         val instruction = q.substringBefore('\n')
         // Polite writing requests remain local even when their supplied subject
         // mentions news/today. Explicit research retains priority.
@@ -36,7 +39,7 @@ object AnswerRoutingPolicy {
         val explicit = explicitResearch.containsMatchIn(instruction) || PublicQuestionIntent.externalRequest(instruction) || verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val verify = verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)
         val privateInput = GroundingPolicy.containsCredential(q) || !explicit && Regex("(?i)\\b(?:my|our)\\s+(?:(?:current|recent|latest|private)\\s+)?(?:password|secret|key|token|chat|messages|notes|project|code|email|salary|medical)\\b").containsMatchIn(q)
-        val calculation = com.example.engine.LocalCalculation.evaluate(q) != null
+        val calculation = com.example.engine.LocalCalculation.evaluate(q) != null || com.example.engine.DeviceClock.recognises(q)
         val conversational = Regex("(?i)^\\s*(?:hi|hello|hey|yes|no|ok(?:ay)?|sure|thanks?(?: you)?|thank you|good (?:morning|evening|night)|who are you|what can you do|how are you)[.!? ]*$").matches(q)
         val transform = transformation.containsMatchIn(task) && !explicitResearch.containsMatchIn(q.substringBefore('\n').substringBefore(": ")) && !Regex("https?://").containsMatchIn(q.substringBefore('\n'))
         val resolved = if (transform || calculation || privateInput || localOnly(q)) q else ConversationalResearch.question(q, history, conversationId)
@@ -45,7 +48,13 @@ object AnswerRoutingPolicy {
             return AnswerRoute(AnswerPath.CLARIFICATION, q, "Title confirmation needs a named subject", clarification = ConversationalResearch.askSubject)
         val publicQuestion = resolved.substringBefore("(Public source topic:").trim()
         val signals = publicQuestion.substringBefore('\n').replace(Regex("(?i)^\\s*(?:(?:can|could|would) you\\s+|please\\s+)+"), "").replace(technicalContext, "task context")
-        val personalContext = !explicit && Regex("(?i)\\b(?:my|our|I|we)\\b|എന്റെ|ഞാൻ|നമ്മുടെ").containsMatchIn(instruction) &&
+        // Only mask an explicitly requested public title containing "I'm".
+        // Arbitrary first-person descriptions of a film remain private.
+        val personalSignals = if (publicTopic?.type == PublicEntityType.FILM &&
+            Regex("(?i)^i[’']m\\s").containsMatchIn(publicTopic.subject) &&
+            Regex("(?i)^(?:when|what|who|how|is|was|find|search)\\b").containsMatchIn(instruction))
+            instruction.replace(Regex(Regex.escape(publicTopic.subject), RegexOption.IGNORE_CASE), " ") else instruction
+        val personalContext = !explicit && Regex("(?i)\\b(?:my|our|I|we)\\b|എന്റെ|ഞാൻ|നമ്മുടെ").containsMatchIn(personalSignals) &&
             !changing.containsMatchIn(signals) && !ConversationalResearch.isWeather(signals) && !product.containsMatchIn(signals) && !ResearchQuery.isCurrentIncumbentQuery(signals)
         val current = fresh.containsMatchIn(signals) || NewsIntent.isLiveRequest(signals) || PublicQuestionIntent.serviceStatus(signals) || PublicQuestionIntent.upcoming(signals)
         val general = explanation.containsMatchIn(signals) && !current && (concept.containsMatchIn(signals) ||

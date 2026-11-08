@@ -906,6 +906,16 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             var foregroundToken = 0L
             var model = repository.engine.activeModelName
             try {
+                com.example.engine.DeviceClock.answer(text)?.let { clock ->
+                    model = "Device clock"
+                    repository.beginChatTurn(ChatMessageEntity(role = "user", content = text, modelName = model, conversationId = conversation), replaceFrom)
+                    savedUser = true
+                    pendingId = repository.insertChatMessage(ChatMessageEntity(role = "assistant", content = "", modelName = model,
+                        conversationId = conversation, messageState = "STREAMING"))
+                    _pendingReplyId.value = pendingId
+                    result = clock; evidence = GroundingResult("DEVICE_CLOCK")
+                    return@launch
+                }
                 // Evaluate available RAM and dynamically route between Primary (full/stepped-down context) and Secondary model.
                 val params = _chatGenerationParams.value
                 val tierDecision = repository.resolveAndActivateForRam(params.contextSize)
@@ -990,7 +1000,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val rawDraft = StringBuilder()
                 var lastDraftUiAt = 0L
                 fun publishDraft() {
-                    if (localNeedsLive) return
+                    if (localNeedsLive || evidence.sources.isNotEmpty()) return
                     val draft = rawDraft.toString()
                     _streamingChatText.value = if (AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(route, draft)) ""
                         else LocalAnswerUncertainty.visible(draft)
@@ -1001,7 +1011,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                         if (localNeedsLive) return
                         rawDraft.append(token)
                         if (android.os.SystemClock.elapsedRealtime() - lastDraftUiAt >= 40) publishDraft()
-                        _chatStatus.value = if (evidence.sources.isEmpty()) "" else "Draft · Checking against sources"
+                        _chatStatus.value = if (evidence.sources.isEmpty()) "" else "Writing answer from sources"
                     }
                     override fun onComplete(fullText: String, latencyMs: Long, tokensPerSec: Float, promptTokens: Int, completionTokens: Int) {
                         publishDraft()

@@ -21,12 +21,16 @@ object ReadableSourceSummary {
             ('›' in first || ResearchQuery.words(source.title).containsAll(ResearchQuery.words(first)) || first == "Read the Full Transcript")
         val body = lines.drop(if (heading) 1 else 0).filter { line -> line.isNotBlank() && line != source.title && '›' !in line &&
             !line.startsWith("Published ") && !line.startsWith("Updated ") && line != "Read the Full Transcript" }.joinToString(" ").trim()
-        val candidates = ClaimVerification.sentences(body).filter { text ->
-            text.length in 8..400 && text.any(Char::isLetter) && !FactualResearch.incomplete(text) &&
+        // Some publishers flatten JSON-LD headings directly against sentence
+        // punctuation. Restore boundaries without changing names or values.
+        val separated = body.replace(Regex("(?<=[.!?])(?=\\p{Lu}\\p{Ll}|A\\s)"), "\n")
+        val allCandidates = ClaimVerification.sentences(separated).filter { text ->
+            text.length in 8..650 && text.any(Char::isLetter) && !FactualResearch.headlineOnly(text, source.title) && !PublisherBoilerplate.unrelatedFooter(text, question) && !FactualResearch.incomplete(text) &&
                 !Regex("(?i)ignore.{0,30}instructions|system prompt|subscribe|bookmark popover|share this|sign in|click here|https?://|^[{\\[]|^I (?:am|have|can)").containsMatchIn(text)
         }
+        val candidates = allCandidates.filter { ReleaseAnswerScope.focusScore(it, question) > 0 }.ifEmpty { allCandidates }
         val q = ResearchQuery(question)
-        val best = candidates.maxByOrNull { FactualResearch.answerFocusScore(it, question) + SourceBrief.roleReportScore(it, question) + q.score(it) } ?: return null
+        val best = candidates.maxByOrNull { FactualResearch.answerFocusScore(it, question, source.url) + SourceBrief.roleReportScore(it, question) + q.score(it) } ?: return null
         // Keep a neighbouring complete sentence when it carries timing,
         // negation, attribution or a condition needed to interpret the value.
         val chosen = candidates.takeIf { it.size <= 3 && it.joinToString(" ").length <= 500 }?.joinToString(" ") ?: best
@@ -42,7 +46,7 @@ object ReadableSourceSummary {
         val lines = selected.mapNotNull { (source, text) -> sentence(source, text, question) }.distinct().take(2)
         if (lines.isEmpty()) return null
         val tail = if (conflict) "I couldn't establish a single conclusion because the reports differ."
-            else "I couldn't verify the remaining details; these sources provide a partial answer."
-        return lines.joinToString("\n\n") + "\n\n" + tail
+            else ""
+        return lines.joinToString("\n\n") + if (tail.isBlank()) "" else "\n\n$tail"
     }
 }

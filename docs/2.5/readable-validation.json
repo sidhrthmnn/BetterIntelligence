@@ -1,0 +1,279 @@
+{
+  "applicationSourceRevision": "b0ed8e9f8db80e860401cd242956ba7c213d812c",
+  "jvm": {
+    "tests": 342,
+    "passed": 341,
+    "skipped": 1,
+    "failures": 0,
+    "focusedReadableMethods": 40
+  },
+  "rust": {
+    "testsPassed": 31,
+    "formatCheck": "passed",
+    "clippyWarningsDenied": "passed",
+    "runtimeChanges": "none; existing cfg(test) fixtures formatted"
+  },
+  "phone": {
+    "device": "HONOR VKP-NX9 / Android 16",
+    "installation": "isolated BI Validation; production app and chats preserved",
+    "model": "Qwen3.5-2B-Q4_K_M.gguf / CPU",
+    "configuration": {
+      "context": 2048,
+      "threads": 4,
+      "outputTokens": {
+        "originalCases": 192,
+        "additionalCases": 224
+      },
+      "temperature": 0
+    },
+    "distinctPublicRequests": 14,
+    "liveWebAndModelAnswers": 10,
+    "deviceClockAnswers": 2,
+    "clarifications": 2,
+    "reviewedHandlingPassed": 14,
+    "finalScope": "13 requests passed on 3ab090a; final finance/ownership/ranking rerun passed on source-equivalent 4ca929f; final financial qualification/citation correction passed on source-equivalent b0ed8e9. Changes after the full replay affect finance/identity recovery only. All final source ran through the 342-test suite.",
+    "validationRevisionLabel": "Validation APKs were built before committing unchanged tested app sources; their revision labels precede source-equivalent commits. Signed bundle is built from applicationSourceRevision.",
+    "additionalControlledQuestions": 3,
+    "additionalControlledScope": "Real Qwen generation with fictional publisher fixtures; citations and no unchecked draft exposure.",
+    "citationWebsiteAndImageUi": "passed; grouped/table IDs, Open website target, image opt-in and permission revocation controls",
+    "earlierBroaderPhoneSuite": "18 distinct relevant methods passed across the initial full suite and targeted recommendation repair; runtime/IPC/context/navigation/IME/cancellation scope was not all repeated after presentation-only changes.",
+    "emulatorTestsRun": 0
+  },
+  "manualReplayComparison": {
+    "initialUsefulHandling": 8,
+    "initialRequests": 14,
+    "initialIssues": [
+      "wrong film edition",
+      "interest instead of requested amount",
+      "captions instead of cause",
+      "unrelated cast credits/FAQ",
+      "wrong company ownership relation",
+      "ranking without named leader"
+    ],
+    "finalUsefulHandling": 14,
+    "definition": "Correct relevant sourced answer, explicitly bounded partial report, necessary clarification or exact device-clock response. Includes clarifications, not 14 answered factual questions.",
+    "limits": "Live evidence changed across runs; this is not a controlled general factual-accuracy score."
+  },
+  "fixedEvidenceRecoveryReplay": {
+    "cases": 26,
+    "baselineRecovery": {
+      "PARTIAL": 20,
+      "CITED": 5,
+      "INSUFFICIENT": 1
+    },
+    "revisedRecovery": {
+      "CITED": 18,
+      "PARTIAL": 6,
+      "INSUFFICIENT": 2
+    },
+    "scope": "Identical fixture questions, drafts and evidence; frozen V29 recovery helper, not an old-app native performance benchmark."
+  },
+  "cases": [
+    {
+      "question": "When is malayalam movie i'm game releasing on ott",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "SOURCE_BRIEF",
+      "messageState": "LENGTH_LIMIT",
+      "readSources": 1,
+      "publishers": [
+        "www.filmibeat.com"
+      ],
+      "citationMarkers": 1,
+      "manualReview": "Named platform and reported streaming date retained; no page controls.",
+      "storedModelLatencyMs": 44956,
+      "storedTokensPerSecond": 13.6838875
+    },
+    {
+      "question": "When is dhrishyam 3 hindi releasing on ott",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "SOURCE_BRIEF",
+      "messageState": "LENGTH_LIMIT",
+      "readSources": 1,
+      "publishers": [
+        "economictimes.indiatimes.com"
+      ],
+      "citationMarkers": 1,
+      "manualReview": "Hindi edition, tentative window and exact-date gap retained; no plot or glued FAQ.",
+      "storedModelLatencyMs": 44119,
+      "storedTokensPerSecond": 13.704235
+    },
+    {
+      "question": "Which shoe is good for running",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "EVIDENCE_CITED",
+      "messageState": "LENGTH_LIMIT",
+      "readSources": 2,
+      "publishers": [
+        "www.fleetfeet.com",
+        "www.rtings.com"
+      ],
+      "citationMarkers": 1,
+      "manualReview": "Budget category and publisher attribution retained; no claim that BI tested shoes.",
+      "storedModelLatencyMs": 44040,
+      "storedTokensPerSecond": 14.870532
+    },
+    {
+      "question": "How much is on ai worth",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "LOCAL",
+      "messageState": "COMPLETE",
+      "readSources": 0,
+      "publishers": [],
+      "citationMarkers": 0,
+      "manualReview": "Ambiguous company clarified instead of inventing a valuation.",
+      "storedModelLatencyMs": 0,
+      "storedTokensPerSecond": 0
+    },
+    {
+      "question": "How much loan does openai have",
+      "sourceEquivalentRevision": "b0ed8e9f8db80e860401cd242956ba7c213d812c",
+      "status": "SOURCE_BRIEF",
+      "messageState": "COMPLETE",
+      "readSources": 2,
+      "publishers": [
+        "thenextweb.com",
+        "www.cnbc.com"
+      ],
+      "citationMarkers": 1,
+      "manualReview": "Dated balance-sheet report retains off-balance-sheet qualification; current total explicitly unknown.",
+      "storedModelLatencyMs": 43086,
+      "storedTokensPerSecond": 13.632647
+    },
+    {
+      "question": "Antropic or openai have most number of users",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "EVIDENCE_CITED",
+      "messageState": "LENGTH_LIMIT",
+      "readSources": 2,
+      "publishers": [
+        "felloai.com",
+        "www.analyticsinsight.net"
+      ],
+      "citationMarkers": 1,
+      "manualReview": "Answers user-count comparison rather than enterprise-revenue comparison.",
+      "storedModelLatencyMs": 47052,
+      "storedTokensPerSecond": 12.897013
+    },
+    {
+      "question": "What is the time in india",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "DEVICE_CLOCK",
+      "messageState": "COMPLETE",
+      "readSources": 0,
+      "publishers": [],
+      "citationMarkers": 0,
+      "manualReview": "Device clock with Asia/Kolkata UTC+05:30 offset.",
+      "storedModelLatencyMs": 0,
+      "storedTokensPerSecond": 0
+    },
+    {
+      "question": "What time is it now",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "DEVICE_CLOCK",
+      "messageState": "COMPLETE",
+      "readSources": 0,
+      "publishers": [],
+      "citationMarkers": 0,
+      "manualReview": "Device clock with explicit local zone and date.",
+      "storedModelLatencyMs": 0,
+      "storedTokensPerSecond": 0
+    },
+    {
+      "question": "Why is the iphone duo cracking",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "SOURCE_EXCERPTS",
+      "messageState": "LENGTH_LIMIT",
+      "readSources": 2,
+      "publishers": [
+        "www.macrumors.com",
+        "www.theverge.com"
+      ],
+      "citationMarkers": 1,
+      "manualReview": "Attributed, qualified hinge-pressure report; no caption or unrelated dust experiment.",
+      "storedModelLatencyMs": 56585,
+      "storedTokensPerSecond": 12.664975
+    },
+    {
+      "question": "What's the wether in london",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "SOURCE_EXCERPTS",
+      "messageState": "LENGTH_LIMIT",
+      "readSources": 2,
+      "publishers": [
+        "weather.metoffice.gov.uk",
+        "www.bbc.com"
+      ],
+      "citationMarkers": 2,
+      "manualReview": "Observed temperature, time and distinct forecast low retained.",
+      "storedModelLatencyMs": 47612,
+      "storedTokensPerSecond": 12.922561
+    },
+    {
+      "question": "Who is being cast in the movie Matrubhumi",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "SOURCE_EXCERPTS",
+      "messageState": "LENGTH_LIMIT",
+      "readSources": 1,
+      "publishers": [
+        "trendkia.com"
+      ],
+      "citationMarkers": 2,
+      "manualReview": "Named actors retained, unrelated credits and duplicate bullets removed.",
+      "storedModelLatencyMs": 56844,
+      "storedTokensPerSecond": 11.994526
+    },
+    {
+      "question": "How's batha tamil movie",
+      "sourceEquivalentRevision": "3ab090a1f0bde5267f9f499fff8e5ba4d2066ab1",
+      "status": "NEEDS_SUBJECT",
+      "messageState": "COMPLETE",
+      "readSources": 0,
+      "publishers": [],
+      "citationMarkers": 0,
+      "manualReview": "Possible Baththa spelling asks for confirmation; no silently substituted film review.",
+      "storedModelLatencyMs": 0,
+      "storedTokensPerSecond": 0
+    },
+    {
+      "question": "Who is the ownsr of L&R HOTELS",
+      "sourceEquivalentRevision": "4ca929f591b1422f15a67498ef0ec9d217da6966",
+      "status": "EVIDENCE_CITED",
+      "messageState": "COMPLETE",
+      "readSources": 2,
+      "publishers": [
+        "www.hospitalitynet.org",
+        "www.thecaterer.com"
+      ],
+      "citationMarkers": 1,
+      "manualReview": "Requested group owners identified rather than owners of an acquired company.",
+      "storedModelLatencyMs": 42222,
+      "storedTokensPerSecond": 13.413747
+    },
+    {
+      "question": "Who is the richest person in the world right now",
+      "sourceEquivalentRevision": "4ca929f591b1422f15a67498ef0ec9d217da6966",
+      "status": "SOURCE_BRIEF",
+      "messageState": "LENGTH_LIMIT",
+      "readSources": 1,
+      "publishers": [
+        "www.indiatoday.in"
+      ],
+      "citationMarkers": 1,
+      "manualReview": "Names the global leader and visibly dates the source; regional leader not substituted.",
+      "storedModelLatencyMs": 48697,
+      "storedTokensPerSecond": 13.508995
+    }
+  ],
+  "illustrationTransport": {
+    "earlierLiveAttempts": 4,
+    "earlierDecoded": 2,
+    "earlierUnavailable": 2,
+    "scope": "Earlier beta31 phone probe; unchanged loader. Images are optional illustrations, not verified visual evidence."
+  },
+  "limits": [
+    "Publisher correctness is not guaranteed.",
+    "Unavailable pages and missing present-day balances are identified rather than invented.",
+    "Native token limits deliberately stress recovery; stored model telemetry is not end-to-end latency or a GPU/NPU benchmark.",
+    "Saved old chat answers are not rewritten automatically."
+  ]
+}

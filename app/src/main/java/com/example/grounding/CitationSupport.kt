@@ -29,7 +29,7 @@ object CitationSupport {
     fun citedParagraphs(text: String): Boolean = Regex("```[\\s\\S]*?(?:```|$)|`[^`\\n]*`").replace(text, "")
         .split(Regex("\\n\\s*\\n|\\n(?=[-*] )")).all { paragraph ->
             val prose = paragraph.trim()
-            prose in setOf("Some details were omitted because the supplied evidence did not support them.",
+            prose in setOf(ReleaseAnswerScope.missingOtt, "Some details were omitted because the supplied evidence did not support them.",
                 "Some documentation is older or undated; it does not establish when these features were added.") ||
                 prose.length < 45 || prose.startsWith('#') || marker.containsMatchIn(prose) ||
                 Regex("(?i)^(I (?:cannot|can't|couldn't)|(?:The )?(?:sources?|evidence) (?:do not|does not|don't|doesn't)|There (?:is|are) (?:not enough|insufficient))").containsMatchIn(prose)
@@ -39,9 +39,20 @@ object CitationSupport {
         val prose = Regex("```[\\s\\S]*?(?:```|$)|`[^`\\n]*`").replace(text, "")
         return prose.split(Regex("\\n\\s*\\n")).all { paragraph ->
             val ids = marker.findAll(paragraph).flatMap { it.groupValues[1].split(',').asSequence().map(String::trim) }.toSet()
-            val claimed = values(marker.replace(paragraph, ""))
+            val cited = sources.filter { it.id.toString() in ids }
+            // A visibly labelled page date describes source provenance, not a
+            // date asserted about the subject. Admit only the exact date and
+            // publisher of an actually cited source; all factual values below
+            // it still require their normal body evidence.
+            val withoutPageDate = cited.fold(paragraph) { current, source ->
+                val date = ResearchQuery.date(source.updatedAt)?.takeIf { source.dateKind in setOf("PUBLISHED", "MODIFIED") }
+                val publisher = runCatching { ReadableSourceSummary.publisher(source.url) }.getOrNull()
+                val label = "$publisher reports (page dated $date)"
+                if (date != null && publisher != null && current.trimStart().removePrefix("- ").removePrefix("* ").startsWith(label))
+                    current.replaceFirst(label, "$publisher reports") else current
+            }
+            val claimed = values(marker.replace(withoutPageDate, ""))
             if (claimed.isEmpty()) true else {
-                val cited = sources.filter { it.id.toString() in ids }
                 val supplied = values(cited.joinToString("\n") { it.title + "\n" + it.excerpt })
                 cited.isNotEmpty() && supplied.containsAll(claimed)
             }

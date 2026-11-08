@@ -5,6 +5,7 @@ import com.example.grounding.ResearchQuery
 
 /** Chat-only instructions. Native model templates and external-app contracts stay unchanged. */
 object ChatAnswerPolicy {
+    private fun requestedLanguage(question: String, language: String) = Regex("(?i)^$language\\s*:|^$language\\s+please\\s*[.!?]*$|\\b(?:reply|answer|respond|use)(?: to me)? (?:in )?$language\\b|\\b(?:write|explain|translate)\\b.{0,160}\\b(?:in|into) $language(?: please)?\\s*[.!?]*$").containsMatchIn(question)
     const val liveUnavailable = "I couldn't check the current information right now. Enable web research in Settings to check live sources."
     fun requiresLiveData(question: String): Boolean {
         return com.example.grounding.AnswerRoutingPolicy.decide(question).requiresLive
@@ -35,11 +36,11 @@ object ChatAnswerPolicy {
         val format = when {
             Regex("(?i)\\bjson(?:[- ]only)?\\b").containsMatchIn(question) -> " Return valid JSON only, without fences or commentary; preserve requested keys, values and types."
             Regex("(?i)\\b(?:markdown )?table\\b").containsMatchIn(question) -> " Use the requested Markdown table with a header and separator row."
-            else -> ""
+            else -> " Lead with the answer. Use short paragraphs, bullets for several points and a small table for comparisons. Avoid repetition."
         }
         val language = when {
-            Regex("(?i)\\bManglish\\b").containsMatchIn(question) -> " Use Malayalam in Latin letters (Manglish), preserving names and identifiers."
-            Regex("[\\u0D00-\\u0D7F]|(?i)\\bMalayalam\\b").containsMatchIn(question) -> " Reply in Malayalam unless a different language was requested."
+            requestedLanguage(question, "Manglish") -> " Use Malayalam in Latin letters (Manglish), preserving names and identifiers."
+            Regex("[\\u0D00-\\u0D7F]").containsMatchIn(question) || requestedLanguage(question, "Malayalam") -> " Reply in Malayalam unless a different language was requested."
             else -> " Match the requested language, length and format."
         }
         val calculation = LocalCalculation.evaluate(question)?.let { " A bounded local decimal calculation of the explicit expression gives $it; use that value accurately." }.orEmpty()
