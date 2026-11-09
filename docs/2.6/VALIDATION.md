@@ -21,7 +21,7 @@ The principal files are `DeviceIntelligenceChecker.kt`, `AutomaticModelSelector.
 | Rust host tests | 31 passed; formatting and clippy passed |
 | Android debug app and instrumentation APK | Built successfully |
 | Android debug lint | Passed, 0 errors and 136 warnings (including existing localisation warnings) |
-| Production signed bundle and release lint | See final bundle validation and release record |
+| Production signed bundle and release lint | Passed; lint 0 errors/136 warnings, signature and bundletool validation passed, both ABI library sets aligned to 16 KB |
 | Frozen baseline/current fixture comparison | 60/120 → 120/120 |
 
 The frozen comparison uses identical public synthetic inputs on `ba336ec` and this change: numbered identities 0/40 → 40/40, local/current routing 40/40 → 40/40, evidence/citation recovery 20/20 → 20/20, and follow-up title identities 0/20 → 20/20. A numbered-identity case requires accepting the correct subject and rejecting the wrong edition. These are deterministic pipeline assertions, **not measured end-to-end LLM factual accuracy**. Fixture timings measure JVM checks, not mobile answer latency. Raw results: [baseline](evaluation-baseline.json), [current](evaluation-current.json).
@@ -68,3 +68,5 @@ The phone's native runtime reported NEON/FMA/repacking support. CPU two/four-thr
 - Benchmarking defers under memory, battery or thermal pressure. A candidate that cannot safely finish is incomplete, not measured.
 - Positive GPU/NPU and other encoder/model compatibility require appropriate physical hardware and files. There is no simulated acceleration.
 - Publishing status, final artifact digest and commit IDs are recorded separately after the closed-beta submission. Review submission does not mean Google has approved or published the update.
+
+Release artifact and submission: [version 33 release record](release-v33.json), [bundle validation](bundle-v33-validation.json). Play Console showed **Changes in review** for **Closed testing � Alpha, 33 (2.6.0-beta1)**, with quick checks running and managed publishing off. Submission is queued for review after those checks; approval/publication was not waited for.

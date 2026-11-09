@@ -1,0 +1,20 @@
+{
+  "versionCode": 33,
+  "versionName": "2.6.0-beta1",
+  "track": "Closed testing - Alpha",
+  "releaseId": "27",
+  "status": "REVIEW_SUBMISSION_QUEUED",
+  "playOverview": "Changes in review",
+  "quickChecks": "Running; changes go to review when checks complete successfully",
+  "managedPublishing": false,
+  "automaticPublicationAfterApproval": true,
+  "recordedAtUtc": "2026-11-09T09:45:20.907442+00:00",
+  "applicationSourceRevision": "13ee0e68d6c2297ffd72bb25c2ebf94b7dac7ab0",
+  "bundleSha256": "bab4ffa8c40e75be0bf891bf77217d0b8eea72b146a8bba16ba37ea463280b36",
+  "bundleBytes": 94639762,
+  "bundleValidation": "bundle-v33-validation.json",
+  "validationReport": "VALIDATION.md",
+  "releaseNotes": "Automatic device checks and local AI setup; reliable background downloads with Wi-Fi and pause/resume; delete unfinished downloads; on-device model checks; exact numbered-title and version matching.",
+  "publicationWaitedFor": false,
+  "playNonBlockingWarning": "No deobfuscation file; release uses non-obfuscated code."
+}
