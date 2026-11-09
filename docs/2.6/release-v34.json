@@ -1,0 +1,14 @@
+{
+  "versionCode": 34,
+  "versionName": "2.6.0-beta2",
+  "track": "Closed testing - Alpha",
+  "status": "READY_FOR_UPLOAD",
+  "recordedAtUtc": "2026-11-09T13:38:00+00:00",
+  "applicationSourceRevision": "cfe223961dafa72266858e9464eb789b70fe501c",
+  "bundlePath": "app/build/outputs/bundle/release/app-release.aab",
+  "bundleSha256": "4bef3e47d09fddbba56a917b7ef0ef59c3b60ea26b4bffc892a7b6b629964cd5",
+  "bundleBytes": 94652362,
+  "bundleValidation": "bundle-v34-validation.json",
+  "releaseNotes": "Expanded inbuilt public web discovery and encyclopedic Wikipedia resolution; improved numerical and award verification; added predecessor fallback when an unannounced sequel has no official release date; preserved grounded sources on \"continue\" follow-ups; kept open-ended productivity tip prompts local.",
+  "playConsoleTrackUrl": "https://play.google.com/console/u/0/developers/7469907004406722588/app/4975407059009835662/tracks/closed-testing"
+}
