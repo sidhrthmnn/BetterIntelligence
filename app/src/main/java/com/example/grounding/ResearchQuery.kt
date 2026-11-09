@@ -113,8 +113,10 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
     private val currentRoleLookup = (isCurrentIncumbentQuery(userPlain) || FactualResearch.isCasting(userPlain)) &&
         !Regex("(?i)\\b(news|announced|appointed|became|election|elected|resigned)\\b").containsMatchIn(userPlain)
     val useNews = relative || years.any { it.toInt() >= today.year - 1 }
+    val isReleaseQuery = Regex("(?i)\\b(?:when (?:is|will|does).+releas|releas(?:e|ed|ing)|release date)\\b").containsMatchIn(userPlain)
     val searchText = if (subjectless) "" else searchOverride ?: (expandedSearchTerms + years +
         (if (FactualResearch.isCasting(userPlain)) listOf("actor", "cast") else emptyList()) +
+        (if (isReleaseQuery && !expandedSearchTerms.contains("release") && !expandedSearchTerms.contains("date")) listOf("release", "date") else emptyList()) +
         if (relative && years.isEmpty() && !currentRoleLookup) setOf(today.year.toString()) else emptySet()).distinct().joinToString(" ").ifBlank { plain.trim() }.take(400)
     val earliest: LocalDate? = when {
         EventQuery.parse(question) != null -> null // Validate event startDate, never calendar publication recency.

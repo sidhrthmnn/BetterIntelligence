@@ -79,6 +79,8 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
 @Composable
 private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewModel) {
     var expanded by rememberSaveable(policy.packageName) { mutableStateOf(false) }
+    val allModels by viewModel.allModels.collectAsState()
+    val installedModels = remember(allModels) { allModels.filter { it.isInstalled } }
     val context = LocalContext.current
     val icon by produceState<android.graphics.Bitmap?>(null, policy.packageName) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching {
@@ -105,14 +107,74 @@ private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewMo
             TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide permissions" else "Permissions and limits") }
             if (expanded) {
                 Text(policy.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ModelSelectionRow(
+                    label = "Primary model",
+                    selectedId = policy.primaryModelId,
+                    models = installedModels,
+                    onSelect = { viewModel.updateClientPrimaryModel(policy, it) }
+                )
+                ModelSelectionRow(
+                    label = "Fallback model",
+                    selectedId = policy.fallbackModelId,
+                    models = installedModels,
+                    onSelect = { viewModel.updateClientFallbackModel(policy, it) }
+                )
                 PermissionRow("AI generation and polish", policy.allowInference) { viewModel.togglePolicyInference(policy) }
+                PermissionRow("App-specific context", policy.allowAppContext) { viewModel.togglePolicyAppContext(policy) }
                 PermissionRow("Read shared memories", policy.allowReadMemory) { viewModel.togglePolicyReadMemory(policy) }
                 PermissionRow("Write shared memories", policy.allowWriteMemory) { viewModel.togglePolicyWriteMemory(policy) }
                 Text("Requests per minute: ${policy.rateLimitPerMin}", style = MaterialTheme.typography.bodyMedium)
                 Slider(value = policy.rateLimitPerMin.toFloat().coerceIn(1f, 120f), onValueChange = { viewModel.updatePolicyRateLimit(policy, it.toInt()) },
                     valueRange = 1f..120f, steps = 118)
-                TextButton(onClick = { viewModel.toggleClientBlocked(policy.packageName, !policy.isBlocked) }) {
-                    Text(if (policy.isBlocked) "Unblock app" else "Block app")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(onClick = { viewModel.revokeClientPermissions(policy) },
+                        modifier = Modifier.testTag("revoke_permissions_${policy.packageName}")) {
+                        Text("Revoke permissions", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = { viewModel.toggleClientBlocked(policy.packageName, !policy.isBlocked) }) {
+                        Text(if (policy.isBlocked) "Unblock app" else "Block app")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModelSelectionRow(
+    label: String,
+    selectedId: Long?,
+    models: List<com.example.data.ModelEntity>,
+    onSelect: (Long?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val currentName = if (selectedId == null) "Default" else (models.find { it.id == selectedId }?.name?.substringBefore(" · ") ?: "Default")
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Box {
+            TextButton(onClick = { expanded = true }) {
+                Text(currentName)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                DropdownMenuItem(
+                    text = { Text("Default") },
+                    onClick = {
+                        onSelect(null)
+                        expanded = false
+                    }
+                )
+                models.forEach { model ->
+                    DropdownMenuItem(
+                        text = { Text(model.name.substringBefore(" · ")) },
+                        onClick = {
+                            onSelect(model.id)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }

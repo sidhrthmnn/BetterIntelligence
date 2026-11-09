@@ -78,6 +78,7 @@ class AiBrainContentProvider : ContentProvider() {
                 }
 
                 val output = runBlocking(Dispatchers.Default) {
+                    repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     val effectiveSystem = repo.buildClientSystemPrompt(callingPkg, systemPrompt)
                     repo.engine.generateSync(
                         prompt,
@@ -105,6 +106,7 @@ class AiBrainContentProvider : ContentProvider() {
                 }
 
                 val json = runBlocking(Dispatchers.Default) {
+                    repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     repo.engine.extractStructuredJson(text, keys)
                 }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(8L)
@@ -127,6 +129,7 @@ class AiBrainContentProvider : ContentProvider() {
                 }
 
                 val routed = runBlocking(Dispatchers.Default) {
+                    repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     repo.engine.routeIntent(utterance, routes)
                 }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(6L)
@@ -222,6 +225,7 @@ class AiBrainContentProvider : ContentProvider() {
                     return result
                 }
                 val output = runBlocking(Dispatchers.Default) {
+                    repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     val effectiveSystem = repo.buildClientSystemPrompt(callingPkg, systemPrompt)
                     repo.engine.generateSync(prompt, GenerationParams(systemPrompt = effectiveSystem, maxTokens = 256))
                 }
@@ -243,6 +247,7 @@ class AiBrainContentProvider : ContentProvider() {
                     return result
                 }
                 val json = runBlocking(Dispatchers.Default) {
+                    repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     repo.engine.extractStructuredJson(text, keys)
                 }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(8L)
@@ -263,6 +268,7 @@ class AiBrainContentProvider : ContentProvider() {
                     return result
                 }
                 val routed = runBlocking(Dispatchers.Default) {
+                    repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     repo.engine.routeIntent(utterance, routes)
                 }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(6L)

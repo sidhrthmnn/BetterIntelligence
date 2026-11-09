@@ -12,7 +12,7 @@ object EvidenceAnswer {
         if (sequelFallback != null && sources.isNotEmpty() && sources.none { ExactIdentity.accepts(question, "${it.title} ${it.excerpt}") }) {
             val baseResolved = resolve(draft, sources, sequelFallback.second)
             if (baseResolved.support != AnswerSupport.INSUFFICIENT && baseResolved.text.isNotBlank()) {
-                val notice = "The sources do not contain an official release announcement for the requested sequel."
+                val notice = "The sources do not contain an official release announcement for the requested sequel. Release dates are unconfirmed and sources only discuss the predecessor."
                 val combined = if (baseResolved.text.contains(notice)) baseResolved.text else "$notice\n\n${baseResolved.text}"
                 return baseResolved.copy(text = combined, support = AnswerSupport.PARTIAL)
             }

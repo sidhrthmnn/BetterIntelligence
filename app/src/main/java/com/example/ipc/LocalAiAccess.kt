@@ -80,7 +80,7 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
                     if (!allowed) failure(if (reason.startsWith("Rate limit")) "RATE_LIMITED" else "DENIED", reason)
                     else try {
                         val requested = PolishText.parameters(repository.engine.activeContextLength, text).contextSize
-                        val selected = repository.resolveAndActivateForRam(requested, preferLoaded = true)
+                        val selected = repository.resolveAndActivateForClient(caller, requested, preferLoaded = true)
                         if (selected.role == com.example.engine.ModelTierRole.NONE) failure("ERROR", selected.reason)
                         else {
                             val params = PolishText.parameters(repository.engine.activeContextLength, text).copy(contextSize = selected.effectiveContext)

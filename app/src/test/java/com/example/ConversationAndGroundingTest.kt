@@ -43,12 +43,13 @@ class ConversationAndGroundingTest {
                 override fun onUpgrade(db: androidx.sqlite.db.SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
             }).build())
         helper.use { assertEquals(7, it.writableDatabase.version) }
-        val upgraded = Room.databaseBuilder(context, AppDatabase::class.java, name).addMigrations(AppDatabase.MIGRATION_7_8, AppDatabase.MIGRATION_8_9).build()
+        val upgraded = Room.databaseBuilder(context, AppDatabase::class.java, name).addMigrations(AppDatabase.MIGRATION_7_8, AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10).build()
         try {
-            assertEquals(9, upgraded.openHelper.writableDatabase.version)
+            assertEquals(10, upgraded.openHelper.writableDatabase.version)
             assertEquals("Keep my previous chat", upgraded.chatDao().messages(1).first().single().content)
             val policy = upgraded.clientPolicyDao().getPolicyForPackage("com.aistudio.typerigh2.jkwpzq")!!
             assertTrue(policy.isWhitelisted); assertFalse(policy.allowReadMemory); assertEquals(3, policy.totalRequests)
+            assertNull(policy.primaryModelId); assertNull(policy.fallbackModelId); assertFalse(policy.allowAppContext)
             val model = upgraded.modelDao().getAllModels().first().single()
             assertTrue(model.isInstalled); assertTrue(model.isActive); assertEquals("/private/models/existing.gguf", model.localFilePath)
             assertEquals("Previous chat", upgraded.conversationDao().get(1)!!.title)

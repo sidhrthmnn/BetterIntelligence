@@ -78,6 +78,11 @@ object ResearchPlanner {
                 if (entities.isNotEmpty() && entities.none { q.contains(it, true) }) "$subject $q" else q
             }
             comparison -> listOf(query.searchText, "$subject specifications comparison")
+            Regex("(?i)\\b(?:when (?:is|will|does).+releas|releas(?:e|ed|ing)|release date)\\b").containsMatchIn(plain) -> {
+                val cleanSubject = subject.replace(Regex("(?i)\\b(?:when|is|will|does|releas\\w*|date)\\b"), "").trim()
+                val mainQuery = if (cleanSubject.isNotBlank()) "$cleanSubject release date" else query.searchText
+                listOf(mainQuery, query.searchText).distinct()
+            }
             else -> listOf(query.searchText)
         }.map { it.trim().take(400) }.filter { it.isNotBlank() }.distinctBy { ResearchQuery.words(it).sorted() }.take(3)
         val intents = buildSet {

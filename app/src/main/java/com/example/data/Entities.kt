@@ -69,7 +69,10 @@ data class ClientAppPolicyEntity(
     val allowWriteMemory: Boolean = false,
     val allowStructuredJson: Boolean = true,
     val customSystemPrompt: String = "",
-    val allowedMemoryCategories: String = "*"
+    val allowedMemoryCategories: String = "*",
+    val primaryModelId: Long? = null,
+    val fallbackModelId: Long? = null,
+    val allowAppContext: Boolean = false
 )
 
 @Entity(tableName = "chat_messages")

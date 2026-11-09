@@ -106,13 +106,15 @@ class LocalAiCoreService : Service() {
             val startTime = System.currentTimeMillis()
             check(inferenceOwner.compareAndSet(-1, callingUid)) { "AI Core is busy" }
             val result = try { runBlocking(Dispatchers.Default) {
+                repository.resolveAndActivateForClient(callingPackage, clientContextSize(), preferLoaded = true)
+                val finalSystemPrompt = repository.buildClientSystemPrompt(callingPackage, safeSystemPrompt)
                 repository.engine.generateSync(
                     safePrompt,
                     GenerationParams(
                         temperature = if (temperature.isFinite()) temperature.coerceIn(0f, 2f) else 0.7f,
                         maxTokens = if (maxTokens > 0) maxTokens.coerceIn(1, 4096) else 256,
                         contextSize = clientContextSize(),
-                        systemPrompt = safeSystemPrompt.ifBlank { null }
+                        systemPrompt = finalSystemPrompt.ifBlank { null }
                     )
                 )
             } } finally { inferenceOwner.set(-1) }
@@ -147,14 +149,20 @@ class LocalAiCoreService : Service() {
                 return
             }
 
+            if (!inferenceOwner.compareAndSet(-1, callingUid)) { callback.onError(409, "AI Core is busy"); return }
+
+            val finalSystemPrompt = runBlocking(Dispatchers.Default) {
+                repository.resolveAndActivateForClient(callingPackage, clientContextSize(), preferLoaded = true)
+                repository.buildClientSystemPrompt(callingPackage, safeSystemPrompt)
+            }
+
             val params = GenerationParams(
                 temperature = if (temperature.isFinite()) temperature.coerceIn(0f, 2f) else 0.7f,
                 topP = if (topP > 0) topP.coerceIn(0.1f, 1.0f) else 0.9f,
                 maxTokens = if (maxTokens > 0) maxTokens.coerceIn(1, 4096) else 512,
                 contextSize = clientContextSize(),
-                systemPrompt = safeSystemPrompt.ifBlank { null }
+                systemPrompt = finalSystemPrompt.ifBlank { null }
             )
-            if (!inferenceOwner.compareAndSet(-1, callingUid)) { callback.onError(409, "AI Core is busy"); return }
 
             repository.engine.generateStream(
                 safePrompt,
@@ -237,6 +245,7 @@ class LocalAiCoreService : Service() {
             val startTime = System.currentTimeMillis()
             check(inferenceOwner.compareAndSet(-1, callingUid)) { "AI Core is busy" }
             val summary = try { runBlocking(Dispatchers.Default) {
+                repository.resolveAndActivateForClient(callingPackage, clientContextSize(), preferLoaded = true)
                 repository.engine.summarize(safeText, if (maxWords > 0) maxWords.coerceIn(10, 500) else 60)
             } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
@@ -259,6 +268,7 @@ class LocalAiCoreService : Service() {
             val startTime = System.currentTimeMillis()
             check(inferenceOwner.compareAndSet(-1, callingUid)) { "AI Core is busy" }
             val result = try { runBlocking(Dispatchers.Default) {
+                repository.resolveAndActivateForClient(callingPackage, clientContextSize(), preferLoaded = true)
                 repository.engine.classify(safeText, labels)
             } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
@@ -314,7 +324,10 @@ class LocalAiCoreService : Service() {
         val (allowed, reason) = runBlocking { repository.checkSecurityAndRateLimit(pkg, scope) }
         if (!allowed) return org.json.JSONObject().put("error", reason).toString()
         if (inference) check(inferenceOwner.compareAndSet(-1, uid)) { "AI Core is busy" }
-        return try { runBlocking(Dispatchers.Default) { block() } }
+        return try { runBlocking(Dispatchers.Default) {
+            if (inference) repository.resolveAndActivateForClient(pkg, clientContextSize(), preferLoaded = true)
+            block()
+        } }
         finally { if (inference) inferenceOwner.set(-1) }
     }
 

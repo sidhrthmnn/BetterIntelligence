@@ -47,6 +47,9 @@ fun SettingsScreen(viewModel: AiCoreViewModel) {
         item { SettingsSection("Your AI") }
         item { SettingsRow("Optimise your AI", "Check device, set up models and view results", Icons.Default.AutoAwesome) { viewModel.recheckDevice(); viewModel.selectTab(AppTab.OPTIMISE) } }
         item { SettingsRow("Models", active?.name?.substringBefore(" · ") ?: "Find, download and manage models", Icons.Default.Memory) { viewModel.selectTab(AppTab.MODELS) } }
+        item { DetailDisclosure("Models & Downloads", "Background downloads, mobile data, and notifications", Modifier.testTag("setting_Models_Downloads")) {
+            ModelsDownloadsPreferences(viewModel)
+        } }
         item { SettingsRow("Connected apps", "Choose which apps can use your AI", Icons.Default.Apps) { viewModel.selectTab(AppTab.CONNECT) } }
         item { SettingsRow("Web & grounding", if (allowed) "On · Answers with sources" else "Off · Local answers", Icons.Default.Language) { viewModel.selectTab(AppTab.WEB) } }
         item { SettingsSection("Personalise") }
@@ -55,6 +58,75 @@ fun SettingsScreen(viewModel: AiCoreViewModel) {
         item { SettingsSection("Privacy & about") }
         item { SettingsRow("Privacy & data", "Your data, storage and permissions", Icons.Default.Lock) { viewModel.selectTab(AppTab.PRIVACY) } }
         item { SettingsRow("Advanced & about", "Processing, performance and app details", Icons.Default.Tune) { viewModel.selectTab(AppTab.ADVANCED) } }
+    }
+}
+
+@Composable
+fun ModelsDownloadsPreferences(viewModel: AiCoreViewModel) {
+    var bgEnabled by remember { mutableStateOf(viewModel.backgroundDownloadsEnabled) }
+    var wifiOnly by remember { mutableStateOf(viewModel.downloadsWifiOnly) }
+    var mobileData by remember { mutableStateOf(viewModel.allowMobileData) }
+    var autoResume by remember { mutableStateOf(viewModel.autoResumeDownloads) }
+    var notifications by remember { mutableStateOf(viewModel.downloadNotificationsEnabled) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Enable background downloads", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = bgEnabled,
+                onCheckedChange = {
+                    bgEnabled = it
+                    viewModel.setBackgroundDownloadsEnabled(it)
+                },
+                modifier = Modifier.testTag("pref_background_downloads")
+            )
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Wi-Fi only downloads", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = wifiOnly,
+                onCheckedChange = {
+                    wifiOnly = it
+                    mobileData = !it
+                    viewModel.setDownloadsWifiOnly(it)
+                },
+                modifier = Modifier.testTag("pref_wifi_only")
+            )
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Allow mobile data", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = mobileData,
+                onCheckedChange = {
+                    mobileData = it
+                    wifiOnly = !it
+                    viewModel.setAllowMobileData(it)
+                },
+                modifier = Modifier.testTag("pref_allow_mobile_data")
+            )
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Automatic download resumption", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = autoResume,
+                onCheckedChange = {
+                    autoResume = it
+                    viewModel.setAutoResumeDownloads(it)
+                },
+                modifier = Modifier.testTag("pref_auto_resume")
+            )
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Download notifications", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = notifications,
+                onCheckedChange = {
+                    notifications = it
+                    viewModel.setDownloadNotificationsEnabled(it)
+                },
+                modifier = Modifier.testTag("pref_download_notifications")
+            )
+        }
     }
 }
 
@@ -126,6 +198,36 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
             }
             Text("Your public question goes to Exa. Visited websites see your IP address.", style = MaterialTheme.typography.bodyMedium)
             Text("Private memories and connected-app requests stay local. Keep secrets out of web questions.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } }
+        item { ScreenCard {
+            Text("Grounding mode", style = MaterialTheme.typography.titleMedium)
+            val groundingMode by viewModel.groundingMode.collectAsState()
+            listOf(
+                com.example.grounding.GroundingMode.AUTO to ("Auto (Model first)" to "Model answers first, web research when needed"),
+                com.example.grounding.GroundingMode.ON to ("Always on" to "Always research public facts with web sources"),
+                com.example.grounding.GroundingMode.OFF to ("Off" to "Local model answers only")
+            ).forEach { (mode, pair) ->
+                val (label, desc) = pair
+                OutlinedCard(
+                    Modifier.fillMaxWidth().clickable { viewModel.selectGroundingMode(mode) },
+                    colors = CardDefaults.outlinedCardColors(
+                        containerColor = if (groundingMode == mode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = groundingMode == mode,
+                            onClick = { viewModel.selectGroundingMode(mode) },
+                            modifier = Modifier.testTag("grounding_mode_${mode.name}")
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(label, style = MaterialTheme.typography.titleSmall)
+                            Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
         } }
         item { ScreenCard {
             Text("Find. Read. Answer.", style = MaterialTheme.typography.titleMedium)

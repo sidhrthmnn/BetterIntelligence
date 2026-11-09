@@ -58,7 +58,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
     private val timeouts: ResearchTimeouts = ResearchTimeouts(), private val biFallback: Boolean = true,
     private val alternativeProviders: List<ConfiguredDiscovery> = emptyList(),
     private val clock: java.time.Clock = java.time.Clock.systemDefaultZone(),
-    private val localRanking: ((String, List<EvidenceSource>) -> Map<String, Double>)? = null) : SearchProvider {
+    private val localRanking: ((String, List<EvidenceSource>) -> Map<String, Double>)? = null,
+    val maxSearchAttempts: Int = 3) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
     private val discoveryCircuits = mutableMapOf<String, DiscoveryCircuit>()
     private val biIndex = BiDiscovery(fetcher, robots, discoveryAllowed, timeouts)
@@ -106,12 +107,15 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val failedReads = java.util.concurrent.atomic.AtomicInteger()
         var rounds = 0
         var recoveryAttempts = 0
+        val executedSearches = mutableSetOf<String>()
         fun eligible(candidates: List<ResearchCandidate>, activeQuery: ResearchQuery = query, activeQuestion: String = question) =
             candidates.filter { WeatherPageEvidence.requestedDay(it.title, activeQuestion) && !SourceBrief.predictionMarket(it.title, it.url, activeQuestion) && !ExactIdentity.urlConflicts(activeQuestion, it.url) && activeQuery.candidateRelevant("${it.title} ${it.url}", it.routingHint) && !activeQuery.isPrediction(it.title) &&
                 (!FactualResearch.speculativeCasting(activeQuestion, it.title) || Regex("(?i)screen[- ]?tests?|auditions?|shortlist|not (?:yet )?(?:confirmed|announced)").containsMatchIn(it.title)) }
         suspend fun discover(search: String, broad: Boolean, activeQuery: ResearchQuery = query, activeQuestion: String = question): List<ResearchCandidate>? {
+            val normalizedSearch = search.trim().lowercase()
+            if (!executedSearches.add(normalizedSearch)) return emptyList()
             if (!discoveryAllowed()) { discoveryFailed = true; providerFailure = ResearchFailure.PROVIDER_ACCESS_DENIED; return null }
-            if (rounds++ >= 3) return emptyList()
+            if (rounds++ >= maxSearchAttempts) return emptyList()
             if (!deadline.permits()) { discoveryTimedOut = true; providerFailure = ResearchFailure.PROVIDER_TIMEOUT; return null }
             val result = withTimeoutOrNull(remaining().coerceAtLeast(1)) {
                 try { discovery.discover(ResearchQuery(activeQuestion, java.time.LocalDate.now(clock), searchOverride = search), broad) }
@@ -274,7 +278,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         // Expand only after actual passages fail to cover the requested facets.
         if (explicit.isEmpty() && !enough() && !blocked && providerFailure != ResearchFailure.NETWORK_UNAVAILABLE) {
             for (search in plan.searches.drop(1)) {
-                if (readCount >= 8 || !deadline.permits()) break
+                if (readCount >= 8 || !deadline.permits() || rounds >= maxSearchAttempts) break
                 progress(ResearchStage.SEARCHING)
                 recoveryAttempts++
                 readCandidates(discover(search, false).orEmpty())
@@ -283,6 +287,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         }
         if (explicit.isEmpty() && biFallback && discoveryOverride == null && sources.isEmpty() &&
             (biIndex.matchesDirectory(query) || (discoveryFailed || discoveredCount == 0) && biIndex.supports(query)) && readCount < 8 &&
+            rounds < maxSearchAttempts &&
             deadline.permits(1000) && discoveryAllowed() && providerFailure != ResearchFailure.NETWORK_UNAVAILABLE) {
             fallbackUsed = true
             recoveryAttempts++

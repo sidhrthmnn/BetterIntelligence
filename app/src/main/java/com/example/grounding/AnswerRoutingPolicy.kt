@@ -4,11 +4,24 @@ import com.example.data.ChatMessageEntity
 import java.time.LocalDate
 
 enum class AnswerPath { LOCAL, WEB_GROUNDED, CLARIFICATION }
+
+enum class RequestCategory {
+    GENERAL_KNOWLEDGE,
+    EXPLANATION_OR_REASONING,
+    CALCULATION,
+    CREATIVE_WRITING,
+    CONVERSATION_FOLLOW_UP,
+    CURRENT_INFORMATION,
+    EXPLICIT_RESEARCH,
+    SOURCE_VERIFICATION
+}
+
 data class AnswerRoute(val path: AnswerPath, val question: String, val reason: String,
     val requiresLive: Boolean = false, val requiresVerification: Boolean = false,
     val clarification: String = "", val localPart: String? = null,
     val reusedSources: List<EvidenceSource> = emptyList(), val privacyBlocked: Boolean = false,
-    val researchAllowed: Boolean = false, val webDisabled: Boolean = false)
+    val researchAllowed: Boolean = false, val webDisabled: Boolean = false,
+    val category: RequestCategory = RequestCategory.GENERAL_KNOWLEDGE)
 data class AnswerRecovery(val localQuestion: String?, val notice: String, val status: String)
 
 /** Chat-only intent routing. No additional model run; private history stays on device. */
@@ -26,12 +39,45 @@ object AnswerRoutingPolicy {
     private val followUp = Regex("(?i)^\\s*(?:what about|how about|and |can it|does it|is it|explain it|explain that|make it|why is that)|\\b(?:he|she|his|her|there|that|it|its|previous example)\\b|അത്|അതിന്റെ|അവൻ|അവൾ")
     fun localOnly(question: String): Boolean = Regex("(?i)\\b(?:offline|without (?:web|search)|do not search|don't search)\\b|(?:^|[.;]\\s*|\\bplease\\s+)(?:(?:work|answer|respond|stay)\\s+)?locally\\b|(?:do not|don't) (?:use|search) (?:the )?(?:web|internet)|ഓഫ്‌ലൈൻ|വെബ് വേണ്ട").containsMatchIn(question)
 
+    fun categorize(question: String, history: List<ChatMessageEntity> = emptyList()): RequestCategory {
+        val q = question.trim()
+        val instruction = q.substringBefore('\n')
+        val task = q.replace(Regex("(?i)^\\s*(?:(?:can|could|would) you\\s+|please\\s+)+"), "")
+        if (com.example.engine.LocalCalculation.evaluate(q) != null || com.example.engine.DeviceClock.recognises(q)) {
+            return RequestCategory.CALCULATION
+        }
+        if (verification.containsMatchIn(instruction) || Regex("https?://").containsMatchIn(instruction)) {
+            return RequestCategory.SOURCE_VERIFICATION
+        }
+        if (explicitResearch.containsMatchIn(instruction) || PublicQuestionIntent.externalRequest(instruction)) {
+            return RequestCategory.EXPLICIT_RESEARCH
+        }
+        if (transformation.containsMatchIn(task) && !explicitResearch.containsMatchIn(q.substringBefore('\n').substringBefore(": "))) {
+            return RequestCategory.CREATIVE_WRITING
+        }
+        if (ConversationalResearch.isContinue(q) || followUp.containsMatchIn(q) || (history.isNotEmpty() && Regex("(?i)^\\s*(?:what about|how about|and|can it|does it|is it|why)\\b").containsMatchIn(q))) {
+            return RequestCategory.CONVERSATION_FOLLOW_UP
+        }
+        val signals = q.substringBefore('\n').replace(Regex("(?i)^\\s*(?:(?:can|could|would) you\\s+|please\\s+)+"), "").replace(technicalContext, "task context")
+        val current = fresh.containsMatchIn(signals) || NewsIntent.isLiveRequest(signals) || PublicQuestionIntent.serviceStatus(signals) || PublicQuestionIntent.upcoming(signals) || changing.containsMatchIn(signals) || ConversationalResearch.isWeather(signals)
+        if (current) {
+            return RequestCategory.CURRENT_INFORMATION
+        }
+        val general = explanation.containsMatchIn(signals) && !current && (concept.containsMatchIn(signals) ||
+            Regex("(?i)^\\s*(?:explain|define|describe|how (?:does|do|to)|why)\\b|വിശദീകരി|എങ്ങനെ|എന്താണ്").containsMatchIn(signals))
+        if (general || explanation.containsMatchIn(signals)) {
+            return RequestCategory.EXPLANATION_OR_REASONING
+        }
+        return RequestCategory.GENERAL_KNOWLEDGE
+    }
+
     fun decide(question: String, allowed: Boolean = true, mode: GroundingMode = GroundingMode.AUTO,
         history: List<ChatMessageEntity> = emptyList(), today: LocalDate = LocalDate.now(), now: Long = System.currentTimeMillis(), conversationId: Long? = null): AnswerRoute {
         val q = question.trim()
+        val category = categorize(q, history)
         if (Regex("(?i)^how much is on ai worth[?!. ]*$").matches(q))
             return AnswerRoute(AnswerPath.CLARIFICATION, q, "Ambiguous company name",
-                clarification = "Do you mean OpenAI, xAI, or a different company? Please give its name.")
+                clarification = "Do you mean OpenAI, xAI, or a different company? Please give its name.", category = category)
         if (ConversationalResearch.isContinue(q)) {
             val sameChat = history.filter { conversationId == null || it.conversationId == conversationId }
             val lastAssistant = sameChat.lastOrNull { it.role == "assistant" }
@@ -39,8 +85,8 @@ object AnswerRoutingPolicy {
                 ?.let { GroundingResult.sources(it.sourcesJson) }.orEmpty()
             val priorQuestion = ConversationalResearch.question(q, history, conversationId)
             return if (allowed && mode != GroundingMode.OFF && priorSources.isNotEmpty() && !ConversationalResearch.isWeather(priorQuestion))
-                AnswerRoute(AnswerPath.WEB_GROUNDED, priorQuestion, "Continue from retrieved sources", reusedSources = priorSources, researchAllowed = true)
-            else AnswerRoute(AnswerPath.LOCAL, q, "Established knowledge, reasoning or conversation", researchAllowed = false, webDisabled = !allowed || mode == GroundingMode.OFF)
+                AnswerRoute(AnswerPath.WEB_GROUNDED, priorQuestion, "Continue from retrieved sources", reusedSources = priorSources, researchAllowed = true, category = category)
+            else AnswerRoute(AnswerPath.LOCAL, q, "Established knowledge, reasoning or conversation", researchAllowed = false, webDisabled = !allowed || mode == GroundingMode.OFF, category = category)
         }
         val instruction = q.substringBefore('\n')
         // Polite writing requests remain local even when their supplied subject
@@ -97,9 +143,9 @@ object AnswerRoutingPolicy {
                     !Regex("https?://").containsMatchIn(resolved) -> ConversationalResearch.askCity
                 else -> ""
             }
-            if (clarification.isNotBlank()) return AnswerRoute(AnswerPath.CLARIFICATION, resolved, "Missing public subject or place", live, verify, clarification)
+            if (clarification.isNotBlank()) return AnswerRoute(AnswerPath.CLARIFICATION, resolved, "Missing public subject or place", live, verify, clarification, category = category)
             val reuse = if (mode != GroundingMode.ON && !explicit && !current && followUp.containsMatchIn(q)) reusableEvidence(resolved, history, now) else emptyList()
-            return AnswerRoute(AnswerPath.WEB_GROUNDED, resolved, if (explicit) "Requested external evidence" else if (publicTopic != null) "Public ${publicTopic.type.name.lowercase()} ${publicTopic.intent.name.lowercase()} lookup" else "Changing facts or runtime compatibility", live, verify, localPart = localPart, reusedSources = reuse, researchAllowed = true)
+            return AnswerRoute(AnswerPath.WEB_GROUNDED, resolved, if (explicit) "Requested external evidence" else if (publicTopic != null) "Public ${publicTopic.type.name.lowercase()} ${publicTopic.intent.name.lowercase()} lookup" else "Changing facts or runtime compatibility", live, verify, localPart = localPart, reusedSources = reuse, researchAllowed = true, category = category)
         }
         return AnswerRoute(AnswerPath.LOCAL, q, when {
             privateInput -> "Possible credentials stay on device"
@@ -108,7 +154,7 @@ object AnswerRoutingPolicy {
             calculation -> "Local calculation"
             else -> "Established knowledge, reasoning or conversation"
         }, live, verify, localPart = localPart, privacyBlocked = GroundingPolicy.containsCredential(q),
-            researchAllowed = canSearch, webDisabled = !allowed || mode == GroundingMode.OFF)
+            researchAllowed = canSearch, webDisabled = !allowed || mode == GroundingMode.OFF, category = category)
     }
 
     /** One recovery search when the local model cannot answer a public question.
@@ -116,7 +162,8 @@ object AnswerRoutingPolicy {
     fun shouldResearchAfterLocalAnswer(route: AnswerRoute, answer: String): Boolean =
         route.path == AnswerPath.LOCAL && route.researchAllowed && !route.privacyBlocked &&
             !transformation.containsMatchIn(route.question) &&
-            !ConversationalResearch.needsSubject(route.question) && LocalAnswerUncertainty.needsResearch(answer)
+            !ConversationalResearch.needsSubject(route.question) &&
+            (LocalAnswerUncertainty.needsResearch(answer) || !ResponseQualityValidator.validate(route.question, answer, isLocalOnly = true).isValid)
 
     private fun mixedLocalPart(question: String): String? {
         val parts = question.split(Regex("(?i),?\\s+and\\s+(?=(?:(?:also )?(?:tell|give|show) me )?(?:what|which|who|when|where|the latest|latest|the current|current))|;\\s*|\\s+കൂടാതെ\\s+"), limit = 2)

@@ -363,16 +363,18 @@ class AiCoreRepository(
 
     /** Evaluates current available RAM against Primary and Secondary models and hot-swaps if required. */
     suspend fun resolveAndActivateForRam(requestedContext: Int, preferLoaded: Boolean = false,
-        onLoading: (ModelEntity, ModelTierRole) -> Unit = { _, _ -> }): ModelTierDecision = withContext(Dispatchers.IO) {
+        onLoading: (ModelEntity, ModelTierRole) -> Unit = { _, _ -> },
+        overridePrimaryId: Long? = null,
+        overrideSecondaryId: Long? = null): ModelTierDecision = withContext(Dispatchers.IO) {
         resolutionLock.withLock {
         val models = modelDao.getAllModels().first()
         val currentActive = modelDao.getActiveModel().first()
-        val primaryId = preferencesRepository.primaryModelId.first()
-        val secondaryId = preferencesRepository.secondaryModelId.first()
+        val primaryId = overridePrimaryId ?: preferencesRepository.primaryModelId.first()
+        val secondaryId = overrideSecondaryId ?: preferencesRepository.secondaryModelId.first()
         val autoFallback = preferencesRepository.autoRamFallback.first()
         // Configured primary and current fallback are distinct identities. Rust
         // may keep the fallback through cooldown, but cannot rename it primary.
-        val primary = models.find { it.id == primaryId } ?: currentActive
+        val primary = models.find { it.id == primaryId && it.isInstalled } ?: models.find { it.id == primaryId } ?: currentActive
         val secondary = models.find { it.id == secondaryId && it.isInstalled && it.id != primary?.id }
             ?: ModelMemoryPlanner.pickDefaultSecondary(models, primary)
         val rawProfile = HardwareAnalyzer.analyze(appContext)
@@ -419,6 +421,22 @@ class AiCoreRepository(
         ModelTierDecision(ModelTierRole.NONE, primary ?: secondary, 512, 0, profile.safeModelRamLimitMb,
             "No downloaded model could load safely. Try another model or free memory.", "LOAD_FAILED")
         }
+    }
+
+    suspend fun resolveAndActivateForClient(
+        packageName: String,
+        requestedContext: Int = 1024,
+        preferLoaded: Boolean = true,
+        onLoading: (ModelEntity, ModelTierRole) -> Unit = { _, _ -> }
+    ): ModelTierDecision {
+        val policy = clientPolicyDao.getPolicyForPackage(packageName)
+        return resolveAndActivateForRam(
+            requestedContext = requestedContext,
+            preferLoaded = preferLoaded,
+            onLoading = onLoading,
+            overridePrimaryId = policy?.primaryModelId,
+            overrideSecondaryId = policy?.fallbackModelId
+        )
     }
 
     private suspend fun activateModel(model: ModelEntity, restoring: Boolean = false, contextOverride: Int? = null) = withContext(Dispatchers.IO) {
@@ -816,6 +834,7 @@ class AiCoreRepository(
             val allowed = when (scope) {
                 "INFERENCE" -> policy.allowInference
                 "STRUCTURED_JSON" -> policy.allowInference && policy.allowStructuredJson
+                "APP_CONTEXT" -> policy.allowAppContext
                 "READ_MEMORY" -> policy.allowReadMemory
                 "WRITE_MEMORY" -> policy.allowWriteMemory
                 else -> false
@@ -912,9 +931,10 @@ class AiCoreRepository(
 
     suspend fun buildClientSystemPrompt(packageName: String, requested: String?): String {
         val policy = clientPolicyDao.getPolicyForPackage(packageName)
+        val includeRequested = if (policy == null) true else policy.allowAppContext
         val system = listOfNotNull(
             policy?.customSystemPrompt?.take(4000)?.takeIf { it.isNotBlank() },
-            requested?.take(4000)?.takeIf { it.isNotBlank() }
+            requested?.take(4000)?.takeIf { it.isNotBlank() && includeRequested }
         ).joinToString("\n").ifBlank { "You are a helpful on-device assistant." } +
             (policy?.let { "\nClient: ${it.appName.take(200)}" } ?: "")
         // Sharing inference does not imply sharing personal memories.

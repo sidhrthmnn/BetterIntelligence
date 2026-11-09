@@ -57,7 +57,6 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val context = LocalContext.current
     var source by rememberSaveable { mutableStateOf("library") }
     var advanced by rememberSaveable { mutableStateOf(false) }
-    var wifiOnly by remember { mutableStateOf(viewModel.downloadsWifiOnly) }
     var details by remember { mutableStateOf<ModelEntity?>(null) }
     var partialDelete by remember { mutableStateOf<ModelEntity?>(null) }
     var deleting by remember { mutableStateOf<ModelEntity?>(null) }
@@ -86,13 +85,6 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     }
 
     LazyColumn(Modifier.fillMaxSize().testTag("models_list"), state = listState, contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { com.example.ui.components.DetailDisclosure("Background downloads", "One at a time · Pause, resume or delete unfinished files") {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Wi-Fi only", Modifier.weight(1f)); Switch(wifiOnly, { wifiOnly = it; viewModel.setDownloadsWifiOnly(it) })
-            }
-            Text("Turning this off allows metered/mobile data. Android may defer transfers under network, battery or storage restrictions.", style = MaterialTheme.typography.bodySmall)
-        } }
-
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -151,17 +143,11 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                             )
                         }
                         if (telemetry.isModelLoaded) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                TextButton(
-                                    onClick = { viewModel.selectTab(AppTab.CONNECT) },
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                                ) { Text("Connect apps", style = MaterialTheme.typography.labelMedium) }
-                                Button(
-                                    onClick = { viewModel.selectTab(AppTab.CHAT) },
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                    modifier = Modifier.heightIn(min = 40.dp)
-                                ) { Text("Chat", style = MaterialTheme.typography.labelMedium) }
-                            }
+                            Button(
+                                onClick = { viewModel.selectTab(AppTab.CHAT) },
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                modifier = Modifier.heightIn(min = 40.dp)
+                            ) { Text("Chat", style = MaterialTheme.typography.labelMedium) }
                         }
                     }
                     if (telemetry.isModelLoaded && (models.count { it.isInstalled } >= 2 || secondary != null)) {
@@ -379,7 +365,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Delete ${model.name}?") },
             text = { Text(buildString {
                 append("This removes the model from this device and frees its storage. ")
-                if (active?.id == model.id) append("The model will be unloaded and connected apps will need another model selected. ")
+                if (active?.id == model.id) append("The model will be unloaded. ")
                 append(if (model.isCustom && model.downloadUrl.isNullOrBlank()) "You can import the original file again. The original file and saved chats are kept." else "You can download it again later. Saved chats are kept.")
             }) },
             confirmButton = { TextButton(onClick = { viewModel.uninstallModel(model); deleting = null },

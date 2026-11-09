@@ -32,6 +32,13 @@ data class EventQuery(val subject: String, val constraint: String, val question:
                 (if (today.dayOfWeek == DayOfWeek.SUNDAY) today else saturday) to
                     (if (today.dayOfWeek == DayOfWeek.SUNDAY) today else saturday.plusDays(1))
             }
+            "next weekend" -> {
+                val daysUntilNextMonday = (8 - today.dayOfWeek.value).toLong()
+                val nextMonday = today.plusDays(daysUntilNextMonday)
+                val nextSaturday = nextMonday.plusDays(5)
+                val nextSunday = nextMonday.plusDays(6)
+                nextSaturday to nextSunday
+            }
             "next week" -> today.plusDays((8 - today.dayOfWeek.value).toLong()).let { it to it.plusDays(6) }
             "tonight", "later today", "today" -> today to today
             else -> today to null
@@ -40,17 +47,17 @@ data class EventQuery(val subject: String, val constraint: String, val question:
 
     companion object {
         private val activity = Regex("(?i)\\b(?:events?|concerts?|performances?|fixtures?|matches|match|launch|launches|cinema|showtimes?|screenings?|shows?|gigs?|activities|happening)\\b")
-        private val temporal = Regex("(?i)\\b(?:next|upcoming|scheduled|tomorrow|tonight|this weekend|next week|later today|today)\\b")
-        private val generic = ResearchQuery.words("a an the at in on for near next upcoming scheduled tomorrow tonight this weekend week later today event events concert concerts performance fixture match launch cinema showtime screening show gig activity happening official calendar schedule")
+        private val temporal = Regex("(?i)\\b(?:next weekend|this weekend|next week|next|upcoming|scheduled|tomorrow|tonight|later today|today)\\b")
+        private val generic = ResearchQuery.words("a an the at in on for near next upcoming scheduled tomorrow tonight this weekend next weekend week later today event events concert concerts performance fixture match launch cinema showtime screening show gig activity happening official calendar schedule")
         fun identity(text: String): Set<String> = ResearchQuery.words(text) - generic
         fun parse(question: String): EventQuery? {
             val q = question.substringBefore("(Public source topic:").trim().trimEnd('?', '.', '!')
             if (!activity.containsMatchIn(q) || !temporal.containsMatchIn(q)) return null
-            val time = listOf("this weekend", "next week", "later today", "tomorrow", "tonight", "today", "next", "upcoming", "scheduled")
+            val time = listOf("next weekend", "this weekend", "next week", "later today", "tomorrow", "tonight", "today", "next", "upcoming", "scheduled")
                 .firstOrNull { Regex("(?i)\\b${Regex.escape(it)}\\b").containsMatchIn(q) } ?: "upcoming"
             val tail = Regex("(?i)\\b(?:at|in|near)\\s+(.+)$").find(q)?.groupValues?.get(1)
             val subject = (tail ?: q.replace(Regex("(?i)^.*?\\b(?:next|upcoming|scheduled)\\s+"), ""))
-                .replace(Regex("(?i)\\b(?:this weekend|next week|later today|tomorrow|tonight|today|next|upcoming|scheduled|events?|concerts?|performances?|fixtures?|matches|match|launches?|showtimes?|screenings?|happening)\\b"), " ")
+                .replace(Regex("(?i)\\b(?:next weekend|this weekend|next week|later today|tomorrow|tonight|today|next|upcoming|scheduled|events?|concerts?|performances?|fixtures?|matches|match|launches?|showtimes?|screenings?|happening)\\b"), " ")
                 .replace(Regex("\\s+"), " ").trim(' ', ',', ':')
             if (subject.length !in 2..120 || identity(subject).isEmpty()) return null
             return EventQuery(subject, time, q)

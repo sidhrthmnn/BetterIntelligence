@@ -60,6 +60,7 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
     val conversation by viewModel.conversationId.collectAsState()
     val status by viewModel.chatStatus.collectAsState()
     val allowed by viewModel.webAllowed.collectAsState()
+    val groundingMode by viewModel.groundingMode.collectAsState()
     val ready by viewModel.telemetry.collectAsState()
     val editing by viewModel.isEditingMessage.collectAsState()
     val pendingReplyId by viewModel.pendingReplyId.collectAsState()
@@ -160,10 +161,48 @@ fun ChatScreen(viewModel: AiCoreViewModel) {
                                 unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent))
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.weight(1f)) {
-                                TextButton(onClick = { viewModel.selectTab(AppTab.WEB) },
+                                var menuExpanded by remember { mutableStateOf(false) }
+                                TextButton(onClick = { menuExpanded = true },
                                     modifier = Modifier.testTag("chat_grounding")) {
                                     Icon(Icons.Default.Language, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                                    Text(if (allowed) "Web research · On" else "Web research · Off", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(
+                                        when (groundingMode) {
+                                            com.example.grounding.GroundingMode.AUTO -> "Web research · Auto"
+                                            com.example.grounding.GroundingMode.ON -> "Web research · On"
+                                            com.example.grounding.GroundingMode.OFF -> "Web research · Off"
+                                        },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = menuExpanded,
+                                    onDismissRequest = { menuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Auto (Model first)") },
+                                        onClick = {
+                                            viewModel.selectGroundingMode(com.example.grounding.GroundingMode.AUTO)
+                                            menuExpanded = false
+                                        },
+                                        modifier = Modifier.testTag("chat_grounding_auto")
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Always on") },
+                                        onClick = {
+                                            viewModel.selectGroundingMode(com.example.grounding.GroundingMode.ON)
+                                            menuExpanded = false
+                                        },
+                                        modifier = Modifier.testTag("chat_grounding_on")
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Off") },
+                                        onClick = {
+                                            viewModel.selectGroundingMode(com.example.grounding.GroundingMode.OFF)
+                                            menuExpanded = false
+                                        },
+                                        modifier = Modifier.testTag("chat_grounding_off")
+                                    )
                                 }
                             }
                             FilledIconButton(onClick = { if (generating) viewModel.cancelGeneration() else { keyboard?.hide(); viewModel.sendChatMessage(draft) } },

@@ -96,6 +96,46 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         com.example.service.ModelDownloadQueue.schedule(getApplication(), true)
     }
     val downloadsWifiOnly get() = com.example.service.DownloadQueueStore(getApplication()).wifiOnly()
+    val backgroundDownloadsEnabled get() = com.example.service.DownloadQueueStore(getApplication()).backgroundDownloadsEnabled()
+    fun setBackgroundDownloadsEnabled(value: Boolean) {
+        com.example.service.DownloadQueueStore(getApplication()).setBackgroundDownloadsEnabled(value)
+        com.example.service.ModelDownloadQueue.schedule(getApplication(), true)
+    }
+    val allowMobileData get() = com.example.service.DownloadQueueStore(getApplication()).allowMobileData()
+    fun setAllowMobileData(value: Boolean) {
+        com.example.service.DownloadQueueStore(getApplication()).setAllowMobileData(value)
+        com.example.service.ModelDownloadQueue.schedule(getApplication(), true)
+    }
+    val autoResumeDownloads get() = com.example.service.DownloadQueueStore(getApplication()).autoResumeEnabled()
+    fun setAutoResumeDownloads(value: Boolean) {
+        com.example.service.DownloadQueueStore(getApplication()).setAutoResumeEnabled(value)
+    }
+    val downloadNotificationsEnabled get() = com.example.service.DownloadQueueStore(getApplication()).notificationsEnabled()
+    fun setDownloadNotificationsEnabled(value: Boolean) {
+        com.example.service.DownloadQueueStore(getApplication()).setNotificationsEnabled(value)
+    }
+    fun togglePolicyAppContext(policy: ClientAppPolicyEntity) {
+        viewModelScope.launch { repository.updatePolicy(policy.copy(allowAppContext = !policy.allowAppContext)) }
+    }
+    fun updateClientPrimaryModel(policy: ClientAppPolicyEntity, modelId: Long?) {
+        viewModelScope.launch { repository.updatePolicy(policy.copy(primaryModelId = modelId)) }
+    }
+    fun updateClientFallbackModel(policy: ClientAppPolicyEntity, modelId: Long?) {
+        viewModelScope.launch { repository.updatePolicy(policy.copy(fallbackModelId = modelId)) }
+    }
+    fun revokeClientPermissions(policy: ClientAppPolicyEntity) {
+        viewModelScope.launch {
+            repository.updatePolicy(policy.copy(
+                isWhitelisted = false,
+                allowInference = false,
+                allowAppContext = false,
+                allowReadMemory = false,
+                allowWriteMemory = false,
+                primaryModelId = null,
+                fallbackModelId = null
+            ))
+        }
+    }
     val hasLocalEncoder get() = com.example.engine.LocalEmbeddingRanker(getApplication()).available()
     fun importLocalEncoder(uri: android.net.Uri) { viewModelScope.launch(Dispatchers.IO) {
         runCatching { com.example.engine.LocalEmbeddingRanker(getApplication()).import(uri) }
@@ -165,7 +205,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     private var editingMessageId: Long? = null
     private val _isEditingMessage = MutableStateFlow(false)
     val isEditingMessage = _isEditingMessage.asStateFlow()
-    private val _groundingMode = MutableStateFlow(GroundingMode.ON)
+    private val _groundingMode = MutableStateFlow(GroundingMode.AUTO)
     val groundingMode = _groundingMode.asStateFlow()
     private val _chatStatus = MutableStateFlow("")
     val chatStatus = _chatStatus.asStateFlow()
@@ -388,11 +428,17 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     } }
     fun dismissResearchDiagnostics() { _researchDiagnosticReport.value = null }
     fun clearSearchData() { _researchDiagnosticReport.value = null; grounding.clearTemporaryData(); viewModelScope.launch(Dispatchers.IO) { ResearchDiagnostics.clear(getApplication()) }; _userMessage.value = "Temporary search data cleared." }
-    @androidx.annotation.VisibleForTesting
-    internal fun setGroundingMode(mode: GroundingMode) {
+    fun selectGroundingMode(mode: GroundingMode) {
         _groundingMode.value = mode
         val id = _conversationId.value
-        viewModelScope.launch { repository.saveGroundingMode(id, mode.name) }
+        viewModelScope.launch {
+            repository.saveGroundingMode(id, mode.name)
+            repository.preferencesRepository.saveWebMode(mode.name)
+        }
+    }
+    @androidx.annotation.VisibleForTesting
+    internal fun setGroundingMode(mode: GroundingMode) {
+        selectGroundingMode(mode)
     }
     fun updateDraft(value: String) {
         _draft.value = value
@@ -410,7 +456,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         savedState["draft"] = _draft.value; savedState["draftConversation"] = id
         // Enabled grounding checks public factual answers before generation.
         // Global web consent and explicit offline/private admission still apply.
-        _groundingMode.value = GroundingMode.ON
+        _groundingMode.value = GroundingMode.AUTO
         editingMessageId = null
         _isEditingMessage.value = false
         _conversationId.value = id
@@ -423,7 +469,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     fun newConversation() { viewModelScope.launch { conversationLock.withLock {
         stopChatAndSaveDraft()
         val id = repository.createConversation()
-        repository.saveGroundingMode(id, GroundingMode.ON.name)
+        repository.saveGroundingMode(id, GroundingMode.AUTO.name)
         activateConversation(id); selectTab(AppTab.CHAT)
     } } }
     fun openConversation(id: Long) { viewModelScope.launch { conversationLock.withLock {
@@ -954,6 +1000,16 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     result = clock; evidence = GroundingResult("DEVICE_CLOCK")
                     return@launch
                 }
+                com.example.engine.LocalCalculation.evaluate(text)?.let { calc ->
+                    model = "Local calculation"
+                    repository.beginChatTurn(ChatMessageEntity(role = "user", content = text, modelName = model, conversationId = conversation), replaceFrom)
+                    savedUser = true
+                    pendingId = repository.insertChatMessage(ChatMessageEntity(role = "assistant", content = "", modelName = model,
+                        conversationId = conversation, messageState = "STREAMING"))
+                    _pendingReplyId.value = pendingId
+                    result = calc; evidence = GroundingResult("LOCAL")
+                    return@launch
+                }
                 // Evaluate available RAM and dynamically route between Primary (full/stepped-down context) and Secondary model.
                 val params = _chatGenerationParams.value
                 val tierDecision = repository.resolveAndActivateForRam(params.contextSize)
@@ -1108,27 +1164,44 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 }
                 if ((error == null || error == com.example.engine.InvalidModelOutputException().message) && evidence.sources.isNotEmpty()) {
                     _chatStatus.value = "Checking answer against sources"
+                    var quality = com.example.grounding.ResponseQualityValidator.validate(effectiveQuestion, result, evidence.sources, isLocalOnly = false)
                     val assessed = withContext(Dispatchers.Default) { com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion).copy(generationFailed = error != null) }
-                    if (assessed.support != AnswerSupport.INSUFFICIENT) {
+                    if (!quality.isValid || assessed.support == AnswerSupport.INSUFFICIENT) {
+                        val resources = repository.engine.hardware.resources()
+                        val repair = EvidenceRepair.prompt(effectiveQuestion, result, prepared, assessed, effectiveContext,
+                            resources.availableMb, resources.lowMemory, resources.thermal, repository.engine.telemetry.value.timeToFirstTokenMs, speed) {
+                            repository.engine.contextTokenCount(it) + repository.engine.contextTokenCount(system) + EvidenceRepair.maxTokens + 96 <= effectiveContext
+                        }
+                        if (repair != null) {
+                            _chatStatus.value = "Checking a shorter answer"
+                            val corrected = try { kotlinx.coroutines.withTimeoutOrNull(EvidenceRepair.deadlineMs) {
+                                repository.engine.generateSync(repair, GenerationParams(temperature = 0f, topK = 1, topP = 1f,
+                                    maxTokens = EvidenceRepair.maxTokens, contextSize = effectiveContext, threads = params.threads, systemPrompt = system))
+                            } } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+                            if (corrected != null) {
+                                val correctedQuality = com.example.grounding.ResponseQualityValidator.validate(effectiveQuestion, corrected, evidence.sources, isLocalOnly = false)
+                                if (correctedQuality.isValid && withContext(Dispatchers.Default) { GroundingPolicy.checkAnswer(corrected, evidence.sources, effectiveQuestion).support } != AnswerSupport.INSUFFICIENT) {
+                                    result = corrected
+                                    quality = correctedQuality
+                                }
+                            }
+                        }
+                    }
+                    if (!quality.isValid) {
+                        if (assessed.support != AnswerSupport.INSUFFICIENT && assessed.text.isNotBlank() &&
+                            com.example.grounding.ResponseQualityValidator.validate(effectiveQuestion, assessed.text, evidence.sources, isLocalOnly = false).isValid) {
+                            result = assessed.text
+                            error = null
+                        } else {
+                            result = "I couldn't verify a complete answer for this question from the available public sources."
+                            error = null
+                        }
+                    } else if (assessed.support != AnswerSupport.INSUFFICIENT) {
                         if (result.isBlank() || error != null) result = assessed.text
                         error = null
                     }
-                    val resources = repository.engine.hardware.resources()
-                    val repair = EvidenceRepair.prompt(effectiveQuestion, result, prepared, assessed, effectiveContext,
-                        resources.availableMb, resources.lowMemory, resources.thermal, repository.engine.telemetry.value.timeToFirstTokenMs, speed) {
-                        repository.engine.contextTokenCount(it) + repository.engine.contextTokenCount(system) + EvidenceRepair.maxTokens + 96 <= effectiveContext
-                    }
-                    if (repair != null) {
-                        _chatStatus.value = "Checking a shorter answer"
-                        val corrected = try { kotlinx.coroutines.withTimeoutOrNull(EvidenceRepair.deadlineMs) {
-                            repository.engine.generateSync(repair, GenerationParams(temperature = 0f, topK = 1, topP = 1f,
-                                maxTokens = EvidenceRepair.maxTokens, contextSize = effectiveContext, threads = params.threads, systemPrompt = system))
-                        } } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
-                        if (corrected != null && withContext(Dispatchers.Default) { GroundingPolicy.checkAnswer(corrected, evidence.sources, effectiveQuestion).support } != AnswerSupport.INSUFFICIENT)
-                            result = corrected
-                    }
-                    resolvedAnswer = if (repair == null) assessed else withContext(Dispatchers.Default) {
-                        com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion).copy(repairAttempted = true)
+                    resolvedAnswer = withContext(Dispatchers.Default) {
+                        com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion).copy(repairAttempted = !quality.isValid)
                     }
                 }
                 if (error == null && localNeedsLive) {

@@ -19,7 +19,6 @@ fun AutomaticSetupScreen(viewModel: AiCoreViewModel) {
     val downloading = models.filter { it.downloadState in setOf("DOWNLOADING", "QUEUED") }
     var approval by remember { mutableStateOf(false) }
     var reviewed by remember { mutableStateOf<com.example.engine.AutomaticModelPair?>(null) }
-    var wifiOnly by remember { mutableStateOf(viewModel.downloadsWifiOnly) }
     LaunchedEffect(Unit) { viewModel.recheckDevice() }
     LazyColumn(Modifier.fillMaxSize().testTag("automatic_setup_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { ScreenCard {
@@ -59,15 +58,13 @@ fun AutomaticSetupScreen(viewModel: AiCoreViewModel) {
         item { DetailDisclosure("Setup tools", "Benchmarks, model choices and downloads") {
             TextButton(onClick = viewModel::rerunModelBenchmarks, enabled = !state.pending) { Text("Re-run benchmarks") }
             TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Change primary or backup model") }
-            TextButton(onClick = { viewModel.selectTab(AppTab.MODELS) }) { Text("Manage background downloads") }
             state.reports.filter { report -> models.any { model -> model.id == report.modelId && report.key.startsWith(com.example.engine.ModelQualityBenchmark.key(model, com.example.engine.ModelLibrary.configuredContext(model, 1024)) + ":") } }
                 .forEach { report -> Text("Model ${report.modelId}: ${report.quality}/100 · ${if (report.passed) "Passed" else "Core checks not passed"} · ${report.backend} · load ${report.loadMs} ms · first token ${report.firstTokenMs} ms · peak ${report.peakMb} MB", style = MaterialTheme.typography.bodySmall) }
         } }
     }
     if (approval) AlertDialog(onDismissRequest = { approval = false }, title = { Text("Download selected models?") }, text = {
         Column { Text("${ModelPresentation.size(reviewed?.downloadMb ?: 0)} total download. Only the selected models are downloaded, one at a time. Local checks run when battery, temperature and RAM permit.")
-            Row { Checkbox(wifiOnly, { wifiOnly = it }); Text("Wi-Fi only. Uncheck to allow metered/mobile data.", style = MaterialTheme.typography.bodySmall) }
             Text("Inference and quality checks stay on this device. Model publishers receive download requests.", style = MaterialTheme.typography.bodySmall) }
-    }, confirmButton = { TextButton(onClick = { approval = false; viewModel.setUpAutomatically(wifiOnly, reviewed) }) { Text("Approve setup") } },
+    }, confirmButton = { TextButton(onClick = { approval = false; viewModel.setUpAutomatically(viewModel.downloadsWifiOnly, reviewed) }) { Text("Approve setup") } },
         dismissButton = { TextButton(onClick = { approval = false }) { Text("Cancel") } })
 }
