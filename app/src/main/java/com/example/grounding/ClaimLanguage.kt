@@ -8,7 +8,10 @@ object ClaimLanguage {
         "pictures" to "image", "images" to "image", "picture" to "image", "photographs" to "image", "photo" to "image",
         "runs" to "run", "running" to "run", "operates" to "run", "operate" to "run",
         "purchased" to "buy", "purchase" to "buy", "bought" to "buy", "wrote" to "write", "written" to "write",
+        "won" to "win", "wins" to "win", "winning" to "win", "lost" to "lose", "loses" to "lose", "built" to "build", "builds" to "build",
+        "releas" to "release", "released" to "release", "releases" to "release", "releasing" to "release", "announc" to "announce",
         "founded" to "found", "established" to "found", "faster" to "speed", "slower" to "speed")
+    fun canonicalToken(token: String): String = aliases[token] ?: token
     fun words(text: String): Set<String> = ResearchQuery.words(text.replace(Regex("(?i)\\b(?:is|are) compatible with\\b"), "supports")
         .replace(Regex("(?i)\\b(?:cannot|can't) (?:process|accept) (?:images?|pictures?)\\b"), "does not support image input"))
         .map { aliases[it] ?: it }.toSet()

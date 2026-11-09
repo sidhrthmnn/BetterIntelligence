@@ -13,7 +13,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
     private val subjectless = ConversationalResearch.needsSubject(question)
     companion object {
         private val stop = ("a an and are as at be been by can could did do does for from give has have how " +
-            "i in into is it me of on or please say should tell than that the their there these they this to " +
+            "i in into is it many me much of on or please say should tell than that the their there these they this to " +
             "us was were what when where which who why will with would you your won win winner winners " +
             "latest recent recently current currently today yesterday now new news source sources cite " +
             "verify check fact summarize summary about answer only read find search public topic context require requires required requirement requirements " +

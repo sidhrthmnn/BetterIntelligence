@@ -1,5 +1,6 @@
 package com.example
 
+import com.example.data.ChatMessageEntity
 import com.example.grounding.*
 import kotlinx.coroutines.*
 import org.json.JSONArray
@@ -197,5 +198,118 @@ class WebSearchReliabilityTest {
         assertTrue(outcome.sources.any { it.discoveryProvider == BiDiscovery.providerName })
         assertTrue(outcome.sources.all { it.kind == "WEB_PAGE" })
         assertEquals("Exa + BI source index", outcome.metrics.provider)
+    }
+
+    @Test fun productivityTipsAndContinueRouteCleanlyWithoutFalseEntitiesOrSearchPollution() {
+        val tips = "Give me 5 daily productivity tips"
+        assertTrue(ExactIdentity.labels(tips).isEmpty())
+        assertTrue(ResearchPlanner.entities(tips).none { it.equals("me 5", true) || it.equals("Give", true) })
+        assertEquals(AnswerPath.LOCAL, AnswerRoutingPolicy.decide(tips, mode = GroundingMode.ON).path)
+
+        val bootSource = EvidenceSource(
+            1,
+            "The 6 Best Winter Boots of 2026 | OutdoorGearLab",
+            "https://www.outdoorgearlab.com/topics/shoes-and-boots/best-winter-boots",
+            "Sorel Caribou and Kamik Nation Plus are top-rated insulated snow boots with waterproof rubber shells.",
+            1,
+            kind = "WEB_PAGE"
+        )
+        val history = listOf(
+            ChatMessageEntity(id = 1, role = "user", content = "Find good boot for snow", conversationId = 1),
+            ChatMessageEntity(
+                id = 2,
+                role = "assistant",
+                content = "Sorel Caribou and Kamik Nation Plus are top-rated insulated snow boots. [1]",
+                conversationId = 1,
+                groundingStatus = "WEB_SEARCH",
+                sourcesJson = GroundingResult(sources = listOf(bootSource)).json()
+            )
+        )
+        val cont = AnswerRoutingPolicy.decide("continue", mode = GroundingMode.ON, history = history, conversationId = 1)
+        assertEquals(AnswerPath.WEB_GROUNDED, cont.path)
+        assertEquals("Find good boot for snow", cont.question)
+        assertEquals(listOf(bootSource), cont.reusedSources)
+    }
+
+    @Test fun unannouncedSequelRecoversPredecessorEvidenceAndExplainsClearly() = runBlocking {
+        val question = "When will jailer 3 be released?"
+        assertEquals("jailer 3" to "When will jailer 2 be released?", ExactIdentity.sequelFallback(question))
+        assertFalse(ExactIdentity.accepts("Jailer 3", "Jailer 1 received 3 stars"))
+        assertTrue(ExactIdentity.urlConflicts(question, "https://www.indiamasala.com/title/jailer-2-133255153"))
+        assertFalse(ExactIdentity.urlConflicts("When will jailer 2 be released?", "https://www.indiamasala.com/title/jailer-2-133255153"))
+
+        val reader = PublicWebResearch(
+            WebFetcher { url ->
+                if (url.endsWith("robots.txt")) WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
+                else WebDocument(
+                    url,
+                    "<title>Jailer 2 release update</title><article><p>Jailer 2 directed by Nelson Dilipkumar starring Rajinikanth is scheduled for theatrical release in 2026.</p></article>",
+                    "text/html"
+                )
+            },
+            DiscoveryProvider { query, _ ->
+                if ("jailer 3" in query.question.lowercase()) DiscoveryResult(emptyList(), DiscoveryState.EMPTY)
+                else DiscoveryResult(listOf(ResearchCandidate("https://cinema.example/jailer-2-release", "Jailer 2 release update")), DiscoveryState.FOUND)
+            }
+        )
+        val outcome = reader.research(question) {}
+        assertNull(outcome.failure)
+        assertEquals(1, outcome.sources.size)
+        val prepared = GroundingPolicy.prepareEvidence(question, outcome.sources, 2400)
+        assertTrue(prepared.prompt.isNotEmpty())
+        val resolved = EvidenceAnswer.resolve("Jailer 3 has not been announced yet.", outcome.sources, question)
+        assertTrue(resolved.text, resolved.text.contains("The sources do not contain an official release announcement for the requested sequel."))
+        assertTrue(resolved.text, resolved.text.contains("Jailer 2"))
+        assertTrue(resolved.text, GroundingPolicy.validateCitations(resolved.text, outcome.sources).second)
+    }
+
+    @Test fun filmAwardsAndSubsequenceBulletsAreVerifiedAndDeduplicated() {
+        val question = "Manichitrathazhu, how many awards did it win?"
+        val wikiPage = WebPageExtractor.article(
+            WebDocument(
+                "https://en.wikipedia.org/wiki/Manichitrathazhu",
+                "<title>Manichitrathazhu - Wikipedia</title><header class='mw-body-header'><h1 id='firstHeading'>Manichitrathazhu</h1></header><div id='mw-content-text'><p>Manichitrathazhu received widespread critical acclaim upon release and is considered by many critics as one of the best films in Malayalam cinema. The film won the National Film Award for Best Popular Film Providing Wholesome Entertainment. The film also won three Kerala state awards -- Best Film with Popular Appeal and Aesthetic Value (1994), Best Actress and Best Make-up Artist (PN Mani).</p></div>",
+                "text/html"
+            ),
+            2,
+            question
+        )!!
+        assertTrue(wikiPage.excerpt, wikiPage.excerpt.contains("three Kerala state awards"))
+        val resolved = EvidenceAnswer.resolve(
+            "Manichitrathazhu won the National Film Award for Best Popular Film Providing Wholesome Entertainment. [2]",
+            listOf(wikiPage),
+            question
+        )
+        assertFalse(resolved.text, resolved.text.contains("couldn't verify", ignoreCase = true))
+        assertTrue(resolved.text, resolved.text.contains("National Film Award"))
+        assertTrue(resolved.text, resolved.text.contains("three Kerala state awards"))
+
+        val bullets = "- The O2 in Greenwich has 6 upcoming events. [1]\n\n- The O2 has 6 upcoming events. [1]\n\n- Pete Tong Ibiza Classics performs on 4 December 2026. [1]"
+        val paragraphs = AnswerPresentation.paragraphs(bullets)
+        assertTrue(paragraphs, paragraphs.contains("The O2 in Greenwich has 6 upcoming events. [1]"))
+        assertFalse(paragraphs, paragraphs.contains("- The O2 has 6 upcoming events. [1]"))
+    }
+
+    @Test fun biDiscoveryResolvesEncyclopedicAndDirectorySeedsWithoutQueryStrings() = runBlocking {
+        val requests = mutableListOf<String>()
+        val fetcher = WebFetcher { url ->
+            requests += url
+            when {
+                url.endsWith("robots.txt") -> WebDocument(url, "User-agent: *\nAllow: /", "text/plain")
+                url == "https://en.wikipedia.org/wiki/Manichitrathazhu" -> WebDocument(
+                    url,
+                    "<title>Manichitrathazhu - Wikipedia</title><main><p>Manichitrathazhu is a 1993 Indian Malayalam-language psychological thriller film that won 2 National Film Awards.</p></main>",
+                    "text/html"
+                )
+                else -> WebDocument(url, "<title>Index</title><main></main>", "text/html")
+            }
+        }
+        val bi = BiDiscovery(fetcher, ResearchRobots(fetcher), { true })
+        val wiki = bi.discover(ResearchQuery("Manichitrathazhu, how many awards did it win?"), false)
+        assertEquals(DiscoveryState.FOUND, wiki.state)
+        assertTrue(wiki.candidates.any { it.url == "https://en.wikipedia.org/wiki/Manichitrathazhu" })
+        assertTrue(requests.none { "?" in it })
+        assertTrue(bi.matchesDirectory(ResearchQuery("When is the next event in O2 Greenwich?")))
+        assertTrue(bi.matchesDirectory(ResearchQuery("Find good boot for snow")))
     }
 }

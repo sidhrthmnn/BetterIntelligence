@@ -74,7 +74,7 @@ object WebPageExtractor {
         }.forEach { it.remove() }
         doc.select("[class*=devsite-banner], [class*=site-banner]").remove()
         // Keep article headers: their subject/date often disambiguates the answer.
-        doc.select("body > header").remove()
+        doc.select("body > header:not(:has(h1))").remove()
         doc.select("button, [role=button], select, .breadcrumbs, [aria-label=Breadcrumb]").remove()
         val explicitContent = doc.selectFirst("#mw-content-text, .markdown-body")?.takeIf { it.text().length >= 200 }
         val articles = doc.select("article").filter { it.text().length >= 200 }
@@ -147,7 +147,7 @@ object WebPageExtractor {
         val body = if (type == "text/plain") page.text else root.text()
         if (blocked.containsMatchIn(title) || (body.length < 1500 && blocked.containsMatchIn(body))) return null
         val headingStack = sortedMapOf<Int, String>()
-        root.selectFirst("h1")?.text()?.trim()?.takeIf { it.isNotBlank() && !utilityHeading.matches(it) }?.let { headingStack[1] = it }
+        (root.selectFirst("h1") ?: doc.selectFirst("h1"))?.text()?.trim()?.takeIf { it.isNotBlank() && !utilityHeading.matches(it) }?.let { headingStack[1] = it }
         fun currentHeading(): String = headingStack.values.filter { it.isNotBlank() }.distinct().joinToString(" › ")
         var pendingTerm = ""
         val blockTags = setOf("p", "h1", "h2", "h3", "h4", "ul", "ol", "pre", "table", "dd", "dt")
@@ -355,7 +355,7 @@ object WebPageExtractor {
                     else -> 0
                 } else 0
                 return query.bm25Score(blockText, docFreqs, candidates.size, avgWords).toDouble() +
-                    incumbentScore + weatherScore + castingScore + definitionScore + roleScore(blockText) + FactualResearch.answerFocusScore(blockText, question, sourceUrl) + SourceBrief.roleReportScore(blockText, question) +
+                    incumbentScore + weatherScore + castingScore + definitionScore + (if (ResearchIntent.NUMERICAL in plan.intents && plan.coverage(castingBody).isNotEmpty() && CitationSupport.hasFactNumber(castingBody)) 30 else 0) + roleScore(blockText) + FactualResearch.answerFocusScore(blockText, question, sourceUrl) + SourceBrief.roleReportScore(blockText, question) +
                     if (PublicQuestionIntent.statusValue(blockText, question)) 100 else 0
         }
         val scores = candidates.indices.map(::staticScore)

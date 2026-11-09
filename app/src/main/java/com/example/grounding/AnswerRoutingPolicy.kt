@@ -13,7 +13,7 @@ data class AnswerRecovery(val localQuestion: String?, val notice: String, val st
 
 /** Chat-only intent routing. No additional model run; private history stays on device. */
 object AnswerRoutingPolicy {
-    private val transformation = Regex("(?i)^\\s*(?:please\\s+)?(?:write|draft|compose|imagine|brainstorm|translate|rewrite|improve|correct|rephrase|edit|polish|proofread|summari[sz]e|format|extract|convert)\\b|^(?:എഴുത|വിവർത്തനം|തിരുത്ത)")
+    private val transformation = Regex("(?i)^\\s*(?:please\\s+)?(?:write|draft|compose|imagine|brainstorm|translate|rewrite|improve|correct|rephrase|edit|polish|proofread|summari[sz]e|format|extract|convert)\\b|^(?:എഴുത|വിവർത്തനം|തിരുത്ത)|(?:^\\s*(?:please\\s+)?(?:give(?:\\s+me|\\s+us)?|suggest|share|list)\\s+(?:\\d+\\s+|some\\s+|a\\s+few\\s+)?(?:daily\\s+|practical\\s+|simple\\s+|quick\\s+|good\\s+|best\\s+|effective\\s+)*(?:productivity\\s+|study\\s+|focus\\s+|time\\s+management\\s+|morning\\s+|work\\s+|life\\s+|writing\\s+|coding\\s+)*(?:tips|ideas|habits|ways\\s+to\\s+improve|affirmations|prompts)\\b)")
     private val explicitResearch = Regex("(?i)(?:^\\s*(?:please\\s+)?|\\b(?:can|could|would) you\\s+|\\b(?:and|also)\\s+)(?:search(?: the web| online| for)?|look up|check online|research|find (?:official |public )?(?:sources|documentation))\\b|\\b(?:with|using|cite|give|provide|include) (?:cited |official |reliable )?(?:sources|citations|references)\\b|വെബിൽ|തിരയുക|അന്വേഷിക്കുക")
     private val verification = Regex("(?i)(?:^\\s*(?:please\\s+)?|\\b(?:can|could|would) you\\s+|\\b(?:and|also)\\s+)(?:verify|fact[- ]?check|cite|check (?:this|the) claim)\\b|\\b(?:with|using) (?:official )?(?:sources|citations|evidence)\\b|\\bofficial documentation\\b|സത്യമാണോ|സ്ഥിരീകരിക്കുക")
     private val fresh = Regex("(?i)\\b(?:latest|today|tonight|yesterday|currently|recent|this (?:week|month|year)|right now|news|headlines|current)\\b|ഇന്ന്|ഇപ്പോൾ|ഇപ്പോഴത്തെ|നിലവിലെ|ഏറ്റവും പുതിയ|പുതിയ വാർത്ത")
@@ -32,6 +32,16 @@ object AnswerRoutingPolicy {
         if (Regex("(?i)^how much is on ai worth[?!. ]*$").matches(q))
             return AnswerRoute(AnswerPath.CLARIFICATION, q, "Ambiguous company name",
                 clarification = "Do you mean OpenAI, xAI, or a different company? Please give its name.")
+        if (ConversationalResearch.isContinue(q)) {
+            val sameChat = history.filter { conversationId == null || it.conversationId == conversationId }
+            val lastAssistant = sameChat.lastOrNull { it.role == "assistant" }
+            val priorSources = lastAssistant?.takeIf { !it.groundingStatus.startsWith("LOCAL") && it.sourcesJson != "[]" }
+                ?.let { GroundingResult.sources(it.sourcesJson) }.orEmpty()
+            val priorQuestion = ConversationalResearch.question(q, history, conversationId)
+            return if (allowed && mode != GroundingMode.OFF && priorSources.isNotEmpty() && !ConversationalResearch.isWeather(priorQuestion))
+                AnswerRoute(AnswerPath.WEB_GROUNDED, priorQuestion, "Continue from retrieved sources", reusedSources = priorSources, researchAllowed = true)
+            else AnswerRoute(AnswerPath.LOCAL, q, "Established knowledge, reasoning or conversation", researchAllowed = false, webDisabled = !allowed || mode == GroundingMode.OFF)
+        }
         val instruction = q.substringBefore('\n')
         // Polite writing requests remain local even when their supplied subject
         // mentions news/today. Explicit research retains priority.

@@ -21,7 +21,11 @@ object CitationSupport {
         runCatching { java.math.BigDecimal(normalized).stripTrailingZeros().toPlainString() }.getOrDefault(normalized)
     }.toSet()
 
-    fun hasFactNumber(text: String): Boolean = values(marker.replace(normalize(text), "")).isNotEmpty()
+    private val numberWord = Regex("(?i)\\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|trillion|\\d+(?:st|nd|rd|th))\\b")
+    fun hasFactNumber(text: String): Boolean {
+        val clean = listPrefix.replace(marker.replace(normalize(text), ""), "")
+        return values(clean).isNotEmpty() || numberWord.containsMatchIn(clean)
+    }
 
     /** Reliably checkable missing-attribution boundary, not semantic verification.
      * Headings, short connective labels and explicit uncertainty can be uncited;

@@ -3,17 +3,30 @@ package com.example.grounding
 /** Format already checked text without creating facts, citations or new values. */
 object AnswerPresentation {
     private val citation = Regex("\\[\\d+(?:,\\s*\\d+)*]")
+    private fun isWordSubsequence(shorter: String, longer: String): Boolean {
+        val s = shorter.split(Regex("\\s+")).filter(String::isNotEmpty)
+        val l = longer.split(Regex("\\s+")).filter(String::isNotEmpty)
+        if (s.size < 4 || s.size >= l.size) return false
+        val signs = Regex("[+−-]\\d+").findAll(shorter).map { it.value }.toList()
+        if (signs != Regex("[+−-]\\d+").findAll(longer).map { it.value }.toList()) return false
+        var i = 0
+        for (token in l) if (i < s.size && token == s[i]) i++
+        return i == s.size
+    }
     fun paragraphs(text: String): String {
         val kept = mutableListOf<String>()
         for (part in text.split(Regex("\\n\\s*\\n")).map(String::trim).filter(String::isNotEmpty)) {
             fun key(value: String) = citation.replace(value, "").lowercase().replace(Regex("^the source (?:explicitly )?states that\\s+"), "")
                 .replace(Regex("[^\\p{L}\\p{N}%°+−-]+"), " ").trim()
             val ids = citation.findAll(part).map { it.value }.toSet()
+            val kPart = key(part)
+            if (ids.isNotEmpty() && kept.any { old -> citation.findAll(old).map { it.value }.toSet() == ids && isWordSubsequence(kPart, key(old)) }) continue
             val prior = kept.indexOfFirst { old ->
+                val kOld = key(old)
                 ids.isNotEmpty() && citation.findAll(old).map { it.value }.toSet() == ids &&
-                    (key(old) == key(part) || key(part).startsWith(key(old) + " "))
+                    (kOld == kPart || kPart.startsWith("$kOld ") || isWordSubsequence(kOld, kPart))
             }
-            if (prior >= 0) kept[prior] = part else if (kept.none { key(it) == key(part) }) kept += part
+            if (prior >= 0) kept[prior] = part else if (kept.none { key(it) == kPart }) kept += part
         }
         return kept.joinToString("\n\n")
     }

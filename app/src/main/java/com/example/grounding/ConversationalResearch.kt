@@ -30,6 +30,8 @@ object ConversationalResearch {
     private val recheckPattern = Regex(
         "(?i)^\\s*(?:please\\s+)?(?:check|search|verify|try|look|are\\s+you\\s+sure|that'?s\\s+wrong|wrong(?:\\s+info)?)(?:\\s+(?:it|that|this|again|now|once\\s+more|properly|carefully|the\\s+web|online))*\\s*[.?!]*$"
     )
+    private val continuePattern = Regex("(?i)^\\s*(?:please\\s+)?(?:continue|go on|keep going|carry on)(?:\\s+(?:please|with that|from there))?\\s*[.?!]*$")
+    fun isContinue(question: String): Boolean = continuePattern.matches(question.trim())
     fun isRecheck(question: String): Boolean = recheckPattern.matches(question.trim())
     fun needsSubject(question: String): Boolean = PublicTopics.missingSubject(question) || Regex("(?i)^\\s*(?:who (?:owns|developed|made)|whose is|what is the owner of)\\s+(?:it|this|that)\\s*[?!.]*$").matches(question)
     const val askSubject = "Which film, product or subject do you mean? Please name it so I can check the right sources."
@@ -39,6 +41,11 @@ object ConversationalResearch {
     fun needsPlace(question: String) = Regex("(?i)\\bthere\\b").containsMatchIn(question) &&
         Regex("(?i)\\b(mayor|governor)\\b").containsMatchIn(question)
     fun question(question: String, history: List<ChatMessageEntity>, conversationId: Long? = null): String {
+        if (isContinue(question)) {
+            val priorUser = history.filter { conversationId == null || it.conversationId == conversationId }
+                .lastOrNull { it.role == "user" && !isContinue(it.content) }?.content?.trim()
+            return if (!priorUser.isNullOrBlank()) priorUser else question
+        }
         // Bounded, reviewed typing corrections; private/offline inputs are
         // admitted by the caller before any public-query resolution.
         var normalized = question.replace(Regex("(?i)\\bwether(?=\\s+(?:in|at|for|today|tomorrow|tonight)\\b)"), "weather")

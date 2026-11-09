@@ -55,7 +55,7 @@ object EvidenceRanking {
             minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question, source.url) / 2 + weatherPlaceScore(source.title, plan.question) + FactualResearch.reviewPriority(source.title, source.url, plan.question)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
-        if (!ExactIdentity.accepts(plan.question, source.title + " " + source.excerpt)) return false
+        if (!ExactIdentity.accepts(plan.question, source.title + " " + source.excerpt) || ExactIdentity.urlConflicts(plan.question, source.url)) return false
         plan.event?.let { event -> return VenueContext.profile(source, event) || source.kind == "EVENT_LISTING" && source.events.any {
             it.sourceUrl == source.url && VenueContext.potential(it, event) && !it.cancelled() && it.date() != null
         } }

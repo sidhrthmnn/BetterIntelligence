@@ -89,7 +89,7 @@ data class GroundingResult(val status: String = "LOCAL", val sources: List<Evide
                     EvidenceSource(item.getInt("id"), item.getString("title"), url, item.optString("excerpt"),
                         item.optLong("retrievedAt"), item.optString("updatedAt"), item.optString("kind"), item.optString("dateKind"),
                         item.optString("publicPlace").takeIf(ConversationalResearch::validPublicPlace).orEmpty(),
-                        item.optString("discoveryProvider").takeIf { it in setOf("DuckDuckGo", "Exa", "Mwmbl") }.orEmpty(),
+                        item.optString("discoveryProvider").takeIf { it in setOf("DuckDuckGo", "Exa", "Mwmbl", BiDiscovery.providerName) }.orEmpty(),
                         item.optString("publicQuery").takeIf(ConversationalResearch::validPublicQuery).orEmpty(),
                         item.optString("imageUrl").takeIf(GroundingPolicy::publicHttpsUrl).orEmpty(), item.optString("imageAlt").take(160),
                         item.optString("publicLanguage").takeIf(PublicTopics::validLanguage).orEmpty(), EventEvidence.fromJson(item.optJSONArray("events"), url))
@@ -170,16 +170,19 @@ object GroundingPolicy {
         }
         // Preserve useful evidence by dropping lower-ranked sources before squeezing every
         // source down to a few words. The returned sources are exactly those in the prompt.
-        val researchPlan = ResearchPlanner.plan(question)
+        val focusQuestion = ExactIdentity.sequelFallback(question)?.takeIf {
+            sources.none { s -> ExactIdentity.accepts(question, "${s.title} ${s.excerpt}") }
+        }?.second ?: question
+        val researchPlan = ResearchPlanner.plan(focusQuestion)
         val complex = researchPlan.focuses.size > 1 || ResearchIntent.COMPARISON in researchPlan.intents
         val plans = if (complex) listOf(3 to 2000, 2 to 2400, 3 to 1400, 3 to 900, 3 to 600, 2 to 900, 2 to 600, 1 to 1200, 1 to 600, 1 to 350)
             else listOf(1 to 1600, 2 to 900, 1 to 700, 2 to 450, 1 to 450, 1 to 250)
         val options = mutableListOf<PreparedEvidence>()
-        val eligibleSources = sources.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) }
+        val eligibleSources = sources.filter { WeatherPageEvidence.requestedDay(it.title, focusQuestion) && !SourceBrief.predictionMarket(it.title, it.url, focusQuestion) }
         for ((count, excerptBudget) in plans) {
             val included = eligibleSources.take(count).map { it.copy(
-                excerpt = EvidencePacket.completeExcerpt(WebPageExtractor.focusExcerpt(it.excerpt, question, excerptBudget, it.url), excerptBudget)) }
-                .filter { it.excerpt.isNotBlank() && (FactualResearch.usable(it, question) || SourceBrief.reportedRoleContext(it, question)) }.map { it.copy(title = bounded(it.title, 120)) }
+                excerpt = EvidencePacket.completeExcerpt(WebPageExtractor.focusExcerpt(it.excerpt, focusQuestion, excerptBudget, it.url), excerptBudget)) }
+                .filter { it.excerpt.isNotBlank() && (FactualResearch.usable(it, focusQuestion) || SourceBrief.reportedRoleContext(it, focusQuestion)) }.map { it.copy(title = bounded(it.title, 120)) }
             if (included.isEmpty()) continue
             val evidence = JSONArray().apply { included.forEach { source -> put(JSONObject()
                 .put("id", source.id).put("title", bounded(source.title, 120))
@@ -228,10 +231,10 @@ object GroundingPolicy {
             val text = option.sources.joinToString("\n") { it.excerpt }
             val words = ResearchQuery.words(text)
             researchPlan.coverage(text).size * 100 + researchPlan.entities.count { entity -> ResearchQuery.words(entity).all { it in words } } * 30 +
-                (if (option.sources.any { FactualResearch.definitionLine(it.excerpt, question) }) 120 else 0) +
-                option.sources.maxOf { FactualResearch.definitionQuality(it.excerpt, question) } +
-                option.sources.maxOf { FactualResearch.answerFocusScore(it.excerpt, question) } * 2 +
-                option.sources.maxOf { SourceBrief.roleReportScore(it.excerpt, question) } * 2 +
+                (if (option.sources.any { FactualResearch.definitionLine(it.excerpt, focusQuestion) }) 120 else 0) +
+                option.sources.maxOf { FactualResearch.definitionQuality(it.excerpt, focusQuestion) } +
+                option.sources.maxOf { FactualResearch.answerFocusScore(it.excerpt, focusQuestion) } * 2 +
+                option.sources.maxOf { SourceBrief.roleReportScore(it.excerpt, focusQuestion) } * 2 +
                 minOf(20, text.length / 100) + option.sources.map { EvidenceRanking.publisher(it.url) }.distinct().size * 3
         }
         error("Web evidence does not fit this model's context. Choose 2048 context in Advanced settings, shorten the question, or turn web search off.")
@@ -395,10 +398,13 @@ class GroundingCoordinator(private val providers: Map<SearchProviderId, SearchPr
             // Follow-ups can reuse it without sending unsent chat/history.
             val publicQuery = if (ResearchPlanner.plan(question).explicitUrls.isNotEmpty()) "" else
                 ResearchQuery(question).topicSearchText.takeIf(ConversationalResearch::validPublicQuery).orEmpty()
-            val eligible = outcome.sources.filter { source -> PublicTopics.parse(question)?.let { topic ->
-                topic.sourceMatches(source.title, source.excerpt, source.url, source.publicLanguage) && FactualResearch.usable(source, question)
+            val effectiveTopicQuestion = ExactIdentity.sequelFallback(question)?.takeIf {
+                outcome.sources.isNotEmpty() && outcome.sources.none { s -> ExactIdentity.accepts(question, "${s.title} ${s.excerpt}") }
+            }?.second ?: question
+            val eligible = outcome.sources.filter { source -> PublicTopics.parse(effectiveTopicQuestion)?.let { topic ->
+                topic.sourceMatches(source.title, source.excerpt, source.url, source.publicLanguage) && FactualResearch.usable(source, effectiveTopicQuestion)
             } != false }
-            val sources = ConversationalResearch.bindPublicPlace(question, PublicTopics.alignedSources(question, eligible)).map { it.copy(publicQuery = publicQuery) }
+            val sources = ConversationalResearch.bindPublicPlace(effectiveTopicQuestion, PublicTopics.alignedSources(effectiveTopicQuestion, eligible)).map { it.copy(publicQuery = publicQuery) }
             if (sources.isEmpty() && outcome.clarification.isNotBlank() && !GroundingPolicy.containsCredential(outcome.clarification))
                 GroundingResult("NEEDS_SUBJECT", notice = outcome.clarification.take(400), metrics = outcome.metrics)
             else if (sources.isEmpty()) {

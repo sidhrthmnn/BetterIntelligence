@@ -89,6 +89,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val explicit = plan.explicitUrls
         val query = ResearchQuery(question, java.time.LocalDate.now(clock))
         val possibleSpellings = linkedSetOf<String>()
+        val rawDiscovered = java.util.Collections.synchronizedList(mutableListOf<ResearchCandidate>())
         val discovery = DiscoveryChain(listOf(ConfiguredDiscovery("Exa", discoveryOverride ?: ExaDiscovery(transport, discoveryAllowed, timeouts))) +
             alternativeProviders, timeouts, discoveryCircuits, discoveryAllowed)
         var providerFailure: ResearchFailure? = null
@@ -105,18 +106,20 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val failedReads = java.util.concurrent.atomic.AtomicInteger()
         var rounds = 0
         var recoveryAttempts = 0
-        fun eligible(candidates: List<ResearchCandidate>) = candidates.filter { WeatherPageEvidence.requestedDay(it.title, question) && !SourceBrief.predictionMarket(it.title, it.url, question) && query.candidateRelevant("${it.title} ${it.url}", it.routingHint) && !query.isPrediction(it.title) &&
-                (!FactualResearch.speculativeCasting(question, it.title) || Regex("(?i)screen[- ]?tests?|auditions?|shortlist|not (?:yet )?(?:confirmed|announced)").containsMatchIn(it.title)) }
-        suspend fun discover(search: String, broad: Boolean): List<ResearchCandidate>? {
+        fun eligible(candidates: List<ResearchCandidate>, activeQuery: ResearchQuery = query, activeQuestion: String = question) =
+            candidates.filter { WeatherPageEvidence.requestedDay(it.title, activeQuestion) && !SourceBrief.predictionMarket(it.title, it.url, activeQuestion) && !ExactIdentity.urlConflicts(activeQuestion, it.url) && activeQuery.candidateRelevant("${it.title} ${it.url}", it.routingHint) && !activeQuery.isPrediction(it.title) &&
+                (!FactualResearch.speculativeCasting(activeQuestion, it.title) || Regex("(?i)screen[- ]?tests?|auditions?|shortlist|not (?:yet )?(?:confirmed|announced)").containsMatchIn(it.title)) }
+        suspend fun discover(search: String, broad: Boolean, activeQuery: ResearchQuery = query, activeQuestion: String = question): List<ResearchCandidate>? {
             if (!discoveryAllowed()) { discoveryFailed = true; providerFailure = ResearchFailure.PROVIDER_ACCESS_DENIED; return null }
             if (rounds++ >= 3) return emptyList()
             if (!deadline.permits()) { discoveryTimedOut = true; providerFailure = ResearchFailure.PROVIDER_TIMEOUT; return null }
             val result = withTimeoutOrNull(remaining().coerceAtLeast(1)) {
-                try { discovery.discover(ResearchQuery(question, java.time.LocalDate.now(clock), searchOverride = search), broad) }
+                try { discovery.discover(ResearchQuery(activeQuestion, java.time.LocalDate.now(clock), searchOverride = search), broad) }
                 catch (e: CancellationException) { throw e }
                 catch (_: Exception) { DiscoveryResult(emptyList(), DiscoveryState.UNAVAILABLE) }
             } ?: DiscoveryResult(emptyList(), DiscoveryState.TIMEOUT)
             discoveredCount += result.candidates.size
+            rawDiscovered += result.candidates
             retryCount += (result.attempts - 1).coerceAtLeast(0)
             if (result.httpCategory.isNotEmpty()) httpCategory = result.httpCategory
             if (result.failure != null) providerFailure = result.failure
@@ -124,10 +127,10 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             if (result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.RATE_LIMITED, DiscoveryState.UNAVAILABLE, DiscoveryState.NETWORK_UNAVAILABLE, DiscoveryState.MALFORMED)) {
                 discoveryFailed = true; blocked = result.state in setOf(DiscoveryState.BLOCKED, DiscoveryState.RATE_LIMITED); return null
             }
-            query.publicTopic?.let { topic -> result.candidates.forEach { candidate ->
+            activeQuery.publicTopic?.let { topic -> result.candidates.forEach { candidate ->
                 PublicTopics.possibleSpelling(topic, candidate.title)?.let(possibleSpellings::add)
             } }
-            return eligible(result.candidates)
+            return eligible(result.candidates, activeQuery, activeQuestion)
         }
 
         val links = if (explicit.isNotEmpty()) explicit.map { ResearchCandidate(it, "") } else {
@@ -160,8 +163,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         val venueProfiles = java.util.concurrent.ConcurrentLinkedQueue<EvidenceSource>()
         val extraReads = java.util.concurrent.atomic.AtomicInteger()
         val extraction = java.util.concurrent.ConcurrentHashMap<String, Int>()
-        fun extract(page: WebDocument, provider: String): EvidenceSource? {
-            val result = WebPageExtractor.extract(page, 0, question)
+        fun extract(page: WebDocument, provider: String, activeQuestion: String = question): EvidenceSource? {
+            val result = WebPageExtractor.extract(page, 0, activeQuestion)
             extraction.merge(result.category, 1, Int::plus)
             extraction.merge("PASSAGES", result.passages, Int::plus)
             if (result.source == null) {
@@ -185,7 +188,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 (covered.size == plan.focuses.size || financingAmount) && (selected.size >= 2 || selected.size == 1 &&
                 (explicit.isNotEmpty() || EvidenceRanking.primaryRelevance(selected.single().url, question) > 0)) && EvidenceRanking.conflicts(selected).isEmpty()
         }
-        suspend fun readCandidates(candidates: List<ResearchCandidate>) {
+        suspend fun readCandidates(candidates: List<ResearchCandidate>, activePlan: ResearchPlan = plan, activeQuery: ResearchQuery = query, activeQuestion: String = question) {
         val unique = candidates.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }.filter { HtmlDiscovery.canonicalUrl(it.url) !in attempted }
         val ordered = unique
             .sortedWith(compareBy<ResearchCandidate> { candidate ->
@@ -193,12 +196,12 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 unique.indexOfFirst { domain(it.url) == domain(candidate.url) } != unique.indexOf(candidate)
                 }.thenByDescending {
                 val combined = "${it.title} ${it.routingHint}".trim()
-                plan.coverage(combined).size * 15 + query.score(it.title) * 2 + query.score(combined) + EvidenceRanking.primaryRelevance(it.url, question) + EvidenceRanking.weatherPlaceScore(it.title, question) + FactualResearch.reviewPriority(it.title, it.url, question)
+                activePlan.coverage(combined).size * 15 + activeQuery.score(it.title) * 2 + activeQuery.score(combined) + EvidenceRanking.primaryRelevance(it.url, activeQuestion) + EvidenceRanking.weatherPlaceScore(it.title, activeQuestion) + FactualResearch.reviewPriority(it.title, it.url, activeQuestion)
             })
             .filter { domains.getOrDefault(domain(it.url), 0) < 2 }
             // Reserve reads for one focused reformulation when broad election
             // coverage has not yet supplied the count/status the question needs.
-            .take(minOf((8 - readCount).coerceAtLeast(0), if (readCount == 0 && (FactualResearch.needsAnswerFocus(question) || plan.event != null) && plan.searches.size > 1) 4 else 8))
+            .take(minOf((8 - readCount).coerceAtLeast(0), if (readCount == 0 && (FactualResearch.needsAnswerFocus(activeQuestion) || activePlan.event != null) && activePlan.searches.size > 1) 4 else 8))
         if (ordered.isNotEmpty()) progress(ResearchStage.READING)
         // Read in waves: stop after enough evidence instead of fetching every result.
         for (wave in ordered.chunked(2)) {
@@ -213,14 +216,14 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                         try {
                             val page = transport.fetchPage(candidate.url, permitted)
                             extraction.merge("FETCH_2XX", 1, Int::plus)
-                            val source = extract(page, candidate.provider)
-                            fun acceptable(value: EvidenceSource): Boolean = EvidenceRanking.acceptable(value, plan).also { if (!it) {
+                            val source = extract(page, candidate.provider, activeQuestion)
+                            fun acceptable(value: EvidenceSource): Boolean = EvidenceRanking.acceptable(value, activePlan).also { if (!it) {
                                     extraction.merge("REJECTED_RELEVANCE_OR_DATE", 1, Int::plus)
-                                    publisherFailures += if (plan.event != null) ResearchFailure.EVENT_DATES_UNVERIFIED else ResearchFailure.RELEVANCE_REJECTED
+                                    publisherFailures += if (activePlan.event != null) ResearchFailure.EVENT_DATES_UNVERIFIED else ResearchFailure.RELEVANCE_REJECTED
                                 } }
                             if (source != null && acceptable(source)) {
                                 retained = source
-                                val event = plan.event
+                                val event = activePlan.event
                                 if (event != null && source.events.isNotEmpty() && source.events.none { event.matches(it) }) {
                                     val profile = WebPageExtractor.venueLinks(page).firstOrNull { link ->
                                         VenueContext.publisherHint(source) > 0 || Regex("(?i)getting (?:here|to)|directions|find us|venue (?:information|address)").containsMatchIn(link.title)
@@ -229,7 +232,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                                         extraReads.incrementAndGet()
                                         try {
                                             withTimeoutOrNull(minOf(3000, remaining().coerceAtLeast(1))) {
-                                                extract(transport.fetchPage(profile.url, permitted), candidate.provider)?.takeIf { VenueContext.profile(it, event) }?.let(venueProfiles::add)
+                                                extract(transport.fetchPage(profile.url, permitted), candidate.provider, activeQuestion)?.takeIf { VenueContext.profile(it, event) }?.let(venueProfiles::add)
                                             }
                                         } catch (e: CancellationException) { throw e } catch (e: Exception) {
                                             access.merge(ResearchErrors.publisher(e).name, 1, Int::plus)
@@ -240,12 +243,12 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                             }
                             else {
                                 // A landing/hub page may link to the actual article or benchmark sub-page.
-                                val child = WebPageExtractor.relevantLinks(page, question).firstOrNull()
+                                val child = WebPageExtractor.relevantLinks(page, activeQuestion).firstOrNull()
                                 // Do not mark an unread child as attempted when
                                 // its quota is exhausted: it may be a later result.
                                 if (child != null && admitChild(child.url, reserveVenueProfile = true)) {
                                     extraReads.incrementAndGet()
-                                    extract(transport.fetchPage(child.url, permitted), candidate.provider)?.takeIf(::acceptable)
+                                    extract(transport.fetchPage(child.url, permitted), candidate.provider, activeQuestion)?.takeIf(::acceptable)
                                 }
                                 else null
                             }
@@ -258,7 +261,7 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                     }
                     if (!finished) { readTimeouts.incrementAndGet(); publisherFailures += ResearchFailure.PUBLISHER_TIMEOUT; access.merge("PUBLISHER_TIMEOUT", 1, Int::plus) }
                     result ?: retained ?: candidate.instantAnswer?.takeIf {
-                        LegacyTopicEvidence.summaryAllowed(question) && EvidenceRanking.acceptable(it, plan)
+                        LegacyTopicEvidence.summaryAllowed(activeQuestion) && EvidenceRanking.acceptable(it, activePlan)
                     }
                 }
             } }.awaitAll().filterNotNull()
@@ -278,20 +281,40 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
                 if (enough() || blocked) break
             }
         }
-        if (explicit.isEmpty() && biFallback && discoveryOverride == null && sources.isEmpty() && biIndex.supports(query) && readCount < 8 &&
+        if (explicit.isEmpty() && biFallback && discoveryOverride == null && sources.isEmpty() &&
+            (biIndex.matchesDirectory(query) || (discoveryFailed || discoveredCount == 0) && biIndex.supports(query)) && readCount < 8 &&
             deadline.permits(1000) && discoveryAllowed() && providerFailure != ResearchFailure.NETWORK_UNAVAILABLE) {
             fallbackUsed = true
             recoveryAttempts++
             progress(ResearchStage.READING)
             val own = biIndex.session(transport).discover(query, false)
             discoveredCount += own.candidates.size
+            rawDiscovered += own.candidates
             readCandidates(eligible(own.candidates))
+        }
+        var activeRankingPlan = plan
+        val sequelFallback = if (explicit.isEmpty() && sources.isEmpty() && !blocked && providerFailure != ResearchFailure.NETWORK_UNAVAILABLE)
+            ExactIdentity.sequelFallback(question) else null
+        if (sequelFallback != null && readCount < 8 && deadline.permits(1200)) {
+            val fallbackQuestion = sequelFallback.second
+            val fallbackPlan = ResearchPlanner.plan(fallbackQuestion, java.time.LocalDate.now(clock))
+            val fallbackQuery = ResearchQuery(fallbackQuestion, java.time.LocalDate.now(clock))
+            val fromExisting = eligible(rawDiscovered.toList(), fallbackQuery, fallbackQuestion)
+            val fallbackCandidates = fromExisting.ifEmpty {
+                if (rounds < 3 && discoveryAllowed()) discover(fallbackQuery.searchText, false, fallbackQuery, fallbackQuestion).orEmpty()
+                else emptyList()
+            }
+            if (fallbackCandidates.isNotEmpty()) {
+                recoveryAttempts++
+                readCandidates(fallbackCandidates.take(3), fallbackPlan, fallbackQuery, fallbackQuestion)
+                if (sources.isNotEmpty()) activeRankingPlan = fallbackPlan
+            }
         }
         progress(ResearchStage.COMPARING)
         val semantic = localRanking?.invoke(question, sources).orEmpty()
-        val orderedSources = if (plan.event == null) sources.sortedByDescending { EvidenceRanking.score(it, plan) + semantic.getOrDefault(it.url, 0.0) } else sources
-        val ranked = EvidenceRanking.select(orderedSources, plan, localScores = semantic)
-        val selected = if (plan.event != null && EventAnswer.candidates(plan.event, ranked, clock.instant()).isEmpty()) emptyList() else ranked
+        val orderedSources = if (activeRankingPlan.event == null) sources.sortedByDescending { EvidenceRanking.score(it, activeRankingPlan) + semantic.getOrDefault(it.url, 0.0) } else sources
+        val ranked = EvidenceRanking.select(orderedSources, activeRankingPlan, localScores = semantic)
+        val selected = if (activeRankingPlan.event != null && EventAnswer.candidates(activeRankingPlan.event, ranked, clock.instant()).isEmpty()) emptyList() else ranked
         val failure = when {
             selected.isNotEmpty() -> null
             plan.event != null && sources.isNotEmpty() -> ResearchFailure.EVENT_DATES_UNVERIFIED
@@ -299,6 +322,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             readTimeouts.get() > 0 -> ResearchFailure.PUBLISHER_TIMEOUT
             readCount > 0 && publisherFailures.contains(ResearchFailure.EVENT_DATES_UNVERIFIED) -> ResearchFailure.EVENT_DATES_UNVERIFIED
             readCount > 0 && publisherFailures.contains(ResearchFailure.NETWORK_UNAVAILABLE) -> ResearchFailure.NETWORK_UNAVAILABLE
+            readCount > 0 && (extraction["FETCH_2XX"] ?: 0) > 0 && publisherFailures.isNotEmpty() ->
+                publisherFailures.firstOrNull { it != ResearchFailure.ROBOTS_UNAVAILABLE && it != ResearchFailure.ROBOTS_DISALLOWED } ?: publisherFailures.first()
             readCount > 0 && publisherFailures.isNotEmpty() -> publisherFailures.first()
             discoveredCount == 0 && explicit.isEmpty() -> ResearchFailure.NO_SEARCH_RESULTS
             else -> ResearchFailure.INSUFFICIENT_EVIDENCE

@@ -1181,7 +1181,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                             conversationId = conversation, modelName = model, latencyMs = latency, tokensPerSec = speed,
                             promptTokens = promptTokens, completionTokens = outputTokens,
                             sourcesJson = evidence.json(), groundingStatus = com.example.grounding.AnswerSourceStatus.forEvidence(status, evidence.sources),
-                            messageState = if (cancelled) "STOPPED" else if (error != null) "ERROR" else if (reachedOutputLimit) "LENGTH_LIMIT" else "COMPLETE"))
+                            messageState = if (cancelled) "STOPPED" else if (error != null) "ERROR" else if (reachedOutputLimit && (checked == null || (!checked.sourceExtract && !checked.sourceBrief && checked.support != AnswerSupport.CITED))) "LENGTH_LIMIT" else "COMPLETE"))
                         withContext(Dispatchers.IO) { if (repository.preferencesRepository.webAllowed.first())
                             ResearchDiagnostics.record(getApplication(), conversation, pendingId!!, text,
                                 diagnosticRoute, if (cancelled) evidence.copy(failure = ResearchFailure.USER_CANCELLED) else evidence, checked, error != null, diagnosticGeneration) }

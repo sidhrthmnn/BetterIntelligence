@@ -8,6 +8,15 @@ object EvidenceAnswer {
 
     fun resolve(draft: String, sources: List<EvidenceSource>, question: String): CheckedAnswer {
         EventAnswer.resolve(question, sources)?.let { return it }
+        val sequelFallback = ExactIdentity.sequelFallback(question)
+        if (sequelFallback != null && sources.isNotEmpty() && sources.none { ExactIdentity.accepts(question, "${it.title} ${it.excerpt}") }) {
+            val baseResolved = resolve(draft, sources, sequelFallback.second)
+            if (baseResolved.support != AnswerSupport.INSUFFICIENT && baseResolved.text.isNotBlank()) {
+                val notice = "The sources do not contain an official release announcement for the requested sequel."
+                val combined = if (baseResolved.text.contains(notice)) baseResolved.text else "$notice\n\n${baseResolved.text}"
+                return baseResolved.copy(text = combined, support = AnswerSupport.PARTIAL)
+            }
+        }
         val aligned = PublicTopics.alignedSources(question, sources)
         if (aligned.any { SourceBrief.reportedRoleContext(it, question) })
             SourceBrief.build(question, aligned, emptyList())?.let { return it }
@@ -18,7 +27,7 @@ object EvidenceAnswer {
             MovieRatingEvidence.summary(question, aligned, checked.claims) ?: SourceBrief.build(question, aligned, checked.claims) ?: checked else checked
         // When a recommendation draft only repeats a product name, the actual
         // review paragraph can offer useful qualifications without another run.
-        val recommendation = Regex("(?i)^which .{1,60} (?:is|are) (?:good|best) for\\b|^(?:recommend|suggest) .{1,80}\\b").containsMatchIn(question)
+        val recommendation = Regex("(?i)^which .{1,60} (?:is|are) (?:good|best) for\\b|^(?:recommend|suggest|find) .{1,80}\\b").containsMatchIn(question)
         val fuller = if (resolved.support == AnswerSupport.PARTIAL && recommendation)
             SourceBrief.build(question, aligned, resolved.claims) ?: resolved else resolved
         val bestCause = if (Regex("(?i)^\\s*why\\b").containsMatchIn(question)) aligned.maxOfOrNull { FactualResearch.answerFocusScore(it.excerpt, question) } ?: 0 else 0
@@ -62,7 +71,7 @@ object EvidenceAnswer {
         val labelledWeather = weather && sources.any { Regex("(?i)observed temperature:|(?:today|tonight) forecast: (?:high|low)").containsMatchIn(it.excerpt) }
         val definitionMissing = FactualResearch.definitionTopic(question) != null && !FactualResearch.definitionLine(checked.text, question)
         val focusMissing = sources.any { FactualResearch.answerFocusScore(it.excerpt, question) >= 65 } && FactualResearch.answerFocusScore(checked.text, question) < 65
-        if (checked.support == AnswerSupport.CITED && (!comparisonRequested || EvidenceRecovery.complete(question, checked.claims.filter { it.supported }.map { it.text })) && !numericMissing && !missingTemperature && !labelledWeather && !definitionMissing && !focusMissing) return checked
+        if (checked.support == AnswerSupport.CITED && (!comparisonRequested || EvidenceRecovery.complete(question, checked.claims.filter { it.supported }.map { it.text }, sources)) && !numericMissing && !missingTemperature && !labelledWeather && !definitionMissing && !focusMissing) return checked
         checked = checked.copy(recoveryAttempted = true)
         val query = ResearchQuery(question)
         val plan = ResearchPlanner.plan(question)

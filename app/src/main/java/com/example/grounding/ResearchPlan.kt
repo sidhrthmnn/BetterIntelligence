@@ -9,9 +9,10 @@ data class ResearchPlan(val question: String, val intents: Set<ResearchIntent>, 
     val focuses: List<ResearchFocus>, val searches: List<String>, val explicitUrls: List<String>, val event: EventQuery? = null) {
     fun coverage(text: String): Set<Int> {
         val found = ResearchQuery.words(text)
+        val claimFound = ClaimLanguage.words(text)
         return focuses.indices.filter { index ->
             val terms = focuses[index].terms
-            terms.isEmpty() || terms.count { it in found } >= minOf(2, terms.size)
+            terms.isEmpty() || terms.count { it in found || ClaimLanguage.canonicalToken(it) in claimFound } >= minOf(2, terms.size)
         }.toSet()
     }
 }
@@ -105,14 +106,15 @@ object ResearchPlanner {
         val andCompared = Regex("(?i)\\bcompare\\s+([\\p{L}][\\p{L}\\p{N}._-]*(?:\\s+\\d+(?:\\.\\d+)*)?)\\s+(?:and|with|to)\\s+([\\p{L}][\\p{L}\\p{N}._-]*(?:\\s+\\d+(?:\\.\\d+)*)?)")
             .findAll(text).flatMap { sequenceOf(it.groupValues[1], it.groupValues[2]) }
         val versions = Regex("\\b[\\p{L}][\\p{L}\\p{N}-]{1,25}\\s+\\d+(?:\\.\\d+)*(?:\\s+[A-Z]\\d+[A-Z]?)?\\b").findAll(text).map { it.value }
+            .filter { !ExactIdentity.isGenericHead(it.substringBefore(' ')) }
         val names = Regex("\\b[A-Z][\\p{L}\\p{N}-]+(?:\\s+[A-Z][\\p{L}\\p{N}-]+){0,3}\\b").findAll(text).map { it.value }
-            .map { it.replace(Regex("(?i)^(?:Compare|Explain|What|When|Which|Who|Where|Is|Are|Does|Do|How|Why|Tell|Read|Current|Check|Verify|Search|Research|Find|Summarize|Summarise|Describe)\\s+"), "") }
+            .map { it.replace(Regex("(?i)^(?:Compare|Explain|What|When|Which|Who|Where|Is|Are|Does|Do|How|Why|Tell|Read|Current|Check|Verify|Search|Research|Find|Summarize|Summarise|Describe|Give|List|Show|Provide|Suggest|Share|Write|Make|Create|Draft|Continue)\\s+"), "") }
             .map { candidate ->
                 candidate.split(Regex("\\s+"))
-                    .filter { token -> token.lowercase() !in setOf("of", "the", "in", "for", "to", "on", "at", "by", "with", "from", "is", "are", "who", "what", "where", "when", "why", "how", "cm", "pm", "ceo", "current", "incumbent", "list", "all") }
+                    .filter { token -> token.lowercase() !in setOf("of", "the", "in", "for", "to", "on", "at", "by", "with", "from", "is", "are", "who", "what", "where", "when", "why", "how", "cm", "pm", "ceo", "current", "incumbent", "list", "all", "me", "us", "you") }
                     .joinToString(" ")
             }
-            .filter { it.length >= 2 && it.lowercase() !in setOf("is", "are", "when", "what", "who", "where", "how", "why", "compare", "explain", "does", "can", "tell", "read", "search", "research", "find", "summarize", "summarise", "describe", "which", "public", "source", "topic") }
+            .filter { it.length >= 2 && it.lowercase() !in setOf("is", "are", "when", "what", "who", "where", "how", "why", "compare", "explain", "does", "can", "tell", "read", "search", "research", "find", "summarize", "summarise", "describe", "which", "public", "source", "topic", "give", "list", "show", "provide", "suggest", "share", "write", "make", "create", "draft", "continue", "me", "us") }
         val locations = Regex("\\b(?:in|near|for|of)\\s+([A-Z][\\p{L}]+(?:[, ]+[A-Z][\\p{L}]+){0,2})").findAll(text).map { it.groupValues[1] }
         val weatherLocations = if (Regex("(?i)\\b(weather|temperature|forecast|rain|wind|humidity)\\b").containsMatchIn(text)) {
             Regex("(?i)\\b(?:in|near|for|at)\\s+([\\p{L}][\\p{L}-]{2,}(?:\\s+[\\p{L}][\\p{L}-]{2,}){0,2}?)(?=\\s*(?:today|tonight|now|right now|currently|tomorrow|this week|\\?|$))")
