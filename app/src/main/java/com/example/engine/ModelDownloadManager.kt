@@ -58,6 +58,7 @@ sealed class DownloadStateUpdate {
 }
 
 class ModelDownloadManager(private val context: Context,
+    private val availableSpace: (File) -> Long = { it.usableSpace },
     private val openConnection: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection }) {
 
     private val activeDownloadFlags = ConcurrentHashMap<Long, Boolean>()
@@ -177,7 +178,7 @@ class ModelDownloadManager(private val context: Context,
 
         try {
             var resumeOffset = if (!model.sha256Checksum.isNullOrBlank()) tempFile.length() else 0L
-            check(modelsDirectory.usableSpace > ((model.fileSizeMb + 128) * 1024L * 1024L - resumeOffset).coerceAtLeast(128L * 1024 * 1024)) { "Insufficient storage for the remaining model download" }
+            check(availableSpace(modelsDirectory) > ((model.fileSizeMb + 128) * 1024L * 1024L - resumeOffset).coerceAtLeast(128L * 1024 * 1024)) { "Insufficient storage for the remaining model download" }
             val downloadUrl = model.downloadUrl ?: throw IllegalArgumentException("No download URL provided for model ${model.name}")
 
             val activeConn = openHttps(downloadUrl, resumeOffset)
@@ -233,6 +234,8 @@ class ModelDownloadManager(private val context: Context,
                             throw kotlinx.coroutines.CancellationException("Download paused")
                         }
 
+                        if (downloadedBytes / (64 * 1048576) != (downloadedBytes + bytesRead) / (64 * 1048576))
+                            check(availableSpace(modelsDirectory) > 64L * 1048576) { "Insufficient storage. Free space and resume the download." }
                         output.write(buffer, 0, bytesRead)
                         digest.update(buffer, 0, bytesRead)
                         downloadedBytes += bytesRead
@@ -282,15 +285,18 @@ class ModelDownloadManager(private val context: Context,
                 Log.i(TAG, "No remote checksum for ${model.filename}. Generated hash: $computedSha256")
             }
 
+            try {
             if (downloadedBytes == 0L) error("Empty model download")
             if (model.filename.endsWith(".gguf", true)) GgufParser().parseFromFile(tempFile).getOrThrow()
             if (model.filename.endsWith(".litertlm", true)) com.google.ai.edge.litertlm.ModelInfo.from(tempFile.absolutePath).use {
                 require(it is com.google.ai.edge.litertlm.ModelInfo.Llm) { "Downloaded LiteRT file is not a text-generation model" }
             }
+            } catch (e: Exception) { tempFile.delete(); throw e }
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
             // Atomically move temp file to destination
             if (tempFile.exists() && tempFile.length() > 0) {
-                if (targetFile.exists()) targetFile.delete()
+                // Android rename on this same private filesystem atomically replaces
+                // the old path. Never delete a working installed copy first.
                 check(tempFile.renameTo(targetFile)) { "Could not install downloaded model" }
             }
 

@@ -1,0 +1,1267 @@
+{
+  "cases": 120,
+  "passed": 120,
+  "rows": [
+    {
+      "case": 0,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1615
+    },
+    {
+      "case": 1,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 680
+    },
+    {
+      "case": 2,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1080
+    },
+    {
+      "case": 3,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1087
+    },
+    {
+      "case": 4,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 946
+    },
+    {
+      "case": 5,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 602
+    },
+    {
+      "case": 6,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 579
+    },
+    {
+      "case": 7,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 553
+    },
+    {
+      "case": 8,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 560
+    },
+    {
+      "case": 9,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 561
+    },
+    {
+      "case": 10,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 573
+    },
+    {
+      "case": 11,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 551
+    },
+    {
+      "case": 12,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 718
+    },
+    {
+      "case": 13,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1457
+    },
+    {
+      "case": 14,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1467
+    },
+    {
+      "case": 15,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1378
+    },
+    {
+      "case": 16,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1565
+    },
+    {
+      "case": 17,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1414
+    },
+    {
+      "case": 18,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1421
+    },
+    {
+      "case": 19,
+      "kind": "identity",
+      "category": "numbered_films",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 1346
+    },
+    {
+      "case": 20,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 915
+    },
+    {
+      "case": 21,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 511
+    },
+    {
+      "case": 22,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 499
+    },
+    {
+      "case": 23,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 499
+    },
+    {
+      "case": 24,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 464
+    },
+    {
+      "case": 25,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 404
+    },
+    {
+      "case": 26,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 488
+    },
+    {
+      "case": 27,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 468
+    },
+    {
+      "case": 28,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 452
+    },
+    {
+      "case": 29,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 712
+    },
+    {
+      "case": 30,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 797
+    },
+    {
+      "case": 31,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 940
+    },
+    {
+      "case": 32,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 908
+    },
+    {
+      "case": 33,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 988
+    },
+    {
+      "case": 34,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 898
+    },
+    {
+      "case": 35,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 929
+    },
+    {
+      "case": 36,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 861
+    },
+    {
+      "case": 37,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 912
+    },
+    {
+      "case": 38,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 603
+    },
+    {
+      "case": 39,
+      "kind": "identity",
+      "category": "numbered_technology",
+      "checks": {
+        "acceptCorrectSubject": true,
+        "rejectWrongSubject": true
+      },
+      "passed": true,
+      "latencyUs": 554
+    },
+    {
+      "case": 40,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 510
+    },
+    {
+      "case": 41,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 458
+    },
+    {
+      "case": 42,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 356
+    },
+    {
+      "case": 43,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 371
+    },
+    {
+      "case": 44,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 398
+    },
+    {
+      "case": 45,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 423
+    },
+    {
+      "case": 46,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 505
+    },
+    {
+      "case": 47,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 363
+    },
+    {
+      "case": 48,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 925
+    },
+    {
+      "case": 49,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 597
+    },
+    {
+      "case": 50,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 692
+    },
+    {
+      "case": 51,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 896
+    },
+    {
+      "case": 52,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 816
+    },
+    {
+      "case": 53,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 747
+    },
+    {
+      "case": 54,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 609
+    },
+    {
+      "case": 55,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 684
+    },
+    {
+      "case": 56,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 691
+    },
+    {
+      "case": 57,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 877
+    },
+    {
+      "case": 58,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 630
+    },
+    {
+      "case": 59,
+      "kind": "route",
+      "category": "local_privacy_tools",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 596
+    },
+    {
+      "case": 60,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1255
+    },
+    {
+      "case": 61,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1013
+    },
+    {
+      "case": 62,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1006
+    },
+    {
+      "case": 63,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1095
+    },
+    {
+      "case": 64,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1225
+    },
+    {
+      "case": 65,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1075
+    },
+    {
+      "case": 66,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1107
+    },
+    {
+      "case": 67,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1082
+    },
+    {
+      "case": 68,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1300
+    },
+    {
+      "case": 69,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1127
+    },
+    {
+      "case": 70,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1222
+    },
+    {
+      "case": 71,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 688
+    },
+    {
+      "case": 72,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 640
+    },
+    {
+      "case": 73,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 842
+    },
+    {
+      "case": 74,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 907
+    },
+    {
+      "case": 75,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 1653
+    },
+    {
+      "case": 76,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 656
+    },
+    {
+      "case": 77,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 490
+    },
+    {
+      "case": 78,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 500
+    },
+    {
+      "case": 79,
+      "kind": "route",
+      "category": "current_and_public_lookup",
+      "checks": {
+        "route": true
+      },
+      "passed": true,
+      "latencyUs": 430
+    },
+    {
+      "case": 80,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 13254
+    },
+    {
+      "case": 81,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 7818
+    },
+    {
+      "case": 82,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 14673
+    },
+    {
+      "case": 83,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 15063
+    },
+    {
+      "case": 84,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 14738
+    },
+    {
+      "case": 85,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 15420
+    },
+    {
+      "case": 86,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 12162
+    },
+    {
+      "case": 87,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 22626
+    },
+    {
+      "case": 88,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 13913
+    },
+    {
+      "case": 89,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 13139
+    },
+    {
+      "case": 90,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 16384
+    },
+    {
+      "case": 91,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 5511
+    },
+    {
+      "case": 92,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 23535
+    },
+    {
+      "case": 93,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 13401
+    },
+    {
+      "case": 94,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 24287
+    },
+    {
+      "case": 95,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 14788
+    },
+    {
+      "case": 96,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 9792
+    },
+    {
+      "case": 97,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 29185
+    },
+    {
+      "case": 98,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 13335
+    },
+    {
+      "case": 99,
+      "kind": "evidence",
+      "category": "frozen_explanation_evidence",
+      "checks": {
+        "usefulAnswer": true,
+        "citation": true
+      },
+      "passed": true,
+      "latencyUs": 7270
+    },
+    {
+      "case": 100,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 516
+    },
+    {
+      "case": 101,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 219
+    },
+    {
+      "case": 102,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 276
+    },
+    {
+      "case": 103,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 203
+    },
+    {
+      "case": 104,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 183
+    },
+    {
+      "case": 105,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 183
+    },
+    {
+      "case": 106,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 173
+    },
+    {
+      "case": 107,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 173
+    },
+    {
+      "case": 108,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 185
+    },
+    {
+      "case": 109,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 173
+    },
+    {
+      "case": 110,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 191
+    },
+    {
+      "case": 111,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 179
+    },
+    {
+      "case": 112,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 173
+    },
+    {
+      "case": 113,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 347
+    },
+    {
+      "case": 114,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 466
+    },
+    {
+      "case": 115,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 435
+    },
+    {
+      "case": 116,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 398
+    },
+    {
+      "case": 117,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 308
+    },
+    {
+      "case": 118,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 299
+    },
+    {
+      "case": 119,
+      "kind": "followup",
+      "category": "conversation_identity",
+      "checks": {
+        "sessionIdentity": true
+      },
+      "passed": true,
+      "latencyUs": 304
+    }
+  ],
+  "scope": "Deterministic routing, entity and frozen-evidence checks; not measured LLM factual accuracy"
+}

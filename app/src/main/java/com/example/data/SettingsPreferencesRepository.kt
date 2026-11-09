@@ -107,6 +107,10 @@ class SettingsPreferencesRepository(private val context: Context) {
             if (id == null) it.remove(KEY_PRIMARY_MODEL_ID) else it[KEY_PRIMARY_MODEL_ID] = id.toString()
         }
     }
+    suspend fun saveModelPair(primary: Long, secondary: Long?) { context.dataStore.edit {
+        it[KEY_PRIMARY_MODEL_ID] = primary.toString()
+        if (secondary == null) it.remove(KEY_SECONDARY_MODEL_ID) else it[KEY_SECONDARY_MODEL_ID] = secondary.toString()
+    } }
     suspend fun saveSecondaryModelId(id: Long?) {
         context.dataStore.edit {
             if (id == null) it.remove(KEY_SECONDARY_MODEL_ID) else it[KEY_SECONDARY_MODEL_ID] = id.toString()

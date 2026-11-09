@@ -108,7 +108,7 @@ class HardwareAccelerationDeviceTest {
                 assertNoNativeWeightMapping(file)
             }
             // Same-file reload is shared rather than allocating a duplicate model.
-            val file = File(context.filesDir, "models/smollm2-135m-instruct-q4_k_m.gguf")
+            val file = File(context.filesDir, "models/${names.first()}")
             repeat(3) {
                 progress("same-file reload $it")
                 engine.loadCustomGguf(file).getOrThrow(); engine.loadCustomGguf(file).getOrThrow()

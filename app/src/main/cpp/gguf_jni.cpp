@@ -15,6 +15,7 @@
 #include <sstream>
 #include <atomic>
 #include <cstdio>
+#include <cmath>
 #include <cstring>
 
 namespace {
@@ -375,4 +376,67 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
         check();
         return array(env, output.substr(0, utf8Prefix(output)));
     } catch (const std::exception &e) { fail(env, e); return nullptr; }
+}
+
+// Optional small GGUF encoder. It never replaces or unloads the chat model.
+extern "C" JNIEXPORT jfloatArray JNICALL
+Java_com_example_engine_NativeGguf_rankPassages(JNIEnv *env, jobject, jbyteArray fileBytes, jobjectArray texts) {
+    try {
+        std::unique_lock<std::mutex> lock(guard, std::try_to_lock);
+        if (!lock.owns_lock()) return nullptr;
+        initialize();
+        const int count = env->GetArrayLength(texts);
+        if (count < 2 || count > 9) return nullptr;
+        auto params = llama_model_default_params(); params.n_gpu_layers = 0;
+        Model encoder(llama_model_load_from_file(bytes(env, fileBytes).c_str(), params), llama_model_free);
+        if (!encoder) return nullptr;
+        char architecture[64] = {};
+        if (llama_model_meta_val_str(encoder.get(), "general.architecture", architecture, sizeof(architecture)) <= 0 ||
+            std::string(architecture).find("bert") == std::string::npos) return nullptr;
+        auto cp = llama_context_default_params(); cp.n_ctx = 512; cp.n_batch = 512; cp.n_ubatch = 512;
+        cp.n_threads = 2; cp.n_threads_batch = 2; cp.embeddings = true; cp.pooling_type = LLAMA_POOLING_TYPE_UNSPECIFIED;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(6);
+        cp.abort_callback = [](void *value) -> bool {
+            return std::chrono::steady_clock::now() > *static_cast<const std::chrono::steady_clock::time_point *>(value);
+        };
+        cp.abort_callback_data = const_cast<void *>(static_cast<const void *>(&deadline));
+        std::unique_ptr<llama_context, decltype(&llama_free)> ctx(llama_init_from_model(encoder.get(), cp), llama_free);
+        if (!ctx) return nullptr;
+        const auto *vocab = llama_model_get_vocab(encoder.get());
+        const int width = llama_model_n_embd(encoder.get());
+        if (width <= 0 || width > 4096) return nullptr;
+        std::vector<std::vector<float>> vectors;
+        for (int n = 0; n < count; ++n) {
+            if (std::chrono::steady_clock::now() > deadline) return nullptr;
+            auto value = static_cast<jbyteArray>(env->GetObjectArrayElement(texts, n));
+            const std::string text = bytes(env, value); env->DeleteLocalRef(value);
+            if (text.size() > 4096) return nullptr;
+            std::vector<llama_token> tokens(512);
+            const int length = llama_tokenize(vocab, text.c_str(), text.size(), tokens.data(), tokens.size(), true, true);
+            if (length <= 0 || length > 512) return nullptr;
+            struct Batch { llama_batch value; ~Batch() { llama_batch_free(value); } } batch{llama_batch_init(length, 0, 1)};
+            batch.value.n_tokens = length;
+            for (int i = 0; i < length; ++i) {
+                batch.value.token[i] = tokens[i]; batch.value.pos[i] = i;
+                batch.value.n_seq_id[i] = 1; batch.value.seq_id[i][0] = 0; batch.value.logits[i] = true;
+            }
+            if (auto *memory = llama_get_memory(ctx.get())) llama_memory_clear(memory, true);
+            // BERT embeddings use the non-causal DECODE graph in llama.cpp.
+            // has_encoder()/llama_encode() describe T5-style encoder-decoder models.
+            if (llama_decode(ctx.get(), batch.value) != 0) return nullptr;
+            const float *pooled = llama_get_embeddings_seq(ctx.get(), 0);
+            if (!pooled) return nullptr;
+            std::vector<float> vector(pooled, pooled + width);
+            double norm = 0;
+            for (float x : vector) { if (!std::isfinite(x)) return nullptr; norm += x * x; }
+            if (norm < 1e-12) return nullptr;
+            for (float &x : vector) x /= std::sqrt(norm);
+            vectors.push_back(std::move(vector));
+        }
+        std::vector<float> scores(count - 1);
+        for (int i = 1; i < count; ++i) for (int j = 0; j < width; ++j) scores[i - 1] += vectors[0][j] * vectors[i][j];
+        auto result = env->NewFloatArray(scores.size());
+        env->SetFloatArrayRegion(result, 0, scores.size(), scores.data());
+        return result;
+    } catch (...) { return nullptr; } // Lexical retrieval stays fully usable.
 }

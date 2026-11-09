@@ -13,7 +13,7 @@ internal object ModelPresentation {
             .thenBy { pinned.indexOf(it.id).takeIf { index -> index >= 0 } ?: Int.MAX_VALUE }
             .thenBy { ModelLibrary.memoryEstimate(it, loadContext(it, requestedContext)).totalMb }
             .thenBy { it.name }.thenBy { it.id })
-    fun hasDownload(model: ModelEntity) = model.isInstalled || model.downloadState in setOf("DOWNLOADING", "PAUSED", "ERROR")
+    fun hasDownload(model: ModelEntity) = model.isInstalled || model.downloadState in setOf("DOWNLOADING", "QUEUED", "PAUSED", "ERROR")
 
     fun size(mb: Long): String = if (mb >= 1024) String.format(Locale.getDefault(), "%.1f GB", mb / 1024.0) else "$mb MB"
 
@@ -33,6 +33,7 @@ internal object ModelPresentation {
         model.isInstalled -> "Downloaded · Ready to use"
         model.downloadState == "DOWNLOADING" && model.checksumVerificationStatus == "VERIFYING" -> "Checking file before installing…"
         model.downloadState == "DOWNLOADING" -> "Downloading ${(model.downloadProgress.coerceIn(0f, .99f) * 100).toInt()}%"
+        model.downloadState == "QUEUED" -> "Queued · Waiting for network"
         model.downloadState == "PAUSED" -> "Paused · ${(model.downloadProgress.coerceIn(0f, .99f) * 100).toInt()}% saved"
         model.downloadState == "ERROR" -> "Download interrupted · Tap Retry"
         else -> "Available to download"

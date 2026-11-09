@@ -87,8 +87,8 @@ android {
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
     targetSdk = 36
-    versionCode = 32
-    versionName = "2.5.0-beta7"
+    versionCode = 33
+    versionName = "2.6.0-beta1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders["localAiExported"] = "true"
@@ -177,6 +177,7 @@ tasks.withType<Test>().configureEach {
 dependencies {
   if (qualcommNpu.get()) qnnRuntime("com.qualcomm.qti:qnn-runtime:2.44.0@aar")
   implementation("org.jsoup:jsoup:1.23.2")
+  implementation("androidx.work:work-runtime-ktx:2.11.2")
   coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
   implementation(platform(libs.androidx.compose.bom))
   // implementation(libs.accompanist.permissions)

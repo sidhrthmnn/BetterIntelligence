@@ -1,0 +1,54 @@
+[
+  {
+    "modelId": 2,
+    "key": "efa5e56acf7dcff140c0fb9f8f0f86f275d1eebd37631d238ceaeaf04c5d7f24:CPU:-1:CPU:4:0",
+    "quality": 65,
+    "passed": false,
+    "loadMs": 167,
+    "firstTokenMs": 945,
+    "tokensPerSecond": 45.136837,
+    "promptTokensPerSecond": 78.70027,
+    "peakMb": 587,
+    "backend": "CPU",
+    "thermal": "Nominal \/ Cool",
+    "durationMs": 18409,
+    "checks": {
+      "fact": true,
+      "instruction": false,
+      "reasoning": false,
+      "json": false,
+      "summary": true,
+      "evidence": true,
+      "unknown": true,
+      "context": true,
+      "continuity": true,
+      "stability": true
+    }
+  },
+  {
+    "modelId": 3,
+    "key": "f528faf829fc2c7cd57869ba32566b98012daee7f1e82889e073a656127440cf:CPU:-1:CPU:4:0",
+    "quality": 70,
+    "passed": false,
+    "loadMs": 445,
+    "firstTokenMs": 1005,
+    "tokensPerSecond": 33.4599,
+    "promptTokensPerSecond": 69.87485,
+    "peakMb": 861,
+    "backend": "CPU",
+    "thermal": "Nominal \/ Cool",
+    "durationMs": 13438,
+    "checks": {
+      "fact": false,
+      "instruction": true,
+      "reasoning": false,
+      "json": true,
+      "summary": true,
+      "evidence": true,
+      "unknown": true,
+      "context": true,
+      "continuity": true,
+      "stability": true
+    }
+  }
+]

@@ -38,7 +38,8 @@ data class GenerationParams(
     val enableSimd: Boolean = true,
     val isAdvancedMode: Boolean = false,
     val history: List<ChatTurn> = emptyList(),
-    val autoContinue: Boolean = false
+    val autoContinue: Boolean = false,
+    val internalPlanning: Boolean = false
 )
 
 /**
@@ -820,7 +821,7 @@ class InferenceEngine internal constructor(private val context: android.content.
             // coroutine cancellation semantics so sibling work is not failed.
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
             val budget = runCatching { hardware.resources().let { ModelMemoryPlanner.budget(it.totalMb, it.availableMb) } }.getOrDefault(0L)
-            com.example.rustcore.RustModelPolicy.runtimeFailure(policyModelKey, e, budget)
+            if (!params.internalPlanning) com.example.rustcore.RustModelPolicy.runtimeFailure(policyModelKey, e, budget)
             throw e
         } finally {
             synchronized(lifecycleLock) {

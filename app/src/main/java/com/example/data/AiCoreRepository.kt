@@ -40,6 +40,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -55,6 +56,8 @@ class AiCoreRepository(
     val engine: InferenceEngine
         get() = engineManager.llamaCppEngine.coreInferenceEngine
     val downloadManager = ModelDownloadManager(appContext)
+    val automaticSetup by lazy { com.example.engine.AutomaticSetupController(appContext, this) }
+    private val initialized = kotlinx.coroutines.CompletableDeferred<Unit>()
     private val modelDao = database.modelDao()
     private val ipcLogDao = database.ipcLogDao()
     private val clientPolicyDao = database.clientPolicyDao()
@@ -174,7 +177,8 @@ class AiCoreRepository(
                 modelLock.withLock { seedDefaultModelsIfEmpty() }
                 analyzeHardware(appContext)
                 val previous = modelDao.getActiveModel().first()
-                if (previous != null) {
+                if (previous != null && com.example.service.DownloadQueueStore(appContext).ids().isEmpty() &&
+                    !appContext.getSharedPreferences("automatic_setup", Context.MODE_PRIVATE).getBoolean("pending", false)) {
                     if (preferencesRepository.primaryModelId.first() == null) {
                         preferencesRepository.savePrimaryModelId(previous.id)
                     }
@@ -191,7 +195,7 @@ class AiCoreRepository(
                         if (!fallbackSuccess && !explicitModelSelection && !engine.isReady()) modelDao.clearActiveModel()
                     }
                 }
-            } finally { modelOperations.decrementAndGet() }
+            } finally { modelOperations.decrementAndGet(); initialized.complete(Unit) }
         }
         repositoryScope.launch {
             while (true) {
@@ -224,6 +228,7 @@ class AiCoreRepository(
         }
         // Catalogue curation never deletes an existing model row or its weights.
         // This also preserves downloads/imports if a publisher removes an entry.
+        val queuedIds = com.example.service.DownloadQueueStore(appContext).ids().toSet()
         library.forEach { entry ->
             val existing = modelDao.getModelByFilename(entry.filename)
             val file = File(downloadManager.modelsDirectory, entry.filename)
@@ -234,7 +239,7 @@ class AiCoreRepository(
                 lastUsedTimestamp = existing?.lastUsedTimestamp ?: 0L,
                 isActive = installed && existing?.isActive == true,
                 localFilePath = if (installed) file.absolutePath else null,
-                downloadState = if (installed) "DOWNLOADED" else if (File(downloadManager.modelsDirectory, "${entry.filename}.part").length() > 0) "PAUSED" else "NOT_DOWNLOADED",
+                downloadState = if (installed) "DOWNLOADED" else if (existing?.id in queuedIds) "QUEUED" else if (File(downloadManager.modelsDirectory, "${entry.filename}.part").length() > 0) "PAUSED" else "NOT_DOWNLOADED",
                 downloadProgress = if (installed) 1f else (File(downloadManager.modelsDirectory, "${entry.filename}.part").length().toFloat() / (entry.fileSizeMb * 1048576).coerceAtLeast(1)).coerceIn(0f, .99f),
                 isChecksumVerified = installed,
                 checksumVerificationStatus = if (installed) "VERIFIED" else "NOT_VERIFIED")
@@ -243,6 +248,7 @@ class AiCoreRepository(
     }
 
     suspend fun unloadModel() = withContext(Dispatchers.IO) {
+        automaticSetup.cancelPending()
         resolutionLock.withLock {
             explicitModelSelection = true
             modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() }
@@ -251,13 +257,103 @@ class AiCoreRepository(
     }
 
     suspend fun switchActiveModel(model: ModelEntity) {
+        automaticSetup.cancelPending()
         resolutionLock.withLock {
             explicitModelSelection = true
             clientPreparation.invalidate()
-            preferencesRepository.savePrimaryModelId(model.id)
+            val previous = modelDao.getActiveModel().first()
             RustModelPolicy.reset(model)
-            try { activateModel(model); RustModelPolicy.outcome(model) }
-            catch (e: Exception) { RustModelPolicy.outcome(model, e); throw e }
+            try { activateModel(model); preferencesRepository.savePrimaryModelId(model.id); RustModelPolicy.outcome(model) }
+            catch (e: Exception) {
+                RustModelPolicy.outcome(model, e)
+                if (previous != null && !engine.telemetry.value.isRunning) runCatching { activateModel(previous) }
+                throw e
+            }
+        }
+    }
+
+    internal fun automaticSetupApproved() { explicitModelSelection = false }
+    private fun checkSetupIntent(epoch: Long?) {
+        if (epoch != null && !automaticSetup.isCurrentPending(epoch)) throw CancellationException("Automatic setup cancelled by a manual choice")
+    }
+    private suspend fun restoreAfterSetup(previous: ModelEntity?) = withContext(kotlinx.coroutines.NonCancellable) {
+        if (!engine.telemetry.value.isRunning) {
+            // Release the candidate's private graph memory before admitting the previous model.
+            modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() }
+            if (previous != null) runCatching { activateModel(previous) }
+                .onFailure { modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() } }
+        }
+        clientPreparation.invalidate()
+    }
+    suspend fun evaluateSetupModels(models: List<ModelEntity>, force: Boolean, setupEpoch: Long? = null, progress: (String) -> Unit): List<com.example.engine.ModelQualityReport> =
+        resolutionLock.withLock {
+            check(!engine.telemetry.value.isRunning) { "Finish the current answer before benchmarking" }
+            withModelLoading("Checking recommended models") {
+                clientPreparation.invalidate()
+                val previous = modelDao.getActiveModel().first()
+                try {
+                    models.mapNotNull { model ->
+                        checkSetupIntent(setupEpoch)
+                        automaticSetup.cached(model).takeUnless { force } ?: run {
+                            check(automaticSetup.checkDevice().canBenchmark) { "Benchmark deferred: free RAM, battery or thermal headroom is insufficient" }
+                            try {
+                            check(verifyModelChecksum(model).isMatch) { "Verify the installed model checksum before automatic setup" }
+                            modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() }
+                            val started = android.os.SystemClock.elapsedRealtime()
+                            activateModel(model, contextOverride = 1024)
+                            com.example.engine.ModelQualityBenchmark.run(engine, model, android.os.SystemClock.elapsedRealtime() - started,
+                                { checkSetupIntent(setupEpoch); com.example.engine.HardwareAnalyzer.analyze(appContext).let { !it.isLowMemory && !it.isThermalThrottling && (it.isCharging || it.batteryPercent >= 20) } }, progress)
+                                .also { automaticSetup.saveReport(it) }
+                            } catch (e: CancellationException) { throw e }
+                            catch (e: Exception) {
+                                // An incomplete benchmark is never saved or labelled measured.
+                                progress("${model.name}: ${e.message?.take(160) ?: "Validation could not finish"}. Checking the other candidate.")
+                                RustModelPolicy.outcome(model, e)
+                                null
+                            }
+                        }
+                    }
+                } finally {
+                    restoreAfterSetup(previous)
+                }
+            }
+        }
+    suspend fun activateMeasuredPair(primary: ModelEntity, secondary: ModelEntity?, setupEpoch: Long? = null) = resolutionLock.withLock {
+        checkSetupIntent(setupEpoch)
+        check(!engine.telemetry.value.isRunning) { "Finish the current answer before changing models" }
+        withModelLoading("Activating checked model") {
+            val previous = modelDao.getActiveModel().first()
+            clientPreparation.invalidate()
+            try {
+                activateModel(primary, contextOverride = 1024)
+                val text = kotlinx.coroutines.withTimeout(30_000) { engine.generateSync("Reply with exactly: ready", GenerationParams(contextSize = ModelLibrary.configuredContext(primary, 1024), maxTokens = 16, temperature = 0f, autoContinue = false)) }
+                check(text.isNotBlank()) { "The model did not produce an answer" }
+                checkSetupIntent(setupEpoch)
+                preferencesRepository.saveModelPair(primary.id, secondary?.id)
+            } catch (e: Exception) {
+                restoreAfterSetup(previous)
+                throw e
+            }
+        }
+    }
+    suspend fun finishAutomaticSetup(): Boolean = automaticSetup.finish()
+
+    /** First approved file can serve chat while the other selected file downloads.
+     * Existing working or manually selected models always win. */
+    suspend fun provisionFirstSetupModel(model: ModelEntity) = resolutionLock.withLock {
+        if (!automaticSetup.state.value.pending || explicitModelSelection || engine.isReady() || engine.telemetry.value.isRunning) return@withLock
+        if (!ModelLibrary.fits(model, HardwareAnalyzer.analyze(appContext), ModelLibrary.configuredContext(model, 1024))) return@withLock
+        withModelLoading("Checking first downloaded model") {
+            try {
+                check(verifyModelChecksum(model).isMatch)
+                activateModel(model, contextOverride = 1024)
+                val text = engine.generateSync("Say hello briefly.", GenerationParams(contextSize = ModelLibrary.configuredContext(model, 1024), maxTokens = 24, temperature = 0f, autoContinue = false))
+                check(text.isNotBlank()) { "The first model did not decode successfully" }
+                automaticSetup.status("A model is available for chat; finishing automatic setup")
+            } catch (e: Exception) {
+                withContext(kotlinx.coroutines.NonCancellable) { modelLock.withLock { engine.unloadActiveModel(); modelDao.clearActiveModel() } }
+                if (e is CancellationException) throw e
+            } finally { clientPreparation.invalidate() }
         }
     }
 
@@ -360,11 +456,24 @@ class AiCoreRepository(
         }
     }
 
+    suspend fun awaitModelInitialization() = initialized.await()
+    suspend fun modelForDownload(id: Long) = modelDao.getModelById(id)
     fun startModelDownload(model: ModelEntity, scope: CoroutineScope) {
-        if (activeDownloadJobs.containsKey(model.id)) return
+        val queue = com.example.service.DownloadQueueStore(appContext)
+        synchronized(activeDownloadJobs) { queue.enqueue(model.id) }
+        repositoryScope.launch {
+            val current = modelDao.getModelById(model.id) ?: return@launch
+            if (current.downloadState !in setOf("DOWNLOADING", "DOWNLOADED") && model.id in queue.ids()) modelDao.updateModel(current.copy(downloadState = "QUEUED"))
+        }
+        com.example.service.ModelDownloadQueue.schedule(appContext, userInitiated = true)
+    }
+
+    suspend fun executeQueuedDownload(model: ModelEntity, progress: suspend (ModelEntity) -> Unit) = kotlinx.coroutines.coroutineScope {
+        val scope = this
+        if (activeDownloadJobs.containsKey(model.id)) return@coroutineScope
         _downloadErrors.value = _downloadErrors.value - model.id
 
-        val job = repositoryScope.launch(Dispatchers.IO, start = kotlinx.coroutines.CoroutineStart.LAZY) {
+        val job = scope.launch(Dispatchers.IO, start = kotlinx.coroutines.CoroutineStart.LAZY) {
             try {
                 // Set state to DOWNLOADING
                 modelDao.updateModel(
@@ -382,7 +491,7 @@ class AiCoreRepository(
                         val current = modelDao.getModelById(model.id) ?: return@run
                         when (update) {
                             is DownloadStateUpdate.Progress -> {
-                                if (current.downloadState == "DOWNLOADING") {
+                                if (current.downloadState in setOf("DOWNLOADING", "QUEUED")) {
                                     modelDao.updateModel(
                                         current.copy(
                                             downloadProgress = update.progress,
@@ -392,7 +501,7 @@ class AiCoreRepository(
                                 }
                             }
                             is DownloadStateUpdate.VerifyingChecksum -> {
-                                if (current.downloadState == "DOWNLOADING") {
+                                if (current.downloadState in setOf("DOWNLOADING", "QUEUED")) {
                                     modelDao.updateModel(
                                         current.copy(
                                             downloadProgress = 0.99f,
@@ -429,6 +538,7 @@ class AiCoreRepository(
                             }
                         }
                     }
+                    modelDao.getModelById(model.id)?.let { progress(it) }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -444,15 +554,40 @@ class AiCoreRepository(
                     )
                 }
             } finally {
+                withContext(kotlinx.coroutines.NonCancellable) {
+                    val interrupted = modelDao.getModelById(model.id)
+                    if (interrupted?.downloadState == "DOWNLOADING") modelDao.updateModel(interrupted.copy(
+                        downloadState = if (model.id in com.example.service.DownloadQueueStore(appContext).ids()) "QUEUED" else "PAUSED", downloadSpeedMbps = 0f))
+                }
                 activeDownloadJobs.remove(model.id, kotlinx.coroutines.currentCoroutineContext()[Job])
             }
         }
-        if (activeDownloadJobs.putIfAbsent(model.id, job) == null) job.start() else job.cancel()
+        val existing = synchronized(activeDownloadJobs) {
+            if (model.id !in com.example.service.DownloadQueueStore(appContext).ids()) { job.cancel(); return@coroutineScope }
+            activeDownloadJobs.putIfAbsent(model.id, job)
+        }
+        if (existing == null) { job.start(); job.join() } else { job.cancel(); existing.join() }
+    }
+
+    suspend fun deletePartialDownload(modelId: Long) {
+        val running = synchronized(activeDownloadJobs) { com.example.service.DownloadQueueStore(appContext).remove(modelId); activeDownloadJobs[modelId] }
+        downloadManager.cancelDownload(modelId); running?.cancelAndJoin()
+        modelLock.withLock {
+            val current = modelDao.getModelById(modelId) ?: return@withLock
+            val dir = downloadManager.modelsDirectory.canonicalFile
+            val part = File(dir, "${current.filename}.part").canonicalFile
+            check(part.parentFile == dir) { "Invalid partial model path" }
+            check(!part.exists() || part.delete()) { "Could not remove partial download" }
+            _downloadErrors.value = _downloadErrors.value - modelId
+            modelDao.updateModel(current.copy(downloadState = if (current.isInstalled) "DOWNLOADED" else "NOT_DOWNLOADED",
+                downloadProgress = if (current.isInstalled) 1f else 0f, downloadSpeedMbps = 0f,
+                checksumVerificationStatus = if (current.isChecksumVerified) "VERIFIED" else "NOT_VERIFIED"))
+        }
     }
 
     fun cancelModelDownload(modelId: Long, scope: CoroutineScope) {
+        val job = synchronized(activeDownloadJobs) { com.example.service.DownloadQueueStore(appContext).remove(modelId); activeDownloadJobs[modelId] }
         downloadManager.cancelDownload(modelId)
-        val job = activeDownloadJobs[modelId]
         job?.cancel()
         repositoryScope.launch(Dispatchers.IO) {
             job?.join()
@@ -536,8 +671,11 @@ class AiCoreRepository(
         modelLock.withLock {
             // Re-read inside the same lock used for activation: the UI's model may be stale.
             val current = modelDao.getModelById(model.id) ?: return@withLock
+            synchronized(activeDownloadJobs) {
             check(current.downloadState != "DOWNLOADING" && !activeDownloadJobs.containsKey(current.id)) {
                 "Cancel the download before deleting this model"
+            }
+            com.example.service.DownloadQueueStore(appContext).remove(current.id)
             }
             val directory = downloadManager.modelsDirectory.canonicalFile
             val modelFile = File(current.localFilePath ?: File(directory, current.filename).path).canonicalFile

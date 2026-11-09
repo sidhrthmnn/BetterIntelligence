@@ -57,7 +57,8 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
     private val discoveryAllowed: suspend () -> Boolean = { true }, private val researchBudgetMs: Long = 55_000,
     private val timeouts: ResearchTimeouts = ResearchTimeouts(), private val biFallback: Boolean = true,
     private val alternativeProviders: List<ConfiguredDiscovery> = emptyList(),
-    private val clock: java.time.Clock = java.time.Clock.systemDefaultZone()) : SearchProvider {
+    private val clock: java.time.Clock = java.time.Clock.systemDefaultZone(),
+    private val localRanking: ((String, List<EvidenceSource>) -> Map<String, Double>)? = null) : SearchProvider {
     private val robots = ResearchRobots(fetcher)
     private val discoveryCircuits = mutableMapOf<String, DiscoveryCircuit>()
     private val biIndex = BiDiscovery(fetcher, robots, discoveryAllowed, timeouts)
@@ -79,7 +80,10 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
         fun remaining() = deadline.remainingMs()
         require(!GroundingPolicy.containsCredential(question)) { "Do not search for credentials" }
         if (ConversationalResearch.needsSubject(question)) return@withContext ResearchOutcome(emptyList(), ResearchFailure.INSUFFICIENT)
-        val plan = ResearchPlanner.plan(question, java.time.LocalDate.now(clock))
+        val basePlan = ResearchPlanner.plan(question, java.time.LocalDate.now(clock))
+        val local = kotlinx.coroutines.currentCoroutineContext()[LocalPlanContext]?.plan
+        val plan = if (local != null && basePlan.event == null && basePlan.explicitUrls.isEmpty()) basePlan.copy(
+            searches = (basePlan.searches.take(1) + local.queries + basePlan.searches.drop(1)).distinct().take(3)) else basePlan
         val transport = fetcher.session(24)
         val permitted: suspend (String) -> Boolean = { discoveryAllowed() && robots.requireAllowed(it, transport) }
         val explicit = plan.explicitUrls
@@ -284,7 +288,9 @@ class PublicWebResearch(private val fetcher: WebFetcher = SearchHttp(), private 
             readCandidates(eligible(own.candidates))
         }
         progress(ResearchStage.COMPARING)
-        val ranked = EvidenceRanking.select(sources, plan)
+        val semantic = localRanking?.invoke(question, sources).orEmpty()
+        val orderedSources = if (plan.event == null) sources.sortedByDescending { EvidenceRanking.score(it, plan) + semantic.getOrDefault(it.url, 0.0) } else sources
+        val ranked = EvidenceRanking.select(orderedSources, plan, localScores = semantic)
         val selected = if (plan.event != null && EventAnswer.candidates(plan.event, ranked, clock.instant()).isEmpty()) emptyList() else ranked
         val failure = when {
             selected.isNotEmpty() -> null

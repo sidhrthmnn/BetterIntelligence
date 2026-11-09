@@ -29,7 +29,8 @@ class SimpleUiDeviceTest {
         val previous = vm.appearance.value
         val screens = listOf(AppTab.CHAT to "chat_input_field", AppTab.MODELS to "models_list", AppTab.CONNECT to "connect_list",
             AppTab.SETTINGS to "settings_list", AppTab.HISTORY to "history_list", AppTab.APPEARANCE to "appearance_LIGHT",
-            AppTab.WEB to "web_settings_list", AppTab.MEMORY to "memory_list", AppTab.PRIVACY to "privacy_list", AppTab.ADVANCED to "advanced_list")
+            AppTab.WEB to "web_settings_list", AppTab.MEMORY to "memory_list", AppTab.PRIVACY to "privacy_list", AppTab.ADVANCED to "advanced_list",
+            AppTab.OPTIMISE to "automatic_setup_list")
         try {
             for (theme in listOf("LIGHT", "AMOLED")) {
                 compose.runOnUiThread { vm.setAppearance(theme) }

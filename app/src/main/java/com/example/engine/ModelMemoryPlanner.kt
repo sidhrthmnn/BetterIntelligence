@@ -75,7 +75,7 @@ object ModelMemoryPlanner {
     fun pickDefaultSecondary(models: List<ModelEntity>, primary: ModelEntity?): ModelEntity? {
         val primaryRam = primary?.let { ModelLibrary.memoryEstimate(it, 512).totalMb } ?: Long.MAX_VALUE
         return models.filter {
-            it.isInstalled && it.id != primary?.id && ModelLibrary.automaticUseAllowed(it) && ModelLibrary.category(it) != "EXPERIMENTAL" &&
+            it.isInstalled && it.id != primary?.id && AutomaticModelSelector.billions(it) >= .3 && ModelLibrary.automaticUseAllowed(it) && ModelLibrary.category(it) != "EXPERIMENTAL" &&
                 ModelLibrary.memoryEstimate(it, 512).totalMb < primaryRam
         }.minWithOrNull(
             compareBy<ModelEntity> {

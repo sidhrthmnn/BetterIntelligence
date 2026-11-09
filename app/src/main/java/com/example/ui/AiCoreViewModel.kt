@@ -59,6 +59,7 @@ import java.io.File
 import java.io.FileOutputStream
 
 enum class AppTab(val title: String) {
+    OPTIMISE("Optimise your AI"),
     MODELS("Models"),
     CHAT("Chat"),
     CONNECT("Connected apps"),
@@ -89,6 +90,33 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     private val repository = AiCoreRepository.getInstance(application)
     private val parser = GgufParser()
 
+    val automaticSetup = repository.automaticSetup.state
+    fun setDownloadsWifiOnly(value: Boolean) {
+        com.example.service.DownloadQueueStore(getApplication()).setWifiOnly(value)
+        com.example.service.ModelDownloadQueue.schedule(getApplication(), true)
+    }
+    val downloadsWifiOnly get() = com.example.service.DownloadQueueStore(getApplication()).wifiOnly()
+    val hasLocalEncoder get() = com.example.engine.LocalEmbeddingRanker(getApplication()).available()
+    fun importLocalEncoder(uri: android.net.Uri) { viewModelScope.launch(Dispatchers.IO) {
+        runCatching { com.example.engine.LocalEmbeddingRanker(getApplication()).import(uri) }
+            .onSuccess { _userMessage.value = "Local encoder installed. Exact identities still take priority." }.onFailure { _userMessage.value = it.message }
+    } }
+    fun removeLocalEncoder() { com.example.engine.LocalEmbeddingRanker(getApplication()).remove() }
+    fun recheckDevice() { viewModelScope.launch(Dispatchers.IO) { repository.automaticSetup.checkDevice() } }
+    fun setUpAutomatically(wifiOnly: Boolean, reviewed: com.example.engine.AutomaticModelPair?) {
+        val token = repository.automaticSetup.approvalToken()
+        viewModelScope.launch(Dispatchers.IO) {
+        runCatching { repository.automaticSetup.approve(wifiOnly, reviewed, token) }.onFailure { _userMessage.value = it.message }
+    } }
+    fun chooseModelsManually() { repository.automaticSetup.cancelPending(); repository.automaticSetup.dismiss(); selectTab(AppTab.MODELS) }
+    fun rerunModelBenchmarks() { val token = repository.automaticSetup.approvalToken(); viewModelScope.launch(Dispatchers.IO) { repository.automaticSetup.rerun(token) } }
+    fun deletePartialDownload(model: ModelEntity) {
+        if (_deletingModelId.value != null) return
+        _deletingModelId.value = model.id
+        viewModelScope.launch(Dispatchers.IO) { try {
+        runCatching { repository.deletePartialDownload(model.id) }.onSuccess { _userMessage.value = "Partial download deleted. Installed models were kept." }.onFailure { _userMessage.value = it.message }
+        } finally { _deletingModelId.value = null } }
+    }
     val allModels: StateFlow<List<ModelEntity>> = repository.allModels
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val modelDownloadErrors = repository.downloadErrors
@@ -144,7 +172,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val appearance = repository.preferencesRepository.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, "AMOLED")
     val webAllowed = repository.preferencesRepository.webAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     private var grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(
-        discoveryAllowed = { repository.preferencesRepository.webAllowed.first() })))
+        discoveryAllowed = { repository.preferencesRepository.webAllowed.first() }, localRanking = com.example.engine.LocalEmbeddingRanker(application)::scores)))
     @androidx.annotation.VisibleForTesting
     internal fun useSearchProviderForTesting(provider: SearchProvider) {
         check(!_isChatGenerating.value)
@@ -289,7 +317,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
 
     init {
         viewModelScope.launch {
-            repository.preferencesRepository.saveAutoRamFallback(true)
             repository.preferencesRepository.saveForegroundEnabled(true)
             val autoParams = GenerationParams(contextSize = 2048, maxTokens = 384, temperature = 0.6f, accelerationMode = "Automatic")
             _chatGenerationParams.value = autoParams
@@ -308,6 +335,17 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         }
         viewModelScope.launch {
             repository.preferencesRepository.darkThemeFlow.collect { _isDarkTheme.value = it }
+        }
+        viewModelScope.launch {
+            repository.awaitModelInitialization()
+            withContext(Dispatchers.IO) {
+                repository.automaticSetup.checkDevice()
+                com.example.service.ModelDownloadQueue.ensureScheduled(application)
+            }
+            if (!repository.automaticSetup.seen()) {
+                if (repository.allModels.first().none { it.isInstalled } && !getApplication<Application>().packageName.endsWith(".validation")) selectTab(AppTab.OPTIMISE)
+                else repository.automaticSetup.dismiss()
+            }
         }
         // Initial hardware analysis
         repository.analyzeHardware(application)
@@ -954,7 +992,9 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                     route.reusedSources.isNotEmpty() -> GroundingResult("SOURCES_RETRIEVED", route.reusedSources)
                     route.path == AnswerPath.WEB_GROUNDED -> {
                         _chatStatus.value = "Finding and reading public sources"
-                        retrieveForChat(researchQuestion, allowed, effectiveMode)
+                        val localPlan = com.example.grounding.OnDeviceRequestPlanner.plan(repository.engine, researchQuestion, tierDecision.effectiveContext)
+                        if (localPlan == null) retrieveForChat(researchQuestion, allowed, effectiveMode)
+                        else withContext(com.example.grounding.LocalPlanContext(localPlan)) { retrieveForChat(researchQuestion, allowed, effectiveMode) }
                     }
                     else -> GroundingResult()
                 }

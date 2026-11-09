@@ -130,6 +130,7 @@ fun TabContent(tab: AppTab, viewModel: AiCoreViewModel) {
         AppTab.CHAT -> ChatScreen(viewModel)
         AppTab.HISTORY -> HistoryScreen(viewModel)
         AppTab.SETTINGS -> SettingsScreen(viewModel)
+        AppTab.OPTIMISE -> AutomaticSetupScreen(viewModel)
         AppTab.MODELS -> ModelsScreen(viewModel)
         AppTab.CONNECT -> ConnectScreen(viewModel)
         AppTab.WEB -> WebSettingsScreen(viewModel)

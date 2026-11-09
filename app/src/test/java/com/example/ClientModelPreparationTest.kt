@@ -56,4 +56,28 @@ class ClientModelPreparationTest {
         controller.request(); yield()
         assertEquals("READY", controller.state.value.phase)
     }
+
+    @Test fun oneExplicitRequestSurvivesColdStartupWithoutASecondPrepareCall() = runBlocking {
+        var loading = true; var calls = 0
+        val controller = ClientModelPreparation(this, { false }, { loading }) {
+            calls++; ClientModelState("READY", "Saved primary", context = 1024)
+        }
+        assertEquals("LOADING_MODEL", controller.request().phase)
+        yield(); assertEquals(0, calls)
+        repeat(8) { controller.request() }
+        loading = false
+        withTimeout(2_000) { while (controller.isPreparing) delay(10) }
+        assertEquals(1, calls); assertEquals("READY", controller.state.value.phase)
+    }
+
+    @Test fun aChatStartingDuringStartupIsNotQueuedBehind() = runBlocking {
+        var loading = true; var generating = false; var calls = 0
+        val controller = ClientModelPreparation(this, { generating }, { loading }) {
+            calls++; ClientModelState("READY")
+        }
+        controller.request(); yield()
+        generating = true; loading = false
+        withTimeout(2_000) { while (controller.isPreparing) delay(10) }
+        assertEquals(0, calls); assertEquals("OTHER_REQUEST", controller.state.value.phase)
+    }
 }

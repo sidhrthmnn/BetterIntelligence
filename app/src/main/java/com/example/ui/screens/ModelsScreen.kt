@@ -57,7 +57,9 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val context = LocalContext.current
     var source by rememberSaveable { mutableStateOf("library") }
     var advanced by rememberSaveable { mutableStateOf(false) }
+    var wifiOnly by remember { mutableStateOf(viewModel.downloadsWifiOnly) }
     var details by remember { mutableStateOf<ModelEntity?>(null) }
+    var partialDelete by remember { mutableStateOf<ModelEntity?>(null) }
     var deleting by remember { mutableStateOf<ModelEntity?>(null) }
     val listState = rememberLazyListState()
     var pinnedDownloads by rememberSaveable { mutableStateOf(listOf<Long>()) }
@@ -67,7 +69,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         uris.forEach { viewModel.importGgufFromUri(it, context) }
     }
     val recommended = models.find { it.filename == recommendation?.recommendedFilename }
-    val downloadingIds = models.filter { it.downloadState == "DOWNLOADING" }.map { it.id }.toSet()
+    val downloadingIds = models.filter { it.downloadState in setOf("DOWNLOADING", "QUEUED") }.map { it.id }.toSet()
     LaunchedEffect(downloadingIds) {
         val started = downloadingIds - previousDownloads
         previousDownloads = downloadingIds
@@ -75,7 +77,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             pinnedDownloads = started.sorted() + pinnedDownloads.filterNot { it in started }
             source = "my_models"
             // Focus once per start/resume. Progress and RAM samples never interrupt scrolling.
-            listState.scrollToItem(if (telemetry.isModelLoaded || loading != null) 3 else 2)
+            listState.scrollToItem(if (telemetry.isModelLoaded || loading != null) 4 else 3)
         }
     }
     val loadProfile = hardware?.let { profile ->
@@ -84,6 +86,13 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     }
 
     LazyColumn(Modifier.fillMaxSize().testTag("models_list"), state = listState, contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { com.example.ui.components.DetailDisclosure("Background downloads", "One at a time · Pause, resume or delete unfinished files") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Wi-Fi only", Modifier.weight(1f)); Switch(wifiOnly, { wifiOnly = it; viewModel.setDownloadsWifiOnly(it) })
+            }
+            Text("Turning this off allows metered/mobile data. Android may defer transfers under network, battery or storage restrictions.", style = MaterialTheme.typography.bodySmall)
+        } }
+
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -194,7 +203,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val visibleModels = models.filter {
-            if (it.id in pinnedDownloads || it.downloadState == "DOWNLOADING") true else when (source) {
+            if (it.id in pinnedDownloads || it.downloadState in setOf("DOWNLOADING", "QUEUED")) true else when (source) {
                 "library" -> true
                 "my_models" -> ModelPresentation.hasDownload(it) || it.isCustom
                 else -> false
@@ -205,7 +214,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
         }
         items(ModelPresentation.byRam(visibleModels, generationParams.contextSize, pinnedDownloads), key = { it.id }) { model ->
             val installed = model.isInstalled
-            val downloading = model.downloadState == "DOWNLOADING"
+            val downloading = model.downloadState in setOf("DOWNLOADING", "QUEUED")
             val selected = active?.id == model.id && telemetry.isModelLoaded
             val isSecondary = secondary?.id == model.id && !selected
             val memoryContext = ModelPresentation.loadContext(model, generationParams.contextSize)
@@ -285,6 +294,9 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                                 modifier = Modifier.heightIn(min = 40.dp).testTag("download_model_${model.id}")
                             ) { Text(if (model.downloadState == "ERROR") "Retry download" else if (model.downloadState == "PAUSED") "Resume download" else "Download", style = MaterialTheme.typography.labelMedium) }
                         }
+                        if (model.downloadState in setOf("DOWNLOADING", "QUEUED", "PAUSED", "ERROR")) TextButton(
+                            onClick = { partialDelete = model }, enabled = deletingId == null,
+                            modifier = Modifier.testTag("delete_partial_${model.id}")) { Text(if (deletingId == model.id) "Deleting…" else "Delete partial download") }
                         TextButton(
                             onClick = { details = model },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
@@ -359,6 +371,10 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             }
         }, confirmButton = { TextButton(onClick = { details = null }) { Text("Done") } })
     }
+    partialDelete?.let { model -> AlertDialog(onDismissRequest = { partialDelete = null }, title = { Text("Delete partial download?") },
+        text = { Text("Remove the unfinished download for ${model.name}. Any complete installed model is kept.") },
+        confirmButton = { TextButton(onClick = { partialDelete = null; viewModel.deletePartialDownload(model) }, modifier = Modifier.testTag("confirm_delete_partial")) { Text("Delete partial") } },
+        dismissButton = { TextButton(onClick = { partialDelete = null }) { Text("Cancel") } }) }
     deleting?.let { model ->
         AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Delete ${model.name}?") },
             text = { Text(buildString {

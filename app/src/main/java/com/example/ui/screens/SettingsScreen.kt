@@ -45,6 +45,7 @@ fun SettingsScreen(viewModel: AiCoreViewModel) {
     val appearance by viewModel.appearance.collectAsState()
     LazyColumn(Modifier.fillMaxSize().testTag("settings_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { SettingsSection("Your AI") }
+        item { SettingsRow("Optimise your AI", "Check device, set up models and view results", Icons.Default.AutoAwesome) { viewModel.recheckDevice(); viewModel.selectTab(AppTab.OPTIMISE) } }
         item { SettingsRow("Models", active?.name?.substringBefore(" · ") ?: "Find, download and manage models", Icons.Default.Memory) { viewModel.selectTab(AppTab.MODELS) } }
         item { SettingsRow("Connected apps", "Choose which apps can use your AI", Icons.Default.Apps) { viewModel.selectTab(AppTab.CONNECT) } }
         item { SettingsRow("Web & grounding", if (allowed) "On · Answers with sources" else "Off · Local answers", Icons.Default.Language) { viewModel.selectTab(AppTab.WEB) } }
@@ -113,6 +114,7 @@ fun AppearanceScreen(viewModel: AiCoreViewModel) {
 fun WebSettingsScreen(viewModel: AiCoreViewModel) {
     val allowed by viewModel.webAllowed.collectAsState()
     val diagnostics by viewModel.researchDiagnosticReport.collectAsState()
+    val encoderPicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) viewModel.importLocalEncoder(uri) }
     LazyColumn(Modifier.fillMaxSize().testTag("web_settings_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { ScreenCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -138,6 +140,9 @@ fun WebSettingsScreen(viewModel: AiCoreViewModel) {
             Text("Up to 48 local diagnostic records contain timing and outcome codes. Exports omit questions, URLs, chat IDs and page text. Disabling web or clearing data removes them.", style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = viewModel::inspectResearchDiagnostics, modifier = Modifier.testTag("view_research_diagnostics")) { Text("View diagnostics") }
             TextButton(onClick = viewModel::clearSearchData) { Text("Clear temporary search data") }
+            Text("Optional local semantic ranking: import a BERT-family GGUF encoder (up to 128 MB). Nothing is downloaded automatically. Without a compatible encoder or enough RAM, lexical ranking is used.", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { encoderPicker.launch(arrayOf("application/octet-stream", "*/*")) }) { Text("Import local passage encoder") }
+            TextButton(onClick = viewModel::removeLocalEncoder, enabled = viewModel.hasLocalEncoder) { Text("Remove local encoder") }
         } }
     }
     diagnostics?.let { report -> AlertDialog(onDismissRequest = viewModel::dismissResearchDiagnostics, title = { Text("Research diagnostics") }, text = {

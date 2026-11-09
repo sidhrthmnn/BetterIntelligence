@@ -29,8 +29,8 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         )
         private val wordPattern = Regex("[\\p{L}\\p{M}][\\p{L}\\p{M}\\p{N}]*|\\p{N}+(?:\\.\\p{N}+)*")
         private val englishWord = Regex("[a-z]{5,}")
-        private val modelVersion = Regex("(?i)\\b(gemma|qwen)(\\d+(?:\\.\\d+)*)\\b")
-        private fun normalizedModels(text: String) = modelVersion.replace(text, "$1 $2")
+        private val modelVersion = Regex("(?i)\\b(gemma|qwen|lfm|llama|smollm|mistral|phi)(\\d+(?:\\.\\d+)*)\\b")
+        internal fun normalizedModels(text: String) = modelVersion.replace(text, "$1 $2")
         // Mild English inflection matching, without damaging non-Latin words.
         private fun undouble(value: String) = if (value.length > 3 && value.last() in "bdfgmnprt" && value.last() == value[value.lastIndex - 1]) value.dropLast(1) else value
         private fun stem(value: String) = if (value == "registration") "register" else if (value.matches(englishWord)) when {
@@ -136,6 +136,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         else -> null
     }
     fun relevant(text: String): Boolean {
+        if (!ExactIdentity.accepts(question, text)) return false
         publicTopic?.let { return it.subjectMatches(text) }
         val found = words(text)
         if (years.isNotEmpty() && !found.containsAll(years)) return false
@@ -143,6 +144,7 @@ class ResearchQuery(val question: String, val today: LocalDate = LocalDate.now()
         return terms.isEmpty() || matches >= if (terms.size <= 3) terms.size else kotlin.math.ceil(terms.size * .65).toInt()
     }
     fun candidateRelevant(text: String, routingHint: String = ""): Boolean {
+        if (!ExactIdentity.accepts(question, text + " " + routingHint)) return false
         // Generic task words can never substitute for a named identity. Search
         // highlights are ranking hints, not permission to introduce a subject.
         publicTopic?.let { return it.subjectMatches(text) }

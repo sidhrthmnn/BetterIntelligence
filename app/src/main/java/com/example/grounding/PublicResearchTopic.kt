@@ -19,7 +19,7 @@ data class PublicResearchTopic(val subject: String, val type: PublicEntityType, 
         PublicTopicIntent.SEQUEL -> "Is there a sequel to $identity?"
         PublicTopicIntent.INFORMATION -> "Information about $identity"
     }
-    fun subjectMatches(text: String): Boolean = ResearchQuery.words(subject).let { it.isNotEmpty() && ResearchQuery.words(text).containsAll(it) }
+    fun subjectMatches(text: String): Boolean = ExactIdentity.accepts(subject, text) && ResearchQuery.words(subject).let { it.isNotEmpty() && ResearchQuery.words(text).containsAll(it) }
     fun sourceMatches(title: String, body: String, url: String, knownLanguage: String = ""): Boolean {
         if (type == PublicEntityType.FILM && language.isNotBlank() && knownLanguage.isNotBlank() && !language.equals(knownLanguage, true)) return false
         if (!subjectMatches("$title $body")) return false
@@ -135,7 +135,7 @@ object PublicTopics {
         var name = if (film != null) q.take(film.range.first) else q
         val lang = if (type == PublicEntityType.FILM) language.find(q)?.value.orEmpty() else ""
         if (film != null && description(q)) return null
-        val scaffold = ResearchQuery.words("who what when which how is are was were will be being cast actors actresses acted stars starred in of for to a the plot rating review reviews release date good new latest tell me about")
+        val scaffold = ResearchQuery.words("who what when which how is are was were will be being cast actors actresses acted stars starred in of for to a the plot rating review reviews release date good new latest tell me about find search show give check look up")
         if (film != null && ResearchQuery.words(name.replace(language, " ")).all { it in scaffold }) {
             val after = q.substring(film.range.last + 1).trim()
             if (ResearchQuery.words(after).any { it !in scaffold }) name = after

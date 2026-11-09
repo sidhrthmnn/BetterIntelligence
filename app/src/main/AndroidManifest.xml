@@ -5,6 +5,8 @@
     <!-- Network permissions for downloading verified GGUF models -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS" />
 
     <!-- Custom permission for 3rd-party apps to bind to Local AI Core -->
     <permission
@@ -58,6 +60,9 @@
             </intent-filter>
         </service>
 
+        <service android:name=".service.ModelTransferJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true" />
+        <receiver android:name=".service.ModelDownloadAction" android:exported="false" />
+        <service android:name="androidx.work.impl.foreground.SystemForegroundService" android:foregroundServiceType="dataSync" tools:node="merge" />
         <!-- Dedicated On-Device Inference Foreground Service -->
         <service
             android:name=".service.InferenceForegroundService"

@@ -55,6 +55,7 @@ object EvidenceRanking {
             minOf(4, source.excerpt.length / 300) + FactualResearch.answerFocusScore(source.excerpt, plan.question, source.url) / 2 + weatherPlaceScore(source.title, plan.question) + FactualResearch.reviewPriority(source.title, source.url, plan.question)
     }
     fun acceptable(source: EvidenceSource, plan: ResearchPlan): Boolean {
+        if (!ExactIdentity.accepts(plan.question, source.title + " " + source.excerpt)) return false
         plan.event?.let { event -> return VenueContext.profile(source, event) || source.kind == "EVENT_LISTING" && source.events.any {
             it.sourceUrl == source.url && VenueContext.potential(it, event) && !it.cancelled() && it.date() != null
         } }
@@ -94,7 +95,7 @@ object EvidenceRanking {
         if (Regex("(?i)\\b(today|yesterday|this (?:week|month)|last (?:week|month)|since|published|released|announced|news)\\b").containsMatchIn(plan.question)) return false
         return Regex("(?i)\\b(documentation|reference|overview|guide|get started|API)\\b").containsMatchIn(source.title)
     }
-    fun select(sources: List<EvidenceSource>, plan: ResearchPlan, limit: Int = 3): List<EvidenceSource> {
+    fun select(sources: List<EvidenceSource>, plan: ResearchPlan, limit: Int = 3, localScores: Map<String, Double> = emptyMap()): List<EvidenceSource> {
         if (plan.event != null) {
             val unique = sources.distinctBy { HtmlDiscovery.canonicalUrl(it.url) }
             val eventSources = unique.filter { it.events.isNotEmpty() }
@@ -122,14 +123,15 @@ object EvidenceRanking {
             it.excerpt.lowercase().replace(Regex("\\s+"), " ").trim()
         }
         val remaining = mutableListOf<EvidenceSource>()
-        unique.sortedByDescending { score(it, plan) }.forEach { candidate ->
+        unique.sortedByDescending { score(it, plan) + localScores.getOrDefault(it.url, 0.0).coerceIn(-5.0, 5.0) + HybridPassageRanking.score(plan.question, it.title + " " + it.excerpt, unique.map { row -> row.excerpt }) }.forEach { candidate ->
             if (remaining.none { syndicated(it.excerpt, candidate.excerpt) }) remaining += candidate
         }
         val selected = mutableListOf<EvidenceSource>()
         val covered = mutableSetOf<Int>()
         while (remaining.isNotEmpty() && selected.size < limit) {
             val next = remaining.maxBy { source ->
-                score(source, plan) + (plan.coverage(source.excerpt) - covered).size * 25 +
+                score(source, plan) + localScores.getOrDefault(source.url, 0.0).coerceIn(-5.0, 5.0) +
+                    HybridPassageRanking.score(plan.question, source.title + " " + source.excerpt, unique.map { it.excerpt }) + (plan.coverage(source.excerpt) - covered).size * 25 +
                     if (selected.none { publisher(it.url) == publisher(source.url) }) 10 else -10
             }
             remaining.remove(next); selected += next; covered += plan.coverage(next.excerpt)

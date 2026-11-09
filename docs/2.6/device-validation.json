@@ -1,0 +1,38 @@
+{
+  "partialBeforeProcessTermination": {
+    "id": 1,
+    "partialBytes": 1167603
+  },
+  "completedAfterRecreation": {
+    "checksumVerified": true,
+    "bytes": 105454144
+  },
+  "deletedThroughUi": {
+    "deletedPartialBytes": 1132689,
+    "installedModelKept": true
+  },
+  "physicalModelCoverage": {
+    "requested": 3,
+    "completed": 2,
+    "incomplete": 1
+  },
+  "optionalCandidateSkippedReason": "LICENCE_NOT_ACCEPTED",
+  "encoder": {
+    "family": "BGE-small GGUF",
+    "bytes": 67308128,
+    "sha256": "f0b2fef971e8366438bfd2d9aefea1b0115919389448806d290237f638bae999",
+    "backend": "CPU",
+    "publicSyntheticPassageScoresScaledCosineTimes5": {
+      "https://fixture.example/plants": 4.430210590362549,
+      "https://fixture.example/football": 1.8784402310848236,
+      "syntheticPublicPassages": true
+    },
+    "rankOrderCorrect": true,
+    "nativeResourceCleanupPassed": true
+  },
+  "crossUidLegacyClient": {
+    "before": "MODEL_REQUIRED after one startup preparation request",
+    "after": "PASS",
+    "elapsedSeconds": 6.825
+  }
+}

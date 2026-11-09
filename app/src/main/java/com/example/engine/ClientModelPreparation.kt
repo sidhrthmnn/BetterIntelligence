@@ -5,6 +5,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
 data class ClientModelState(
@@ -34,12 +36,24 @@ class ClientModelPreparation(
     fun request(): ClientModelState {
         if (running.get()) return mutable.value
         if (generating()) return ClientModelState("OTHER_REQUEST")
-        if (loading()) return ClientModelState("LOADING_MODEL")
         if (!running.compareAndSet(false, true)) return mutable.value
-        val initial = ClientModelState("CHECKING_MEMORY")
+        val initial = ClientModelState(if (loading()) "LOADING_MODEL" else "CHECKING_MEMORY")
         mutable.value = initial
         scope.launch {
-            try { mutable.value = prepare { mutable.value = it } }
+            try {
+                // An explicit preparation request must survive repository startup
+                // or a controlled load. Status reads still never initiate work.
+                val mayPrepare = withTimeoutOrNull(60_000) {
+                    while (loading() && !generating()) delay(50)
+                    !generating()
+                }
+                if (mayPrepare != true) {
+                    mutable.value = if (generating()) ClientModelState("OTHER_REQUEST") else
+                        ClientModelState("PREPARATION_FAILED", error = "Better Intelligence is still loading. Try preparation again shortly.")
+                    return@launch
+                }
+                mutable.value = prepare { mutable.value = it }
+            }
             catch (e: CancellationException) { mutable.value = ClientModelState(); throw e }
             catch (_: Exception) {
                 // Never expose native exception strings, paths or client input.
