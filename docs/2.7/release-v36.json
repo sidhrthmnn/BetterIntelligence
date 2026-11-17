@@ -1,0 +1,43 @@
+{
+  "versionCode": 36,
+  "versionName": "2.7.0",
+  "applicationId": "com.aistudio.betterintelligence.mobile",
+  "appSourceCommit": "6a035d1",
+  "validationCommit": "fac6b7a2e1aa821784428dbf35aad768278a8aa7",
+  "bundle": "app/build/outputs/bundle/release/app-release.aab",
+  "bundleSha256": "e108ff4e7bda9a0ec372649a699c308f91a1e024a77e6ec8e62e34a592d4eeec",
+  "bundleBytes": 94546279,
+  "submissionObservedAt": "2026-11-17T09:59:53.231772+00:00",
+  "track": "production",
+  "trackId": "4697332702296100626",
+  "releaseId": "2",
+  "rolloutPercent": 100,
+  "status": "CHANGES_IN_REVIEW",
+  "quickChecks": "RUNNING",
+  "managedPublishing": false,
+  "publishesAutomaticallyAfterApproval": true,
+  "publicationWaitedFor": false,
+  "closedBetaSubmitted": false,
+  "closedBetaDraft30Discarded": true,
+  "storeListingUpdated": [
+    "short description",
+    "full description",
+    "four real phone screenshots"
+  ],
+  "validation": "docs/2.7/VALIDATION.md",
+  "physicalDevice": "HONOR VKP-NX9, Android 17",
+  "productionPhoneInstallModified": false,
+  "kotlinTests": {
+    "cases": 397,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "rustTestsPassed": 31,
+  "limits": [
+    "No new GPU/NPU benchmark",
+    "No Neuron app integration test",
+    "No chargeable cellular model download test"
+  ],
+  "playConsole": "https://play.google.com/console/u/0/developers/7469907004406722588/app/4975407059009835662/publishing"
+}

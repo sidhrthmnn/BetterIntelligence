@@ -34,3 +34,7 @@ No new GPU/NPU benchmark or Neuron app changes are claimed. A client must reconn
 The emulator also produced unrelated background System UI/launcher ANR dialogs during screenshot capture; those images were rejected rather than used as store assets. Physical-phone tests provide the release's actual native inference evidence.
 
 AAB SHA-256: `e108ff4e7bda9a0ec372649a699c308f91a1e024a77e6ec8e62e34a592d4eeec` (94,546,279 bytes).
+
+## Play submission
+
+Version 36 was submitted to **production only**, at 100% rollout across the existing targeted countries. Play Console showed **Changes in review**, with quick checks running and managed publishing off. The updated short/full descriptions and four real phone screenshots are included. The empty closed Alpha draft created during preparation was discarded at the user's request; no closed-beta or other-track update was submitted. Publication was not waited for. See `release-v36.json`.
