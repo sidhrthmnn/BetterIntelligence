@@ -27,10 +27,9 @@ class SimpleUiDeviceTest {
         compose.waitUntil(60_000) { vm.allModels.value.isNotEmpty() }
         repository.unloadModel()
         val previous = vm.appearance.value
-        val screens = listOf(AppTab.CHAT to "chat_input_field", AppTab.MODELS to "models_list", AppTab.CONNECT to "connect_list",
-            AppTab.SETTINGS to "settings_list", AppTab.HISTORY to "history_list", AppTab.APPEARANCE to "appearance_LIGHT",
-            AppTab.WEB to "web_settings_list", AppTab.MEMORY to "memory_list", AppTab.PRIVACY to "privacy_list", AppTab.ADVANCED to "advanced_list",
-            AppTab.OPTIMISE to "automatic_setup_list")
+        val screens = listOf(AppTab.MODELS to "models_list", AppTab.CONNECT to "connect_list",
+            AppTab.SETTINGS to "settings_list", AppTab.APPEARANCE to "appearance_LIGHT",
+            AppTab.PRIVACY to "privacy_list", AppTab.ADVANCED to "advanced_list", AppTab.OPTIMISE to "automatic_setup_list")
         try {
             for (theme in listOf("LIGHT", "AMOLED")) {
                 compose.runOnUiThread { vm.setAppearance(theme) }
@@ -41,14 +40,10 @@ class SimpleUiDeviceTest {
                     compose.waitForIdle()
                     compose.onNodeWithTag(tag).assertIsDisplayed()
                     capture("${theme.lowercase()}-${screen.name.lowercase()}.png")
-                    if (screen == AppTab.WEB) {
-                        compose.onNodeWithTag("research_details").performClick()
-                        compose.onNodeWithTag("web_settings_list").performScrollToNode(hasTestTag("view_research_diagnostics"))
-                        compose.onNodeWithTag("view_research_diagnostics").assertIsDisplayed()
-                    }
+
                 }
             }
-        } finally { compose.runOnUiThread { vm.setAppearance(previous); vm.selectTab(AppTab.CHAT) } }
+        } finally { compose.runOnUiThread { vm.setAppearance(previous); vm.selectTab(AppTab.MODELS) } }
     }
     private fun capture(name: String) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()

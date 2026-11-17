@@ -13,14 +13,7 @@ import kotlinx.coroutines.runBlocking
 
 /** The same identity, readiness and polish contract for Binder and ContentResolver clients. */
 class LocalAiAccess(private val context: Context, private val repository: AiCoreRepository) {
-    fun callerPackage(): String {
-        val uid = Binder.getCallingUid()
-        if (uid == Process.myUid()) return context.packageName
-        context.enforceCallingPermission(LocalAiCoreService.PERMISSION_BIND, "Local AI permission is required")
-        // Never accept an identity from a Bundle, URI or prompt. Shared-UID apps share this grant.
-        return context.packageManager.getPackagesForUid(uid)?.sorted()?.firstOrNull()
-            ?: throw SecurityException("Cannot identify calling UID")
-    }
+    fun callerPackage(): String = LocalAiCaller.packageForUid(context)
 
     fun status(): Bundle {
         val caller = callerPackage()

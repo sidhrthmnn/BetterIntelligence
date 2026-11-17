@@ -318,25 +318,21 @@ class IntelligentAnswerPipelineTest {
         // Set preferences from Settings -> Models & Downloads
         store.setBackgroundDownloadsEnabled(true)
         store.setWifiOnly(false)
-        store.setAllowMobileData(true)
         store.setAutoResumeEnabled(true)
         store.setNotificationsEnabled(true)
 
         // Verify values persisted
         assertTrue(store.backgroundDownloadsEnabled())
         assertFalse(store.wifiOnly())
-        assertTrue(store.allowMobileData())
         assertTrue(store.autoResumeEnabled())
         assertTrue(store.notificationsEnabled())
 
-        // Verify bidirectional synchronization between wifiOnly and allowMobileData
+        // One switch controls Wi-Fi-only versus any connected network.
         store.setWifiOnly(true)
         assertTrue(store.wifiOnly())
-        assertFalse(store.allowMobileData())
 
-        store.setAllowMobileData(true)
+        store.setWifiOnly(false)
         assertFalse(store.wifiOnly())
-        assertTrue(store.allowMobileData())
     }
 
     // -------------------------------------------------------------
@@ -383,7 +379,9 @@ class IntelligentAnswerPipelineTest {
     // Scenario 12: Previously authorised apps retain permissions after Room migration 9->10
     // -------------------------------------------------------------
     @Test
-    fun scenario12_roomMigration9To10_preservesExistingPermissionsAndAddsNewColumns() = runBlocking {
+    // Robolectric includes this method name in its temporary directory. Keep
+    // the native SQLite fixture below Windows' path-length limit.
+    fun migrationPreservesApprovedClients() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val dbName = "migration-9-10-test.db"
         context.deleteDatabase(dbName)

@@ -1,3 +1,7 @@
+# Current release scope (2.7)
+
+Better Intelligence now manages local models, settings and explicitly approved app connections. It no longer provides built-in chat or web research and does not initialize a search provider during startup. Internet access is used for model discovery and approved downloads. Connected-app inference stays on-device. Existing stored legacy conversations are not silently erased or transferred to Neuron; their database format remains for non-destructive upgrades. Shared-memory API access remains separately scoped and disabled by default. The research and chat descriptions below document earlier releases and do not describe active features in 2.7.
+
 # Better Intelligence privacy policy
 
 Updated 4 November 2026 for the web-reliability development update (based on version 27).

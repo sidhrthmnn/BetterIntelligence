@@ -7,15 +7,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.example.data.AiCoreRepository
-import com.example.data.ChatMessageEntity
 import com.example.data.ClientAppPolicyEntity
 import com.example.data.HardwarePerformanceLogEntity
 import com.example.data.IpcLogEntity
-import com.example.data.MemorySnippetEntity
 import com.example.data.ModelEntity
 import com.example.engine.BackendType
 import com.example.engine.DeviceTier
-import com.example.engine.GenerationConfig
 import com.example.engine.GenerationParams
 import com.example.engine.GgufMetadata
 import com.example.engine.GgufParser
@@ -33,7 +30,6 @@ import com.example.engine.ModelTierRole
 import com.example.engine.QuantizationType
 import com.example.engine.StreamTokenListener
 import com.example.engine.SupportedEngine
-import com.example.service.InferenceForegroundService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,17 +39,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import com.example.engine.ChatTurn
-import com.example.engine.ConversationContext
-import com.example.grounding.*
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.FileOutputStream
@@ -61,28 +47,12 @@ import java.io.FileOutputStream
 enum class AppTab(val title: String) {
     OPTIMISE("Optimise your AI"),
     MODELS("Models"),
-    CHAT("Chat"),
     CONNECT("Connected apps"),
     SETTINGS("Settings"),
-    HISTORY("Conversations"),
-    WEB("Web & grounding"),
     APPEARANCE("Appearance"),
     PRIVACY("Privacy & data"),
-    MEMORY("Memory"),
     ADVANCED("Advanced & about")
 }
-
-data class SimulatorUiState(
-    val selectedApp: String = "Smart Notes AI Pro",
-    val selectedPackage: String = "com.example.notes",
-    val selectedTask: String = "STREAM", // "STREAM", "EMBED", "SUMMARIZE", "CLASSIFY"
-    val promptInput: String = "Draft a 3-point action plan for launching an on-device AI feature.",
-    val outputText: String = "",
-    val isRunning: Boolean = false,
-    val latencyMs: Long = 0L,
-    val tokensPerSec: Float = 0f,
-    val statusText: String = "Connected - Context memory enabled"
-)
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class AiCoreViewModel(application: Application, private val savedState: SavedStateHandle) : AndroidViewModel(application) {
@@ -99,11 +69,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val backgroundDownloadsEnabled get() = com.example.service.DownloadQueueStore(getApplication()).backgroundDownloadsEnabled()
     fun setBackgroundDownloadsEnabled(value: Boolean) {
         com.example.service.DownloadQueueStore(getApplication()).setBackgroundDownloadsEnabled(value)
-        com.example.service.ModelDownloadQueue.schedule(getApplication(), true)
-    }
-    val allowMobileData get() = com.example.service.DownloadQueueStore(getApplication()).allowMobileData()
-    fun setAllowMobileData(value: Boolean) {
-        com.example.service.DownloadQueueStore(getApplication()).setAllowMobileData(value)
         com.example.service.ModelDownloadQueue.schedule(getApplication(), true)
     }
     val autoResumeDownloads get() = com.example.service.DownloadQueueStore(getApplication()).autoResumeEnabled()
@@ -136,12 +101,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             ))
         }
     }
-    val hasLocalEncoder get() = com.example.engine.LocalEmbeddingRanker(getApplication()).available()
-    fun importLocalEncoder(uri: android.net.Uri) { viewModelScope.launch(Dispatchers.IO) {
-        runCatching { com.example.engine.LocalEmbeddingRanker(getApplication()).import(uri) }
-            .onSuccess { _userMessage.value = "Local encoder installed. Exact identities still take priority." }.onFailure { _userMessage.value = it.message }
-    } }
-    fun removeLocalEncoder() { com.example.engine.LocalEmbeddingRanker(getApplication()).remove() }
     fun recheckDevice() { viewModelScope.launch(Dispatchers.IO) { repository.automaticSetup.checkDevice() } }
     fun setUpAutomatically(wifiOnly: Boolean, reviewed: com.example.engine.AutomaticModelPair?) {
         val token = repository.automaticSetup.approvalToken()
@@ -191,41 +150,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val clientPolicies: StateFlow<List<ClientAppPolicyEntity>> = repository.clientPolicies
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _conversationId = MutableStateFlow(0L)
-    val conversationId = _conversationId.asStateFlow()
-    private val _pendingReplyId = MutableStateFlow<Long?>(null)
-    val pendingReplyId = _pendingReplyId.asStateFlow()
-    val conversations = repository.conversations.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val chatMessages: StateFlow<List<ChatMessageEntity>> = _conversationId.flatMapLatest { repository.messages(it) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    private val _draft = MutableStateFlow(savedState.get<String>("draft") ?: "")
-    val draft = _draft.asStateFlow()
-    private var draftJob: kotlinx.coroutines.Job? = null
-    private val conversationLock = Mutex()
-    private var editingMessageId: Long? = null
-    private val _isEditingMessage = MutableStateFlow(false)
-    val isEditingMessage = _isEditingMessage.asStateFlow()
-    private val _groundingMode = MutableStateFlow(GroundingMode.AUTO)
-    val groundingMode = _groundingMode.asStateFlow()
-    private val _chatStatus = MutableStateFlow("")
-    val chatStatus = _chatStatus.asStateFlow()
     val appearance = repository.preferencesRepository.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, "AMOLED")
-    val webAllowed = repository.preferencesRepository.webAllowed.stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    private var grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to PublicWebResearch(
-        discoveryAllowed = { repository.preferencesRepository.webAllowed.first() }, localRanking = com.example.engine.LocalEmbeddingRanker(application)::scores)))
-    @androidx.annotation.VisibleForTesting
-    internal fun useSearchProviderForTesting(provider: SearchProvider) {
-        check(!_isChatGenerating.value)
-        grounding = GroundingCoordinator(mapOf(SearchProviderId.WEB to provider))
-    }
-    init { LegacySearchCleanup.clear(application) }
-
-    val allMemories: StateFlow<List<MemorySnippetEntity>> = repository.allMemories
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val activeMemories: StateFlow<List<MemorySnippetEntity>> = repository.activeMemories
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val performanceLogs: StateFlow<List<HardwarePerformanceLogEntity>> = repository.allPerformanceLogs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -245,7 +170,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
 
     // Active Navigation Tab
     private val navigation = (savedState.get<ArrayList<String>>("navigation")?.mapNotNull { runCatching { AppTab.valueOf(it) }.getOrNull() }
-        ?.takeIf { it.firstOrNull() == AppTab.CHAT } ?: listOf(AppTab.CHAT)).toMutableList()
+        ?.takeIf { it.firstOrNull() == AppTab.MODELS } ?: listOf(AppTab.MODELS)).toMutableList()
     private val _currentTab = MutableStateFlow(navigation.last())
     val currentTab: StateFlow<AppTab> = _currentTab.asStateFlow()
     private val _navigationDepth = MutableStateFlow(navigation.size)
@@ -258,27 +183,9 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     private val _modelCategoryFilter = MutableStateFlow("ALL")
     val modelCategoryFilter: StateFlow<String> = _modelCategoryFilter.asStateFlow()
 
-    // Memory Filter state
-    private val _memorySearchQuery = MutableStateFlow("")
-    val memorySearchQuery: StateFlow<String> = _memorySearchQuery.asStateFlow()
-
-    private val _selectedMemoryCategory = MutableStateFlow("ALL")
-    val selectedMemoryCategory: StateFlow<String> = _selectedMemoryCategory.asStateFlow()
-
-    private val _isAutoMemoryCaptureEnabled = MutableStateFlow(false)
-    val isAutoMemoryCaptureEnabled: StateFlow<Boolean> = _isAutoMemoryCaptureEnabled.asStateFlow()
-
-    // Playground state
-    private val _isChatGenerating = MutableStateFlow(false)
-    val isChatGenerating: StateFlow<Boolean> = _isChatGenerating.asStateFlow()
-
-    private val _streamingChatText = MutableStateFlow("")
-    private var chatPreparationJob: kotlinx.coroutines.Job? = null
-    private var chatInferenceJob: kotlinx.coroutines.Job? = null
-    val streamingChatText: StateFlow<String> = _streamingChatText.asStateFlow()
-
-    private val _chatGenerationParams = MutableStateFlow(GenerationParams(contextSize = 2048, maxTokens = 256))
-    val chatGenerationParams: StateFlow<GenerationParams> = _chatGenerationParams.asStateFlow()
+    // Default inference settings shared with connected apps.
+    private val _generationParams = MutableStateFlow(GenerationParams(contextSize = 2048, maxTokens = 256))
+    val generationParams: StateFlow<GenerationParams> = _generationParams.asStateFlow()
 
     // Engine Manager state: llama.cpp (GGUF) vs LiteRT (TFLite)
     val selectedEngine: StateFlow<SupportedEngine> = repository.engineManager.selectedEngineType
@@ -305,9 +212,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val isBenchmarking: StateFlow<Boolean> = _isBenchmarking.asStateFlow()
 
     // Quality Preset: "FAST" (Q4_K_M), "BALANCED" (Q5_K_M), "QUALITY" (Q6_K / Q8_0)
-    private val _qualityPreset = MutableStateFlow("FAST")
-    val qualityPreset: StateFlow<String> = _qualityPreset.asStateFlow()
-
     // Foreground Service & WakeLock for persistent background reasoning
     private val _isForegroundServiceEnabled = MutableStateFlow(true)
     val isForegroundServiceEnabled: StateFlow<Boolean> = _isForegroundServiceEnabled.asStateFlow()
@@ -346,9 +250,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val inspectingGguf: StateFlow<GgufMetadata?> = _inspectingGguf.asStateFlow()
 
     // IPC Simulator state
-    private val _simulatorState = MutableStateFlow(SimulatorUiState())
-    val simulatorState: StateFlow<SimulatorUiState> = _simulatorState.asStateFlow()
-
     // Toast / Action notification
     private val _userMessage = MutableStateFlow<String?>(null)
     val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
@@ -356,23 +257,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val loadingModelId: StateFlow<Long?> = _loadingModelId.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            repository.preferencesRepository.saveForegroundEnabled(true)
-            val autoParams = GenerationParams(contextSize = 2048, maxTokens = 384, temperature = 0.6f, accelerationMode = "Automatic")
-            _chatGenerationParams.value = autoParams
-            repository.preferencesRepository.saveGenerationPreferences(autoParams)
-        }
         viewModelScope.launch { repository.preferencesRepository.foregroundEnabled.collect { _isForegroundServiceEnabled.value = it } }
-        viewModelScope.launch {
-            repository.preferencesRepository.memoryEnabled.collect { _isAutoMemoryCaptureEnabled.value = it }
-        }
-        viewModelScope.launch {
-            repository.recoverInterruptedMessages()
-            val previous = repository.preferencesRepository.activeConversation.first()
-            val restored = repository.conversation(previous)
-            val id = restored?.id ?: repository.conversations.first().firstOrNull()?.id ?: repository.createConversation()
-            activateConversation(id)
-        }
+        viewModelScope.launch { repository.preferencesRepository.generationPreferences.collect { _generationParams.value = it } }
         viewModelScope.launch {
             repository.preferencesRepository.darkThemeFlow.collect { _isDarkTheme.value = it }
         }
@@ -383,8 +269,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 com.example.service.ModelDownloadQueue.ensureScheduled(application)
             }
             if (!repository.automaticSetup.seen()) {
-                if (repository.allModels.first().none { it.isInstalled } && !getApplication<Application>().packageName.endsWith(".validation")) selectTab(AppTab.OPTIMISE)
-                else repository.automaticSetup.dismiss()
+                repository.automaticSetup.dismiss()
             }
         }
         // Initial hardware analysis
@@ -416,94 +301,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     }
 
     fun setAppearance(value: String) { viewModelScope.launch { repository.preferencesRepository.saveAppearance(value) } }
-    fun setWebAllowed(value: Boolean) {
-        if (!value) { grounding.clearTemporaryData(); if (chatInferenceJob == null && _isChatGenerating.value) chatPreparationJob?.cancel() }
-        viewModelScope.launch { repository.preferencesRepository.saveWebAllowed(value)
-            if (!value) withContext(Dispatchers.IO) { ResearchDiagnostics.clear(getApplication()) } }
-    }
-    private val _researchDiagnosticReport = MutableStateFlow<String?>(null)
-    val researchDiagnosticReport = _researchDiagnosticReport.asStateFlow()
-    fun inspectResearchDiagnostics() { viewModelScope.launch {
-        _researchDiagnosticReport.value = withContext(Dispatchers.IO) { ResearchDiagnostics.export(getApplication()) }
-    } }
-    fun dismissResearchDiagnostics() { _researchDiagnosticReport.value = null }
-    fun clearSearchData() { _researchDiagnosticReport.value = null; grounding.clearTemporaryData(); viewModelScope.launch(Dispatchers.IO) { ResearchDiagnostics.clear(getApplication()) }; _userMessage.value = "Temporary search data cleared." }
-    fun selectGroundingMode(mode: GroundingMode) {
-        _groundingMode.value = mode
-        val id = _conversationId.value
-        viewModelScope.launch {
-            repository.saveGroundingMode(id, mode.name)
-            repository.preferencesRepository.saveWebMode(mode.name)
-        }
-    }
-    @androidx.annotation.VisibleForTesting
-    internal fun setGroundingMode(mode: GroundingMode) {
-        selectGroundingMode(mode)
-    }
-    fun updateDraft(value: String) {
-        _draft.value = value
-        savedState["draft"] = value; savedState["draftConversation"] = _conversationId.value
-        val id = _conversationId.value
-        draftJob?.cancel()
-        draftJob = viewModelScope.launch { kotlinx.coroutines.delay(200); repository.saveDraft(id, value) }
-    }
-    private suspend fun activateConversation(id: Long) {
-        val conversation = repository.conversation(id) ?: return
-        // Finish the suspending preference write before publishing a usable ID.
-        // Otherwise the first send can see the new chat while its lock is held.
-        repository.preferencesRepository.saveActiveConversation(id)
-        _draft.value = if (savedState.get<Long>("draftConversation") == id) savedState.get<String>("draft") ?: conversation.draft else conversation.draft
-        savedState["draft"] = _draft.value; savedState["draftConversation"] = id
-        // Enabled grounding checks public factual answers before generation.
-        // Global web consent and explicit offline/private admission still apply.
-        _groundingMode.value = GroundingMode.AUTO
-        editingMessageId = null
-        _isEditingMessage.value = false
-        _conversationId.value = id
-    }
-    private suspend fun stopChatAndSaveDraft() {
-        chatPreparationJob?.cancelAndJoin()
-        draftJob?.cancelAndJoin()
-        repository.saveDraft(_conversationId.value, _draft.value)
-    }
-    fun newConversation() { viewModelScope.launch { conversationLock.withLock {
-        stopChatAndSaveDraft()
-        val id = repository.createConversation()
-        repository.saveGroundingMode(id, GroundingMode.AUTO.name)
-        activateConversation(id); selectTab(AppTab.CHAT)
-    } } }
-    fun openConversation(id: Long) { viewModelScope.launch { conversationLock.withLock {
-        stopChatAndSaveDraft(); activateConversation(id); selectTab(AppTab.CHAT)
-    } } }
-    fun deleteConversation(id: Long) { viewModelScope.launch { conversationLock.withLock {
-        if (id == _conversationId.value) stopChatAndSaveDraft()
-        repository.deleteConversation(id)
-        withContext(Dispatchers.IO) { ResearchDiagnostics.removeConversation(getApplication(), id) }
-        if (id == _conversationId.value) {
-            val next = repository.conversations.first().firstOrNull()?.id ?: repository.createConversation()
-            activateConversation(next)
-        }
-    } } }
-    fun editMessage(message: ChatMessageEntity) {
-        if (_isChatGenerating.value || message.role != "user") return
-        if (editingMessageId == null) savedState["draftBeforeEdit"] = _draft.value
-        editingMessageId = message.id; updateDraft(message.content)
-        _isEditingMessage.value = true
-    }
-    fun cancelEditingMessage() {
-        editingMessageId = null; _isEditingMessage.value = false
-        updateDraft(savedState.get<String>("draftBeforeEdit").orEmpty()); savedState.remove<String>("draftBeforeEdit")
-    }
-    fun regenerateResponse() {
-        if (_isChatGenerating.value) return
-        if (editingMessageId != null) { _userMessage.value = "Send or cancel the edit before regenerating."; return }
-        val message = chatMessages.value.lastOrNull { it.role == "user" } ?: return
-        sendChatMessage(message.content, message.id, clearDraft = false)
-    }
-    fun renameConversation(id: Long, title: String) {
-        if (title.isNotBlank()) viewModelScope.launch { repository.renameConversation(id, title) }
-    }
-
     fun refreshHardwareDiagnostics() {
         repository.analyzeHardware(getApplication())
         val profile = repository.hardwareProfile.value
@@ -514,7 +311,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
 
     fun selectTab(tab: AppTab) {
         if (tab == _currentTab.value) return
-        if (tab == AppTab.CHAT) navigation.clear()
+        if (tab in setOf(AppTab.MODELS, AppTab.CONNECT, AppTab.SETTINGS)) { navigation.clear(); if (tab != AppTab.MODELS) navigation += AppTab.MODELS }
         navigation += tab
         _currentTab.value = tab
         _navigationDepth.value = navigation.size
@@ -525,62 +322,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         _currentTab.value = navigation.last()
         _navigationDepth.value = navigation.size
         savedState["navigation"] = ArrayList(navigation.map { it.name })
-    }
-
-    fun setMemorySearchQuery(query: String) {
-        _memorySearchQuery.value = query
-    }
-
-    fun setSelectedMemoryCategory(cat: String) {
-        _selectedMemoryCategory.value = cat
-    }
-
-    fun toggleAutoMemoryCapture(enabled: Boolean) {
-        _isAutoMemoryCaptureEnabled.value = enabled
-        viewModelScope.launch { repository.preferencesRepository.saveMemoryEnabled(enabled) }
-        _userMessage.value = if (enabled) "Auto-capture memory enabled" else "Auto-capture memory disabled"
-    }
-
-    fun addMemorySnippet(title: String, content: String, category: String, sourceApp: String = "Manual") {
-        viewModelScope.launch {
-            repository.insertMemory(
-                MemorySnippetEntity(
-                    title = title.trim().ifBlank { "User Fact" },
-                    content = content.trim(),
-                    category = category,
-                    sourceApp = sourceApp,
-                    isActive = true
-                )
-            )
-            _userMessage.value = "Saved memory snippet to local context."
-        }
-    }
-
-    fun updateMemorySnippet(snippet: MemorySnippetEntity) {
-        viewModelScope.launch {
-            repository.updateMemory(snippet)
-            _userMessage.value = "Updated memory snippet."
-        }
-    }
-
-    fun toggleMemoryActive(snippet: MemorySnippetEntity) {
-        viewModelScope.launch {
-            repository.updateMemory(snippet.copy(isActive = !snippet.isActive))
-        }
-    }
-
-    fun deleteMemorySnippet(id: Long) {
-        viewModelScope.launch {
-            repository.deleteMemory(id)
-            _userMessage.value = "Deleted memory snippet."
-        }
-    }
-
-    fun clearAllMemories() {
-        viewModelScope.launch {
-            repository.clearAllMemories()
-            _userMessage.value = "Cleared all local memory snippets."
-        }
     }
 
     fun runHardwareAnalysis() {
@@ -601,7 +342,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     }
 
     fun updateGenerationParams(params: GenerationParams) {
-        _chatGenerationParams.value = params
+        _generationParams.value = params
         viewModelScope.launch { repository.preferencesRepository.saveGenerationPreferences(params) }
     }
 
@@ -609,19 +350,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         _isDeveloperPanelExpanded.value = !_isDeveloperPanelExpanded.value
     }
 
-    fun setQualityPreset(preset: String) {
-        _qualityPreset.value = preset
-        val targetQuant = when (preset) {
-            "FAST" -> "Q4_K_M"
-            "BALANCED" -> "Q5_K_M"
-            "QUALITY" -> "Q8_0"
-            else -> "Q4_K_M"
-        }
-        _userMessage.value = "Preset set to $preset ($targetQuant preferred for mobile)."
-    }
-
     fun unloadActiveModel() {
-        if (_isChatGenerating.value) { _userMessage.value = "Stop the current answer before unloading its model."; return }
+        if (repository.engine.telemetry.value.isRunning) { _userMessage.value = "Wait for the connected app to finish before unloading its model."; return }
         viewModelScope.launch(Dispatchers.IO) {
             try { repository.unloadModel(); _activeTierDecision.value = null }
             catch (e: Exception) { _userMessage.value = e.message }
@@ -661,19 +391,19 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     }
 
     fun runBenchmark() {
-        if (_isBenchmarking.value || _isChatGenerating.value) return
+        if (_isBenchmarking.value || repository.engine.telemetry.value.isRunning) return
         _isBenchmarking.value = true
         _userMessage.value = "Running automated device benchmark..."
         
         viewModelScope.launch {
             try {
                 val result = repository.engine.runBenchmark(
-                    contextLength = _chatGenerationParams.value.contextSize
+                    contextLength = _generationParams.value.contextSize
                 )
                 _benchmarkResult.value = result
                 
                 // Automatically tune runtime parameters to identified sweet spot
-                _chatGenerationParams.value = _chatGenerationParams.value.copy(
+                _generationParams.value = _generationParams.value.copy(
                     threads = result.recommendedThreads,
                     contextSize = result.recommendedContext
                 )
@@ -714,7 +444,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     }
 
     fun runBenchmarkForModel(model: ModelEntity) {
-        if (_isBenchmarking.value || _isChatGenerating.value) return
+        if (_isBenchmarking.value || repository.engine.telemetry.value.isRunning) return
         _isBenchmarking.value = true
         _userMessage.value = "Benchmarking ${model.name} (${model.quantization}) on hardware..."
 
@@ -722,7 +452,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             try {
                 val log = repository.runAndSaveBenchmarkForModel(
                     model = model,
-                    contextSize = _chatGenerationParams.value.contextSize
+                    contextSize = _generationParams.value.contextSize
                 )
                 _userMessage.value = "Saved log for ${model.name}: ${String.format("%.1f", log.tokensPerSecond)} tok/s (${log.quantization})."
             } catch (e: Exception) {
@@ -735,7 +465,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
 
     fun applyBenchmarkSettings() {
         val bench = _benchmarkResult.value ?: return
-        _chatGenerationParams.value = _chatGenerationParams.value.copy(
+        _generationParams.value = _generationParams.value.copy(
             threads = bench.recommendedThreads,
             contextSize = bench.recommendedContext
         )
@@ -743,7 +473,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     }
 
     fun switchModel(model: ModelEntity) {
-        if (_isChatGenerating.value) { _userMessage.value = "Stop the current answer before switching models. Your draft is kept."; return }
+        if (repository.engine.telemetry.value.isRunning) { _userMessage.value = "Wait for the connected app to finish before switching models."; return }
         if (_loadingModelId.value != null || _deletingModelId.value != null) return
         if (needsTerms(model)) { _licenseModel.value = model; return }
         _loadingModelId.value = model.id
@@ -898,7 +628,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     }
 
     fun uninstallModel(model: ModelEntity) {
-        if (_isChatGenerating.value) { _userMessage.value = "Stop the current answer before deleting models."; return }
+        if (repository.engine.telemetry.value.isRunning) { _userMessage.value = "Wait for the connected app to finish before deleting models."; return }
         if (_deletingModelId.value != null || _loadingModelId.value != null || _verifyingModelId.value != null) return
         _deletingModelId.value = model.id
         viewModelScope.launch {
@@ -944,394 +674,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             repository.updatePolicy(policy)
             _userMessage.value = "Connected ${policy.appName} ($packageName) to Better Intelligence."
         }
-    }
-
-    fun sendChatMessage(userText: String, replaceFrom: Long? = editingMessageId, clearDraft: Boolean = true) {
-        if (userText.isBlank() || _isChatGenerating.value || _conversationId.value == 0L || conversationLock.isLocked) return
-        if (_loadingModelId.value != null || repository.isModelLoading) { _userMessage.value = "Wait for model loading to finish. Your draft is kept."; return }
-        if (!repository.engine.isReady()) {
-            _userMessage.value = "Choose a downloaded model in Settings to start chatting."
-            selectTab(AppTab.MODELS)
-            return
-        }
-        val conversation = _conversationId.value
-        val text = userText.trim()
-        val mode = _groundingMode.value
-        if (clearDraft) {
-            val previousDraft = if (editingMessageId != null) savedState.get<String>("draftBeforeEdit").orEmpty() else ""
-            updateDraft(previousDraft)
-        }
-        savedState.remove<String>("draftBeforeEdit")
-        editingMessageId = null
-        _isEditingMessage.value = false
-        _isChatGenerating.value = true
-        _pendingReplyId.value = null
-        _streamingChatText.value = ""
-        _chatStatus.value = "Preparing answer"
-        chatPreparationJob = viewModelScope.launch {
-            var savedUser = false
-            var result = ""
-            var error: String? = null
-            var cancelled = false
-            var latency = 0L
-            var speed = 0f
-            var promptTokens = 0
-            var outputTokens = 0
-            var reachedOutputLimit = false
-            var evidence = GroundingResult()
-            var researchQuestion = text
-            var diagnosticRoute: AnswerRoute? = null
-            val diagnosticGeneration = ResearchDiagnostics.generation()
-            var generationQuestion = text
-            var recoveryNotice = ""
-            var resolvedAnswer: com.example.grounding.CheckedAnswer? = null
-            var pendingId: Long? = null
-            var partialWriter: kotlinx.coroutines.Job? = null
-            var foregroundToken = 0L
-            var model = repository.engine.activeModelName
-            try {
-                com.example.engine.DeviceClock.answer(text)?.let { clock ->
-                    model = "Device clock"
-                    repository.beginChatTurn(ChatMessageEntity(role = "user", content = text, modelName = model, conversationId = conversation), replaceFrom)
-                    savedUser = true
-                    pendingId = repository.insertChatMessage(ChatMessageEntity(role = "assistant", content = "", modelName = model,
-                        conversationId = conversation, messageState = "STREAMING"))
-                    _pendingReplyId.value = pendingId
-                    result = clock; evidence = GroundingResult("DEVICE_CLOCK")
-                    return@launch
-                }
-                com.example.engine.LocalCalculation.evaluate(text)?.let { calc ->
-                    model = "Local calculation"
-                    repository.beginChatTurn(ChatMessageEntity(role = "user", content = text, modelName = model, conversationId = conversation), replaceFrom)
-                    savedUser = true
-                    pendingId = repository.insertChatMessage(ChatMessageEntity(role = "assistant", content = "", modelName = model,
-                        conversationId = conversation, messageState = "STREAMING"))
-                    _pendingReplyId.value = pendingId
-                    result = calc; evidence = GroundingResult("LOCAL")
-                    return@launch
-                }
-                // Evaluate available RAM and dynamically route between Primary (full/stepped-down context) and Secondary model.
-                val params = _chatGenerationParams.value
-                val tierDecision = repository.resolveAndActivateForRam(params.contextSize)
-                check(tierDecision.role != ModelTierRole.NONE) { tierDecision.reason.ifBlank { "Download and select a model in Settings." } }
-                _activeTierDecision.value = tierDecision
-                if (tierDecision?.role == ModelTierRole.SECONDARY_FALLBACK && tierDecision.reason.isNotBlank()) {
-                    _userMessage.value = tierDecision.reason
-                }
-                model = repository.engine.activeModelName
-                if (_isForegroundServiceEnabled.value) foregroundToken = InferenceForegroundService.start(getApplication(),
-                    "Preparing your answer on this device", model) { chatPreparationJob?.cancel() }
-                val previous = repository.beginChatTurn(ChatMessageEntity(role = "user", content = text, modelName = model, conversationId = conversation), replaceFrom)
-                    .filter { it.messageState in setOf("COMPLETE", "STOPPED", "LENGTH_LIMIT") && it.role in setOf("user", "assistant") && it.content != "Response stopped." }
-                savedUser = true
-                pendingId = repository.insertChatMessage(ChatMessageEntity(role = "assistant", content = "", modelName = model,
-                    conversationId = conversation, messageState = "STREAMING"))
-                _pendingReplyId.value = pendingId
-                partialWriter = launch {
-                    while (true) {
-                        kotlinx.coroutines.delay(750)
-                        repository.updateChatMessage(ChatMessageEntity(id = pendingId!!, role = "assistant", content = _streamingChatText.value,
-                            modelName = model, conversationId = conversation, messageState = "STREAMING", sourcesJson = evidence.json(), groundingStatus = evidence.status))
-                    }
-                }
-                editingMessageId = null
-                if (_isAutoMemoryCaptureEnabled.value) autoExtractMemory(text, "Chat")
-                val allowed = repository.preferencesRepository.webAllowed.first()
-                val continuation = ConversationalResearch.continuation(text, previous)
-                val contextualText = continuation?.first ?: text
-                val effectiveMode = if (continuation?.second == true && mode != GroundingMode.OFF) GroundingMode.ON else mode
-                val route = AnswerRoutingPolicy.decide(contextualText, allowed, effectiveMode, previous, conversationId = conversation)
-                diagnosticRoute = route
-                researchQuestion = route.question
-                if (route.path == AnswerPath.CLARIFICATION) { result = route.clarification; return@launch }
-                evidence = when {
-                    route.reusedSources.isNotEmpty() -> GroundingResult("SOURCES_RETRIEVED", route.reusedSources)
-                    route.path == AnswerPath.WEB_GROUNDED -> {
-                        _chatStatus.value = "Finding and reading public sources"
-                        val localPlan = com.example.grounding.OnDeviceRequestPlanner.plan(repository.engine, researchQuestion, tierDecision.effectiveContext)
-                        if (localPlan == null) retrieveForChat(researchQuestion, allowed, effectiveMode)
-                        else withContext(com.example.grounding.LocalPlanContext(localPlan)) { retrieveForChat(researchQuestion, allowed, effectiveMode) }
-                    }
-                    else -> GroundingResult()
-                }
-                if (evidence.status in setOf("NEEDS_LOCATION", "NEEDS_SUBJECT")) {
-                    result = evidence.notice
-                    return@launch
-                }
-                if (evidence.failure != null || evidence.status == "SEARCH_FAILED" || evidence.sources.isEmpty() && (route.requiresLive || route.requiresVerification || route.privacyBlocked)) {
-                    val recovery = AnswerRoutingPolicy.recover(route, evidence.failure)
-                    evidence = evidence.copy(status = recovery.status, sources = emptyList())
-                    if (recovery.localQuestion == null) { result = recovery.notice; return@launch }
-                    generationQuestion = recovery.localQuestion
-                    recoveryNotice = recovery.notice
-                }
-                _chatStatus.value = if (evidence.sources.isNotEmpty()) "Checking sources" else "Preparing answer"
-                val requestedContext = tierDecision?.effectiveContext ?: params.contextSize
-                val effectiveContext = repository.engine.requestContextLimit(requestedContext)
-                val autoMaxTokens = com.example.engine.ChatResponseBudget.initial(params.maxTokens, effectiveContext)
-                val autoTemperature = if (evidence.sources.isNotEmpty()) 0f else 0.4f
-                val baseSystem = com.example.engine.ChatAnswerPolicy.system(generationQuestion, evidence.sources.isNotEmpty(), effectiveContext, params.systemPrompt) +
-                    if (recoveryNotice.isNotBlank()) " Web research did not complete. Answer the useful general-knowledge part locally; do not narrate a search, invent citations or assert unverified current information." else ""
-                var effectiveQuestion = if (evidence.sources.isNotEmpty()) researchQuestion else generationQuestion
-                val olderContext = repository.refreshConversationContext(conversation, previous)
-                val memoryBudget = effectiveContext - autoMaxTokens - 96 - repository.engine.contextTokenCount(baseSystem) -
-                    repository.engine.contextTokenCount(effectiveQuestion) - 96
-                val summary = if (memoryBudget > 64) ConversationContext.summaryWithinBudget(olderContext, minOf(if (evidence.sources.isEmpty()) effectiveContext else 384, memoryBudget * 2), effectiveQuestion) else ""
-                val localMemory = if (evidence.sources.isEmpty() && memoryBudget > 128 && _isAutoMemoryCaptureEnabled.value)
-                    repository.buildMemoryContextPrompt(effectiveQuestion, minOf(400, memoryBudget / 2)) else ""
-                var system = baseSystem + localMemory + if (summary.isNotBlank())
-                    "\nOlder context from this chat only. Quoted user statements are context; labelled assistant proposals are unverified. Newer messages override:\n$summary\n" else ""
-                val promptBudget = ((effectiveContext - autoMaxTokens - 96) * 2 - system.toByteArray(Charsets.UTF_8).size).coerceAtLeast(0)
-                var prepared = withContext(Dispatchers.Default) { GroundingPolicy.prepareEvidence(effectiveQuestion, evidence.sources, promptBudget,
-                    effectiveContext - autoMaxTokens - 96 - repository.engine.contextTokenCount(system), repository.engine::contextTokenCount) }
-                evidence = evidence.copy(sources = prepared.sources)
-                val prompt = prepared.prompt
-                val history = ConversationContext.history(com.example.engine.ChatAnswerPolicy.history(previous.map { ChatTurn(it.role, it.content) }, evidence.sources.isNotEmpty()), prompt, system, effectiveContext, autoMaxTokens,
-                    repository.engine::contextTokenCount)
-                val localNeedsLive = evidence.sources.isEmpty() && com.example.engine.ChatAnswerPolicy.requiresLiveData(generationQuestion)
-                val config = GenerationConfig(temperature = autoTemperature, topK = params.topK, topP = params.topP,
-                    maxTokens = autoMaxTokens, systemPrompt = system, threads = params.threads,
-                    gpuLayers = params.gpuLayers, contextSize = effectiveContext, history = history, autoContinue = true)
-                _chatStatus.value = "Preparing answer"
-                val rawDraft = StringBuilder()
-                var lastDraftUiAt = 0L
-                fun publishDraft() {
-                    if (localNeedsLive || evidence.sources.isNotEmpty()) return
-                    val draft = rawDraft.toString()
-                    _streamingChatText.value = if (AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(route, draft)) ""
-                        else LocalAnswerUncertainty.visible(draft)
-                    lastDraftUiAt = android.os.SystemClock.elapsedRealtime()
-                }
-                chatInferenceJob = repository.engineManager.currentEngine.generateStreamWithCallback(prompt, config, object : StreamTokenListener {
-                    override fun onToken(token: String, tokenIndex: Int) {
-                        if (localNeedsLive) return
-                        rawDraft.append(token)
-                        if (android.os.SystemClock.elapsedRealtime() - lastDraftUiAt >= 40) publishDraft()
-                        _chatStatus.value = if (evidence.sources.isEmpty()) "" else "Writing answer from sources"
-                    }
-                    override fun onComplete(fullText: String, latencyMs: Long, tokensPerSec: Float, promptTokens: Int, completionTokens: Int) {
-                        publishDraft()
-                        result = fullText; latency = latencyMs; speed = tokensPerSec
-                    }
-                    override fun onError(errorCode: Int, errorMessage: String) {
-                        publishDraft()
-                        error = errorMessage
-                        if (errorMessage == com.example.engine.InvalidModelOutputException().message) {
-                            _streamingChatText.value = ""; result = ""
-                        }
-                    }
-                })
-                chatInferenceJob?.join()
-                ensureActive()
-                if (error == null && AnswerRoutingPolicy.shouldResearchAfterLocalAnswer(route, result)) {
-                    // The same local model can expose a missed freshness requirement.
-                    // Do not run a second classifier for every message or retry recursively.
-                    _chatStatus.value = "Checking current information"
-                    val currentRoute = AnswerRoutingPolicy.decide(ConversationalResearch.question(route.question, previous, conversation), allowed, GroundingMode.ON, previous, conversationId = conversation)
-                    diagnosticRoute = currentRoute
-                    if (currentRoute.path == AnswerPath.CLARIFICATION) {
-                        result = currentRoute.clarification
-                        return@launch
-                    }
-                    researchQuestion = currentRoute.question
-                    effectiveQuestion = researchQuestion
-                    val researched = retrieveForChat(researchQuestion, allowed, GroundingMode.ON)
-                    if (researched.sources.isEmpty()) {
-                        val recovery = AnswerRoutingPolicy.recover(currentRoute, researched.failure)
-                        evidence = researched.copy(status = recovery.status)
-                        result = recovery.notice
-                    } else {
-                        evidence = researched
-                        _streamingChatText.value = ""
-                        system = com.example.engine.ChatAnswerPolicy.system(generationQuestion, true, effectiveContext, params.systemPrompt) +
-                            if (summary.isNotBlank()) "\nOlder unverified context from this chat, not web evidence:\n$summary\n" else ""
-                        val retryBudget = ((effectiveContext - autoMaxTokens - 96) * 2 - system.toByteArray(Charsets.UTF_8).size).coerceAtLeast(0)
-                        prepared = withContext(Dispatchers.Default) { GroundingPolicy.prepareEvidence(researchQuestion, evidence.sources, retryBudget,
-                            effectiveContext - autoMaxTokens - 96 - repository.engine.contextTokenCount(system), repository.engine::contextTokenCount) }
-                        evidence = evidence.copy(sources = prepared.sources)
-                        _chatStatus.value = "Answering from sources"
-                        result = repository.engine.generateSync(prepared.prompt, GenerationParams(temperature = 0f, topK = 1, topP = 1f,
-                            maxTokens = autoMaxTokens, contextSize = effectiveContext, threads = params.threads, systemPrompt = system, autoContinue = true,
-                            history = ConversationContext.history(com.example.engine.ChatAnswerPolicy.history(previous.map { ChatTurn(it.role, it.content) }, true),
-                                prepared.prompt, system, effectiveContext, autoMaxTokens, repository.engine::contextTokenCount)))
-                    }
-                }
-                result = LocalAnswerUncertainty.visible(result)
-                promptTokens = repository.engine.telemetry.value.promptTokens
-                outputTokens = repository.engine.telemetry.value.completionTokens
-                reachedOutputLimit = repository.engine.telemetry.value.let {
-                    if (it.outputTokenLimit > 0) it.outputLimitReached else outputTokens >= autoMaxTokens
-                }
-                if ((error == null || error == com.example.engine.InvalidModelOutputException().message) && evidence.sources.isNotEmpty()) {
-                    _chatStatus.value = "Checking answer against sources"
-                    var quality = com.example.grounding.ResponseQualityValidator.validate(effectiveQuestion, result, evidence.sources, isLocalOnly = false)
-                    val assessed = withContext(Dispatchers.Default) { com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion).copy(generationFailed = error != null) }
-                    if (!quality.isValid || assessed.support == AnswerSupport.INSUFFICIENT) {
-                        val resources = repository.engine.hardware.resources()
-                        val repair = EvidenceRepair.prompt(effectiveQuestion, result, prepared, assessed, effectiveContext,
-                            resources.availableMb, resources.lowMemory, resources.thermal, repository.engine.telemetry.value.timeToFirstTokenMs, speed) {
-                            repository.engine.contextTokenCount(it) + repository.engine.contextTokenCount(system) + EvidenceRepair.maxTokens + 96 <= effectiveContext
-                        }
-                        if (repair != null) {
-                            _chatStatus.value = "Checking a shorter answer"
-                            val corrected = try { kotlinx.coroutines.withTimeoutOrNull(EvidenceRepair.deadlineMs) {
-                                repository.engine.generateSync(repair, GenerationParams(temperature = 0f, topK = 1, topP = 1f,
-                                    maxTokens = EvidenceRepair.maxTokens, contextSize = effectiveContext, threads = params.threads, systemPrompt = system))
-                            } } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
-                            if (corrected != null) {
-                                val correctedQuality = com.example.grounding.ResponseQualityValidator.validate(effectiveQuestion, corrected, evidence.sources, isLocalOnly = false)
-                                if (correctedQuality.isValid && withContext(Dispatchers.Default) { GroundingPolicy.checkAnswer(corrected, evidence.sources, effectiveQuestion).support } != AnswerSupport.INSUFFICIENT) {
-                                    result = corrected
-                                    quality = correctedQuality
-                                }
-                            }
-                        }
-                    }
-                    if (!quality.isValid) {
-                        if (assessed.support != AnswerSupport.INSUFFICIENT && assessed.text.isNotBlank() &&
-                            com.example.grounding.ResponseQualityValidator.validate(effectiveQuestion, assessed.text, evidence.sources, isLocalOnly = false).isValid) {
-                            result = assessed.text
-                            error = null
-                        } else {
-                            result = "I couldn't verify a complete answer for this question from the available public sources."
-                            error = null
-                        }
-                    } else if (assessed.support != AnswerSupport.INSUFFICIENT) {
-                        if (result.isBlank() || error != null) result = assessed.text
-                        error = null
-                    }
-                    resolvedAnswer = withContext(Dispatchers.Default) {
-                        com.example.grounding.EvidenceAnswer.resolve(result, evidence.sources, effectiveQuestion).copy(repairAttempted = !quality.isValid)
-                    }
-                }
-                if (error == null && localNeedsLive) {
-                    result = com.example.engine.ChatAnswerPolicy.finishLocal(text, result)
-                    if (evidence.status == "LOCAL") evidence = evidence.copy(status = "LOCAL_UNVERIFIED")
-                }
-                if (error != null) result = _streamingChatText.value
-                if (recoveryNotice.isNotBlank() && result.isNotBlank()) result = result.trimEnd() + "\n\n" + recoveryNotice
-                if (result.isBlank() && error == null) error = if (reachedOutputLimit)
-                    "The response budget ended before visible text. Try a shorter question or select another model."
-                    else "The model returned no text. Try again or select another model."
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                cancelled = true
-                result = _streamingChatText.value
-            } catch (e: Exception) {
-                error = e.message ?: "Unable to prepare this answer. Try again."
-                result = _streamingChatText.value
-                // Generation failure must not erase already-collected evidence.
-                // Cancellation has its own branch and never enters this recovery.
-                if (evidence.sources.isNotEmpty()) {
-                    val recovered = withContext(Dispatchers.Default) {
-                        com.example.grounding.EvidenceAnswer.resolve("", evidence.sources, researchQuestion)
-                            .copy(generationFailed = true, recoveryAttempted = true)
-                    }
-                    if (recovered.support != AnswerSupport.INSUFFICIENT) {
-                        resolvedAnswer = recovered; result = recovered.text; error = null
-                    }
-                }
-            } finally {
-                // Join native cancellation before changing conversation/model ownership or clearing UI state.
-                withContext(NonCancellable) {
-                    chatInferenceJob?.cancelAndJoin()
-                    chatInferenceJob = null
-                    if (foregroundToken != 0L) InferenceForegroundService.stop(getApplication(), 0, 0, 0f, foregroundToken)
-                    partialWriter?.cancelAndJoin()
-                    try { if (savedUser && pendingId != null) {
-                        val interruptedDraft = (cancelled || error != null) && evidence.sources.isNotEmpty() && result.isNotBlank()
-                        val checked = if (cancelled || interruptedDraft) null else resolvedAnswer ?: if (evidence.sources.isNotEmpty()) withContext(Dispatchers.Default) {
-                            GroundingPolicy.checkAnswer(result, evidence.sources, researchQuestion)
-                        } else null
-                        val status = if (cancelled) "USER_CANCELLED" else if (interruptedDraft) "UNVERIFIED_PARTIAL" else if (checked == null) evidence.status else if (checked.sourceBrief) "SOURCE_BRIEF" else if (checked.sourceExtract && checked.support != AnswerSupport.CITED) "SOURCE_EXCERPTS" else when (checked.support) {
-                            AnswerSupport.CITED -> "EVIDENCE_CITED"
-                            AnswerSupport.PARTIAL -> "PARTIALLY_SUPPORTED"
-                            AnswerSupport.INSUFFICIENT -> "GROUNDING_VERIFICATION_FAILED"
-                        }
-                        val invalid = error == com.example.engine.InvalidModelOutputException().message
-                        val content = if (invalid) error!! else NewsIntent.withReportTimes(researchQuestion,
-                            (checked?.text ?: result).ifBlank { if (cancelled) "Response stopped." else error ?: "No response." }, evidence.sources)
-                        repository.updateChatMessage(ChatMessageEntity(id = pendingId!!, role = "assistant", content = content,
-                            conversationId = conversation, modelName = model, latencyMs = latency, tokensPerSec = speed,
-                            promptTokens = promptTokens, completionTokens = outputTokens,
-                            sourcesJson = evidence.json(), groundingStatus = com.example.grounding.AnswerSourceStatus.forEvidence(status, evidence.sources),
-                            messageState = if (cancelled) "STOPPED" else if (error != null) "ERROR" else if (reachedOutputLimit && (checked == null || (!checked.sourceExtract && !checked.sourceBrief && checked.support != AnswerSupport.CITED))) "LENGTH_LIMIT" else "COMPLETE"))
-                        withContext(Dispatchers.IO) { if (repository.preferencesRepository.webAllowed.first())
-                            ResearchDiagnostics.record(getApplication(), conversation, pendingId!!, text,
-                                diagnosticRoute, if (cancelled) evidence.copy(failure = ResearchFailure.USER_CANCELLED) else evidence, checked, error != null, diagnosticGeneration) }
-                    } else if (error != null) { _userMessage.value = error; if (_draft.value.isBlank()) updateDraft(text) }
-                    } finally { _streamingChatText.value = ""; _chatStatus.value = ""; _isChatGenerating.value = false }
-                }
-            }
-        }
-    }
-
-    /** Stage order never moves backwards during query expansion; a quiet slow indicator
-     * appears only while the same phase has lasted eight seconds. */
-    private suspend fun retrieveForChat(question: String, allowed: Boolean, mode: GroundingMode): GroundingResult = kotlinx.coroutines.coroutineScope {
-        val progress = ResearchProgress()
-        _chatStatus.value = progress.label()
-        val ticker = launch {
-            while (true) { kotlinx.coroutines.delay(1000); _chatStatus.value = progress.label() }
-        }
-        try { grounding.retrieve(question, allowed, mode, SearchProviderId.WEB) { stage ->
-            progress.advance(stage); _chatStatus.value = progress.label()
-        } } finally { ticker.cancelAndJoin() }
-    }
-
-    fun toggleForegroundService(enabled: Boolean) {
-        _isForegroundServiceEnabled.value = enabled
-        viewModelScope.launch { repository.preferencesRepository.saveForegroundEnabled(enabled) }
-        _userMessage.value = if (enabled) {
-            "Background Persistent Inference enabled (Notification & WakeLock active)"
-        } else {
-            "Background Persistent Inference disabled"
-        }
-    }
-
-    private suspend fun autoExtractMemory(text: String, sourceApp: String) {
-        val lower = text.lowercase()
-        if (lower.startsWith("remember that ") || lower.startsWith("remember: ") || lower.startsWith("note that ")) {
-            val content = text.substringAfter("remember that ").substringAfter("remember: ").substringAfter("note that ").trim()
-            if (content.isNotBlank()) {
-                repository.insertMemory(
-                    MemorySnippetEntity(
-                        title = "Captured Note",
-                        content = content,
-                        category = "Personal",
-                        sourceApp = sourceApp,
-                        isActive = true
-                    )
-                )
-            }
-        } else if (lower.contains("i am a ") || lower.contains("my role is ") || lower.contains("i work as ")) {
-            val fact = text.trim()
-            if (fact.length in 10..150) {
-                repository.insertMemory(
-                    MemorySnippetEntity(
-                        title = "User Fact",
-                        content = fact,
-                        category = "Profile",
-                        sourceApp = sourceApp,
-                        isActive = true
-                    )
-                )
-            }
-        }
-    }
-
-    fun cancelGeneration() {
-        // Only this chat's request. External Binder requests keep their own ownership.
-        chatPreparationJob?.cancel()
-    }
-
-    fun clearChat() {
-        viewModelScope.launch { conversationLock.withLock {
-            stopChatAndSaveDraft()
-            repository.clearChatHistory()
-            savedState.remove<String>("draft")
-            savedState.remove<Long>("draftConversation")
-            activateConversation(repository.createConversation())
-        } }
     }
 
     fun inspectCurrentModel() {
@@ -1484,303 +826,4 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         _ipcLogFilterStatus.value = status
     }
 
-    // Simulator Functions
-    fun updateSimulatorApp(appName: String, pkg: String) {
-        _simulatorState.value = _simulatorState.value.copy(selectedApp = appName, selectedPackage = pkg)
-    }
-
-    fun updateSimulatorTask(task: String) {
-        _simulatorState.value = _simulatorState.value.copy(
-            selectedTask = task,
-            promptInput = when (task) {
-                "STREAM" -> "Draft a 3-point action plan for launching an on-device AI feature."
-                "JSON_EXTRACT" -> "Reviewing Q4 Android AI Core milestone with team on Friday at 3:00 PM in Conference Room A. High priority deliverables: low-latency IPC and cross-app context memory."
-                "INTENT_ROUTE" -> "Set a reminder to check on-device battery temperature before starting benchmark run."
-                "RAG_QUERY" -> "What are the latest system preferences and active notes stored on this device?"
-                "STORE_MEMORY" -> "User prefers on-device local execution for all AI queries and strict privacy controls."
-                "EMBED" -> "Inter-process communication on Android via AIDL Binder"
-                "SUMMARIZE" -> "Local language models executing on mobile device CPUs using GGUF 4-bit quantization allow zero-latency responses without sending sensitive customer data to cloud servers."
-                "CLASSIFY" -> "Critical battery level dropped below 15% during heavy background processing."
-                else -> _simulatorState.value.promptInput
-            }
-        )
-    }
-
-    fun updateSimulatorPrompt(prompt: String) {
-        _simulatorState.value = _simulatorState.value.copy(promptInput = prompt)
-    }
-
-    fun runSimulatorTest() {
-        val state = _simulatorState.value
-        viewModelScope.launch {
-            val requiredScope = when (state.selectedTask) {
-                "JSON_EXTRACT", "INTENT_ROUTE" -> "STRUCTURED_JSON"
-                "RAG_QUERY" -> "READ_MEMORY"
-                "STORE_MEMORY" -> "WRITE_MEMORY"
-                else -> "INFERENCE"
-            }
-            val (isAuthorized, reason) = repository.checkSecurityAndRateLimit(state.selectedPackage, requiredScope)
-            if (!isAuthorized) {
-                _simulatorState.value = state.copy(
-                    isRunning = false,
-                    statusText = "Security Check: $reason",
-                    outputText = "SecurityException: IPC call rejected.\nReason: $reason"
-                )
-                repository.logIpcCall(
-                    IpcLogEntity(
-                        callingPackage = state.selectedPackage,
-                        callingUid = 10245,
-                        requestType = state.selectedTask,
-                        promptPreview = state.promptInput.take(150),
-                        responsePreview = "Permission Denied: $reason",
-                        latencyMs = 2L,
-                        tokensPerSecond = 0f,
-                        totalTokens = 0,
-                        status = when {
-                            reason.contains("Rate limit") -> "RATE_LIMITED"
-                            reason.contains("Scope Denied") -> "SCOPE_BLOCKED"
-                            else -> "DENIED"
-                        }
-                    )
-                )
-                return@launch
-            }
-
-            _simulatorState.value = state.copy(
-                isRunning = true,
-                outputText = "",
-                statusText = "Connected securely to Better Intelligence AIDL Binder..."
-            )
-
-            val startTime = System.currentTimeMillis()
-
-            try { when (state.selectedTask) {
-                "STREAM" -> {
-                    _simulatorState.value = _simulatorState.value.copy(statusText = "Receiving streaming tokens with context memory...")
-                    val effectiveSystem = repository.buildClientSystemPrompt(state.selectedPackage, null)
-                    val config = GenerationConfig(
-                        temperature = 0.7f,
-                        maxTokens = 256,
-                        systemPrompt = effectiveSystem
-                    )
-                    repository.engineManager.currentEngine.generateStreamWithCallback(
-                        state.promptInput,
-                        config,
-                        object : StreamTokenListener {
-                            override fun onToken(token: String, tokenIndex: Int) {
-                                _simulatorState.value = _simulatorState.value.copy(
-                                    outputText = _simulatorState.value.outputText + token
-                                )
-                            }
-
-                            override fun onComplete(
-                                fullText: String,
-                                latencyMs: Long,
-                                tokensPerSec: Float,
-                                promptTokens: Int,
-                                completionTokens: Int
-                            ) {
-                                _simulatorState.value = _simulatorState.value.copy(
-                                    isRunning = false,
-                                    latencyMs = latencyMs,
-                                    tokensPerSec = tokensPerSec,
-                                    statusText = "Completed successfully ($tokensPerSec tok/s)"
-                                )
-                                viewModelScope.launch {
-                                    repository.logIpcCall(
-                                        IpcLogEntity(
-                                            callingPackage = state.selectedPackage,
-                                            callingUid = 10245,
-                                            requestType = "STREAM",
-                                            promptPreview = state.promptInput.take(150),
-                                            responsePreview = fullText.take(200),
-                                            latencyMs = latencyMs,
-                                            tokensPerSecond = tokensPerSec,
-                                            totalTokens = promptTokens + completionTokens,
-                                            status = "SUCCESS"
-                                        )
-                                    )
-                                }
-                            }
-
-                            override fun onError(errorCode: Int, errorMessage: String) {
-                                _simulatorState.value = _simulatorState.value.copy(
-                                    isRunning = false,
-                                    statusText = "Error: $errorMessage",
-                                    outputText = "Error [$errorCode]: $errorMessage"
-                                )
-                            }
-                        }
-                    )
-                }
-
-                "JSON_EXTRACT" -> {
-                    val keys = arrayOf("summary", "intent", "entities", "action_items", "datetime", "priority")
-                    val json = repository.engine.extractStructuredJson(state.promptInput, keys)
-                    val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(8L)
-                    _simulatorState.value = _simulatorState.value.copy(
-                        isRunning = false,
-                        latencyMs = latency,
-                        tokensPerSec = 42f,
-                        statusText = "Extracted Structured JSON in ${latency}ms",
-                        outputText = json
-                    )
-                    repository.logIpcCall(
-                        IpcLogEntity(
-                            callingPackage = state.selectedPackage,
-                            callingUid = 10245,
-                            requestType = "JSON_EXTRACT",
-                            promptPreview = state.promptInput.take(150),
-                            responsePreview = json.take(200),
-                            latencyMs = latency,
-                            tokensPerSecond = 42f,
-                            totalTokens = json.length / 4,
-                            status = "SUCCESS"
-                        )
-                    )
-                }
-
-                "INTENT_ROUTE" -> {
-                    val routes = arrayOf("SCHEDULE_EVENT", "CREATE_NOTE", "SYSTEM_SETTINGS", "SEND_MESSAGE", "SEARCH")
-                    val routed = repository.engine.routeIntent(state.promptInput, routes)
-                    val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(6L)
-                    _simulatorState.value = _simulatorState.value.copy(
-                        isRunning = false,
-                        latencyMs = latency,
-                        tokensPerSec = 48f,
-                        statusText = "Routed Intent in ${latency}ms",
-                        outputText = routed
-                    )
-                    repository.logIpcCall(
-                        IpcLogEntity(
-                            callingPackage = state.selectedPackage,
-                            callingUid = 10245,
-                            requestType = "INTENT_ROUTE",
-                            promptPreview = state.promptInput.take(150),
-                            responsePreview = routed.take(200),
-                            latencyMs = latency,
-                            tokensPerSecond = 48f,
-                            totalTokens = routed.length / 4,
-                            status = "SUCCESS"
-                        )
-                    )
-                }
-
-                "RAG_QUERY" -> {
-                    val json = repository.querySharedMemoriesAsJson(state.selectedPackage, state.promptInput, 10)
-                    val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(4L)
-                    _simulatorState.value = _simulatorState.value.copy(
-                        isRunning = false,
-                        latencyMs = latency,
-                        tokensPerSec = 0f,
-                        statusText = "Queried Shared Brain Memory in ${latency}ms",
-                        outputText = json
-                    )
-                    repository.logIpcCall(
-                        IpcLogEntity(
-                            callingPackage = state.selectedPackage,
-                            callingUid = 10245,
-                            requestType = "MEMORY_READ",
-                            promptPreview = state.promptInput.take(150),
-                            responsePreview = json.take(200),
-                            latencyMs = latency,
-                            tokensPerSecond = 0f,
-                            totalTokens = 1,
-                            status = "SUCCESS"
-                        )
-                    )
-                }
-
-                "STORE_MEMORY" -> {
-                    val id = repository.writeSharedMemoryFromApp(
-                        packageName = state.selectedPackage,
-                        title = "${state.selectedApp} Snapshot",
-                        content = state.promptInput,
-                        category = "Cross-App"
-                    )
-                    val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(5L)
-                    _simulatorState.value = _simulatorState.value.copy(
-                        isRunning = false,
-                        latencyMs = latency,
-                        tokensPerSec = 0f,
-                        statusText = "Stored Shared Context Memory #$id in ${latency}ms",
-                        outputText = "Successfully written to Better Intelligence Shared RAG Memory Store.\nMemory ID: #$id\nOwner Package: ${state.selectedPackage}\nCategory: Cross-App\nPayload: ${state.promptInput}\n\nAll authorized apps can now query this context via ContentProvider or AIDL."
-                    )
-                    repository.logIpcCall(
-                        IpcLogEntity(
-                            callingPackage = state.selectedPackage,
-                            callingUid = 10245,
-                            requestType = "MEMORY_WRITE",
-                            promptPreview = state.promptInput.take(150),
-                            responsePreview = "Saved Memory #$id",
-                            latencyMs = latency,
-                            tokensPerSecond = 0f,
-                            totalTokens = 1,
-                            status = "SUCCESS"
-                        )
-                    )
-                }
-
-                "EMBED" -> {
-                    _simulatorState.value = _simulatorState.value.copy(isRunning = false,
-                        statusText = "Unsupported task", outputText = "The installed library contains text-generation models. Embeddings are unavailable.")
-                }
-
-                "SUMMARIZE" -> {
-                    val summary = repository.engine.summarize(state.promptInput, 40)
-                    val latency = System.currentTimeMillis() - startTime
-                    _simulatorState.value = _simulatorState.value.copy(
-                        isRunning = false,
-                        latencyMs = latency,
-                        tokensPerSec = (summary.length / 4 * 1000f) / maxOf(1L, latency),
-                        statusText = "Summarized in ${latency}ms",
-                        outputText = summary
-                    )
-                    repository.logIpcCall(
-                        IpcLogEntity(
-                            callingPackage = state.selectedPackage,
-                            callingUid = 10245,
-                            requestType = "SUMMARIZE",
-                            promptPreview = state.promptInput.take(150),
-                            responsePreview = summary.take(200),
-                            latencyMs = latency,
-                            tokensPerSecond = _simulatorState.value.tokensPerSec,
-                            totalTokens = summary.length / 4,
-                            status = "SUCCESS"
-                        )
-                    )
-                }
-
-                "CLASSIFY" -> {
-                    val candidates = arrayOf("System Performance", "Security & Privacy", "User Interface", "Hardware Battery")
-                    val result = repository.engine.classify(state.promptInput, candidates)
-                    val latency = System.currentTimeMillis() - startTime
-                    _simulatorState.value = _simulatorState.value.copy(
-                        isRunning = false,
-                        latencyMs = latency,
-                        tokensPerSec = 0f,
-                        statusText = "Classified in ${latency}ms",
-                        outputText = "Predicted Category: **$result**\nCandidates Evaluated: [${candidates.joinToString(", ")}]\nConfidence Score: 0.94 (Softmax Logits on-device)"
-                    )
-                    repository.logIpcCall(
-                        IpcLogEntity(
-                            callingPackage = state.selectedPackage,
-                            callingUid = 10245,
-                            requestType = "CLASSIFY",
-                            promptPreview = state.promptInput.take(150),
-                            responsePreview = result,
-                            latencyMs = latency,
-                            tokensPerSecond = 0f,
-                            totalTokens = 4,
-                            status = "SUCCESS"
-                        )
-                    )
-                }
-            } } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                _simulatorState.value = _simulatorState.value.copy(isRunning = false,
-                    statusText = "AI unavailable", outputText = e.message ?: "Unable to run this task")
-            }
-        }
-    }
 }

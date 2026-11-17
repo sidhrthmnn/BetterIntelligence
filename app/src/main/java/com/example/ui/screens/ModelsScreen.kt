@@ -48,7 +48,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val autoFallback by viewModel.autoRamFallback.collectAsState()
     val telemetry by viewModel.telemetry.collectAsState()
     val hardware by viewModel.hardwareProfile.collectAsState()
-    val generationParams by viewModel.chatGenerationParams.collectAsState()
+    val generationParams by viewModel.generationParams.collectAsState()
     val recommendation by viewModel.modelRecommendation.collectAsState()
     val loading by viewModel.loadingModelId.collectAsState()
     val terms by viewModel.licenseModel.collectAsState()
@@ -133,7 +133,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                if (telemetry.isModelLoaded) "Ready to chat" else if (loading != null) "Loading model…" else "Choose your AI model",
+                                if (telemetry.isModelLoaded) "Ready for connected apps" else if (loading != null) "Loading model…" else "Choose your AI model",
                                 style = MaterialTheme.typography.labelLarge,
                                 modifier = Modifier.testTag("model_readiness")
                             )
@@ -144,10 +144,10 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                         }
                         if (telemetry.isModelLoaded) {
                             Button(
-                                onClick = { viewModel.selectTab(AppTab.CHAT) },
+                                onClick = { viewModel.selectTab(AppTab.CONNECT) },
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                 modifier = Modifier.heightIn(min = 40.dp)
-                            ) { Text("Chat", style = MaterialTheme.typography.labelMedium) }
+                            ) { Text("Apps", style = MaterialTheme.typography.labelMedium) }
                         }
                     }
                     if (telemetry.isModelLoaded && (models.count { it.isInstalled } >= 2 || secondary != null)) {
@@ -289,7 +289,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                             modifier = Modifier.heightIn(min = 40.dp).testTag("model_details_${model.id}")
                         ) { Text("Details", style = MaterialTheme.typography.labelMedium) }
                     }
-                    if (selected && telemetry.isRunning) Text("Stop the current answer before deleting the model.", style = MaterialTheme.typography.bodySmall)
+                    if (selected && telemetry.isRunning) Text("Wait for the connected app to finish before deleting the model.", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

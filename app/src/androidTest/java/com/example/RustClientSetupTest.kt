@@ -20,7 +20,9 @@ class RustClientSetupTest {
         val repository = AiCoreRepository.getInstance(context)
         withTimeout(30_000) { repository.allModels.first { it.isNotEmpty() } }
         while (repository.isModelLoading) delay(100)
-        val file = File(context.filesDir, "models/SmolLM2-135M-Instruct-Q8_0.gguf")
+        val filename = InstrumentationRegistry.getArguments().getString("clientModel", "SmolLM2-135M-Instruct-Q8_0.gguf")
+        require(filename.matches(Regex("[a-zA-Z0-9_.-]+\\.gguf")))
+        val file = File(context.filesDir, "models/$filename")
         check(file.isFile)
         val model = repository.registerImportedGguf(file, GgufParser().parseFromFile(file).getOrThrow())
         repository.engine.setProcessingMode(ProcessingMode.CPU)

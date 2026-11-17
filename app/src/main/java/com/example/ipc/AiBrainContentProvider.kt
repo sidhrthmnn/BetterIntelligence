@@ -46,8 +46,8 @@ class AiBrainContentProvider : ContentProvider() {
         selectionArgs: Array<out String>?,
         sortOrder: String?
     ): Cursor {
-        val repo = getRepo() ?: return MatrixCursor(arrayOf("error")).apply { addRow(arrayOf("Repository unavailable")) }
         val callingPkg = resolveCallerPackage()
+        val repo = getRepo() ?: return MatrixCursor(arrayOf("error")).apply { addRow(arrayOf("Repository unavailable")) }
         val callingUid = Binder.getCallingUid()
         val startTime = System.currentTimeMillis()
 
@@ -167,8 +167,8 @@ class AiBrainContentProvider : ContentProvider() {
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? {
-        val repo = getRepo() ?: return null
         val callingPkg = resolveCallerPackage()
+        val repo = getRepo() ?: return null
         val callingUid = Binder.getCallingUid()
 
         if (uriMatcher.match(uri) == MATCH_MEMORIES && values != null) {
@@ -192,8 +192,11 @@ class AiBrainContentProvider : ContentProvider() {
     }
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
+        // Reject undeclared/unknown callers before initializing model resources.
+        resolveCallerPackage()
         val repo = getRepo() ?: return Bundle().apply { putString("status", "ERROR") }
-        // ContentProvider.call() requires explicit permission enforcement as well as manifest protection.
+        // All entry points verify the installed Binder caller's declaration;
+        // calls then use BI's scoped approval, independently of stale OS grants.
         val access = LocalAiAccess(requireNotNull(context), repo)
         access.callerPackage()
         if (method == "status") return access.status()
@@ -328,7 +331,7 @@ class AiBrainContentProvider : ContentProvider() {
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int = 0
 
     private fun resolveCallerPackage(): String {
-        return LocalAiAccess(requireNotNull(context), requireNotNull(getRepo())).callerPackage()
+        return LocalAiCaller.packageForUid(requireNotNull(context))
     }
 
     private fun checkScope(repo: AiCoreRepository, pkg: String, scope: String): Pair<Boolean, String> {

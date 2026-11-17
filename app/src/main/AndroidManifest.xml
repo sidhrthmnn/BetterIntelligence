@@ -49,11 +49,11 @@
             </intent-filter>
         </activity>
 
-        <!-- System IPC Binder Service for Local AI Core -->
+        <!-- Reinstall-safe IPC enrollment is enforced by LocalAiCaller using
+             Binder UID + installed manifest declaration. BI scopes gate work. -->
         <service
             android:name=".ipc.LocalAiCoreService"
-            android:exported="${localAiExported}"
-            android:permission="${applicationId}.permission.BIND_LOCAL_AI_CORE">
+            android:exported="${localAiExported}">
             <intent-filter>
                 <action android:name="${applicationId}.ACTION_BIND_AI_CORE" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -95,7 +95,6 @@
         <provider
             android:name=".ipc.AiBrainContentProvider"
             android:authorities="${applicationId}.provider"
-            android:permission="${applicationId}.permission.BIND_LOCAL_AI_CORE"
             android:exported="${localAiExported}" />
 
     </application>

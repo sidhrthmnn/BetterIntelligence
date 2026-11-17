@@ -16,6 +16,8 @@ Install Better Intelligence, download a model in Models, and tap Use model. In t
 </queries>
 ```
 
+**BI reinstall recovery (2.7+):** Keep the same manifest declaration and package visibility. Android can revoke the custom normal permission when BI is removed without restoring it to already-installed clients. BI now validates enrollment using the real Binder UID and its installed package's requested permissions, then applies the existing BI approval and scope policy. The service/provider do not rely on that revocable install-time grant. Never provide a caller identity in extras. After a clean BI reinstall, retry the connection and approve the pending app in BI again; do not reinstall the client. A running client should release a dead Binder and retry its normal connection/status flow. No protocol or transaction ID change is required.
+
 No INTERNET permission is needed in the consumer. Copy [LocalAiPolishClient.kt](../app/src/main/java/com/example/ipc/LocalAiPolishClient.kt) into the consumer. It requires Kotlin coroutines and has no AIDL dependency. Keep or change its Kotlin package and update the import in your app.
 
 ```kotlin

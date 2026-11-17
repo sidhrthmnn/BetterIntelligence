@@ -23,9 +23,7 @@ class DownloadQueueStore(context: Context) {
     fun backgroundDownloadsEnabled() = prefs.getBoolean("background_downloads_enabled", true)
     fun setBackgroundDownloadsEnabled(value: Boolean) { prefs.edit().putBoolean("background_downloads_enabled", value).commit() }
     fun wifiOnly() = prefs.getBoolean("wifi_only", !prefs.getBoolean("allow_mobile_data", false))
-    fun setWifiOnly(value: Boolean) { prefs.edit().putBoolean("wifi_only", value).putBoolean("allow_mobile_data", !value).commit() }
-    fun allowMobileData() = prefs.getBoolean("allow_mobile_data", !prefs.getBoolean("wifi_only", true))
-    fun setAllowMobileData(value: Boolean) { prefs.edit().putBoolean("allow_mobile_data", value).putBoolean("wifi_only", !value).commit() }
+    fun setWifiOnly(value: Boolean) { check(prefs.edit().putBoolean("wifi_only", value).remove("allow_mobile_data").commit()) }
     fun autoResumeEnabled() = prefs.getBoolean("auto_resume_downloads", true)
     fun setAutoResumeEnabled(value: Boolean) { prefs.edit().putBoolean("auto_resume_downloads", value).commit() }
     fun notificationsEnabled() = prefs.getBoolean("download_notifications", true)
@@ -62,8 +60,14 @@ object ModelDownloadQueue {
             val info = JobInfo.Builder(JOB, ComponentName(context, ModelTransferJob::class.java))
                 .setUserInitiated(true).setPersisted(queue.autoResumeEnabled()).setRequiredNetworkType(if (queue.wifiOnly()) JobInfo.NETWORK_TYPE_UNMETERED else JobInfo.NETWORK_TYPE_ANY)
                 .setRequiresStorageNotLow(true).setBackoffCriteria(30_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL).build()
-            if (runCatching { scheduler.schedule(info) == JobScheduler.RESULT_SUCCESS }.getOrDefault(false)) return
+            if (runCatching { scheduler.schedule(info) == JobScheduler.RESULT_SUCCESS }.getOrDefault(false)) {
+                // A network setting change must also stop a worker admitted
+                // under the previous policy, not leave two different policies.
+                WorkManager.getInstance(context).cancelUniqueWork("model-download-queue")
+                return
+            }
         }
+        if (Build.VERSION.SDK_INT >= 34) context.getSystemService(JobScheduler::class.java).cancel(JOB)
         // Deferred retry/fallback: Android may postpone execution; never bypass system quotas.
         WorkManager.getInstance(context).enqueueUniqueWork("model-download-queue", ExistingWorkPolicy.REPLACE,
             OneTimeWorkRequestBuilder<ModelDownloadWorker>().setConstraints(Constraints.Builder()

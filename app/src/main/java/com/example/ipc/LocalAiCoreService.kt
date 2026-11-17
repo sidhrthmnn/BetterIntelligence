@@ -32,11 +32,10 @@ class LocalAiCoreService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val inferenceOwner = java.util.concurrent.atomic.AtomicInteger(-1)
-    private lateinit var repository: AiCoreRepository
+    private val repository by lazy { AiCoreRepository.getInstance(applicationContext) }
 
     override fun onCreate() {
         super.onCreate()
-        repository = AiCoreRepository.getInstance(applicationContext)
         createNotificationChannel()
     }
 
@@ -53,9 +52,7 @@ class LocalAiCoreService : Service() {
     }
 
     private fun enforceCallerPermission() {
-        if (Binder.getCallingUid() != Process.myUid()) {
-            enforceCallingPermission(PERMISSION_BIND, "Better Intelligence permission is required")
-        }
+        LocalAiCaller.packageForUid(this)
     }
 
     override fun onDestroy() {
@@ -286,7 +283,10 @@ class LocalAiCoreService : Service() {
             return repository.engine.telemetry.value.toJson()
         }
 
-        override fun getServiceStatus(): android.os.Bundle = LocalAiAccess(this@LocalAiCoreService, repository).status()
+        override fun getServiceStatus(): android.os.Bundle {
+            enforceCallerPermission()
+            return LocalAiAccess(this@LocalAiCoreService, repository).status()
+        }
 
         override fun polishText(text: String?): android.os.Bundle {
             enforceCallerPermission()

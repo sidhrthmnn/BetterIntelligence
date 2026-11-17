@@ -50,6 +50,7 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
         item { DetailDisclosure("Connect an app", "Set up local AI in TypeRight or another supported app") {
             Text("1. Select Better Intelligence in the app’s AI settings.\n2. Request a polish or AI action.\n3. Allow the app here, then retry.", style = MaterialTheme.typography.bodyMedium)
             Text("The other app must support this connection. Installing BI does not change its AI provider.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Reinstalled BI? Retry the connection in the other app, then allow it here again. You do not need to reinstall the other app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } }
         item { Text("App access", style = MaterialTheme.typography.titleMedium) }
         if (policies.isEmpty()) item {
