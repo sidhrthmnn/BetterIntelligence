@@ -1,0 +1,15 @@
+{
+  "checks": [
+    {
+      "scenario": "upgrade-with-lost-grant",
+      "providerAndBinderApprovalAndDenial": "PASS"
+    },
+    {
+      "scenario": "fresh-reinstall-with-client-unchanged",
+      "providerAndBinderApprovalAndDenial": "PASS"
+    }
+  ],
+  "clientReinstalledOrUpdated": false,
+  "clientUpdateTimeUnchanged": true,
+  "device": "API 36 x86_64 emulator"
+}

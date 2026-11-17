@@ -15,7 +15,7 @@ import org.junit.Test
 import java.io.File
 
 /** Only the isolated validation app. No model downloads, deletion, app approvals
- * or changes to production chat data. Covers all ten navigation destinations. */
+ * or changes to production chat data. Covers all seven navigation destinations. */
 class SimpleUiDeviceTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     @Test fun allScreensHaveReadableCardsAndWorkingDetailsInBothThemes(): Unit = runBlocking {
@@ -47,7 +47,15 @@ class SimpleUiDeviceTest {
     }
     private fun capture(name: String) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
         instrumentation.waitForIdleSync()
+        // Semantics can settle before the compositor presents the next frame.
+        // A system ANR/permission dialog must never become a marketing image.
+        Thread.sleep(400)
+        check(instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == instrumentation.targetContext.packageName) {
+            "A system window is covering the app; do not use this screenshot"
+        }
         val image = instrumentation.uiAutomation.takeScreenshot()
         val directory = File(instrumentation.targetContext.filesDir, "simple-ui").apply { mkdirs() }
         File(directory, name).outputStream().use { image.compress(Bitmap.CompressFormat.PNG, 100, it) }

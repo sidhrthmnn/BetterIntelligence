@@ -28,7 +28,8 @@ assert provider.attrib[android + "authorities"] == "com.aistudio.betterintellige
 # Reinstall-safe enrollment is checked against the actual Binder UID's installed
 # manifest declaration in LocalAiCaller. BI's explicit scoped approval gates work.
 assert android + "permission" not in provider.attrib and android + "permission" not in service.attrib
-assert any(p.attrib[android + "name"] == permission and p.attrib[android + "protectionLevel"] in ("normal", "0x0", "0")
+assert any(p.attrib[android + "name"] == permission and
+           (p.attrib[android + "protectionLevel"] == "normal" or int(p.attrib[android + "protectionLevel"], 0) == 0)
            for p in manifest.findall("permission"))
 assert provider.attrib[android + "exported"] == service.attrib[android + "exported"] == "true"
 assert any(a.attrib[android + "name"] == "com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE"

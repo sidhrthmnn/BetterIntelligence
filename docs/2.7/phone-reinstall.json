@@ -1,0 +1,10 @@
+{
+  "device": "HONOR VKP-NX9",
+  "android": "17",
+  "clientUnchanged": true,
+  "approvalAndDenialAfterBiReinstall": "PASS",
+  "realCpuProviderAndBinderPolishAfterReapproval": "PASS",
+  "nativeModel": "SmolLM2 135M Q4_K_M",
+  "modelSha256": "8030f04528538d47bda434f6f0bdf3952c40a58123e4d5e755332f23731a8684",
+  "productionInstallModified": false
+}
