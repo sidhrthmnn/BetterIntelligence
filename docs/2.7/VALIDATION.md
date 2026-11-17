@@ -23,7 +23,7 @@ HONOR VKP-NX9, Android 17:
 - Real SmolLM2 135M Q4_K_M CPU model: provider preparation/polishing and Binder polishing passed (client test 4.214 s).
 - Removed and installed only the disposable BI validation package, leaving the same client installed. Fresh approval/denial checks passed. Reapproval followed by real provider/Binder inference passed again (4.229 s). Client update time was unchanged.
 - All seven screens in light/dark themes were checked again for clean screenshots: one instrumentation test passed in 11.508 s. Store images are unmodified physical-phone captures.
-- No production-app uninstall, model deletion or private chat inspection was needed. No physical-phone network/display settings were changed.
+- No production-app uninstall, model deletion or private chat inspection was needed. No physical-phone network settings were changed. A later screenshot-format attempt temporarily changed the test viewport to 1080x1920; its active-window guard rejected the captures and the physical resolution was restored in a finally block. Original full-resolution, visually checked phone captures were used instead.
 
 The test model was staged from an existing local, SHA-verified copy; it was not downloaded over cellular data. The test client's model/setup permission applied only to this isolated installation.
 
