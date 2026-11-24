@@ -28,7 +28,7 @@ Downloads use a persistent queue. On Android 14 and later, a tap can start an An
 
 With Wi-Fi only enabled, Android 9 and later can schedule transfers on Wi-Fi, including metered Wi-Fi. Earlier versions still use the unmetered scheduler constraint for background work. Connections use the assigned network or an active VPN. If the app cannot confirm that a VPN is using Wi-Fi, it waits rather than sending over another network.
 
-Transient network failures keep checked partial bytes and retry automatically when resumption is enabled. A temporarily unavailable file yields to other models in the queue. BI checks the returned byte range and verifies the expected checksum before installing. Models without a publisher checksum restart at byte zero after an interruption. Android may defer background work, and a force stop requires reopening the app.
+Transient network failures keep saved partial bytes and retry automatically when resumption is enabled. A temporarily unavailable file yields to other models in the queue. BI checks the returned byte range and verifies the expected checksum before installing. Models without a publisher checksum restart at byte zero after an interruption. Android may defer background work, and a force stop requires reopening the app.
 
 ## Validation and release
 

@@ -1,0 +1,33 @@
+{
+  "versionCode": 37,
+  "versionName": "2.7.1",
+  "sourceCommit": "ae50357a1b33b9ce058d553c534752c66676d4e3",
+  "bundleSha256": "99be0ca14911d647daf736fa061e05dfeb7cef8d3fe9efc3f26be6f5f2af9e32",
+  "bundleBytes": 94563411,
+  "signatureVerified": true,
+  "track": "production",
+  "releaseId": "3",
+  "rolloutPercent": 100,
+  "observedDate": "2026-11-24",
+  "status": "CHANGES_IN_REVIEW",
+  "managedPublishing": false,
+  "tests": {
+    "kotlin": {
+      "cases": 399,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "rustPassed": 31,
+    "releaseLintErrors": 0,
+    "releaseLintWarnings": 143,
+    "device": "HONOR VKP-NX9 (Android 17), isolated validation package",
+    "deviceChecks": [
+      "105454144-byte SmolLM2 model with a saved 4194304-byte prefix completed during a real JobScheduler transfer while the activity was stopped and passed its pinned checksum",
+      "Pause and delete a real partial download from the model list while preserving an installed model",
+      "Models, Settings, Apps, discovery cards, and light/dark screen checks",
+      "Real model load and polishing through provider and Binder from the sample client"
+    ]
+  },
+  "playConsole": "https://play.google.com/console/u/0/developers/7469907004406722588/app/4975407059009835662/publishing"
+}
