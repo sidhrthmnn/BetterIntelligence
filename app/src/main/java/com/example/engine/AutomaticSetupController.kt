@@ -74,8 +74,12 @@ class AutomaticSetupController(private val context: Context, private val repo: A
             repo.automaticSetupApproved()
             _state.value = _state.value.copy(pending = true, pair = pair)
         }
-        DownloadQueueStore(context).setWifiOnly(wifiOnly)
-        models.sortedBy { it.fileSizeMb }.filterNot { it.isInstalled }.forEach { repo.startModelDownload(it, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)) }
+        val queue = DownloadQueueStore(context)
+        if (queue.wifiOnly() != wifiOnly) {
+            queue.setWifiOnly(wifiOnly)
+            ModelDownloadQueue.schedule(context, userInitiated = true, policyChanged = true)
+        }
+        models.sortedBy { it.fileSizeMb }.filterNot { it.isInstalled }.forEach { repo.startModelDownload(it) }
         if (isCurrentPending(epoch)) status(if (models.any { !it.isInstalled }) "Downloading selected models" else "Models installed; waiting for safe benchmark conditions")
         if (models.all { it.isInstalled }) AutomaticSetupWorker.enqueue(context)
     }

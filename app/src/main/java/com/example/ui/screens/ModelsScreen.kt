@@ -245,6 +245,9 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                     )
                     if (ModelLibrary.category(model) == "EXPERIMENTAL") Text("Experimental · May be unstable", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     if (!installed && !canDownload) Text("Free more storage before downloading this model.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    if (model.downloadState == "QUEUED" && downloadErrors.containsKey(model.id)) {
+                        Text("Transfer interrupted. Retrying automatically.", style = MaterialTheme.typography.bodySmall)
+                    }
                     if (model.downloadState == "ERROR") Text(downloadErrors[model.id] ?: "Download interrupted. Tap Retry to resume.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (downloading) {
                         val animatedProgress by animateFloatAsState(

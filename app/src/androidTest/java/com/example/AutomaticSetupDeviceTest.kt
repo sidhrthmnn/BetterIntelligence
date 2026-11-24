@@ -120,10 +120,10 @@ class AutomaticSetupDeviceTest {
         val model = repo.allModels.first().first { it.filename == "smollm2-135m-instruct-q4_k_m.gguf" }
         check(!model.isInstalled)
         DownloadQueueStore(context).setWifiOnly(true)
-        repo.startModelDownload(model, this)
+        repo.startModelDownload(model)
         val part = File(repo.downloadManager.modelsDirectory, "${model.filename}.part")
         withTimeout(90_000) { while (part.length() < 1_048_576) delay(100) }
-        repo.cancelModelDownload(model.id, this)
+        repo.cancelModelDownload(model.id)
         withTimeout(15_000) { while (repo.modelForDownload(model.id)?.downloadState !in setOf("PAUSED", "NOT_DOWNLOADED")) delay(100) }
         assertTrue(part.length() > 0)
         File(context.filesDir, "transfer-restart.json").writeText(JSONObject().put("id", model.id).put("partialBytes", part.length()).toString())
@@ -158,10 +158,10 @@ class AutomaticSetupDeviceTest {
         val model = repo.allModels.first().single { it.filename == "qwen2.5-0.5b-instruct-q4_k_m.gguf" }
         check(!model.isInstalled) { "Run this only in the fresh emulator validation app" }
         DownloadQueueStore(context).setWifiOnly(true)
-        repo.startModelDownload(model, this)
+        repo.startModelDownload(model)
         val part = File(repo.downloadManager.modelsDirectory, "${model.filename}.part")
         withTimeout(90_000) { while (part.length() < 1_048_576) delay(100) }
-        repo.cancelModelDownload(model.id, this)
+        repo.cancelModelDownload(model.id)
         withTimeout(15_000) { while (repo.modelForDownload(model.id)?.downloadState != "PAUSED") delay(100) }
         val bytes = part.length(); assertTrue(bytes > 0)
         compose.runOnUiThread { vm.selectTab(AppTab.MODELS) }

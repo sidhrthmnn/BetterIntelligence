@@ -27,6 +27,19 @@ interface ModelDao {
     @Update
     suspend fun updateModel(model: ModelEntity)
 
+    @Query("""UPDATE models SET downloadState = :state, downloadProgress = :progress,
+        downloadSpeedMbps = 0, checksumVerificationStatus = :checksumStatus WHERE id = :id AND isInstalled = 0""")
+    suspend fun updateTransferState(id: Long, state: String, progress: Float, checksumStatus: String)
+
+    @Query("""UPDATE models SET downloadProgress = :progress, downloadSpeedMbps = :speedMbps
+        WHERE id = :id AND downloadState = 'DOWNLOADING' AND isInstalled = 0""")
+    suspend fun updateTransferProgress(id: Long, progress: Float, speedMbps: Float)
+
+    @Query("""UPDATE models SET isInstalled = 1, downloadState = 'DOWNLOADED', downloadProgress = 1,
+        downloadSpeedMbps = 0, localFilePath = :path, sha256Checksum = :sha256, isChecksumVerified = :verified,
+        checksumVerificationStatus = :checksumStatus WHERE id = :id""")
+    suspend fun completeDownload(id: Long, path: String, sha256: String, verified: Boolean, checksumStatus: String)
+
     @Query("UPDATE models SET isActive = 0")
     suspend fun clearActiveModel()
 

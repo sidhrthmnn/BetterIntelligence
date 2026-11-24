@@ -67,7 +67,7 @@ fun ModelsDownloadsPreferences(viewModel: AiCoreViewModel) {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Enable background downloads", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Text("Keep downloading in the background", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
             Switch(
                 checked = bgEnabled,
                 onCheckedChange = {
@@ -88,6 +88,8 @@ fun ModelsDownloadsPreferences(viewModel: AiCoreViewModel) {
                 modifier = Modifier.testTag("pref_wifi_only")
             )
         }
+        if (!bgEnabled) Text("Keep Better Intelligence open to continue downloads.", style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Turn off to download using mobile data or Wi-Fi.", style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

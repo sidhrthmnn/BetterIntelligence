@@ -3,7 +3,11 @@ package com.example
 import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import com.example.service.DownloadQueueStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.data.AiCoreRepository
@@ -31,6 +35,16 @@ class ModelDownloadUiDeviceTest {
         val vm = ViewModelProvider(compose.activity)[AiCoreViewModel::class.java]
         compose.runOnUiThread { vm.selectTab(AppTab.MODELS) }
         compose.onNodeWithTag("model_ram_summary").assertExists()
+        val backgroundCheck = InstrumentationRegistry.getArguments().getString("checkBackground") == "true"
+        if (backgroundCheck) {
+            val connectivity = context.getSystemService(ConnectivityManager::class.java)
+            check(connectivity.getNetworkCapabilities(connectivity.activeNetwork)
+                ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) { "Use Wi-Fi for the real download check" }
+            check(!model.isInstalled) { "This check needs an uninstalled test model" }
+            val queue = DownloadQueueStore(context)
+            queue.setWifiOnly(true)
+            queue.setBackgroundDownloadsEnabled(true)
+        }
         if (!model.isInstalled) {
             compose.onNodeWithTag("model_source_library").performClick()
             compose.onNodeWithTag("models_list").performScrollToNode(hasTestTag("download_model_${model.id}"))
@@ -38,7 +52,18 @@ class ModelDownloadUiDeviceTest {
             compose.waitUntil(15_000) { vm.allModels.value.any { it.id == model.id && (it.downloadState == "DOWNLOADING" || it.isInstalled) } }
             compose.waitForIdle()
             compose.onNodeWithTag("model_card_${model.id}").assertIsDisplayed()
-            compose.waitUntil(180_000) { vm.allModels.value.any { it.id == model.id && it.isInstalled } }
+            if (backgroundCheck) {
+                assertFalse("Transfer completed before the background check", repository.modelForDownload(model.id)!!.isInstalled)
+                compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+                try {
+                    withTimeout(180_000) { repository.allModels.first { rows -> rows.any { it.id == model.id && it.isInstalled } } }
+                    android.util.Log.i("BiBackgroundTest", "Model completed while activity was stopped")
+                } finally {
+                    compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+                }
+            } else {
+                compose.waitUntil(180_000) { vm.allModels.value.any { it.id == model.id && it.isInstalled } }
+            }
         }
         compose.onNodeWithTag("models_list").performScrollToNode(hasTestTag("model_status_${model.id}"))
         compose.onNodeWithTag("model_status_${model.id}").assertTextEquals("Downloaded")

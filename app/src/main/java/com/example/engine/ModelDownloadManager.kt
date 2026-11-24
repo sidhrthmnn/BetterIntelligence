@@ -1,9 +1,14 @@
 package com.example.engine
 
 import android.content.Context
+import android.net.Network
+import android.os.SystemClock
 import android.util.Log
 import com.example.data.ModelEntity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -54,7 +59,7 @@ sealed class DownloadStateUpdate {
     data class Progress(val progress: Float, val speedMbps: Float, val downloadedBytes: Long, val totalBytes: Long) : DownloadStateUpdate()
     object VerifyingChecksum : DownloadStateUpdate()
     data class Success(val file: File, val sha256: String, val isVerified: Boolean) : DownloadStateUpdate()
-    data class Failure(val error: String) : DownloadStateUpdate()
+    data class Failure(val error: String, val retryable: Boolean = false, val bytesSaved: Long = 0) : DownloadStateUpdate()
 }
 
 class ModelDownloadManager(private val context: Context,
@@ -116,7 +121,8 @@ class ModelDownloadManager(private val context: Context,
                     )
                 )
             }
-        } catch (e: Exception) {
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
             Log.e(TAG, "Failed to search Hugging Face Hub: ${e.message}", e)
         }
         results
@@ -125,9 +131,9 @@ class ModelDownloadManager(private val context: Context,
     /**
      * Query Hugging Face API to list all available GGUF files in a repository with their sizes & LFS SHA256 checksums.
      */
-    suspend fun fetchRepoGgufFiles(repoId: String): List<HuggingFaceGgufFile> = withContext(Dispatchers.IO) {
+    suspend fun fetchRepoGgufFiles(repoId: String, network: Network? = null): List<HuggingFaceGgufFile> = withContext(Dispatchers.IO) {
         val repo = HuggingFaceCatalog.normalizeRepo(repoId)
-        val metadata = fetchHttpString("https://huggingface.co/api/models/$repo?blobs=true")
+        val metadata = fetchHttpString("https://huggingface.co/api/models/$repo?blobs=true", network = network)
             ?: error("Repository unavailable. Use a public repository, or import a downloaded GGUF file.")
         HuggingFaceCatalog.files(repo, JSONObject(metadata))
     }
@@ -135,12 +141,12 @@ class ModelDownloadManager(private val context: Context,
     /**
      * Fetch the official Hugging Face Git LFS SHA256 checksum for a specific file.
      */
-    suspend fun fetchOfficialSha256(repoId: String, filename: String): String? = withContext(Dispatchers.IO) {
+    suspend fun fetchOfficialSha256(repoId: String, filename: String, network: Network? = null): String? = withContext(Dispatchers.IO) {
         try {
             val cleanRepo = repoId.trim().removePrefix("https://huggingface.co/").removeSuffix("/")
             // 1. Check raw file pointer (Hugging Face raw pointer contains: 'oid sha256:<hash>')
             val rawPointerUrl = "https://huggingface.co/$cleanRepo/raw/main/$filename"
-            val rawContent = fetchHttpString(rawPointerUrl, maxBytes = 4096)
+            val rawContent = fetchHttpString(rawPointerUrl, maxBytes = 4096, network = network)
             if (!rawContent.isNullOrBlank() && rawContent.contains("oid sha256:")) {
                 val line = rawContent.lines().firstOrNull { it.startsWith("oid sha256:") }
                 if (line != null) {
@@ -150,12 +156,13 @@ class ModelDownloadManager(private val context: Context,
             }
 
             // 2. Query tree API
-            val files = fetchRepoGgufFiles(cleanRepo)
+            val files = fetchRepoGgufFiles(cleanRepo, network)
             val match = files.firstOrNull { it.filename.equals(filename, ignoreCase = true) }
             if (!match?.sha256Oid.isNullOrBlank()) {
                 return@withContext match?.sha256Oid
             }
-        } catch (e: Exception) {
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
             Log.w(TAG, "Could not fetch official sha256 for $repoId / $filename: ${e.message}")
         }
         null
@@ -167,6 +174,8 @@ class ModelDownloadManager(private val context: Context,
      */
     suspend fun downloadAndVerifyModel(
         model: ModelEntity,
+        network: Network? = null,
+        canContinue: () -> Boolean = { true },
         onUpdate: suspend (DownloadStateUpdate) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
         require(model.filename == File(model.filename).name && !model.filename.contains('\\')) { "Invalid model filename" }
@@ -176,39 +185,68 @@ class ModelDownloadManager(private val context: Context,
         activeDownloadFlags[model.id] = true
         var connection: HttpURLConnection? = null
 
+        val initialBytes = tempFile.length()
         try {
             var resumeOffset = if (!model.sha256Checksum.isNullOrBlank()) tempFile.length() else 0L
+            val maxBytes = (model.fileSizeMb + 1) * 1048576L
+            if (resumeOffset > maxBytes) {
+                check(tempFile.delete()) { "Could not remove the oversized partial download" }
+                resumeOffset = 0
+            }
             check(availableSpace(modelsDirectory) > ((model.fileSizeMb + 128) * 1024L * 1024L - resumeOffset).coerceAtLeast(128L * 1024 * 1024)) { "Insufficient storage for the remaining model download" }
             val downloadUrl = model.downloadUrl ?: throw IllegalArgumentException("No download URL provided for model ${model.name}")
 
-            val activeConn = openHttps(downloadUrl, resumeOffset)
+            if (!canContinue()) throw CancellationException("Download network policy changed")
+            val activeConn = openHttps(downloadUrl, resumeOffset, network)
             connection = activeConn
-            if (activeConn.responseCode == 416) {
+            if (activeConn.responseCode == 416 && resumeOffset > 0) {
                 // A complete or stale partial must not trap the user in an endless failed resume.
                 val complete = verifyLocalFile(tempFile, model.sha256Checksum)
                 if (complete.isMatch) {
                     if (model.filename.endsWith(".gguf", true)) GgufParser().parseFromFile(tempFile).getOrThrow()
                     else com.google.ai.edge.litertlm.ModelInfo.from(tempFile.absolutePath).use { require(it is com.google.ai.edge.litertlm.ModelInfo.Llm) }
                     kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                    check(tempFile.renameTo(targetFile)) { "Could not install completed download" }
-                    onUpdate(DownloadStateUpdate.Success(targetFile, complete.computedSha256, true))
+                    withContext(NonCancellable) {
+                        check(tempFile.renameTo(targetFile)) { "Could not install completed download" }
+                        onUpdate(DownloadStateUpdate.Success(targetFile, complete.computedSha256, true))
+                    }
                     return@withContext true
                 }
                 tempFile.delete()
-                error("The partial download is stale. Retry to start a fresh verified download.")
+                throw IOException("The partial download is stale. A fresh download is needed.")
             }
-            if (activeConn.responseCode !in 200..299) {
-                throw IllegalStateException(if (activeConn.responseCode in listOf(401, 403)) "The publisher requires download authorisation for this model. Choose a publicly accessible package." else "Download provider returned HTTP ${activeConn.responseCode}. Retry later.")
+            val status = activeConn.responseCode
+            if (status != 200 && status != 206) {
+                when (status) {
+                    401, 403 -> error("The publisher denied access to this model. Try again or choose a public package.")
+                    404, 410 -> error("The publisher no longer offers this model file. Choose another package.")
+                    408, 425, 429, in 500..599 -> throw IOException("The model server is temporarily unavailable (HTTP $status).")
+                    else -> error("The model server returned HTTP $status.")
+                }
             }
 
-            if (activeConn.responseCode == 206) {
-                val start = Regex("bytes (\\d+)-\\d+/\\d+").matchEntire(activeConn.getHeaderField("Content-Range").orEmpty())?.groupValues?.get(1)?.toLongOrNull()
-                if (start != resumeOffset) { tempFile.delete(); error("The server returned an invalid resume range. Retry to start a fresh download.") }
-            } else resumeOffset = 0 // Server ignored Range; restart instead of appending a full file.
-
-            val totalBytes = activeConn.contentLengthLong.let {
-                if (it > 0) it + resumeOffset else (model.fileSizeMb * 1024L * 1024L)
+            val contentLength = activeConn.getHeaderField("Content-Length")?.toLongOrNull()
+                ?: activeConn.contentLengthLong.takeIf { it > 0 }
+            var responseEnd = contentLength
+            val totalBytes = if (status == 206) {
+                val range = CONTENT_RANGE.matchEntire(activeConn.getHeaderField("Content-Range").orEmpty())
+                val start = range?.groupValues?.get(1)?.toLongOrNull()
+                val end = range?.groupValues?.get(2)?.toLongOrNull()
+                val total = range?.groupValues?.get(3)?.toLongOrNull()
+                if (start != resumeOffset || end == null || total == null || end < resumeOffset || end >= total ||
+                    contentLength != null && contentLength != end - resumeOffset + 1) {
+                    tempFile.delete()
+                    throw IOException("The model server returned an invalid resume range.")
+                }
+                responseEnd = end + 1
+                total
+            } else {
+                resumeOffset = 0 // Server ignored Range. Start from byte zero.
+                contentLength
             }
+            check(totalBytes == null || totalBytes in 1..maxBytes) { "Download exceeds its declared model size" }
+            val remaining = (totalBytes ?: model.fileSizeMb * 1048576L) - resumeOffset
+            check(availableSpace(modelsDirectory) > remaining + 128L * 1048576) { "Insufficient storage for the remaining model download" }
 
             val digest = MessageDigest.getInstance("SHA-256")
             if (resumeOffset > 0) FileInputStream(tempFile).use { existing ->
@@ -221,33 +259,41 @@ class ModelDownloadManager(private val context: Context,
                 }
             }
             var downloadedBytes = resumeOffset
-            var lastLogTime = System.currentTimeMillis()
+            var lastLogTime = SystemClock.elapsedRealtime()
             var lastBytes = resumeOffset
 
             activeConn.inputStream.use { input ->
                 FileOutputStream(tempFile, resumeOffset > 0).use { output ->
                     val buffer = ByteArray(64 * 1024)
-                    var bytesRead: Int
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    while (true) {
+                        currentCoroutineContext().ensureActive()
+                        val bytesRead = input.read(buffer)
+                        if (bytesRead < 0) break
+                        currentCoroutineContext().ensureActive()
                         if (activeDownloadFlags[model.id] != true) {
                             throw kotlinx.coroutines.CancellationException("Download paused")
                         }
 
                         if (downloadedBytes / (64 * 1048576) != (downloadedBytes + bytesRead) / (64 * 1048576))
                             check(availableSpace(modelsDirectory) > 64L * 1048576) { "Insufficient storage. Free space and resume the download." }
+                        val next = downloadedBytes + bytesRead
+                        if (next > (responseEnd ?: maxBytes)) {
+                            // Keep only the already written prefix; don't append
+                            // bytes beyond the declared representation.
+                            error("Download exceeds its declared model size")
+                        }
                         output.write(buffer, 0, bytesRead)
                         digest.update(buffer, 0, bytesRead)
-                        downloadedBytes += bytesRead
-                        check(downloadedBytes <= (model.fileSizeMb + 1) * 1024L * 1024L) { "Download exceeds its declared model size" }
+                        downloadedBytes = next
 
-                        val now = System.currentTimeMillis()
+                        val now = SystemClock.elapsedRealtime()
                         if (now - lastLogTime >= 400) {
+                            if (!canContinue()) throw CancellationException("Download network policy changed")
                             val elapsedSec = (now - lastLogTime) / 1000f
                             val speedMbps = if (elapsedSec > 0) (((downloadedBytes - lastBytes) * 8f) / (1024 * 1024)) / elapsedSec else 0f
-                            val progress = if (totalBytes > 0) (downloadedBytes.toFloat() / totalBytes).coerceIn(0.01f, 0.99f) else 0.5f
-
-                            onUpdate(DownloadStateUpdate.Progress(progress, speedMbps, downloadedBytes, totalBytes))
+                            val estimate = totalBytes ?: (model.fileSizeMb * 1048576L).coerceAtLeast(1L)
+                            val progress = (downloadedBytes.toFloat() / estimate).coerceIn(0f, 0.99f)
+                            onUpdate(DownloadStateUpdate.Progress(progress, speedMbps, downloadedBytes, estimate))
                             lastLogTime = now
                             lastBytes = downloadedBytes
                         }
@@ -255,7 +301,10 @@ class ModelDownloadManager(private val context: Context,
                 }
             }
 
-            if (activeConn.contentLengthLong > 0 && downloadedBytes != totalBytes) throw java.io.IOException("Download interrupted. Retry to resume the remaining data.")
+            if (totalBytes != null && downloadedBytes != totalBytes) throw IOException("Download interrupted before the complete file arrived.")
+            connection = null
+            activeConn.disconnect()
+            if (!canContinue()) throw CancellationException("Download network policy changed")
             // Checksum verification phase
             onUpdate(DownloadStateUpdate.VerifyingChecksum)
 
@@ -264,7 +313,7 @@ class ModelDownloadManager(private val context: Context,
             // Determine expected checksum: from entity, or fetch from Hugging Face if repo provided
             var expectedChecksum = model.sha256Checksum
             if (expectedChecksum.isNullOrBlank() && !model.isCustom && !model.huggingFaceRepo.isNullOrBlank()) {
-                expectedChecksum = fetchOfficialSha256(model.huggingFaceRepo, model.filename)
+                expectedChecksum = fetchOfficialSha256(model.huggingFaceRepo, model.filename, network)
             }
 
             var isVerified = false
@@ -286,28 +335,34 @@ class ModelDownloadManager(private val context: Context,
             }
 
             try {
-            if (downloadedBytes == 0L) error("Empty model download")
-            if (model.filename.endsWith(".gguf", true)) GgufParser().parseFromFile(tempFile).getOrThrow()
-            if (model.filename.endsWith(".litertlm", true)) com.google.ai.edge.litertlm.ModelInfo.from(tempFile.absolutePath).use {
-                require(it is com.google.ai.edge.litertlm.ModelInfo.Llm) { "Downloaded LiteRT file is not a text-generation model" }
+                check(downloadedBytes > 0) { "Empty model download" }
+                if (model.filename.endsWith(".gguf", true)) GgufParser().parseFromFile(tempFile).getOrThrow()
+                if (model.filename.endsWith(".litertlm", true)) com.google.ai.edge.litertlm.ModelInfo.from(tempFile.absolutePath).use {
+                    require(it is com.google.ai.edge.litertlm.ModelInfo.Llm) { "Downloaded LiteRT file is not a text-generation model" }
+                }
+            } catch (e: Exception) {
+                tempFile.delete()
+                throw e
             }
-            } catch (e: Exception) { tempFile.delete(); throw e }
-            kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            // Atomically move temp file to destination
-            if (tempFile.exists() && tempFile.length() > 0) {
-                // Android rename on this same private filesystem atomically replaces
-                // the old path. Never delete a working installed copy first.
+            currentCoroutineContext().ensureActive()
+            // Keep the atomic file move and the installed-state callback
+            // together when the OS stops a worker or the user taps Pause.
+            withContext(NonCancellable) {
                 check(tempFile.renameTo(targetFile)) { "Could not install downloaded model" }
+                onUpdate(DownloadStateUpdate.Success(targetFile, computedSha256, isVerified))
             }
-
-            onUpdate(DownloadStateUpdate.Success(targetFile, computedSha256, isVerified))
-            return@withContext true
-
+            true
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Download failed for ${model.name}: ${e.message}", e)
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            onUpdate(DownloadStateUpdate.Failure(downloadErrorMessage(e)))
-            return@withContext false
+            currentCoroutineContext().ensureActive()
+            Log.w(TAG, "Model download failed: ${e.javaClass.simpleName}")
+            val secureConnectionFailure = generateSequence<Throwable>(e) { it.cause }
+                .take(12).any { it is SSLException || it is CertificateException }
+            onUpdate(DownloadStateUpdate.Failure(downloadErrorMessage(e),
+                retryable = e is IOException && !secureConnectionFailure && e !is java.io.FileNotFoundException,
+                bytesSaved = (tempFile.length() - initialBytes).coerceAtLeast(0)))
+            false
         } finally {
             connection?.disconnect()
             activeDownloadFlags.remove(model.id)
@@ -318,7 +373,7 @@ class ModelDownloadManager(private val context: Context,
      * Cancel an active download by model ID.
      */
     fun cancelDownload(modelId: Long) {
-        activeDownloadFlags[modelId] = false
+        activeDownloadFlags.computeIfPresent(modelId) { _, _ -> false }
     }
 
     /**
@@ -386,11 +441,11 @@ class ModelDownloadManager(private val context: Context,
      * Platform TLS uses network_security_config; never install a permissive trust manager.
      * Close even a connection that fails while establishing TLS (before returning it).
      */
-    internal fun openHttps(urlString: String, resumeOffset: Long = 0): HttpURLConnection {
+    internal fun openHttps(urlString: String, resumeOffset: Long = 0, network: Network? = null): HttpURLConnection {
         var url = URL(urlString)
         repeat(9) { hop ->
             require(url.protocol == "https") { "Model downloads require HTTPS" }
-            val conn = openConnection(url)
+            val conn = if (network == null) openConnection(url) else network.openConnection(url) as HttpURLConnection
             try {
                 conn.apply {
                     connectTimeout = 15000
@@ -415,11 +470,11 @@ class ModelDownloadManager(private val context: Context,
         error("Download provider redirected too many times")
     }
 
-    internal fun fetchHttpString(urlString: String, maxBytes: Int = 1024 * 1024): String? {
+    internal fun fetchHttpString(urlString: String, maxBytes: Int = 1024 * 1024, network: Network? = null): String? {
         var connection: HttpURLConnection? = null
         return try {
             require(maxBytes in 1..(1024 * 1024))
-            connection = openHttps(urlString)
+            connection = openHttps(urlString, network = network)
             if (connection.responseCode in 200..299) {
                 connection.inputStream.use { input ->
                     val output = ByteArrayOutputStream()
@@ -444,6 +499,8 @@ class ModelDownloadManager(private val context: Context,
     }
 
     companion object {
+        private val CONTENT_RANGE = Regex("bytes ([0-9]+)-([0-9]+)/([0-9]+)")
+
         internal fun downloadErrorMessage(error: Throwable): String {
             var cause: Throwable? = error
             repeat(12) {

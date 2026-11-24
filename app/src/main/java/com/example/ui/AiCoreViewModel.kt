@@ -30,6 +30,8 @@ import com.example.engine.ModelTierRole
 import com.example.engine.QuantizationType
 import com.example.engine.StreamTokenListener
 import com.example.engine.SupportedEngine
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,13 +65,13 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val automaticSetup = repository.automaticSetup.state
     fun setDownloadsWifiOnly(value: Boolean) {
         com.example.service.DownloadQueueStore(getApplication()).setWifiOnly(value)
-        com.example.service.ModelDownloadQueue.schedule(getApplication(), true)
+        com.example.service.ModelDownloadQueue.schedule(getApplication(), userInitiated = true, policyChanged = true)
     }
     val downloadsWifiOnly get() = com.example.service.DownloadQueueStore(getApplication()).wifiOnly()
     val backgroundDownloadsEnabled get() = com.example.service.DownloadQueueStore(getApplication()).backgroundDownloadsEnabled()
     fun setBackgroundDownloadsEnabled(value: Boolean) {
         com.example.service.DownloadQueueStore(getApplication()).setBackgroundDownloadsEnabled(value)
-        com.example.service.ModelDownloadQueue.schedule(getApplication(), true)
+        com.example.service.ModelDownloadQueue.schedule(getApplication(), userInitiated = true, policyChanged = true)
     }
     val autoResumeDownloads get() = com.example.service.DownloadQueueStore(getApplication()).autoResumeEnabled()
     fun setAutoResumeDownloads(value: Boolean) {
@@ -266,7 +268,6 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
             repository.awaitModelInitialization()
             withContext(Dispatchers.IO) {
                 repository.automaticSetup.checkDevice()
-                com.example.service.ModelDownloadQueue.ensureScheduled(application)
             }
             if (!repository.automaticSetup.seen()) {
                 repository.automaticSetup.dismiss()
@@ -524,73 +525,85 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
 
     fun downloadModel(model: ModelEntity) {
         if (needsTerms(model)) { _licenseModel.value = model; return }
-        repository.startModelDownload(model, viewModelScope)
-        _userMessage.value = "Starting download for ${model.name}..."
+        viewModelScope.launch {
+            try {
+                repository.startModelDownload(model)
+                _userMessage.value = "Queued ${model.name} for download."
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { _userMessage.value = e.message ?: "Could not queue this download." }
+        }
     }
 
     fun cancelDownload(modelId: Long) {
-        repository.cancelModelDownload(modelId, viewModelScope)
-        _userMessage.value = "Download cancelled."
+        viewModelScope.launch {
+            try {
+                repository.cancelModelDownload(modelId)
+                _userMessage.value = "Download paused."
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { _userMessage.value = e.message ?: "Could not pause this download." }
+        }
     }
 
+    private var hfSearchJob: Job? = null
+    private var hfRepoJob: Job? = null
+
     fun setHfSearchQuery(query: String) {
+        if (_hfSearchQuery.value == query) return
+        hfSearchJob?.cancel()
+        _isHfSearching.value = false
+        _hfSearchResults.value = emptyList()
         _hfSearchQuery.value = query
     }
 
     fun searchHuggingFace(query: String = _hfSearchQuery.value) {
+        hfSearchJob?.cancel()
         val q = query.trim()
         if (q.isBlank()) {
+            _isHfSearching.value = false
             _hfSearchResults.value = emptyList()
             return
         }
         val directRepo = runCatching { com.example.engine.HuggingFaceCatalog.normalizeRepo(q) }.getOrNull()
         if (directRepo != null) {
+            _isHfSearching.value = false
             selectHfRepo(directRepo)
             return
         }
-        viewModelScope.launch {
+        hfSearchJob = viewModelScope.launch {
             _isHfSearching.value = true
             try {
                 val results = repository.searchHuggingFaceHub(q)
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 _hfSearchResults.value = results
-                if (results.isEmpty()) {
-                    _userMessage.value = "No GGUF models found for '$q'."
-                } else {
-                    _userMessage.value = "Found ${results.size} repositories on Hugging Face Hub."
-                }
-            } catch (e: Exception) {
-                _userMessage.value = "Hugging Face search failed: ${e.message}"
-            } finally {
-                _isHfSearching.value = false
-            }
+                if (results.isEmpty()) _userMessage.value = "No GGUF models found for '$q'."
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { _userMessage.value = "Hugging Face search failed: ${e.message}" }
+            finally { if (kotlinx.coroutines.currentCoroutineContext().isActive) _isHfSearching.value = false }
         }
     }
 
     fun selectHfRepo(repoId: String) {
+        hfRepoJob?.cancel()
         _selectedHfRepo.value = repoId
         _hfRepoGgufFiles.value = emptyList()
-        viewModelScope.launch {
+        hfRepoJob = viewModelScope.launch {
             _isLoadingRepoFiles.value = true
             try {
                 val files = repository.fetchRepoGgufFiles(repoId)
-                if (_selectedHfRepo.value != repoId) return@launch
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 _hfRepoGgufFiles.value = files
-                if (files.isEmpty()) {
-                    _userMessage.value = "No .gguf files detected in $repoId."
-                } else {
-                    _userMessage.value = "Discovered ${files.size} GGUF quantization files."
-                }
-            } catch (e: Exception) {
-                if (_selectedHfRepo.value == repoId) _userMessage.value = "Failed to load repo files: ${e.message}"
-            } finally {
-                if (_selectedHfRepo.value == repoId) _isLoadingRepoFiles.value = false
-            }
+                if (files.isEmpty()) _userMessage.value = "No .gguf files detected in $repoId."
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { _userMessage.value = "Failed to load repo files: ${e.message}" }
+            finally { if (kotlinx.coroutines.currentCoroutineContext().isActive) _isLoadingRepoFiles.value = false }
         }
     }
 
     fun clearHfRepoSelection() {
+        hfRepoJob?.cancel()
         _selectedHfRepo.value = null
         _hfRepoGgufFiles.value = emptyList()
+        _isLoadingRepoFiles.value = false
     }
 
     fun addAndDownloadHfModel(repoId: String, file: HuggingFaceGgufFile) {
@@ -647,7 +660,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
 
     fun updateModel(model: ModelEntity) {
         viewModelScope.launch {
-            repository.updateModel(model, viewModelScope)
+            repository.updateModel(model)
             _userMessage.value = "Checking and downloading updates for ${model.name}..."
         }
     }

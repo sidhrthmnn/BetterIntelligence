@@ -22,6 +22,14 @@ A clean BI uninstall removes its private approval records and downloaded models 
 
 Changing network policy reschedules pending work and cancels the alternate scheduler so an old WorkManager/JobScheduler admission cannot continue under a contradictory policy. Android's execution restrictions remain in force. Partial files, checksums, pause/resume and deletion continue using the existing downloader.
 
+## Download reliability in 2.7.1
+
+Downloads use a persistent queue. On Android 14 and later, a tap can start an Android user-initiated data transfer job. WorkManager handles deferred transfers and older versions of Android. Adding an item keeps the current transfer running. If BI is open with background downloads turned off, the visible activity owns the transfer and saves progress when it stops.
+
+With Wi-Fi only enabled, Android 9 and later can schedule transfers on Wi-Fi, including metered Wi-Fi. Earlier versions still use the unmetered scheduler constraint for background work. Connections use the assigned network or an active VPN. If the app cannot confirm that a VPN is using Wi-Fi, it waits rather than sending over another network.
+
+Transient network failures keep checked partial bytes and retry automatically when resumption is enabled. A temporarily unavailable file yields to other models in the queue. BI checks the returned byte range and verifies the expected checksum before installing. Models without a publisher checksum restart at byte zero after an interruption. Android may defer background work, and a force stop requires reopening the app.
+
 ## Validation and release
 
 The test plan covers the actual provider-reinstall failure with an unchanged cross-UID client, fresh client approval and inference, undeclared/unknown UID rejection, scope enforcement, setting migration, navigation/recreation, absence of chat controls, seven light/dark screens, existing Kotlin regressions, Rust host tests and signed production-bundle validation. Retired chat-screen instrumentation and transcript UI tests are removed with the feature; native, schema, client and deterministic evidence tests remain.

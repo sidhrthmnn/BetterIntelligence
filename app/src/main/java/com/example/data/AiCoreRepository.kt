@@ -1,6 +1,7 @@
 package com.example.data
 
 import android.content.Context
+import android.net.Network
 import androidx.room.withTransaction
 import com.example.engine.ChecksumVerificationResult
 import com.example.engine.DownloadStateUpdate
@@ -18,6 +19,10 @@ import com.example.engine.SupportedEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import com.example.engine.ModelLibrary
 import com.example.engine.ModelMemoryPlanner
@@ -33,6 +39,8 @@ import com.example.engine.ModelTierRole
 import com.example.engine.GenerationParams
 import com.example.engine.ConversationContext
 import com.example.engine.ChatTurn
+import com.example.service.DownloadQueueStore
+import com.example.service.ModelDownloadQueue
 import com.example.rustcore.RustModelPolicy
 import com.example.rustcore.ModelFailureKind
 import com.example.rustcore.RustIntelligence
@@ -116,6 +124,7 @@ class AiCoreRepository(
     val savedEnginePreference: Flow<SupportedEngine> = preferencesRepository.selectedEngineFlow
 
     // Download jobs map
+    private val downloadActions = Mutex()
     private val activeDownloadJobs = ConcurrentHashMap<Long, Job>()
     private val _downloadErrors = MutableStateFlow<Map<Long, String>>(emptyMap())
     val downloadErrors = _downloadErrors.asStateFlow()
@@ -239,12 +248,19 @@ class AiCoreRepository(
                 lastUsedTimestamp = existing?.lastUsedTimestamp ?: 0L,
                 isActive = installed && existing?.isActive == true,
                 localFilePath = if (installed) file.absolutePath else null,
-                downloadState = if (installed) "DOWNLOADED" else if (existing?.id in queuedIds) "QUEUED" else if (File(downloadManager.modelsDirectory, "${entry.filename}.part").length() > 0) "PAUSED" else "NOT_DOWNLOADED",
+                downloadState = if (installed) "DOWNLOADED" else if (existing?.id in queuedIds) "QUEUED" else if (existing?.downloadState == "ERROR") "ERROR" else if (File(downloadManager.modelsDirectory, "${entry.filename}.part").length() > 0) "PAUSED" else "NOT_DOWNLOADED",
                 downloadProgress = if (installed) 1f else (File(downloadManager.modelsDirectory, "${entry.filename}.part").length().toFloat() / (entry.fileSizeMb * 1048576).coerceAtLeast(1)).coerceIn(0f, .99f),
                 isChecksumVerified = installed,
                 checksumVerificationStatus = if (installed) "VERIFIED" else "NOT_VERIFIED")
             modelDao.insertModel(updated)
         }
+        // Restored queue state matters for Hugging Face additions too. Unlike
+        // catalogue entries, these rows are not reseeded at process startup.
+        modelDao.getAllModels().first().filter { !it.isInstalled && it.downloadState in setOf("DOWNLOADING", "QUEUED") }
+            .forEach { model ->
+                val state = if (model.id in queuedIds) "QUEUED" else "PAUSED"
+                updateTransferState(model, state)
+            }
     }
 
     suspend fun unloadModel() = withContext(Dispatchers.IO) {
@@ -476,151 +492,127 @@ class AiCoreRepository(
 
     suspend fun awaitModelInitialization() = initialized.await()
     suspend fun modelForDownload(id: Long) = modelDao.getModelById(id)
-    fun startModelDownload(model: ModelEntity, scope: CoroutineScope) {
-        val queue = com.example.service.DownloadQueueStore(appContext)
-        synchronized(activeDownloadJobs) { queue.enqueue(model.id) }
-        repositoryScope.launch {
-            val current = modelDao.getModelById(model.id) ?: return@launch
-            if (current.downloadState !in setOf("DOWNLOADING", "DOWNLOADED") && model.id in queue.ids()) modelDao.updateModel(current.copy(downloadState = "QUEUED"))
+    suspend fun startModelDownload(model: ModelEntity) = withContext(Dispatchers.IO) {
+        awaitModelInitialization()
+        downloadActions.withLock {
+            val current = modelDao.getModelById(model.id) ?: return@withLock
+            if (current.isInstalled || current.downloadUrl == null) return@withLock
+            val queue = DownloadQueueStore(appContext)
+            if (current.id in queue.ids()) return@withLock
+            _downloadErrors.update { it - current.id }
+            val part = partialFile(current)
+            updateTransferState(current, "QUEUED", part.length())
+            synchronized(activeDownloadJobs) { queue.enqueue(current.id) }
+            ModelDownloadQueue.schedule(appContext, userInitiated = true)
         }
-        com.example.service.ModelDownloadQueue.schedule(appContext, userInitiated = true)
     }
 
-    suspend fun executeQueuedDownload(model: ModelEntity, progress: suspend (ModelEntity) -> Unit) = kotlinx.coroutines.coroutineScope {
-        val scope = this
-        if (activeDownloadJobs.containsKey(model.id)) return@coroutineScope
-        _downloadErrors.value = _downloadErrors.value - model.id
+    private fun partialFile(model: ModelEntity) = File(downloadManager.modelsDirectory, "${model.filename}.part")
 
-        val job = scope.launch(Dispatchers.IO, start = kotlinx.coroutines.CoroutineStart.LAZY) {
+    private suspend fun updateTransferState(model: ModelEntity, state: String, bytes: Long = partialFile(model).length()) {
+        val fraction = (bytes.toDouble() / (model.fileSizeMb * 1048576L).coerceAtLeast(1)).coerceIn(0.0, .99).toFloat()
+        modelDao.updateTransferState(model.id, state, fraction, if (state == "ERROR") "FAILED" else "NOT_VERIFIED")
+    }
+
+    suspend fun executeQueuedDownload(model: ModelEntity, network: Network, canContinue: () -> Boolean,
+        progress: suspend (ModelEntity) -> Unit): DownloadStateUpdate.Failure? = kotlinx.coroutines.coroutineScope {
+        val queue = DownloadQueueStore(appContext)
+        val job = async(Dispatchers.IO, start = kotlinx.coroutines.CoroutineStart.LAZY) {
+            var failure: DownloadStateUpdate.Failure? = null
             try {
-                // Set state to DOWNLOADING
-                modelDao.updateModel(
-                    model.copy(
-                        downloadState = "DOWNLOADING",
-                        downloadProgress = (File(downloadManager.modelsDirectory, "${model.filename}.part").length().toFloat() /
-                            (model.fileSizeMb * 1048576).coerceAtLeast(1)).coerceIn(0f, .99f),
-                        downloadSpeedMbps = 0f,
-                        checksumVerificationStatus = "NOT_VERIFIED"
-                    )
-                )
-
-                downloadManager.downloadAndVerifyModel(model) { update ->
-                    run {
-                        val current = modelDao.getModelById(model.id) ?: return@run
-                        when (update) {
-                            is DownloadStateUpdate.Progress -> {
-                                if (current.downloadState in setOf("DOWNLOADING", "QUEUED")) {
-                                    modelDao.updateModel(
-                                        current.copy(
-                                            downloadProgress = update.progress,
-                                            downloadSpeedMbps = update.speedMbps
-                                        )
-                                    )
-                                }
-                            }
-                            is DownloadStateUpdate.VerifyingChecksum -> {
-                                if (current.downloadState in setOf("DOWNLOADING", "QUEUED")) {
-                                    modelDao.updateModel(
-                                        current.copy(
-                                            downloadProgress = 0.99f,
-                                            downloadSpeedMbps = 0f,
-                                            checksumVerificationStatus = "VERIFYING"
-                                        )
-                                    )
-                                }
-                            }
-                            is DownloadStateUpdate.Success -> {
-                                com.example.engine.GgufParser().parseFromFile(update.file).getOrNull()?.let { ModelLibrary.recordMetadata(current.filename, it) }
-                                modelDao.updateModel(
-                                    current.copy(
-                                        isInstalled = true,
-                                        downloadState = "DOWNLOADED",
-                                        downloadProgress = 1.0f,
-                                        downloadSpeedMbps = 0f,
-                                        localFilePath = update.file.absolutePath,
-                                        sha256Checksum = update.sha256,
-                                        isChecksumVerified = update.isVerified,
-                                        checksumVerificationStatus = if (update.isVerified) "VERIFIED" else "UNAVAILABLE"
-                                    )
-                                )
-                            }
-                            is DownloadStateUpdate.Failure -> {
-                                _downloadErrors.value = _downloadErrors.value + (model.id to update.error.take(300))
-                                modelDao.updateModel(
-                                    current.copy(
-                                        downloadState = "ERROR",
-                                        downloadSpeedMbps = 0f,
-                                        checksumVerificationStatus = "FAILED"
-                                    )
-                                )
+                _downloadErrors.update { it - model.id }
+                updateTransferState(model, "DOWNLOADING")
+                modelDao.getModelById(model.id)?.let { progress(it) }
+                downloadManager.downloadAndVerifyModel(model, network, canContinue) { update ->
+                    when (update) {
+                        is DownloadStateUpdate.Progress ->
+                            modelDao.updateTransferProgress(model.id, update.progress, update.speedMbps)
+                        is DownloadStateUpdate.VerifyingChecksum ->
+                            modelDao.updateTransferState(model.id, "DOWNLOADING", .99f, "VERIFYING")
+                        is DownloadStateUpdate.Success -> {
+                            modelDao.completeDownload(model.id, update.file.absolutePath, update.sha256, update.isVerified,
+                                if (update.isVerified) "VERIFIED" else "UNAVAILABLE")
+                            if (model.filename.endsWith(".gguf", true)) {
+                                com.example.engine.GgufParser().parseFromFile(update.file).getOrNull()
+                                    ?.let { ModelLibrary.recordMetadata(model.filename, it) }
                             }
                         }
+                        is DownloadStateUpdate.Failure -> failure = update
                     }
-                    modelDao.getModelById(model.id)?.let { progress(it) }
+                    if (update is DownloadStateUpdate.Progress || update is DownloadStateUpdate.VerifyingChecksum) {
+                        modelDao.getModelById(model.id)?.let { progress(it) }
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _downloadErrors.value = _downloadErrors.value + (model.id to (e.message ?: "Unable to download this model").take(300))
-                val current = modelDao.getModelById(model.id)
-                if (current != null) {
-                    modelDao.updateModel(
-                        current.copy(
-                            downloadState = "ERROR",
-                            downloadSpeedMbps = 0f,
-                            checksumVerificationStatus = "FAILED"
-                        )
-                    )
-                }
+                failure = DownloadStateUpdate.Failure(e.message ?: "Unable to download this model")
             } finally {
-                withContext(kotlinx.coroutines.NonCancellable) {
+                withContext(NonCancellable) {
                     val interrupted = modelDao.getModelById(model.id)
-                    if (interrupted?.downloadState == "DOWNLOADING") modelDao.updateModel(interrupted.copy(
-                        downloadState = if (model.id in com.example.service.DownloadQueueStore(appContext).ids()) "QUEUED" else "PAUSED", downloadSpeedMbps = 0f))
+                    if (interrupted?.downloadState == "DOWNLOADING") {
+                        updateTransferState(interrupted, if (model.id in queue.ids()) "QUEUED" else "PAUSED")
+                    }
                 }
-                activeDownloadJobs.remove(model.id, kotlinx.coroutines.currentCoroutineContext()[Job])
             }
+            failure
         }
         val existing = synchronized(activeDownloadJobs) {
-            if (model.id !in com.example.service.DownloadQueueStore(appContext).ids()) { job.cancel(); return@coroutineScope }
+            if (model.id !in queue.ids()) { job.cancel(); return@coroutineScope null }
             activeDownloadJobs.putIfAbsent(model.id, job)
         }
-        if (existing == null) { job.start(); job.join() } else { job.cancel(); existing.join() }
+        if (existing != null) {
+            job.cancel()
+            existing.join()
+            return@coroutineScope null
+        }
+        try { job.await() }
+        catch (e: CancellationException) { currentCoroutineContext().ensureActive(); null }
+        finally { activeDownloadJobs.remove(model.id, job) }
     }
 
-    suspend fun deletePartialDownload(modelId: Long) {
-        val running = synchronized(activeDownloadJobs) { com.example.service.DownloadQueueStore(appContext).remove(modelId); activeDownloadJobs[modelId] }
-        downloadManager.cancelDownload(modelId); running?.cancelAndJoin()
-        modelLock.withLock {
-            val current = modelDao.getModelById(modelId) ?: return@withLock
-            val dir = downloadManager.modelsDirectory.canonicalFile
-            val part = File(dir, "${current.filename}.part").canonicalFile
-            check(part.parentFile == dir) { "Invalid partial model path" }
-            check(!part.exists() || part.delete()) { "Could not remove partial download" }
-            _downloadErrors.value = _downloadErrors.value - modelId
-            modelDao.updateModel(current.copy(downloadState = if (current.isInstalled) "DOWNLOADED" else "NOT_DOWNLOADED",
-                downloadProgress = if (current.isInstalled) 1f else 0f, downloadSpeedMbps = 0f,
-                checksumVerificationStatus = if (current.isChecksumVerified) "VERIFIED" else "NOT_VERIFIED"))
+    suspend fun recordDownloadFailure(id: Long, failure: DownloadStateUpdate.Failure): Boolean = downloadActions.withLock {
+        val queue = DownloadQueueStore(appContext)
+        if (id !in queue.ids()) return@withLock false
+        val model = modelDao.getModelById(id)
+        if (model == null || model.isInstalled) { queue.remove(id); return@withLock false }
+        if (failure.bytesSaved >= 256 * 1024L) queue.resetFailures(id)
+        val retry = failure.retryable && queue.autoResumeEnabled() && queue.failure(id) < 8
+        _downloadErrors.update { it + (id to failure.error.take(300)) }
+        updateTransferState(model, if (retry) "QUEUED" else "ERROR")
+        if (!retry) queue.remove(id)
+        retry
+    }
+
+    suspend fun deletePartialDownload(modelId: Long) = withContext(Dispatchers.IO) {
+        downloadActions.withLock {
+            stopQueuedDownload(modelId)
+            modelLock.withLock {
+                val current = modelDao.getModelById(modelId) ?: return@withLock
+                val dir = downloadManager.modelsDirectory.canonicalFile
+                val part = partialFile(current).canonicalFile
+                check(part.parentFile == dir) { "Invalid partial model path" }
+                check(!part.exists() || part.delete()) { "Could not remove partial download" }
+                _downloadErrors.update { it - modelId }
+                if (!current.isInstalled) updateTransferState(current, "NOT_DOWNLOADED", 0)
+            }
         }
     }
 
-    fun cancelModelDownload(modelId: Long, scope: CoroutineScope) {
-        val job = synchronized(activeDownloadJobs) { com.example.service.DownloadQueueStore(appContext).remove(modelId); activeDownloadJobs[modelId] }
+    private suspend fun stopQueuedDownload(modelId: Long) {
+        val running = synchronized(activeDownloadJobs) { DownloadQueueStore(appContext).remove(modelId); activeDownloadJobs[modelId] }
         downloadManager.cancelDownload(modelId)
-        job?.cancel()
-        repositoryScope.launch(Dispatchers.IO) {
-            job?.join()
-            val model = modelDao.getModelById(modelId) ?: return@launch
-            if (model.isInstalled) return@launch // Completion won the race with Pause.
-            val partFile = File(downloadManager.modelsDirectory, "${model.filename}.part")
-            modelDao.updateModel(
-                model.copy(
-                    downloadState = if (partFile.length() > 0) "PAUSED" else "NOT_DOWNLOADED",
-                    downloadProgress = (partFile.length().toFloat() / (model.fileSizeMb * 1048576).coerceAtLeast(1)).coerceIn(0f, .99f),
-                    downloadSpeedMbps = 0f,
-                    isInstalled = false,
-                    checksumVerificationStatus = "NOT_VERIFIED"
-                )
-            )
+        running?.cancelAndJoin()
+    }
+
+    suspend fun cancelModelDownload(modelId: Long) = withContext(Dispatchers.IO) {
+        downloadActions.withLock {
+            stopQueuedDownload(modelId)
+            val model = modelDao.getModelById(modelId) ?: return@withLock
+            if (model.isInstalled) return@withLock
+            _downloadErrors.update { it - modelId }
+            val bytes = partialFile(model).length()
+            updateTransferState(model, if (bytes > 0) "PAUSED" else "NOT_DOWNLOADED", bytes)
         }
     }
 
@@ -647,9 +639,9 @@ class AiCoreRepository(
         return downloadManager.fetchRepoGgufFiles(repoId)
     }
 
-    suspend fun addHuggingFaceModel(repoId: String, file: HuggingFaceGgufFile): ModelEntity {
+    suspend fun addHuggingFaceModel(repoId: String, file: HuggingFaceGgufFile): ModelEntity = modelLock.withLock {
         val localName = com.example.engine.HuggingFaceCatalog.localFilename(repoId, file)
-        modelDao.getModelByFilename(localName)?.let { return it }
+        modelDao.getModelByFilename(localName)?.let { return@withLock it }
         val cleanModelName = file.filename
             .removeSuffix(".gguf")
             .removeSuffix(".GGUF")
@@ -682,7 +674,7 @@ class AiCoreRepository(
             checksumVerificationStatus = "NOT_VERIFIED"
         )
         val id = modelDao.insertModel(entity)
-        return entity.copy(id = id)
+        entity.copy(id = id)
     }
 
     suspend fun uninstallModel(model: ModelEntity) = withContext(Dispatchers.IO) {
@@ -732,10 +724,10 @@ class AiCoreRepository(
         analyzeHardware(appContext)
     }
 
-    suspend fun updateModel(model: ModelEntity, scope: CoroutineScope) {
+    suspend fun updateModel(model: ModelEntity) {
         check(!model.isActive) { "Select another model before replacing this model's file" }
         // Triggers a fresh download / update check
-        startModelDownload(model, scope)
+        startModelDownload(model)
     }
 
     suspend fun registerImportedGguf(file: File, metadata: GgufMetadata): ModelEntity {

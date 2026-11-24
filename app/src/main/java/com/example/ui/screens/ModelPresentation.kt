@@ -33,7 +33,7 @@ internal object ModelPresentation {
         model.isInstalled -> "Downloaded · Ready to use"
         model.downloadState == "DOWNLOADING" && model.checksumVerificationStatus == "VERIFYING" -> "Checking file before installing…"
         model.downloadState == "DOWNLOADING" -> "Downloading ${(model.downloadProgress.coerceIn(0f, .99f) * 100).toInt()}%"
-        model.downloadState == "QUEUED" -> "Queued · Waiting for network"
+        model.downloadState == "QUEUED" -> "Queued · ${(model.downloadProgress.coerceIn(0f, .99f) * 100).toInt()}% saved"
         model.downloadState == "PAUSED" -> "Paused · ${(model.downloadProgress.coerceIn(0f, .99f) * 100).toInt()}% saved"
         model.downloadState == "ERROR" -> "Download interrupted · Tap Retry"
         else -> "Available to download"

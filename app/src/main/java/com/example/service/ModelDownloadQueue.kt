@@ -5,6 +5,11 @@ import android.app.job.*
 import android.content.*
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.example.MainActivity
@@ -12,6 +17,9 @@ import com.example.R
 import com.example.data.AiCoreRepository
 import com.example.data.ModelEntity
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
@@ -29,7 +37,11 @@ class DownloadQueueStore(context: Context) {
     fun notificationsEnabled() = prefs.getBoolean("download_notifications", true)
     fun setNotificationsEnabled(value: Boolean) { prefs.edit().putBoolean("download_notifications", value).commit() }
     fun enqueue(id: Long) = synchronized(lock) { write(ids() + id) }
-    fun remove(id: Long) = synchronized(lock) { write(ids().filterNot { it == id }); prefs.edit().remove("attempt_$id").commit(); Unit }
+    fun remove(id: Long) = synchronized(lock) {
+        check(prefs.edit().putString("queue", ids().filterNot { it == id }.joinToString(","))
+            .remove("attempt_$id").commit())
+    }
+    fun resetFailures(id: Long) = synchronized(lock) { prefs.edit().remove("attempt_$id").commit(); Unit }
     fun failure(id: Long): Int = synchronized(lock) { val n = prefs.getInt("attempt_$id", 0) + 1; prefs.edit().putInt("attempt_$id", n).commit(); n }
     private fun write(ids: List<Long>) { check(prefs.edit().putString("queue", ids.distinct().joinToString(",")).commit()) }
     companion object { private val lock = Any() }
@@ -37,43 +49,94 @@ class DownloadQueueStore(context: Context) {
 object ModelDownloadQueue {
     const val JOB = 51032
     const val CHANNEL = "model_downloads"
+    private const val WORK = "model-download-queue"
+    private const val TAG = "ModelDownloadQueue"
     private val serial = Mutex()
-    /** Called when the user reopens BI. Respect existing OS work and force-stop semantics. */
+    private val schedulingLock = Any()
+    private val scheduled = MutableStateFlow(0)
+    private var uidtFinishing = false
+
+    private fun wifiRequest() = NetworkRequest.Builder()
+        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+        .build()
+
+    private fun Network.isWifi(context: Context): Boolean =
+        context.getSystemService(ConnectivityManager::class.java).getNetworkCapabilities(this)
+            ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+
     fun ensureScheduled(context: Context) {
-        val queue = DownloadQueueStore(context)
-        if (!queue.backgroundDownloadsEnabled() || !queue.autoResumeEnabled() || queue.ids().isEmpty()) return
-        if (Build.VERSION.SDK_INT >= 34 && context.getSystemService(JobScheduler::class.java).getPendingJob(JOB) != null) return
-        val active = WorkManager.getInstance(context).getWorkInfosForUniqueWork("model-download-queue").get().any { !it.state.isFinished }
-        if (!active) schedule(context, userInitiated = false)
+        if (DownloadQueueStore(context).autoResumeEnabled()) schedule(context, userInitiated = false)
     }
-    fun schedule(context: Context, userInitiated: Boolean) {
+
+    fun schedule(context: Context, userInitiated: Boolean, policyChanged: Boolean = false) = synchronized(schedulingLock) {
         val queue = DownloadQueueStore(context)
-        if (queue.ids().isEmpty()) return
-        if (!queue.backgroundDownloadsEnabled()) {
-            if (Build.VERSION.SDK_INT >= 34) runCatching { context.getSystemService(JobScheduler::class.java)?.cancel(JOB) }
-            runCatching { WorkManager.getInstance(context).cancelUniqueWork("model-download-queue") }
-            return
+        val scheduler = context.getSystemService(JobScheduler::class.java)
+        val work = WorkManager.getInstance(context)
+        scheduled.update { it + 1 }
+        if (policyChanged) {
+            if (Build.VERSION.SDK_INT >= 34) scheduler.cancel(JOB)
+            work.cancelUniqueWork(WORK)
         }
-        val backoffPolicy = if (queue.autoResumeEnabled()) BackoffPolicy.EXPONENTIAL else BackoffPolicy.LINEAR
-        if (Build.VERSION.SDK_INT >= 34 && userInitiated) {
-            val scheduler = context.getSystemService(JobScheduler::class.java)
-            val info = JobInfo.Builder(JOB, ComponentName(context, ModelTransferJob::class.java))
-                .setUserInitiated(true).setPersisted(queue.autoResumeEnabled()).setRequiredNetworkType(if (queue.wifiOnly()) JobInfo.NETWORK_TYPE_UNMETERED else JobInfo.NETWORK_TYPE_ANY)
-                .setRequiresStorageNotLow(true).setBackoffCriteria(30_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL).build()
-            if (runCatching { scheduler.schedule(info) == JobScheduler.RESULT_SUCCESS }.getOrDefault(false)) {
-                // A network setting change must also stop a worker admitted
-                // under the previous policy, not leave two different policies.
-                WorkManager.getInstance(context).cancelUniqueWork("model-download-queue")
-                return
+        if (!queue.backgroundDownloadsEnabled() || queue.ids().isEmpty()) return@synchronized
+        if (Build.VERSION.SDK_INT >= 34) {
+            val pending = scheduler.getPendingJob(JOB)
+            if (!policyChanged && !uidtFinishing && pending != null) return@synchronized
+            if (pending == null) uidtFinishing = false
+            if (userInitiated && !uidtFinishing) {
+                val submitted = runCatching {
+                    val builder = JobInfo.Builder(JOB, ComponentName(context, ModelTransferJob::class.java))
+                        .setUserInitiated(true).setPersisted(queue.autoResumeEnabled())
+                        .setRequiresStorageNotLow(true).setBackoffCriteria(30_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL)
+                    if (queue.wifiOnly()) builder.setRequiredNetwork(wifiRequest())
+                    else builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                    scheduler.schedule(builder.build()) == JobScheduler.RESULT_SUCCESS
+                }.onFailure { Log.w(TAG, "User-initiated download unavailable: " + it.javaClass.simpleName) }.getOrDefault(false)
+                if (submitted) {
+                    work.cancelUniqueWork(WORK)
+                    return@synchronized
+                }
             }
         }
-        if (Build.VERSION.SDK_INT >= 34) context.getSystemService(JobScheduler::class.java).cancel(JOB)
-        // Deferred retry/fallback: Android may postpone execution; never bypass system quotas.
-        WorkManager.getInstance(context).enqueueUniqueWork("model-download-queue", ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<ModelDownloadWorker>().setConstraints(Constraints.Builder()
-                .setRequiredNetworkType(if (queue.wifiOnly()) NetworkType.UNMETERED else NetworkType.CONNECTED).setRequiresStorageNotLow(true).build())
-                .setBackoffCriteria(backoffPolicy, 30, TimeUnit.SECONDS).build())
+        val constraints = Constraints.Builder().setRequiresStorageNotLow(true)
+        if (Build.VERSION.SDK_INT >= 28 && queue.wifiOnly()) {
+            constraints.setRequiredNetworkRequest(wifiRequest(), NetworkType.UNMETERED)
+        } else {
+            constraints.setRequiredNetworkType(if (queue.wifiOnly()) NetworkType.UNMETERED else NetworkType.CONNECTED)
+        }
+        val policy = when {
+            policyChanged -> ExistingWorkPolicy.REPLACE
+            userInitiated -> ExistingWorkPolicy.APPEND_OR_REPLACE
+            else -> ExistingWorkPolicy.KEEP
+        }
+        work.enqueueUniqueWork(WORK, policy, OneTimeWorkRequestBuilder<ModelDownloadWorker>()
+            .setConstraints(constraints.build()).setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS).build())
+        Unit
     }
+
+    fun jobStarted() = synchronized(schedulingLock) { uidtFinishing = false }
+    fun finishJob(context: Context, retry: Boolean, finish: (Boolean) -> Unit) = synchronized(schedulingLock) {
+        // Cover requests appended between the last drain read and jobFinished.
+        val reschedule = retry || DownloadQueueStore(context).ids().isNotEmpty()
+        uidtFinishing = !reschedule
+        finish(reschedule)
+    }
+
+    /** When background downloads are off, the activity owns the transfer. */
+    suspend fun runWhileVisible(context: Context) = withContext(Dispatchers.IO) {
+        val queue = DownloadQueueStore(context)
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        while (isActive) {
+            val changedAt = scheduled.value
+            if (!queue.backgroundDownloadsEnabled() && queue.ids().isNotEmpty()) {
+                val network = connectivity.activeNetwork
+                if (network != null && (!queue.wifiOnly() || network.isWifi(context))) {
+                    if (!run(context, network, background = false) {}) delay(15_000)
+                } else delay(3_000)
+            } else scheduled.first { it != changedAt }
+        }
+    }
+
     fun notification(context: Context, model: ModelEntity? = null): Notification {
         val queue = DownloadQueueStore(context)
         val notifyEnabled = queue.notificationsEnabled()
@@ -95,50 +158,125 @@ object ModelDownloadQueue {
         if (model != null && notifyEnabled) builder.addAction(0, "Pause", action("pause")).addAction(0, "Cancel", action("cancel"))
         return builder.build()
     }
-    suspend fun run(context: Context, progress: suspend (ModelEntity) -> Unit): Boolean = serial.withLock {
-        val repo = AiCoreRepository.getInstance(context); repo.awaitModelInitialization()
+    suspend fun run(context: Context, assignedNetwork: Network?, background: Boolean,
+        progress: suspend (ModelEntity) -> Unit): Boolean = serial.withLock {
         val queue = DownloadQueueStore(context)
-        while (true) {
-            val id = queue.ids().firstOrNull() ?: break
-            try {
-                val model = repo.modelForDownload(id)
-                if (model == null || model.isInstalled && model.downloadState == "DOWNLOADED") { queue.remove(id); continue }
-                repo.executeQueuedDownload(model, progress)
-                if (id !in queue.ids()) continue
-                val installed = repo.modelForDownload(id)?.takeIf { it.isInstalled && it.downloadState == "DOWNLOADED" }
-                if (installed != null) { queue.remove(id); repo.provisionFirstSetupModel(installed) }
-                else if (!queue.autoResumeEnabled() || queue.failure(id) >= 3) queue.remove(id) else return@withLock false
-            } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { if (!queue.autoResumeEnabled() || queue.failure(id) >= 3) queue.remove(id) else return@withLock false }
+        val wifiOnly = queue.wifiOnly()
+        if (queue.ids().isEmpty()) return@withLock true
+        if (queue.backgroundDownloadsEnabled() != background) return@withLock false
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        fun activeVpn(): Network? = connectivity.activeNetwork?.takeIf {
+            connectivity.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
         }
+
+        // The job's assigned network prevents a Wi-Fi download from silently
+        // switching to mobile data. Keep the user's active VPN when there is one.
+        val network = activeVpn() ?: assignedNetwork ?: connectivity.activeNetwork
+        if (network == null || wifiOnly && !network.isWifi(context)) return@withLock false
+
+        val repo = AiCoreRepository.getInstance(context)
+        repo.awaitModelInitialization()
+        val deferred = mutableSetOf<Long>()
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            val id = queue.ids().firstOrNull { it !in deferred } ?: break
+            val canContinue = {
+                queue.backgroundDownloadsEnabled() == background && wifiOnly == queue.wifiOnly() &&
+                    (!wifiOnly || network.isWifi(context)) && activeVpn().let { it == null || it == network }
+            }
+            if (!canContinue()) return@withLock false
+            val model = repo.modelForDownload(id)
+            if (model == null || model.isInstalled) { queue.remove(id); continue }
+            val failure = repo.executeQueuedDownload(model, network, canContinue, progress)
+            if (id !in queue.ids()) continue
+            val installed = repo.modelForDownload(id)?.takeIf { it.isInstalled && it.downloadState == "DOWNLOADED" }
+            if (installed != null) {
+                queue.remove(id)
+                repo.provisionFirstSetupModel(installed)
+                continue
+            }
+            if (failure == null) continue
+            if (repo.recordDownloadFailure(id, failure)) {
+                deferred += id
+                repo.modelForDownload(id)?.let { progress(it) }
+            }
+        }
+        if (deferred.isNotEmpty() && queue.ids().any { it in deferred }) return@withLock false
         AutomaticSetupWorker.enqueue(context)
         true
     }
 }
 class ModelTransferJob : JobService() {
     private var task: Job? = null
+
+    @androidx.annotation.RequiresApi(34)
     override fun onStartJob(params: JobParameters): Boolean {
-        if (Build.VERSION.SDK_INT >= 34) setNotification(params, ModelDownloadQueue.JOB,
-            ModelDownloadQueue.notification(this), JobService.JOB_END_NOTIFICATION_POLICY_REMOVE)
-        task = CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            try {
-            val ok = ModelDownloadQueue.run(this@ModelTransferJob) {
-                if (Build.VERSION.SDK_INT >= 34) setNotification(params, ModelDownloadQueue.JOB, ModelDownloadQueue.notification(this@ModelTransferJob, it), JobService.JOB_END_NOTIFICATION_POLICY_REMOVE)
-            }
-            jobFinished(params, !ok)
+        ModelDownloadQueue.jobStarted()
+        val app = applicationContext
+        if (DownloadQueueStore(app).ids().isEmpty()) return false
+        try {
+            setNotification(params, ModelDownloadQueue.JOB, ModelDownloadQueue.notification(app),
+                JobService.JOB_END_NOTIFICATION_POLICY_REMOVE)
+        } catch (e: IllegalStateException) {
+            Log.w("ModelDownloadQueue", "Transfer notification rejected", e)
+            ModelDownloadQueue.schedule(app, userInitiated = false, policyChanged = true)
+            return false
+        }
+        task = CoroutineScope(Dispatchers.Main.immediate).launch {
+            val ok = try {
+                withContext(Dispatchers.IO) {
+                    ModelDownloadQueue.run(app, params.network, background = true) {
+                        try {
+                            setNotification(params, ModelDownloadQueue.JOB, ModelDownloadQueue.notification(app, it),
+                                JobService.JOB_END_NOTIFICATION_POLICY_REMOVE)
+                        } catch (e: IllegalStateException) {
+                            Log.i("ModelDownloadQueue", "Transfer notification update was unavailable")
+                        }
+                    }
+                }
             } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { jobFinished(params, DownloadQueueStore(this@ModelTransferJob).ids().isNotEmpty()) }
+            catch (e: Exception) {
+                Log.w("ModelDownloadQueue", "Transfer job interrupted", e)
+                false
+            }
+            ModelDownloadQueue.finishJob(app, !ok) { jobFinished(params, it) }
         }
         return true
     }
-    override fun onStopJob(params: JobParameters): Boolean { task?.cancel(); return DownloadQueueStore(this).ids().isNotEmpty() }
+
+    override fun onStopJob(params: JobParameters): Boolean {
+        task?.cancel()
+        return DownloadQueueStore(this).let { it.backgroundDownloadsEnabled() && it.ids().isNotEmpty() }
+    }
     override fun onDestroy() { task?.cancel(); super.onDestroy() }
 }
 class ModelDownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
-    override suspend fun doWork(): Result = try {
-        setForeground(info(null))
-        if (ModelDownloadQueue.run(applicationContext) { setForeground(info(it)) }) Result.success() else Result.retry()
-    } catch (e: CancellationException) { throw e } catch (_: Exception) { Result.retry() }
+    override suspend fun doWork(): Result = if (!DownloadQueueStore(applicationContext).backgroundDownloadsEnabled()) Result.success() else try {
+        var foreground = DownloadQueueStore(applicationContext).ids().isNotEmpty() && updateNotification(null)
+        val assignedNetwork = if (Build.VERSION.SDK_INT >= 28) network else null
+        if (ModelDownloadQueue.run(applicationContext, assignedNetwork, background = true) {
+            if (foreground) foreground = updateNotification(it)
+        }) Result.success() else Result.retry()
+    } catch (e: CancellationException) { throw e }
+    catch (e: Exception) {
+        Log.w("ModelDownloadQueue", "Download worker interrupted", e)
+        Result.retry()
+    }
+
+    private suspend fun updateNotification(model: ModelEntity?): Boolean = try {
+        setForeground(info(model))
+        true
+    } catch (e: CancellationException) { throw e }
+    catch (e: IllegalStateException) {
+        // A foreground-service restriction must not prevent the constrained
+        // worker from making progress within its ordinary execution window.
+        Log.i("ModelDownloadQueue", "Continuing as a regular scheduled worker", e)
+        false
+    } catch (e: SecurityException) {
+        Log.w("ModelDownloadQueue", "Foreground notification unavailable", e)
+        false
+    }
+
     private fun info(model: ModelEntity?) = if (Build.VERSION.SDK_INT >= 29) ForegroundInfo(ModelDownloadQueue.JOB,
         ModelDownloadQueue.notification(applicationContext, model), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         else ForegroundInfo(ModelDownloadQueue.JOB, ModelDownloadQueue.notification(applicationContext, model))
@@ -149,7 +287,7 @@ class ModelDownloadAction : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val repo = AiCoreRepository.getInstance(context); val id = intent.getLongExtra("model", 0)
-                if (intent.action == "cancel") repo.deletePartialDownload(id) else repo.cancelModelDownload(id, this)
+                if (intent.action == "cancel") repo.deletePartialDownload(id) else repo.cancelModelDownload(id)
             } finally { pending.finish() }
         }
     }

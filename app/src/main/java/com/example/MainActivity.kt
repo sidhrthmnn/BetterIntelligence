@@ -17,6 +17,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.example.service.ModelDownloadQueue
+import kotlinx.coroutines.launch
 import com.example.ui.AiCoreViewModel
 import com.example.ui.AppTab
 import com.example.ui.components.BiAvatar
@@ -28,6 +33,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ModelDownloadQueue.ensureScheduled(applicationContext)
+                ModelDownloadQueue.runWhileVisible(applicationContext)
+            }
+        }
         setContent {
             val appearance by viewModel.appearance.collectAsState()
             LaunchedEffect(appearance) {

@@ -46,11 +46,14 @@ class ResumableDownloadTest {
         val base = ModelLibrary.read(context).first().copy(id = 912, filename = "resume-test.gguf", fileSizeMb = (weights.length() + 1048575) / 1048576,
             downloadUrl = "https://models.example.invalid/pinned", sha256Checksum = hash())
         val part = File(manager.modelsDirectory, "${base.filename}.part")
-        val errors = mutableListOf<String>()
+        val errors = mutableListOf<DownloadStateUpdate.Failure>()
         part.delete(); File(manager.modelsDirectory, base.filename).delete()
-        assertFalse(manager.downloadAndVerifyModel(base) { if (it is DownloadStateUpdate.Failure) errors += it.error })
-        assertTrue(errors.joinToString(), part.length() > 0); val offset = part.length()
-        assertTrue(errors.joinToString(), manager.downloadAndVerifyModel(base) { if (it is DownloadStateUpdate.Failure) errors += it.error })
+        assertFalse(manager.downloadAndVerifyModel(base) { if (it is DownloadStateUpdate.Failure) errors += it })
+        assertTrue(errors.single().retryable)
+        val offset = part.length()
+        assertTrue(offset > 0)
+        assertEquals(offset, errors.single().bytesSaved)
+        assertTrue(errors.joinToString(), manager.downloadAndVerifyModel(base) { if (it is DownloadStateUpdate.Failure) errors += it })
         assertEquals("bytes=$offset-", calls.last().getRequestProperty("Range"))
         assertTrue(calls.all { it.closed }); assertFalse(part.exists())
         val installed = File(manager.modelsDirectory, base.filename)
@@ -104,12 +107,42 @@ class ResumableDownloadTest {
         assertTrue(manager.verifyLocalFile(File(manager.modelsDirectory, model.filename), model.sha256Checksum).isMatch)
         File(manager.modelsDirectory, model.filename).delete(); Unit
     }
+    @Test fun temporarilyUnavailableServerRetriesButMissingFileNeedsAttention() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val model = ModelLibrary.read(context).first().copy(id = 916, filename = "server-retry-test.gguf",
+            fileSizeMb = 2, downloadUrl = "https://models.example.invalid/pinned", sha256Checksum = hash())
+        for ((status, expectedRetry) in listOf(429 to true, 503 to true, 404 to false, 403 to false)) {
+            val manager = ModelDownloadManager(context) { Connection(it, weights, status = status) }
+            val failures = mutableListOf<DownloadStateUpdate.Failure>()
+            assertFalse(manager.downloadAndVerifyModel(model) { if (it is DownloadStateUpdate.Failure) failures += it })
+            assertEquals("HTTP $status", expectedRetry, failures.single().retryable)
+            assertFalse(File(manager.modelsDirectory, model.filename).exists())
+        }
+    }
+
+    @Test fun partialBodyWithUnknownLengthRequiresAllBytesBeforeInstall() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val model = ModelLibrary.read(context).first().copy(id = 917, filename = "chunked-resume-test.gguf",
+            fileSizeMb = 2, downloadUrl = "https://models.example.invalid/pinned", sha256Checksum = hash())
+        val manager = ModelDownloadManager(context) { Connection(it, weights, truncated = true) }
+        val part = File(manager.modelsDirectory, "${model.filename}.part")
+        weights.inputStream().use { input -> part.outputStream().use { it.write(input.readNBytes(4096)) } }
+        val errors = mutableListOf<DownloadStateUpdate.Failure>()
+        assertFalse(manager.downloadAndVerifyModel(model) { if (it is DownloadStateUpdate.Failure) errors += it })
+        assertTrue(errors.single().retryable)
+        assertTrue(part.length() > 4096 && part.length() < weights.length())
+        assertFalse(File(manager.modelsDirectory, model.filename).exists())
+        part.delete()
+        Unit
+    }
+
     private class Connection(url: URL, private val file: File, private val fail: Boolean = false,
-        private val ignoreRange: Boolean = false, private val badRange: Boolean = false) : HttpURLConnection(url) {
+        private val ignoreRange: Boolean = false, private val badRange: Boolean = false,
+        private val status: Int? = null, private val truncated: Boolean = false) : HttpURLConnection(url) {
         var closed = false
         private val offset get() = if (ignoreRange) 0L else getRequestProperty("Range")?.removePrefix("bytes=")?.removeSuffix("-")?.toLongOrNull() ?: 0L
-        override fun getResponseCode() = if (offset > 0) 206 else 200
-        override fun getContentLengthLong() = file.length() - offset
+        override fun getResponseCode() = status ?: if (offset > 0) 206 else 200
+        override fun getContentLengthLong() = if (truncated) -1L else file.length() - offset
         override fun getHeaderField(name: String?) = if (name == "Content-Range") "bytes ${if (badRange) offset + 1 else offset}-${file.length() - 1}/${file.length()}" else null
         override fun getInputStream(): java.io.InputStream {
             val stream = FileInputStream(file).apply { channel.position(offset) }
@@ -117,6 +150,7 @@ class ResumableDownloadTest {
                 var read = 0L
                 override fun read(buffer: ByteArray, off: Int, len: Int): Int {
                     if (fail && read >= 1024 * 1024) throw IOException("Synthetic connection interruption")
+                    if (truncated && read >= 65_536) return -1
                     return super.read(buffer, off, len).also { if (it > 0) read += it }
                 }
             }
