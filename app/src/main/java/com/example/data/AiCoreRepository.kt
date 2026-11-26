@@ -40,6 +40,12 @@ import com.example.engine.GenerationParams
 import com.example.engine.ConversationContext
 import com.example.engine.ChatTurn
 import com.example.service.DownloadQueueStore
+import com.example.tasks.CapabilitySettings
+import com.example.tasks.TaskAccess
+import com.example.tasks.TaskFailure
+import com.example.tasks.TaskModels
+import com.example.tasks.TaskSettings
+import com.example.tasks.TaskType
 import com.example.service.ModelDownloadQueue
 import com.example.rustcore.RustModelPolicy
 import com.example.rustcore.ModelFailureKind
@@ -140,6 +146,15 @@ class AiCoreRepository(
     val modelRecommendation: StateFlow<ModelRecommendation?> = _modelRecommendation.asStateFlow()
 
     private val repositoryScope = CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+    internal val taskSettings = TaskSettings(appContext)
+    // Shared with both legacy transports so a model cannot change between
+    // resolving a client request and starting inference.
+    internal val clientExecution = Mutex()
+    internal suspend fun <T> runLegacyClient(block: suspend () -> T): T {
+        check(clientExecution.tryLock()) { "AI Core is busy; retry after the current request" }
+        try { return block() } finally { clientExecution.unlock() }
+    }
+
     private val modelLock = Mutex()
     private val resolutionLock = Mutex()
     private val verifiedFiles = com.example.engine.VerifiedModelFileCache(appContext)
@@ -455,13 +470,96 @@ class AiCoreRepository(
         )
     }
 
-    private suspend fun activateModel(model: ModelEntity, restoring: Boolean = false, contextOverride: Int? = null) = withContext(Dispatchers.IO) {
+    internal suspend fun taskModels(type: TaskType, installedOnly: Boolean): List<ModelEntity> {
+        awaitModelInitialization()
+        return modelDao.getAllModels().first().filter {
+            (!installedOnly || it.isInstalled) && type in TaskModels.capabilities(it)
+        }
+    }
+
+    internal suspend fun orderedTaskModels(type: TaskType, pkg: String, preferred: Long?,
+        installedOnly: Boolean, configuration: CapabilitySettings): List<ModelEntity> {
+        val candidates = taskModels(type, installedOnly)
+        val policy = clientPolicyDao.getPolicyForPackage(pkg)
+        val text = type in TaskModels.text
+        val configuredPrimary = configuration.primaryId ?: if (text) preferencesRepository.primaryModelId.first() else null
+        val configuredFallback = configuration.fallbackId ?: if (text) preferencesRepository.secondaryModelId.first() else null
+        val clientPrimary = policy?.primaryModelId.takeIf { text }
+        val clientFallback = policy?.fallbackModelId.takeIf { text }
+        val ids = if (configuration.auto) listOf(clientPrimary, preferred, configuredPrimary, clientFallback, configuredFallback)
+            else listOf(clientPrimary, configuredPrimary, clientFallback, configuredFallback)
+        val ranked = ids.filterNotNull().distinct().mapNotNull { id -> candidates.find { it.id == id } }
+        if (!configuration.auto) return ranked
+        val remaining = candidates.filter { it.id !in ranked.map { model -> model.id } &&
+            (type == TaskType.EMBEDDINGS || ModelLibrary.automaticUseAllowed(it)) }
+        val order = if (configuration.quality == com.example.tasks.TaskQuality.QUALITY && type != TaskType.TEXT_POLISH)
+            remaining.sortedByDescending { TaskModels.estimateMb(it, type) }
+        else remaining.sortedBy { TaskModels.estimateMb(it, type) }
+        return ranked + order
+    }
+
+    internal suspend fun selectTaskTextModel(pkg: String, type: TaskType, preferred: Long?,
+        configuration: CapabilitySettings, requestedContext: Int, onLoading: (ModelEntity) -> Unit): ModelEntity {
+        val ranked = orderedTaskModels(type, pkg, preferred, true, configuration)
+        if (ranked.isEmpty()) throw TaskFailure("MODEL_REQUIRED", "Download and configure a model in Better Intelligence")
+        return resolutionLock.withLock {
+            var lastFailure: Exception? = null
+            val cap = taskSettings.resourcePolicy.value.maxMemoryMb
+            for (candidate in ranked.take(4)) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                val estimate = ModelLibrary.memoryEstimate(candidate, ModelLibrary.configuredContext(candidate, requestedContext)).totalMb
+                if (cap > 0 && estimate > cap) continue
+                try {
+                    if (!engine.isReady() || modelDao.getActiveModel().first()?.id != candidate.id) {
+                        onLoading(candidate)
+                        activateModel(candidate, contextOverride = requestedContext,
+                            processingOverride = configuration.backend.takeUnless { it == com.example.engine.ProcessingMode.AUTO })
+                        clientPreparation.invalidate()
+                    }
+                    return@withLock candidate
+                } catch (e: CancellationException) { throw e }
+                catch (e: Exception) { lastFailure = e }
+            }
+            throw TaskFailure("RESOURCE_LIMIT", if (lastFailure == null) "Models exceed the configured memory limit"
+                else "No configured model could load safely. Check available memory, model terms and backend settings.")
+        }
+    }
+
+    internal suspend fun <T> withTaskModel(model: ModelEntity, execute: suspend (File) -> T): T = modelLock.withLock {
+        val current = modelDao.getModelById(model.id)
+        if (current == null || !current.isInstalled || current.sha256Checksum != model.sha256Checksum) {
+            throw TaskFailure("MODEL_REQUIRED", "The installed model changed")
+        }
+        val root = downloadManager.modelsDirectory.canonicalFile
+        val file = File(current.localFilePath ?: File(root, current.filename).path).canonicalFile
+        if (file.parentFile != root || !file.isFile) throw TaskFailure("MODEL_REQUIRED", "The model file is missing")
+        execute(file)
+    }
+
+    internal fun idleTaskResources(unload: Boolean) {
+        if ((unload || engine.hardware.resources().lowMemory) && !clientExecution.isLocked && !engine.telemetry.value.isRunning) {
+            repositoryScope.launch {
+                if (!clientExecution.tryLock()) return@launch
+                try {
+                    modelLock.withLock {
+                        if (engine.isReady() && !engine.telemetry.value.isRunning) {
+                            runCatching { engine.unloadActiveModel() }
+                            clientPreparation.invalidate()
+                        }
+                    }
+                } finally { clientExecution.unlock() }
+            }
+        }
+    }
+
+    private suspend fun activateModel(model: ModelEntity, restoring: Boolean = false, contextOverride: Int? = null,
+        processingOverride: com.example.engine.ProcessingMode? = null) = withContext(Dispatchers.IO) {
         modelLock.withLock {
             if (restoring && (explicitModelSelection || engine.isReady())) return@withLock
             withModelLoading(model.name) {
                 RustModelPolicy.loading(model)
                 check(model.isInstalled) { "Download this model first" }
-                require(model.filename.endsWith(".gguf", true) || model.filename.endsWith(".litertlm", true)) { "Select a GGUF or LiteRT-LM instruction model" }
+                require(TaskType.TEXT_GENERATION in TaskModels.capabilities(model)) { "Select a GGUF or LiteRT-LM instruction model" }
                 val file = File(model.localFilePath ?: File(downloadManager.modelsDirectory, model.filename).absolutePath)
                 check(file.isFile) { "Model file is missing; download it again" }
                 if (model.architecture.startsWith("gemma") && !model.architecture.startsWith("gemma4")) {
@@ -478,7 +576,7 @@ class AiCoreRepository(
                 val liteRt = model.filename.endsWith(".litertlm", true)
                 val requestedContext = contextOverride ?: preferencesRepository.generationPreferences.first().contextSize
                 ModelLibrary.incompatibilityReason(model, adjusted, if (liteRt) minOf(requestedContext, model.contextLength) else 512)?.let { error(it) }
-                val result = if (liteRt) engine.loadLiteRt(file, model.name, model.sha256Checksum.orEmpty(), model.quantization, requestedContext)
+                val result = if (liteRt) engine.loadLiteRt(file, model.name, model.sha256Checksum.orEmpty(), model.quantization, requestedContext, processingOverride)
                     else engine.loadCustomGguf(file, model.sha256Checksum.orEmpty()).map { Unit }
                 if (result.isFailure) { modelDao.clearActiveModel(); result.getOrThrow() }
                 engineManager.selectEngine(if (liteRt) SupportedEngine.LITERT else SupportedEngine.LLAMA_CPP)
@@ -641,10 +739,15 @@ class AiCoreRepository(
 
     suspend fun addHuggingFaceModel(repoId: String, file: HuggingFaceGgufFile): ModelEntity = modelLock.withLock {
         val localName = com.example.engine.HuggingFaceCatalog.localFilename(repoId, file)
+        val liteRt = localName.endsWith(".litertlm")
+        // Reuse the known catalogue identity and accurate resource information.
+        file.sha256Oid?.let { hash ->
+            modelDao.getAllModels().first().firstOrNull { it.sha256Checksum == hash }?.let { model -> return@withLock model }
+        }
         modelDao.getModelByFilename(localName)?.let { return@withLock it }
         val cleanModelName = file.filename
-            .removeSuffix(".gguf")
-            .removeSuffix(".GGUF")
+            .substringAfterLast('/')
+            .substringBeforeLast('.')
             .replace("-", " ")
             .replace("_", " ")
 
@@ -654,14 +757,14 @@ class AiCoreRepository(
             architecture = if (file.filename.contains("qwen", ignoreCase = true)) "qwen2" else if (file.filename.contains("gemma", ignoreCase = true)) "gemma2" else "llama",
             quantization = file.quantization,
             parameterCount = "Custom (~${file.sizeMb}MB)",
-            contextLength = 4096,
+            contextLength = if (liteRt) 2048 else 4096,
             fileSizeMb = file.sizeMb,
             ramRequiredMb = file.recommendedRamMb,
             isInstalled = false,
             isActive = false,
             isCustom = true,
             description = "Imported from Hugging Face repository '$repoId'. Quantization: ${file.quantization}.",
-            capabilities = "Hugging Face, GGUF, On-Device LLM",
+            capabilities = if (liteRt) "Hugging Face, LiteRT-LM, Text generation" else "Hugging Face, GGUF, On-device LLM",
             downloadUrl = file.downloadUrl,
             downloadState = "NOT_DOWNLOADED",
             downloadProgress = 0.0f,
@@ -829,7 +932,8 @@ class AiCoreRepository(
                 "APP_CONTEXT" -> policy.allowAppContext
                 "READ_MEMORY" -> policy.allowReadMemory
                 "WRITE_MEMORY" -> policy.allowWriteMemory
-                else -> false
+                else -> TaskAccess.entries.firstOrNull { it.bit != 0 && it.name == scope }
+                    ?.let { policy.taskScopes and it.bit != 0 } == true
             }
             if (!allowed) return false to "Scope Denied: Access to $scope is disabled in Apps"
 
@@ -847,6 +951,28 @@ class AiCoreRepository(
         return Pair(true, "OK")
     }
 
+    internal suspend fun taskAccessStatus(pkg: String, access: TaskAccess, intensive: Boolean = false): String {
+        if (pkg == appContext.packageName) return "READY"
+        val policy = clientPolicyDao.getPolicyForPackage(pkg) ?: run {
+            registerClient(pkg)
+            return "APPROVAL_REQUIRED"
+        }
+        return when {
+            policy.isBlocked -> "DENIED"
+            !policy.isWhitelisted -> "APPROVAL_REQUIRED"
+            access == TaskAccess.TEXT && !policy.allowInference -> "DENIED"
+            access.bit != 0 && policy.taskScopes and access.bit == 0 -> "DENIED"
+            intensive && policy.taskScopes and TaskAccess.INTENSIVE.bit == 0 -> "DENIED"
+            else -> "READY"
+        }
+    }
+
+    internal suspend fun setTaskScope(pkg: String, access: TaskAccess, allowed: Boolean) {
+        if (access.bit == 0) return
+        clientPolicyDao.setTaskScope(pkg, access.bit, allowed)
+        if (!allowed && access == TaskAccess.DOWNLOAD) taskSettings.clearDownloadsFrom(pkg)
+    }
+
     suspend fun isPackageAllowed(packageName: String): Boolean {
         val policy = clientPolicyDao.getPolicyForPackage(packageName)
         return policy != null && policy.isWhitelisted && !policy.isBlocked
@@ -854,10 +980,13 @@ class AiCoreRepository(
 
     suspend fun updatePolicy(policy: ClientAppPolicyEntity) {
         clientPolicyDao.insertOrUpdatePolicy(policy)
+        if (policy.isBlocked || !policy.isWhitelisted || policy.taskScopes and TaskAccess.DOWNLOAD.bit == 0)
+            taskSettings.clearDownloadsFrom(policy.packageName)
     }
 
     suspend fun deletePolicy(pkg: String) {
         clientPolicyDao.deletePolicy(pkg)
+        taskSettings.clearDownloadsFrom(pkg)
     }
 
     suspend fun clearIpcLogs() {

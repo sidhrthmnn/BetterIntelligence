@@ -39,7 +39,8 @@ data class GenerationParams(
     val isAdvancedMode: Boolean = false,
     val history: List<ChatTurn> = emptyList(),
     val autoContinue: Boolean = false,
-    val internalPlanning: Boolean = false
+    val internalPlanning: Boolean = false,
+    val processingOverride: ProcessingMode? = null
 )
 
 /**
@@ -264,7 +265,8 @@ class InferenceEngine internal constructor(private val context: android.content.
     fun isReady(): Boolean = owner === this && (_activeMetadata.value != null || liteSession?.let { it.isInitialized || busy.get() } == true)
     fun isLiteRtLoaded(): Boolean = isReady() && liteSession != null
 
-    fun loadLiteRt(file: File, name: String = file.nameWithoutExtension, identity: String = "", quantization: String = "Model-defined", initialContext: Int = 2048): Result<Unit> = runCatching {
+    fun loadLiteRt(file: File, name: String = file.nameWithoutExtension, identity: String = "", quantization: String = "Model-defined", initialContext: Int = 2048, processingOverride: ProcessingMode? = null): Result<Unit> = runCatching {
+        val loadingMode = processingOverride ?: hardware.mode.value
         synchronized(lifecycleLock) {
             check(owner?.busy?.get() != true) { "Stop generation before switching models" }
             require(file.isFile && file.length() > 24) { "LiteRT-LM file is missing or empty" }
@@ -275,7 +277,7 @@ class InferenceEngine internal constructor(private val context: android.content.
             val attentionOnly = catalogModel != null && identity.isNotBlank() && identity == catalogModel.sha256Checksum &&
                 catalogModel.architecture in setOf("gemma4", "gemma3", "qwen3", "qwen2", "phi3")
             val candidate = LiteRtSession(ctx, file, attentionOnly, identity) // Unknown/hybrid files get isolated executors.
-            require(hardware.mode.value != ProcessingMode.CPU || candidate.supportsCpu) { "CPU Only is selected, but this compiled NPU model has no CPU graph. Select Automatic or a standard CPU/GPU model." }
+            require(loadingMode != ProcessingMode.CPU || candidate.supportsCpu) { "CPU Only is selected, but this compiled NPU model has no CPU graph. Select Automatic or a standard CPU/GPU model." }
             require(candidate.maximumContext >= 512) { "This package supports fewer than 512 context tokens; choose another mobile instruction model." }
             val loadContext = candidate.configurationContext(initialContext.coerceIn(512, 2048))
             val threads = hardware.threads()
@@ -283,8 +285,8 @@ class InferenceEngine internal constructor(private val context: android.content.
             val selectionKey = SmartBackendSelector.key(android.os.Build.FINGERPRINT, SmartBackendSelector.LITERT_RUNTIME, key, loadContext, threads)
             selector.reconsiderResources(selectionKey, (resources.availableMb + (owner?.releasableGpuWeightsMb() ?: 0)).coerceAtMost(resources.totalMb), resources.thermal, resources.lowMemory)
             val cached = selector.cached(selectionKey, candidate.supportsGpu)
-            var preferred = if (hardware.mode.value != ProcessingMode.CPU && selector.hasValidatedGpu(selectionKey) &&
-                (hardware.mode.value == ProcessingMode.GPU || cached?.backend == ProcessingMode.GPU)) ProcessingMode.GPU else ProcessingMode.CPU
+            var preferred = if (loadingMode != ProcessingMode.CPU && selector.hasValidatedGpu(selectionKey) &&
+                (loadingMode == ProcessingMode.GPU || cached?.backend == ProcessingMode.GPU)) ProcessingMode.GPU else ProcessingMode.CPU
             val npuKey = npuController.key(key, loadContext, threads)
             if (!candidate.supportsCpu) {
                 check(candidate.supportsNpu && !selector.blocked(npuKey)) { "NPU-only model cannot load: ${selector.failureReason(npuKey).ifBlank { candidate.npuReason }}. Select a standard CPU/GPU model." }
@@ -349,7 +351,7 @@ class InferenceEngine internal constructor(private val context: android.content.
 
     private suspend fun inferLiteRt(prompt: String, params: GenerationParams, listener: StreamTokenListener?, started: Long): String {
         val session = checkNotNull(liteSession)
-        if (!session.supportsNpu || hardware.mode.value in setOf(ProcessingMode.CPU, ProcessingMode.GPU))
+        if (!session.supportsNpu || (params.processingOverride ?: hardware.mode.value) in setOf(ProcessingMode.CPU, ProcessingMode.GPU))
             return inferLiteRtStandard(prompt, params, listener, started)
         val effective = params.copy(contextSize = session.configurationContext(params.contextSize.coerceIn(512, 4096)),
             threads = hardware.threads(params.threads))
@@ -403,7 +405,7 @@ class InferenceEngine internal constructor(private val context: android.content.
         check(extra < state.availableMb - 256) { "LiteRT context needs about $extra MB of headroom; ${state.availableMb} MB available. Free memory or reduce context." }
         val key = SmartBackendSelector.key(android.os.Build.FINGERPRINT, SmartBackendSelector.LITERT_RUNTIME, modelIdentity,
             effective.contextSize, effective.threads)
-        val mode = hardware.mode.value
+        val mode = params.processingOverride ?: hardware.mode.value
         var target = ProcessingMode.CPU
         val allocationContext = session.allocationContext(effective.contextSize)
         val gpuEstimate = liteLibraryModel?.let { ModelLibrary.memoryEstimate(it, allocationContext, Int.MAX_VALUE).totalMb }
@@ -649,7 +651,7 @@ class InferenceEngine internal constructor(private val context: android.content.
             ModelMemoryPlanner.budget(state.totalMb, (state.availableMb + reclaimableGpuMb).coerceAtMost(state.totalMb))) layers--
         val key = SmartBackendSelector.key(android.os.Build.FINGERPRINT, caps.cpuAbi, caps.cpuBuild, caps.gpuName, SmartBackendSelector.RUNTIME,
             modelIdentity, params.contextSize, params.threads, layers)
-        val mode = hardware.mode.value
+        val mode = params.processingOverride ?: hardware.mode.value
         selector.reconsiderResources(key, layerState.availableMb, state.thermal, state.lowMemory)
         val selection = "$key:$mode:${state.thermal >= 3}:${state.lowMemory}:${selector.blocked(key)}"
         if (selectedKey == selection) return
@@ -834,6 +836,46 @@ class InferenceEngine internal constructor(private val context: android.content.
         }
     }
 
+    /** Reuse the native admission gate while the media encoder owns shared RAM. */
+    internal suspend fun <T> withMediaEngine(modelName: String,
+        execute: suspend (android.content.Context, ResourceState) -> T): T = withContext(Dispatchers.IO) {
+        val ctx = checkNotNull(context)
+        val requestJob = kotlinx.coroutines.currentCoroutineContext()[Job]
+        synchronized(lifecycleLock) {
+            check(owner?.busy?.get() != true && busy.compareAndSet(false, true)) { "AI Core is busy" }
+            try {
+                owner?.clearModelState()
+                runtime.release()
+                owner = this@InferenceEngine
+                activeJob = requestJob
+                _telemetry.value = HardwareTelemetry(isRunning = true, modelName = modelName, backendStatus = "Preparing media model")
+            } catch (e: Throwable) {
+                busy.set(false)
+                throw e
+            }
+        }
+        try { execute(ctx, hardware.resources()) }
+        finally {
+            synchronized(lifecycleLock) {
+                activeJob = null
+                _telemetry.value = HardwareTelemetry()
+                busy.set(false)
+            }
+        }
+    }
+
+    internal fun mediaTelemetry(model: String, startMs: Long, threads: Int, result: LiteRtResult? = null) {
+        val state = hardware.resources()
+        _telemetry.value = _telemetry.value.copy(modelName = model, isRunning = true,
+            activeBackend = "CPU", accelerationMode = "CPU (LiteRT-LM)", activeThreads = threads,
+            modelLoadTimeMs = startMs, backendInitializationMs = startMs, backendStatus = "Processing media",
+            memoryUsageMb = memoryMb(), totalRamMb = state.totalMb.toFloat(),
+            thermalState = state.thermalLabel, temperatureCelsius = state.batteryC,
+            peakMemoryUsageMb = maxOf(_telemetry.value.peakMemoryUsageMb, memoryMb()),
+            timeToFirstTokenMs = result?.firstTokenMs ?: 0,
+            tokensPerSecond = result?.tokensPerSecond ?: 0f, completionTokens = result?.outputTokens ?: 0)
+    }
+
     fun generateStream(prompt: String, params: GenerationParams = GenerationParams(), listener: StreamTokenListener): Job {
         val job = engineScope.launch {
             try { infer(prompt, params, listener) }
@@ -845,6 +887,15 @@ class InferenceEngine internal constructor(private val context: android.content.
 
     suspend fun generateSync(prompt: String, params: GenerationParams = GenerationParams()): String =
         withContext(Dispatchers.Default) { infer(prompt, params, null) }
+
+    internal suspend fun generateTaskText(prompt: String, params: GenerationParams, onText: (String) -> Unit): String =
+        withContext(Dispatchers.Default) {
+            infer(prompt, params, object : StreamTokenListener {
+                override fun onToken(token: String, tokenIndex: Int) = onText(token)
+                override fun onComplete(fullText: String, latencyMs: Long, tokensPerSec: Float, promptTokens: Int, completionTokens: Int) = Unit
+                override fun onError(errorCode: Int, errorMessage: String) = Unit
+            })
+        }
 
     fun computeEmbeddings(text: String): FloatArray =
         throw UnsupportedOperationException("This text-generation library does not provide embedding models")

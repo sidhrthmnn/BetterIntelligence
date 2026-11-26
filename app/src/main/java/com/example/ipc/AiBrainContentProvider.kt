@@ -51,7 +51,7 @@ class AiBrainContentProvider : ContentProvider() {
         val callingUid = Binder.getCallingUid()
         val startTime = System.currentTimeMillis()
 
-        return when (uriMatcher.match(uri)) {
+        return try { when (uriMatcher.match(uri)) {
             MATCH_STATUS -> {
                 val cursor = MatrixCursor(arrayOf("status", "active_model", "quantization", "context_length", "authority"))
                 cursor.addRow(
@@ -77,14 +77,14 @@ class AiBrainContentProvider : ContentProvider() {
                     return cursor
                 }
 
-                val output = runBlocking(Dispatchers.Default) {
+                val output = runBlocking(Dispatchers.Default) { repo.runLegacyClient {
                     repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     val effectiveSystem = repo.buildClientSystemPrompt(callingPkg, systemPrompt)
                     repo.engine.generateSync(
                         prompt,
                         GenerationParams(systemPrompt = effectiveSystem, maxTokens = 256)
                     )
-                }
+                } }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(10L)
                 val modelName = repo.engine.activeModelName
                 logProviderCall(repo, callingPkg, callingUid, "PROVIDER_QUERY", prompt, output, latency, "SUCCESS")
@@ -105,10 +105,10 @@ class AiBrainContentProvider : ContentProvider() {
                     return cursor
                 }
 
-                val json = runBlocking(Dispatchers.Default) {
+                val json = runBlocking(Dispatchers.Default) { repo.runLegacyClient {
                     repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     repo.engine.extractStructuredJson(text, keys)
-                }
+                } }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(8L)
                 logProviderCall(repo, callingPkg, callingUid, "JSON_EXTRACT", text, json, latency, "SUCCESS")
                 cursor.addRow(arrayOf<Any?>("SUCCESS", json, latency))
@@ -128,10 +128,10 @@ class AiBrainContentProvider : ContentProvider() {
                     return cursor
                 }
 
-                val routed = runBlocking(Dispatchers.Default) {
+                val routed = runBlocking(Dispatchers.Default) { repo.runLegacyClient {
                     repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     repo.engine.routeIntent(utterance, routes)
-                }
+                } }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(6L)
                 logProviderCall(repo, callingPkg, callingUid, "INTENT_ROUTE", utterance, routed, latency, "SUCCESS")
                 cursor.addRow(arrayOf<Any?>("SUCCESS", routed, latency))
@@ -163,6 +163,15 @@ class AiBrainContentProvider : ContentProvider() {
                 cursor.addRow(arrayOf("Unsupported URI: $uri"))
                 cursor
             }
+        } } catch (e: IllegalStateException) {
+            if (e.message?.contains("busy", true) != true) throw e
+            val columns = when (uriMatcher.match(uri)) {
+                MATCH_GENERATE -> arrayOf("status", "response", "model", "latency_ms")
+                MATCH_EXTRACT_JSON -> arrayOf("status", "json_payload", "latency_ms")
+                MATCH_ROUTE_INTENT -> arrayOf("status", "routing_json", "latency_ms")
+                else -> throw e
+            }
+            MatrixCursor(columns).apply { addRow(arrayOfNulls<Any>(columns.size).apply { this[0] = "BUSY" }) }
         }
     }
 
@@ -227,11 +236,11 @@ class AiBrainContentProvider : ContentProvider() {
                     result.putString("error", reason)
                     return result
                 }
-                val output = runBlocking(Dispatchers.Default) {
+                val output = runBlocking(Dispatchers.Default) { repo.runLegacyClient {
                     repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     val effectiveSystem = repo.buildClientSystemPrompt(callingPkg, systemPrompt)
                     repo.engine.generateSync(prompt, GenerationParams(systemPrompt = effectiveSystem, maxTokens = 256))
-                }
+                } }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(10L)
                 logProviderCall(repo, callingPkg, callingUid, "PROVIDER_QUERY", prompt, output, latency, "SUCCESS")
                 result.putString("status", "SUCCESS")
@@ -249,10 +258,10 @@ class AiBrainContentProvider : ContentProvider() {
                     result.putString("error", reason)
                     return result
                 }
-                val json = runBlocking(Dispatchers.Default) {
+                val json = runBlocking(Dispatchers.Default) { repo.runLegacyClient {
                     repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     repo.engine.extractStructuredJson(text, keys)
-                }
+                } }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(8L)
                 logProviderCall(repo, callingPkg, callingUid, "JSON_EXTRACT", text, json, latency, "SUCCESS")
                 result.putString("status", "SUCCESS")
@@ -270,10 +279,10 @@ class AiBrainContentProvider : ContentProvider() {
                     result.putString("error", reason)
                     return result
                 }
-                val routed = runBlocking(Dispatchers.Default) {
+                val routed = runBlocking(Dispatchers.Default) { repo.runLegacyClient {
                     repo.resolveAndActivateForClient(callingPkg, 1024, preferLoaded = true)
                     repo.engine.routeIntent(utterance, routes)
-                }
+                } }
                 val latency = (System.currentTimeMillis() - startTime).coerceAtLeast(6L)
                 logProviderCall(repo, callingPkg, callingUid, "INTENT_ROUTE", utterance, routed, latency, "SUCCESS")
                 result.putString("status", "SUCCESS")
@@ -359,7 +368,7 @@ class AiBrainContentProvider : ContentProvider() {
                     callingUid = uid,
                     requestType = type,
                     promptPreview = prompt.take(150),
-                    responsePreview = response.take(200),
+                    responsePreview = "",
                     latencyMs = latencyMs,
                     tokensPerSecond = if (latencyMs > 0) ((response.length / 4).coerceAtLeast(1) * 1000f) / latencyMs else 0f,
                     totalTokens = (response.length / 4).coerceAtLeast(1),

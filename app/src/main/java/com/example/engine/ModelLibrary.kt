@@ -14,7 +14,8 @@ object ModelLibrary {
     private val runtimeMemoryFloors = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val categories = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val manualModels = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
-    fun automaticUseAllowed(model: ModelEntity): Boolean = model.sha256Checksum !in manualModels
+    fun automaticUseAllowed(model: ModelEntity): Boolean = model.sha256Checksum?.let(manualModels::contains) != true &&
+        !model.architecture.contains("bert", true) && !model.architecture.contains("embedding", true)
     fun category(model: ModelEntity): String? = model.sha256Checksum?.let(categories::get)
     fun categoryLabel(model: ModelEntity): String? = when (category(model)) {
         "FAST" -> "Fast"
@@ -80,7 +81,8 @@ object ModelLibrary {
                 fileSizeMb = (item.getLong("bytes") + 1048575) / 1048576,
                 ramRequiredMb = item.getInt("ramMb"), isInstalled = false, isActive = false, isCustom = false,
                 description = item.getString("description") + " License: ${item.getString("license")}. Memory is an estimate.",
-                capabilities = "Chat, Text editing, Summarization", downloadUrl = item.getString("url"),
+                capabilities = if (item.getString("architecture") == "bert") "Embeddings" else "Chat, Text editing, Summarization",
+                downloadUrl = item.getString("url"),
                 huggingFaceRepo = item.getString("repo"), sha256Checksum = item.getString("sha256"),
                 versionTag = item.getString("revision"), speedScoreTokSec = 0f,
                 recommendedTier = item.getString("tier"),

@@ -26,6 +26,7 @@ internal object NativeGguf {
     external fun runtimeInfo(allowGpuProbe: Boolean): ByteArray
     external fun prepare(path: ByteArray, gpuLayers: Int, threads: Int, contextSize: Int): Int
     external fun rankPassages(file: ByteArray, texts: Array<ByteArray>): FloatArray?
+    external fun embedText(file: ByteArray, texts: Array<ByteArray>): FloatArray?
     external fun release()
     external fun countTokens(text: ByteArray): Int
     external fun generate(prompt: ByteArray, systemPrompt: ByteArray, observer: NativeObserver, maxTokens: Int, threads: Int,

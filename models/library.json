@@ -173,7 +173,7 @@
     "revision": "b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1",
     "license": "apache-2.0",
     "tier": "BALANCED",
-    "description": "Mobile-optimized mixed-precision Gemma 4. Text chat and polishing through LiteRT-LM CPU or validated OpenCL GPU. Vision/audio are not enabled. Memory estimate includes text weights and embeddings; unused vision/audio are excluded.",
+    "description": "Text generation and polishing on LiteRT-LM CPU or compatible OpenCL GPU. This package also handles images and short audio on CPU when enough RAM is available. The model list estimates text memory; media needs about 3000 MB of safe RAM.",
     "quantization": "Mixed 2/4/8-bit",
     "url": "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1/gemma-4-E2B-it.litertlm",
     "layers": 35,
@@ -452,6 +452,26 @@
     "kvBytesPerToken": 71680,
     "recommendedMode": "ADVANCED",
     "context": 2048,
+    "manualOnly": true
+  },
+  {
+    "name": "BGE Small English",
+    "filename": "bge-small-en-f16.gguf",
+    "architecture": "bert",
+    "parameters": "33M",
+    "ramMb": 600,
+    "bytes": 67308128,
+    "sha256": "f0b2fef971e8366438bfd2d9aefea1b0115919389448806d290237f638bae999",
+    "repo": "ggml-org/models",
+    "revision": "499bc8821c6b12b4e53c5bffcb21ec206f212d81",
+    "url": "https://huggingface.co/ggml-org/models/resolve/499bc8821c6b12b4e53c5bffcb21ec206f212d81/bert-bge-small/ggml-model-f16.gguf",
+    "license": "mit",
+    "tier": "LIGHTWEIGHT",
+    "description": "Turns English text into normalized 384-value embeddings for local semantic search.",
+    "quantization": "F16",
+    "kvBytesPerToken": 0,
+    "runtimeMemoryFloorMb": 600,
+    "context": 512,
     "manualOnly": true
   }
 ]

@@ -379,14 +379,13 @@ Java_com_example_engine_NativeGguf_generate(JNIEnv *env, jobject, jbyteArray pro
 }
 
 // Optional small GGUF encoder. It never replaces or unloads the chat model.
-extern "C" JNIEXPORT jfloatArray JNICALL
-Java_com_example_engine_NativeGguf_rankPassages(JNIEnv *env, jobject, jbyteArray fileBytes, jobjectArray texts) {
+static jfloatArray encodeBert(JNIEnv *env, jbyteArray fileBytes, jobjectArray texts, bool embedding) {
     try {
         std::unique_lock<std::mutex> lock(guard, std::try_to_lock);
         if (!lock.owns_lock()) return nullptr;
         initialize();
         const int count = env->GetArrayLength(texts);
-        if (count < 2 || count > 9) return nullptr;
+        if (embedding ? count != 1 : (count < 2 || count > 9)) return nullptr;
         auto params = llama_model_default_params(); params.n_gpu_layers = 0;
         Model encoder(llama_model_load_from_file(bytes(env, fileBytes).c_str(), params), llama_model_free);
         if (!encoder) return nullptr;
@@ -435,8 +434,19 @@ Java_com_example_engine_NativeGguf_rankPassages(JNIEnv *env, jobject, jbyteArray
         }
         std::vector<float> scores(count - 1);
         for (int i = 1; i < count; ++i) for (int j = 0; j < width; ++j) scores[i - 1] += vectors[0][j] * vectors[i][j];
-        auto result = env->NewFloatArray(scores.size());
-        env->SetFloatArrayRegion(result, 0, scores.size(), scores.data());
+        const auto &output = embedding ? vectors.front() : scores;
+        auto result = env->NewFloatArray(output.size());
+        if (result) env->SetFloatArrayRegion(result, 0, output.size(), output.data());
         return result;
     } catch (...) { return nullptr; } // Lexical retrieval stays fully usable.
+}
+
+extern "C" JNIEXPORT jfloatArray JNICALL
+Java_com_example_engine_NativeGguf_rankPassages(JNIEnv *env, jobject, jbyteArray fileBytes, jobjectArray texts) {
+    return encodeBert(env, fileBytes, texts, false);
+}
+
+extern "C" JNIEXPORT jfloatArray JNICALL
+Java_com_example_engine_NativeGguf_embedText(JNIEnv *env, jobject, jbyteArray fileBytes, jobjectArray texts) {
+    return encodeBert(env, fileBytes, texts, true);
 }

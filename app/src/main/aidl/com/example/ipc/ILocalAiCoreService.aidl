@@ -2,6 +2,8 @@ package com.example.ipc;
 
 import com.example.ipc.ILocalAiStreamCallback;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
+import com.example.ipc.IBiTaskCallback;
 
 interface ILocalAiCoreService {
     boolean isModelLoaded();
@@ -22,4 +24,15 @@ interface ILocalAiCoreService {
     // Append new methods to preserve existing transaction IDs.
     Bundle getServiceStatus();
     Bundle polishText(String text);
+
+    // Task protocol v3. Keep all earlier methods in their original order.
+    int getApiVersion();
+    Bundle getCapabilities();
+    Bundle getInstalledModels();
+    Bundle getRecommendedModels(String capability);
+    Bundle getModelStatus(long modelId);
+    Bundle requestModelDownload(long modelId);
+    Bundle submitTask(in Bundle request, in ParcelFileDescriptor mediaInput, IBiTaskCallback callback);
+    Bundle getTaskStatus(String taskId);
+    boolean cancelTask(String taskId);
 }

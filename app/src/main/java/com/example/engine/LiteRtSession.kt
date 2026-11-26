@@ -35,7 +35,7 @@ internal data class LiteRtResult(val text: String, val inputTokens: Int, val out
 @OptIn(ExperimentalApi::class)
 internal class LiteRtSession(private val context: Context, val file: File,
     private val reuseAttentionExecutor: Boolean = false, identity: String = "",
-    private val experimentalMtp: Boolean = false) : AutoCloseable {
+    private val experimentalMtp: Boolean = false, private val mediaModality: Modality? = null) : AutoCloseable {
     val supportsGpu: Boolean
     val gpuReason: String
     val supportsCpu: Boolean
@@ -73,6 +73,11 @@ internal class LiteRtSession(private val context: Context, val file: File,
         ModelInfo.from(file.absolutePath).use { info ->
             require(info is ModelInfo.Llm) { "Select a LiteRT-LM text-generation model, not an embedding model" }
             val backends = info.supportedBackends(Modality.TEXT)
+            if (mediaModality != null) {
+                require(com.google.ai.edge.litertlm.BackendType.CPU in info.supportedBackends(mediaModality)) {
+                    "The package has no validated CPU graph for ${mediaModality.name.lowercase()}"
+                }
+            }
             supportsCpu = com.google.ai.edge.litertlm.BackendType.CPU in backends
             val npu = QualcommNpuSupport.inspect(context, info)
             supportsNpu = npu.compatible; npuReason = npu.reason
@@ -111,6 +116,9 @@ internal class LiteRtSession(private val context: Context, val file: File,
                 ProcessingMode.NPU -> Backend.NPU(nativeLibraryDir = this.context.applicationInfo.nativeLibraryDir)
                 else -> Backend.CPU(threads)
             },
+            visionBackend = if (mediaModality == Modality.VISION) Backend.CPU(threads) else null,
+            audioBackend = if (mediaModality == Modality.AUDIO) Backend.CPU(threads) else null,
+            maxNumImages = if (mediaModality == Modality.VISION) 1 else null,
             maxNumTokens = graphContext,
             // Gemma 4 has upstream FP16 GPU correctness reports (#4001). Use
             // the public 0.18 FP32 override for these exact verified packages,
@@ -142,18 +150,24 @@ internal class LiteRtSession(private val context: Context, val file: File,
         val mtp = mtpEligible && memory != null && !memory.lowMemory && memory.availMem >= 1024L * 1048576 && thermal < 2
         lastMtpUsed = mtp
         var visible = false
-        return try { generateOnce(prompt, params, mtp) { delta, index -> visible = true; onText(delta, index) } }
+        return try { generateOnce(prompt, Contents.of(prompt), params, mtp) { delta, index -> visible = true; onText(delta, index) } }
         catch (failure: Exception) {
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
             if (!mtp || visible) throw failure
             // generateOnce has already joined cancellation and closed its
             // Conversation. Replay only before any visible text, once, normally.
             mtpQuarantined = true; lastMtpUsed = false
-            generateOnce(prompt, params, false, onText)
+            generateOnce(prompt, Contents.of(prompt), params, false, onText)
         }
     }
 
-    private suspend fun generateOnce(prompt: String, params: GenerationParams, mtp: Boolean,
+    suspend fun generateMedia(prompt: String, media: Content, params: GenerationParams,
+        onText: (String, Int) -> Unit): LiteRtResult {
+        check(mediaModality != null && backend == ProcessingMode.CPU)
+        return generateOnce(prompt, Contents.of(Content.Text(prompt), media), params, false, onText)
+    }
+
+    private suspend fun generateOnce(prompt: String, contents: Contents, params: GenerationParams, mtp: Boolean,
         onText: (String, Int) -> Unit): LiteRtResult {
         val started = SystemClock.elapsedRealtime()
         if (resetRequired || (usedForConversation && !reuseAttentionExecutor)) {
@@ -179,7 +193,7 @@ internal class LiteRtSession(private val context: Context, val file: File,
         var chunks = 0
         var submitted = false
         try {
-            conversation.sendMessageAsync(prompt, object : MessageCallback {
+            conversation.sendMessageAsync(contents, object : MessageCallback {
                 override fun onMessage(message: Message) {
                     if (completion.isCompleted) return
                     // v0.18.0 Message.toString joins all content types. Read only

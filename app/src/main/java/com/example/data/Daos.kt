@@ -79,6 +79,10 @@ interface IpcLogDao {
 
 @Dao
 interface ClientPolicyDao {
+    @Query("""UPDATE client_policies SET taskScopes = CASE WHEN :allowed THEN (taskScopes | :bit)
+        ELSE (taskScopes & (~:bit)) END WHERE packageName = :pkg""")
+    suspend fun setTaskScope(pkg: String, bit: Int, allowed: Boolean)
+
     @Query("SELECT * FROM client_policies ORDER BY lastAccessTimestamp DESC")
     fun getAllPolicies(): Flow<List<ClientAppPolicyEntity>>
 

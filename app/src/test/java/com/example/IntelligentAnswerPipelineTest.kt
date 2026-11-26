@@ -376,7 +376,7 @@ class IntelligentAnswerPipelineTest {
     }
 
     // -------------------------------------------------------------
-    // Scenario 12: Previously authorised apps retain permissions after Room migration 9->10
+    // Scenario 12: Previously authorised apps retain permissions after a Room upgrade.
     // -------------------------------------------------------------
     @Test
     // Robolectric includes this method name in its temporary directory. Keep
@@ -400,12 +400,12 @@ class IntelligentAnswerPipelineTest {
         )
         helper.use { assertEquals(7, it.writableDatabase.version) }
 
-        // Upgrade using MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
+        // Upgrade from the real v7 schema through all supported migrations.
         val upgraded = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_7_8, AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10)
+            .addMigrations(AppDatabase.MIGRATION_7_8, AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11)
             .build()
         try {
-            assertEquals(10, upgraded.openHelper.writableDatabase.version)
+            assertEquals(11, upgraded.openHelper.writableDatabase.version)
             val policy = upgraded.clientPolicyDao().getPolicyForPackage("com.test.app")
             assertNotNull(policy)
             assertTrue(policy!!.isWhitelisted)
@@ -416,6 +416,7 @@ class IntelligentAnswerPipelineTest {
             assertNull(policy.primaryModelId)
             assertNull(policy.fallbackModelId)
             assertFalse(policy.allowAppContext)
+            assertEquals(0, policy.taskScopes)
         } finally {
             upgraded.close()
             context.deleteDatabase(dbName)

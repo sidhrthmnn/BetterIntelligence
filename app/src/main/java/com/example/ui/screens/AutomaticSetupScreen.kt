@@ -36,6 +36,7 @@ fun AutomaticSetupScreen(viewModel: AiCoreViewModel) {
             }
             TextButton(onClick = viewModel::recheckDevice, modifier = Modifier.testTag("recheck_device")) { Text("Recheck my device") }
         } }
+        item { SmartModelCollection(viewModel, models) }
         state.pair?.let { pair ->
             items(listOfNotNull(pair.primary?.let { "Primary" to it }, pair.secondary?.let { "Low-memory backup" to it })) { (role, model) -> ScreenCard {
                 Text(role, style = MaterialTheme.typography.labelLarge)
@@ -44,7 +45,7 @@ fun AutomaticSetupScreen(viewModel: AiCoreViewModel) {
                 val report = state.reports.lastOrNull { it.modelId == model.id && it.key.startsWith(com.example.engine.ModelQualityBenchmark.key(model, com.example.engine.ModelLibrary.configuredContext(model, 1024)) + ":") }
                 Text(report?.let { "${if (it.passed) "Checked on this phone" else "Needs manual review"}: ${it.quality}/100 checks · ${"%.1f".format(it.tokensPerSecond)} tokens/s · ${it.backend}" }
                     ?: "Preliminary estimate · Not benchmarked on this device", style = MaterialTheme.typography.bodySmall)
-                Text(if (role == "Primary") "For everyday answers and grounded summaries" else "For lower memory use", style = MaterialTheme.typography.bodySmall)
+                Text(if (role == "Primary") "For connected apps that use text AI" else "For lower memory use", style = MaterialTheme.typography.bodySmall)
             } }
             item { Text(pair.reason, style = MaterialTheme.typography.bodySmall) }
             if (!state.pending && pair.primary != null) item { Button(onClick = { reviewed = pair; approval = true }, modifier = Modifier.fillMaxWidth().testTag("automatic_setup_approve")) { Text("Set up automatically") } }

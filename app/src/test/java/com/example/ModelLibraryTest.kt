@@ -78,7 +78,7 @@ class ModelLibraryTest {
 
     @Test fun recommendationUsesAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        assertEquals(23, models.size)
+        assertEquals(24, models.size)
         assertTrue(models.all { !it.isInstalled && !it.isActive && !it.isChecksumVerified })
         assertEquals("Qwen 3 0.6B Instruct · LiteRT", ModelLibrary.recommend(models, profile())!!.recommendedModelName)
         assertEquals("SmolLM2 135M Instruct", ModelLibrary.recommend(models, profile(storage = 0.3f))!!.recommendedModelName)
@@ -114,7 +114,7 @@ class ModelLibraryTest {
     }
 
     @Test fun downloadDoesNotRequireEnoughRamToRunTheModel() {
-        val model = ModelLibrary.read(ApplicationProvider.getApplicationContext()).last()
+        val model = ModelLibrary.read(ApplicationProvider.getApplicationContext()).single { it.filename == "gemma-4-E2B_q4_0-it.gguf" }
         assertTrue(ModelLibrary.canDownload(model, profile(ram = 512)))
         assertFalse(ModelLibrary.fits(model, profile(ram = 512)))
         assertFalse(ModelLibrary.canDownload(model, profile(storage = 0.1f)))
@@ -152,7 +152,7 @@ class ModelLibraryTest {
         val asset = context.assets.open("model-library.json").bufferedReader().use { it.readText() }
         assertEquals(java.io.File("../models/library.json").readText().trim(), asset.trim())
         val models = ModelLibrary.read(context)
-        assertEquals(23, models.map { it.filename }.distinct().size)
+        assertEquals(24, models.map { it.filename }.distinct().size)
         assertEquals(setOf("LIGHTWEIGHT", "BALANCED", "QUALITY"), models.map { it.recommendedTier }.toSet())
         for (model in models) {
             assertTrue(model.sha256Checksum!!.matches(Regex("[a-f0-9]{64}")))
@@ -163,6 +163,7 @@ class ModelLibraryTest {
                 model.name.startsWith("SmolLM3 3B") && model.filename.endsWith(".litertlm") -> "INT4 block32 + INT8 embed"
                 model.architecture == "qwen3" && model.filename.endsWith(".litertlm") -> "INT4 block32"
                 model.filename.endsWith(".litertlm") -> "Mixed 2/4/8-bit"
+                model.architecture == "bert" -> "F16"
                 model.filename.contains("Q4_0", true) -> "Q4_0"
                 else -> "Q4_K_M"
             }, model.quantization)

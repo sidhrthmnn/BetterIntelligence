@@ -81,7 +81,7 @@ fun HuggingFaceDiscoveryCard(
                         }
                     }
                 }
-                Text("Choose a file size before downloading. Compatibility is checked before loading.", style = MaterialTheme.typography.bodySmall,
+                Text("Choose a GGUF or LiteRT-LM package. Check the publisher’s licence.", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else if (!isSearching && lastSearch == searchQuery && searchQuery.isNotBlank()) {
                 ScreenCard { Text("No models found", style = MaterialTheme.typography.titleMedium)
@@ -115,7 +115,7 @@ fun HuggingFaceDiscoveryCard(
                     items(repoGgufFiles.sortedBy { it.recommendedRamMb }, key = { it.filename }) { file -> ScreenCard {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(file.filename, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            QuantBadge(file.quantization)
+                            QuantBadge(if (file.filename.endsWith(".litertlm", true)) "LiteRT-LM" else file.quantization)
                         }
                         Text("${ModelPresentation.size(file.sizeMb.toLong())} download · ~${ModelPresentation.size(file.recommendedRamMb.toLong())} RAM",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

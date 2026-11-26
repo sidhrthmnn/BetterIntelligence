@@ -1,10 +1,10 @@
 # Better Intelligence
 
-Better Intelligence is the local AI model hub for Android. **Version 2.7 opens on Models**, with three main destinations: **Models**, **Apps** and **Settings**. Download, import and delete compatible models; configure CPU/GPU processing, memory and downloads; and approve supported apps to use local inference. Chat and research are handled by client applications such as Neuron, not by BI's own UI.
+Better Intelligence is the local AI model hub for Android. In **Models**, download and manage local models and configure how each capability runs. In **Apps**, approve individual clients and grant access to the capabilities they need. **Settings** controls downloads, hardware and memory. Client apps provide the chat and research experience.
 
 The built-in chat, conversation history, web research, chat-memory controls and request simulator have been removed. BI no longer creates or resumes chat sessions at launch or initializes a web research coordinator. Existing private database tables are retained for non-destructive upgrades and compatibility; removal of a screen does not erase user data. No automatic transfer of old conversations to another app is performed.
 
-Existing llama.cpp/LiteRT kernels and the Rust admission, cancellation and model-health policy remain. Binder/AIDL transaction IDs and ContentResolver methods are compatible. All inference runs locally; Internet is used for approved model discovery and downloads. See [2.7 architecture and validation](docs/2.7/MODEL_HUB.md).
+**Version 3.0** adds a task API for text generation and proofreading, Gemma image and short-audio understanding, transcription, offline Android speech synthesis, and BGE text embeddings. It retains the existing Binder/AIDL transaction IDs and ContentResolver methods. Inference runs locally. Discovery and approved downloads use the internet. See the [task API and sample](docs/3.0/TASK_API.md) and [runtime and compatibility notes](docs/3.0/ARCHITECTURE.md).
 
 **Download over Wi-Fi only** is the single network preference. Turning it off permits mobile data or Wi-Fi. The former mobile-data switch is removed, with existing preferences preserved.
 
@@ -30,6 +30,7 @@ See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin 
 | Qwen 3 4B Instruct 2507 Q4_K_M | 2,497,280,736 | 3,116 MB |
 | Qwen 2.5 7B Instruct Q4_K_M | 4,683,074,240 | 5,192 MB |
 | Gemma 4 E2B LiteRT mixed precision | 2,588,147,712 | 2,374 MB (text only) |
+| BGE Small English F16 | 67,308,128 | 600 MB (embeddings) |
 | Gemma 4 E4B LiteRT mixed precision | 3,659,530,240 | 3,590 MB (text only) |
 | Gemma 4 E2B GGUF Q4_K_M | 3,106,738,272 | 3,596 MB |
 | Gemma 4 E4B GGUF Q4_K_M | 4,977,171,584 | 5,718 MB |

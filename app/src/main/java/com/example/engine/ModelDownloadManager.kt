@@ -6,6 +6,8 @@ import android.os.SystemClock
 import android.util.Log
 import com.example.data.ModelEntity
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
@@ -73,18 +75,24 @@ class ModelDownloadManager(private val context: Context,
         get() = File(context.filesDir, "models").apply { mkdirs() }
 
     /**
-     * Search official Hugging Face Hub for GGUF model repositories.
+     * Search Hugging Face for formats supported by the packaged runtimes.
      */
     suspend fun searchHuggingFaceHub(query: String): List<HuggingFaceModelSearchResult> = withContext(Dispatchers.IO) {
         val results = mutableListOf<HuggingFaceModelSearchResult>()
         try {
             val encodedQuery = java.net.URLEncoder.encode(query.trim(), "UTF-8")
-            val endpoint = "https://huggingface.co/api/models?search=$encodedQuery&filter=gguf&limit=20&full=true"
-            val jsonText = fetchHttpString(endpoint) ?: return@withContext emptyList()
-            val jsonArray = JSONArray(jsonText)
+            val hitLists = kotlinx.coroutines.coroutineScope {
+                listOf("gguf", "litert-lm").map { format ->
+                    async(Dispatchers.IO) {
+                        val endpoint = "https://huggingface.co/api/models?search=$encodedQuery&filter=$format&limit=14&full=true"
+                        val jsonText = fetchHttpString(endpoint)
+                        runCatching { JSONArray(jsonText ?: "[]") }.getOrDefault(JSONArray())
+                    }
+                }.awaitAll()
+            }
+            val items = hitLists.flatMap { array -> (0 until array.length()).mapNotNull(array::optJSONObject) }
 
-            for (i in 0 until jsonArray.length()) {
-                val item = jsonArray.optJSONObject(i) ?: continue
+            for (item in items) {
                 val repoId = item.optString("id", "")
                 if (repoId.isBlank()) continue
 
@@ -102,7 +110,7 @@ class ModelDownloadManager(private val context: Context,
                     for (j in 0 until siblings.length()) {
                         val sib = siblings.optJSONObject(j)
                         val rfilename = sib?.optString("rfilename", "") ?: ""
-                        if (rfilename.endsWith(".gguf", ignoreCase = true)) {
+                        if (rfilename.endsWith(".gguf", true) || rfilename.endsWith(".litertlm", true)) {
                             ggufCount++
                         }
                     }
@@ -125,11 +133,11 @@ class ModelDownloadManager(private val context: Context,
         catch (e: Exception) {
             Log.e(TAG, "Failed to search Hugging Face Hub: ${e.message}", e)
         }
-        results
+        results.distinctBy { it.repoId }.sortedByDescending { it.downloads }.take(24)
     }
 
     /**
-     * Query Hugging Face API to list all available GGUF files in a repository with their sizes & LFS SHA256 checksums.
+     * Query Hugging Face API to list available model files in a repository with their sizes & LFS SHA256 checksums.
      */
     suspend fun fetchRepoGgufFiles(repoId: String, network: Network? = null): List<HuggingFaceGgufFile> = withContext(Dispatchers.IO) {
         val repo = HuggingFaceCatalog.normalizeRepo(repoId)

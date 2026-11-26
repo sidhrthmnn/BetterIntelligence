@@ -1,6 +1,8 @@
-# Current release scope (2.7)
+# Current release scope (3.0)
 
-Better Intelligence now manages local models, settings and explicitly approved app connections. It no longer provides built-in chat or web research and does not initialize a search provider during startup. Internet access is used for model discovery and approved downloads. Connected-app inference stays on-device. Existing stored legacy conversations are not silently erased or transferred to Neuron; their database format remains for non-destructive upgrades. Shared-memory API access remains separately scoped and disabled by default. The research and chat descriptions below document earlier releases and do not describe active features in 2.7.
+Better Intelligence manages local models, settings and explicitly approved app connections. Connected-app inference stays on-device. Internet access supports model discovery and approved downloads. Shared-memory API access is separately scoped and disabled by default. The research and chat descriptions below document earlier releases. Existing legacy conversations stay in the app’s private database for non-destructive upgrades.
+
+A connected app can send text and, with the corresponding permissions, an image or short audio file for a task. BI processes the input in memory. For speech synthesis, BI passes the requested text to Android's system speech engine using an installed offline voice. BI creates generated speech in its private cache and hands the requesting app a read-only file descriptor. BI removes the temporary file after synthesis and transfer. Task logs store the calling application, task type, timings and status. Task status does not retain the requested or generated content.
 
 # Better Intelligence privacy policy
 

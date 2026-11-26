@@ -172,6 +172,8 @@ fun AdvancedSettingsScreen(viewModel: AiCoreViewModel) {
     val parameters by viewModel.generationParams.collectAsState()
     val uri = LocalUriHandler.current
     LazyColumn(Modifier.fillMaxSize().testTag("advanced_list"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { TaskResourceSettings(viewModel) }
+        item { MyAiSetup(viewModel, models) }
         item { DetailDisclosure("Model context", "Default context for connected apps") {
             Text("${parameters.contextSize} tokens", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

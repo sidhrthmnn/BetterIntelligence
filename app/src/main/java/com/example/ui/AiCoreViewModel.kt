@@ -1,6 +1,12 @@
 package com.example.ui
 
 import android.app.Application
+import com.example.tasks.CapabilitySettings
+import com.example.tasks.ModelDownloadApproval
+import com.example.tasks.TaskAccess
+import com.example.tasks.TaskModels
+import com.example.tasks.TaskResourcePolicy
+import com.example.tasks.TaskType
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
@@ -62,6 +68,66 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     private val repository = AiCoreRepository.getInstance(application)
     private val parser = GgufParser()
 
+    val taskSettings = repository.taskSettings.values
+    val taskResourcePolicy = repository.taskSettings.resourcePolicy
+    val modelDownloadApprovals = repository.taskSettings.downloadApprovals
+    val taskActivity = repository.recentIpcLogs
+
+    fun setTaskSettings(type: TaskType, settings: CapabilitySettings) {
+        viewModelScope.launch(Dispatchers.IO) { repository.taskSettings.set(type, settings) }
+    }
+
+    fun setTaskResourcePolicy(settings: TaskResourcePolicy) {
+        viewModelScope.launch(Dispatchers.IO) { repository.taskSettings.setResources(settings) }
+    }
+
+    fun setTaskAccess(packageName: String, access: TaskAccess, allowed: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) { repository.setTaskScope(packageName, access, allowed) }
+    }
+
+    fun reviewRequestedDownload(request: ModelDownloadApproval, approve: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (request !in repository.taskSettings.downloadApprovals.value) return@launch
+            val model = repository.modelForDownload(request.modelId)
+            val allowed = repository.taskAccessStatus(request.packageName, TaskAccess.DOWNLOAD) == "READY"
+            repository.taskSettings.clearDownload(request)
+            if (approve && allowed && model != null && !model.isInstalled) {
+                withContext(Dispatchers.Main) { downloadModel(model) }
+            }
+        }
+    }
+
+    fun applyCapabilityCollection(text: ModelEntity, media: ModelEntity?, downloadMb: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val selected = listOfNotNull(text, media).distinctBy { it.id }.map { reviewed ->
+                    val current = repository.modelForDownload(reviewed.id)
+                    check(current != null && current.sha256Checksum == reviewed.sha256Checksum) { "Review the models again" }
+                    current
+                }
+                val hardware = HardwareAnalyzer.analyze(getApplication())
+                val pending = selected.filterNot { it.isInstalled }
+                val actualDownloadMb = pending.sumOf { it.fileSizeMb }
+                check(actualDownloadMb <= downloadMb && (pending.isEmpty() ||
+                    actualDownloadMb + 128 <= hardware.internalStorageFreeGb * 1024)) { "Free storage or review a smaller collection" }
+                val memoryCap = taskResourcePolicy.value.maxMemoryMb
+                fun fits(estimate: Long) = estimate <= hardware.safeModelRamLimitMb && (memoryCap == 0 || estimate <= memoryCap)
+                check(!hardware.isLowMemory && fits(TaskModels.estimateMb(text, TaskType.TEXT_GENERATION)) &&
+                    (media == null || fits(TaskModels.estimateMb(media, TaskType.IMAGE_UNDERSTANDING)))) {
+                    "Available memory changed. Check your device again before downloading."
+                }
+                check(selected.none(::needsTerms)) { "Accept the model terms in Models before adding it to your setup." }
+                TaskModels.text.forEach { type -> repository.taskSettings.set(type, taskSettings.value.getValue(type).copy(primaryId = text.id)) }
+                media?.let { model -> TaskModels.gemmaMedia.forEach { type ->
+                    repository.taskSettings.set(type, taskSettings.value.getValue(type).copy(primaryId = model.id))
+                } }
+                pending.forEach { repository.startModelDownload(it) }
+                _userMessage.value = if (pending.isEmpty()) "AI setup saved." else "AI setup saved. Downloads are queued."
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { _userMessage.value = e.message ?: "Could not save the AI setup." }
+        }
+    }
+
     val automaticSetup = repository.automaticSetup.state
     fun setDownloadsWifiOnly(value: Boolean) {
         com.example.service.DownloadQueueStore(getApplication()).setWifiOnly(value)
@@ -99,7 +165,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 allowReadMemory = false,
                 allowWriteMemory = false,
                 primaryModelId = null,
-                fallbackModelId = null
+                fallbackModelId = null,
+                taskScopes = 0
             ))
         }
     }
@@ -575,7 +642,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val results = repository.searchHuggingFaceHub(q)
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 _hfSearchResults.value = results
-                if (results.isEmpty()) _userMessage.value = "No GGUF models found for '$q'."
+                if (results.isEmpty()) _userMessage.value = "No compatible model packages found for '$q'."
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) { _userMessage.value = "Hugging Face search failed: ${e.message}" }
             finally { if (kotlinx.coroutines.currentCoroutineContext().isActive) _isHfSearching.value = false }
@@ -592,7 +659,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 val files = repository.fetchRepoGgufFiles(repoId)
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 _hfRepoGgufFiles.value = files
-                if (files.isEmpty()) _userMessage.value = "No .gguf files detected in $repoId."
+                if (files.isEmpty()) _userMessage.value = "No supported model files found in $repoId."
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) { _userMessage.value = "Failed to load repo files: ${e.message}" }
             finally { if (kotlinx.coroutines.currentCoroutineContext().isActive) _isLoadingRepoFiles.value = false }

@@ -72,7 +72,8 @@ data class ClientAppPolicyEntity(
     val allowedMemoryCategories: String = "*",
     val primaryModelId: Long? = null,
     val fallbackModelId: Long? = null,
-    val allowAppContext: Boolean = false
+    val allowAppContext: Boolean = false,
+    @androidx.room.ColumnInfo(defaultValue = "0") val taskScopes: Int = 0
 )
 
 @Entity(tableName = "chat_messages")

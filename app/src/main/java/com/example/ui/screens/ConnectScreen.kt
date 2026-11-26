@@ -5,6 +5,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.tasks.TaskAccess
+import com.example.tasks.TaskModels
 import com.example.ui.components.ScreenCard
 import com.example.ui.components.DetailDisclosure
 import androidx.compose.material.icons.Icons
@@ -80,6 +82,8 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
 @Composable
 private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewModel) {
     var expanded by rememberSaveable(policy.packageName) { mutableStateOf(false) }
+    val activity by viewModel.taskActivity.collectAsState(initial = emptyList())
+    val last = activity.firstOrNull { it.callingPackage == policy.packageName }
     val allModels by viewModel.allModels.collectAsState()
     val installedModels = remember(allModels) { allModels.filter { it.isInstalled } }
     val context = LocalContext.current
@@ -105,6 +109,14 @@ private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewMo
             }
             if (policy.totalRequests > 0) Text("Last used ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(policy.lastAccessTimestamp))}",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (policy.isWhitelisted && !policy.isBlocked) {
+                val skills = TaskModels.implemented.map { it.access }.distinct().filter { access ->
+                    if (access == TaskAccess.TEXT) policy.allowInference else policy.taskScopes and access.bit != 0
+                }.map { it.label }
+                if (skills.isNotEmpty()) Text(skills.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+                last?.let { Text("Last task: ${it.requestType.lowercase().replace('_', ' ')} · ${it.status.lowercase().replace('_', ' ')}",
+                    style = MaterialTheme.typography.bodySmall) }
+            }
             TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide permissions" else "Permissions and limits") }
             if (expanded) {
                 Text(policy.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -121,6 +133,15 @@ private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewMo
                     onSelect = { viewModel.updateClientFallbackModel(policy, it) }
                 )
                 PermissionRow("AI generation and polish", policy.allowInference) { viewModel.togglePolicyInference(policy) }
+                TaskAccess.entries.filter { it != TaskAccess.TEXT }.forEach { access ->
+                    val offered = TaskModels.implemented.any { it.access == access } ||
+                        access in setOf(TaskAccess.INTENSIVE, TaskAccess.DOWNLOAD)
+                    if (offered) {
+                        PermissionRow(access.label, policy.taskScopes and access.bit != 0) {
+                            viewModel.setTaskAccess(policy.packageName, access, policy.taskScopes and access.bit == 0)
+                        }
+                    }
+                }
                 PermissionRow("App-specific context", policy.allowAppContext) { viewModel.togglePolicyAppContext(policy) }
                 PermissionRow("Read shared memories", policy.allowReadMemory) { viewModel.togglePolicyReadMemory(policy) }
                 PermissionRow("Write shared memories", policy.allowWriteMemory) { viewModel.togglePolicyWriteMemory(policy) }

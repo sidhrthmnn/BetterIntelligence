@@ -4,7 +4,7 @@ import org.json.JSONObject
 import java.net.URLEncoder
 import java.security.MessageDigest
 
-/** Resolve public single-file GGUFs to immutable revisions before offering a download. */
+/** Resolve public single-file GGUF and LiteRT-LM packages to immutable revisions before offering a download. */
 object HuggingFaceCatalog {
     fun normalizeRepo(value: String): String {
         val repo = value.trim().removePrefix("https://huggingface.co/").removeSuffix("/")
@@ -22,7 +22,7 @@ object HuggingFaceCatalog {
         return (0 until siblings.length()).mapNotNull { index ->
             val file = siblings.getJSONObject(index)
             val path = file.getString("rfilename")
-            if (!path.endsWith(".gguf", true) || path.contains("mmproj", true) ||
+            if (!(path.endsWith(".gguf", true) || path.endsWith(".litertlm", true)) || path.contains("mmproj", true) ||
                 Regex("-\\d{5}-of-\\d{5}\\.gguf$", RegexOption.IGNORE_CASE).containsMatchIn(path)) return@mapNotNull null
             if (path.split('/').any { it.isBlank() || it == "." || it == ".." }) return@mapNotNull null
             val lfs = file.optJSONObject("lfs")
@@ -30,6 +30,7 @@ object HuggingFaceCatalog {
             if (size <= 0) return@mapNotNull null
             val checksum = (lfs?.optString("sha256")?.ifBlank { null } ?: lfs?.optString("oid"))
                 ?.takeIf { it.matches(Regex("[a-fA-F0-9]{64}")) }
+            if (path.endsWith(".litertlm", true) && checksum == null) return@mapNotNull null
             val encoded = path.split('/').joinToString("/") { URLEncoder.encode(it, "UTF-8").replace("+", "%20") }
             val sizeMb = (size + 1048575) / 1048576
             val quantization = Regex("(?:IQ|Q)\\d(?:_[A-Z0-9]+)*", RegexOption.IGNORE_CASE)
@@ -44,8 +45,9 @@ object HuggingFaceCatalog {
         val identity = "$repo/${file.filename}/${file.sha256Oid ?: file.downloadUrl}"
         val key = MessageDigest.getInstance("SHA-256").digest(identity.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }.take(12)
-        val base = file.filename.substringAfterLast('/').dropLast(5)
+        val filename = file.filename.substringAfterLast('/')
+        val base = filename.substringBeforeLast('.')
             .replace(Regex("[^A-Za-z0-9._-]"), "_").take(150)
-        return "hf-$key-$base.gguf"
+        return "hf-$key-$base.${filename.substringAfterLast('.').lowercase()}"
     }
 }

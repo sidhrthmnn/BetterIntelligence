@@ -37,6 +37,8 @@ import com.example.ui.AppTab
 import com.example.ui.components.HardwareDiagnosticCard
 import com.example.ui.components.HuggingFaceDiscoveryCard
 import com.example.ui.components.HardwarePerformanceComparisonCard
+import com.example.tasks.TaskModels
+import com.example.tasks.TaskType
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -55,6 +57,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
     val verifying by viewModel.verifyingModelId.collectAsState()
     val deletingId by viewModel.deletingModelId.collectAsState()
     val context = LocalContext.current
+    var capability by rememberSaveable { mutableStateOf("All") }
     var source by rememberSaveable { mutableStateOf("library") }
     var advanced by rememberSaveable { mutableStateOf(false) }
     var details by remember { mutableStateOf<ModelEntity?>(null) }
@@ -76,7 +79,8 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
             pinnedDownloads = started.sorted() + pinnedDownloads.filterNot { it in started }
             source = "my_models"
             // Focus once per start/resume. Progress and RAM samples never interrupt scrolling.
-            listState.scrollToItem(if (telemetry.isModelLoaded || loading != null) 4 else 3)
+            capability = "All"
+            listState.scrollToItem(2)
         }
     }
     val loadProfile = hardware?.let { profile ->
@@ -111,7 +115,15 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                 }
             }
         }
-        if (source == "find") item {
+        item { CapabilityFilters(capability) { capability = it } }
+        item { DownloadRequests(viewModel, models) }
+        if (source != "find") item { MyAiSetup(viewModel, models) }
+        if (source == "find" && capability != "Text" && capability != "All") item {
+            val compatible = models.filter { model -> TaskModels.capabilities(model).any { it.filter == capability } }
+            if (compatible.isEmpty()) Text("No verified ${capability.lowercase()} packages are available.")
+            else Text("Verified packages are listed below.", style = MaterialTheme.typography.bodySmall)
+        }
+        if (source == "find" && capability in listOf("All", "Text")) item {
             val query by viewModel.hfSearchQuery.collectAsState()
             val results by viewModel.hfSearchResults.collectAsState()
             val searching by viewModel.isHfSearching.collectAsState()
@@ -183,20 +195,23 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("All models · Least RAM first", style = MaterialTheme.typography.titleSmall)
+                Text(if (capability == "All") "All models · Least RAM first" else "$capability models", style = MaterialTheme.typography.titleSmall)
             }
             Text("RAM is estimated. Downloads stay at the top.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val visibleModels = models.filter {
-            if (it.id in pinnedDownloads || it.downloadState in setOf("DOWNLOADING", "QUEUED")) true else when (source) {
+            if (it.id in pinnedDownloads || it.downloadState in setOf("DOWNLOADING", "QUEUED")) true
+            else if (capability != "All" && TaskModels.capabilities(it).none { type -> type.filter == capability }) false
+            else when (source) {
                 "library" -> true
                 "my_models" -> ModelPresentation.hasDownload(it) || it.isCustom
-                else -> false
+                else -> capability !in listOf("All", "Text")
             }
         }
-        if (source == "my_models" && visibleModels.isEmpty()) item {
-            Text("Your downloads and imports will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (visibleModels.isEmpty() && source != "find") item {
+            Text(if (capability == "All") "Your downloads and imports will appear here."
+                else "No models here support ${capability.lowercase()}.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         items(ModelPresentation.byRam(visibleModels, generationParams.contextSize, pinnedDownloads), key = { it.id }) { model ->
             val installed = model.isInstalled
@@ -249,6 +264,12 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                         Text("Transfer interrupted. Retrying automatically.", style = MaterialTheme.typography.bodySmall)
                     }
                     if (model.downloadState == "ERROR") Text(downloadErrors[model.id] ?: "Download interrupted. Tap Retry to resume.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    val tasks = TaskModels.capabilities(model)
+                    val modelCapabilities = tasks.map { if (it == TaskType.EMBEDDINGS) it.label else it.filter }.distinct()
+                    if (modelCapabilities.any { it != "Text" }) {
+                        Text(modelCapabilities.joinToString(" · "), style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
                     if (downloading) {
                         val animatedProgress by animateFloatAsState(
                             targetValue = model.downloadProgress.coerceIn(0f, .99f),
@@ -268,7 +289,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                 modifier = Modifier.heightIn(min = 40.dp)
                             ) { Text("Pause", style = MaterialTheme.typography.labelMedium) }
-                            installed -> Button(
+                            installed && TaskType.TEXT_GENERATION in tasks -> Button(
                                 onClick = { viewModel.switchModel(model) },
                                 enabled = loading == null && deletingId == null && !selected && fits && !telemetry.isRunning,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -276,7 +297,7 @@ fun ModelsScreen(viewModel: AiCoreViewModel) {
                             ) {
                                 Text(if (loading == model.id) "Loading…" else if (selected) "In use" else "Use model", style = MaterialTheme.typography.labelMedium)
                             }
-                            else -> Button(
+                            !installed -> Button(
                                 onClick = { viewModel.downloadModel(model) },
                                 enabled = canDownload,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),

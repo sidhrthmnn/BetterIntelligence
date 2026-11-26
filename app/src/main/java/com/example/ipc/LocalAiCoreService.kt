@@ -11,6 +11,11 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.Process
+import android.os.Bundle
+import android.os.ParcelFileDescriptor
+import com.example.tasks.TaskRequest
+import com.example.tasks.TaskRouter
+import kotlinx.coroutines.CancellationException
 import androidx.core.app.NotificationCompat
 import com.example.data.AiCoreRepository
 import com.example.data.IpcLogEntity
@@ -31,8 +36,11 @@ import kotlinx.coroutines.flow.first
 class LocalAiCoreService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val legacyExecuting = java.util.concurrent.atomic.AtomicBoolean()
     private val inferenceOwner = java.util.concurrent.atomic.AtomicInteger(-1)
     private val repository by lazy { AiCoreRepository.getInstance(applicationContext) }
+
+    private val taskRouter = lazy { TaskRouter(applicationContext, repository, serviceScope) }
 
     override fun onCreate() {
         super.onCreate()
@@ -55,8 +63,20 @@ class LocalAiCoreService : Service() {
         LocalAiCaller.packageForUid(this)
     }
 
+    @Deprecated("Android component memory callback")
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (taskRouter.isInitialized()) repository.idleTaskResources(false)
+    }
+
+    private suspend fun <T> runOwnedLegacy(block: suspend () -> T): T = repository.runLegacyClient {
+        legacyExecuting.set(true)
+        try { block() } finally { legacyExecuting.set(false) }
+    }
+
     override fun onDestroy() {
-        if (inferenceOwner.get() != -1) repository.engine.cancelGeneration()
+        if (legacyExecuting.get()) repository.engine.cancelGeneration()
+        if (taskRouter.isInitialized()) taskRouter.value.close()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -102,7 +122,7 @@ class LocalAiCoreService : Service() {
 
             val startTime = System.currentTimeMillis()
             check(inferenceOwner.compareAndSet(-1, callingUid)) { "AI Core is busy" }
-            val result = try { runBlocking(Dispatchers.Default) {
+            val result = try { runBlocking(Dispatchers.Default) { runOwnedLegacy {
                 repository.resolveAndActivateForClient(callingPackage, clientContextSize(), preferLoaded = true)
                 val finalSystemPrompt = repository.buildClientSystemPrompt(callingPackage, safeSystemPrompt)
                 repository.engine.generateSync(
@@ -114,7 +134,7 @@ class LocalAiCoreService : Service() {
                         systemPrompt = finalSystemPrompt.ifBlank { null }
                     )
                 )
-            } } finally { inferenceOwner.set(-1) }
+            } } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
             val approxTokens = repository.engine.telemetry.value.completionTokens
             val tokPerSec = repository.engine.telemetry.value.tokensPerSecond
@@ -124,92 +144,52 @@ class LocalAiCoreService : Service() {
         }
 
         override fun generateStream(
-            prompt: String?,
-            systemPrompt: String?,
-            temperature: Float,
-            topP: Float,
-            maxTokens: Int,
+            prompt: String?, systemPrompt: String?, temperature: Float, topP: Float, maxTokens: Int,
             callback: ILocalAiStreamCallback?
         ) {
-            val callingPackage = getCallingPackageName()
-            val callingUid = Binder.getCallingUid()
-            val safePrompt = sanitizeInput(prompt)
-            val safeSystemPrompt = sanitizeInput(systemPrompt)
-
+            val pkg = getCallingPackageName()
+            val uid = Binder.getCallingUid()
             if (callback == null) return
-
-            val (isAuthorized, reason) = checkAuthorizationAndRateLimit(callingPackage)
-            if (!isAuthorized) {
-                val status = if (reason.contains("Rate limit")) "RATE_LIMITED" else "DENIED"
-                logCall(callingPackage, callingUid, "STREAM", safePrompt, reason, 0L, 0f, 0, status)
-                callback.onError(if (status == "RATE_LIMITED") 429 else 403, reason)
+            val (allowed, reason) = checkAuthorizationAndRateLimit(pkg)
+            if (!allowed) {
+                callback.onError(if (reason.contains("Rate limit")) 429 else 403, reason)
                 return
             }
-
-            if (!inferenceOwner.compareAndSet(-1, callingUid)) { callback.onError(409, "AI Core is busy"); return }
-
-            val finalSystemPrompt = runBlocking(Dispatchers.Default) {
-                repository.resolveAndActivateForClient(callingPackage, clientContextSize(), preferLoaded = true)
-                repository.buildClientSystemPrompt(callingPackage, safeSystemPrompt)
+            if (!inferenceOwner.compareAndSet(-1, uid)) {
+                callback.onError(409, "AI Core is busy")
+                return
             }
-
-            val params = GenerationParams(
-                temperature = if (temperature.isFinite()) temperature.coerceIn(0f, 2f) else 0.7f,
-                topP = if (topP > 0) topP.coerceIn(0.1f, 1.0f) else 0.9f,
-                maxTokens = if (maxTokens > 0) maxTokens.coerceIn(1, 4096) else 512,
-                contextSize = clientContextSize(),
-                systemPrompt = finalSystemPrompt.ifBlank { null }
-            )
-
-            repository.engine.generateStream(
-                safePrompt,
-                params,
-                object : StreamTokenListener {
-                    override fun onToken(token: String, tokenIndex: Int) {
-                        try {
-                            callback.onToken(token, tokenIndex)
-                        } catch (e: Exception) {
-                            repository.engine.cancelGeneration()
+            serviceScope.launch {
+                try {
+                    runOwnedLegacy {
+                        val safePrompt = sanitizeInput(prompt)
+                        val selected = repository.resolveAndActivateForClient(pkg, repository.clientContextSize(), preferLoaded = true)
+                        check(selected.role != com.example.engine.ModelTierRole.NONE) { selected.reason }
+                        val finalSystemPrompt = repository.buildClientSystemPrompt(pkg, sanitizeInput(systemPrompt))
+                        val params = GenerationParams(
+                            temperature = if (temperature.isFinite()) temperature.coerceIn(0f, 2f) else .7f,
+                            topP = if (topP.isFinite() && topP > 0) topP.coerceIn(.1f, 1f) else .9f,
+                            maxTokens = if (maxTokens > 0) maxTokens.coerceIn(1, 4096) else 512,
+                            contextSize = selected.effectiveContext,
+                            systemPrompt = finalSystemPrompt.ifBlank { null }
+                        )
+                        val started = android.os.SystemClock.elapsedRealtime()
+                        var sequence = 0
+                        val result = repository.engine.generateTaskText(safePrompt, params) { delta ->
+                            callback.onToken(delta, sequence++)
                         }
+                        val end = repository.engine.telemetry.value
+                        val elapsed = android.os.SystemClock.elapsedRealtime() - started
+                        callback.onComplete(result, elapsed, end.tokensPerSecond, end.promptTokens, end.completionTokens)
+                        logCall(pkg, uid, "STREAM", "", "", elapsed, end.tokensPerSecond, end.completionTokens, "SUCCESS")
                     }
-
-                    override fun onComplete(
-                        fullText: String,
-                        latencyMs: Long,
-                        tokensPerSec: Float,
-                        promptTokens: Int,
-                        completionTokens: Int
-                    ) {
-                        inferenceOwner.set(-1)
-                        try {
-                            callback.onComplete(fullText, latencyMs, tokensPerSec, promptTokens, completionTokens)
-                            logCall(
-                                callingPackage,
-                                callingUid,
-                                "STREAM",
-                                safePrompt,
-                                fullText,
-                                latencyMs,
-                                tokensPerSec,
-                                promptTokens + completionTokens,
-                                "SUCCESS"
-                            )
-                        } catch (e: Exception) {
-                            // Client process unlinked
-                        }
-                    }
-
-                    override fun onError(errorCode: Int, errorMessage: String) {
-                        inferenceOwner.set(-1)
-                        try {
-                            callback.onError(errorCode, errorMessage)
-                            logCall(callingPackage, callingUid, "STREAM", safePrompt, errorMessage, 0L, 0f, 0, "ERROR")
-                        } catch (e: Exception) {
-                            // Ignored
-                        }
-                    }
-                }
-            )
+                } catch (_: CancellationException) {
+                    runCatching { callback.onError(499, "Inference cancelled") }
+                } catch (e: Exception) {
+                    runCatching { callback.onError(if (e.message?.contains("busy", true) == true) 409 else 500,
+                        if (e.message?.contains("busy", true) == true) "AI Core is busy" else "Local inference failed") }
+                } finally { inferenceOwner.set(-1) }
+            }
         }
 
         override fun getEmbeddings(text: String?): FloatArray {
@@ -241,10 +221,10 @@ class LocalAiCoreService : Service() {
 
             val startTime = System.currentTimeMillis()
             check(inferenceOwner.compareAndSet(-1, callingUid)) { "AI Core is busy" }
-            val summary = try { runBlocking(Dispatchers.Default) {
+            val summary = try { runBlocking(Dispatchers.Default) { runOwnedLegacy {
                 repository.resolveAndActivateForClient(callingPackage, clientContextSize(), preferLoaded = true)
                 repository.engine.summarize(safeText, if (maxWords > 0) maxWords.coerceIn(10, 500) else 60)
-            } } finally { inferenceOwner.set(-1) }
+            } } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
             logCall(callingPackage, callingUid, "SUMMARIZE", safeText, summary, latency, repository.engine.telemetry.value.tokensPerSecond, repository.engine.telemetry.value.completionTokens, "SUCCESS")
             return summary
@@ -264,10 +244,10 @@ class LocalAiCoreService : Service() {
 
             val startTime = System.currentTimeMillis()
             check(inferenceOwner.compareAndSet(-1, callingUid)) { "AI Core is busy" }
-            val result = try { runBlocking(Dispatchers.Default) {
+            val result = try { runBlocking(Dispatchers.Default) { runOwnedLegacy {
                 repository.resolveAndActivateForClient(callingPackage, clientContextSize(), preferLoaded = true)
                 repository.engine.classify(safeText, labels)
-            } } finally { inferenceOwner.set(-1) }
+            } } } finally { inferenceOwner.set(-1) }
             val latency = System.currentTimeMillis() - startTime
             logCall(callingPackage, callingUid, "CLASSIFY", safeText, result, latency, repository.engine.telemetry.value.tokensPerSecond, repository.engine.telemetry.value.completionTokens, "SUCCESS")
             return result
@@ -275,7 +255,7 @@ class LocalAiCoreService : Service() {
 
         override fun cancelActiveGeneration() {
             enforceCallerPermission()
-            if (inferenceOwner.get() == Binder.getCallingUid()) repository.engine.cancelGeneration()
+            if (legacyExecuting.get() && inferenceOwner.get() == Binder.getCallingUid()) repository.engine.cancelGeneration()
         }
 
         override fun getEngineTelemetryJson(): String {
@@ -294,6 +274,37 @@ class LocalAiCoreService : Service() {
             if (!inferenceOwner.compareAndSet(-1, uid)) return android.os.Bundle().apply { putString("status", "BUSY") }
             return try { LocalAiAccess(this@LocalAiCoreService, repository).polish(text) }
             finally { inferenceOwner.set(-1) }
+        }
+
+        override fun getApiVersion(): Int {
+            enforceCallerPermission()
+            return TaskRequest.API_VERSION
+        }
+
+        override fun getCapabilities(): Bundle = routerCall { pkg, router -> router.capabilities(pkg) }
+        override fun getInstalledModels(): Bundle = routerCall { pkg, router -> router.installed(pkg) }
+        override fun getRecommendedModels(capability: String?): Bundle =
+            routerCall { pkg, router -> router.recommended(pkg, capability) }
+        override fun getModelStatus(modelId: Long): Bundle = routerCall { pkg, router -> router.modelStatus(pkg, modelId) }
+        override fun requestModelDownload(modelId: Long): Bundle = routerCall { pkg, router -> router.requestDownload(pkg, modelId) }
+
+        override fun submitTask(request: Bundle?, mediaInput: ParcelFileDescriptor?, callback: IBiTaskCallback?): Bundle {
+            val uid = Binder.getCallingUid()
+            val pkg = try { getCallingPackageName() }
+            catch (e: SecurityException) { mediaInput?.close(); throw e }
+            // The server owns the Binder copy. A local call uses its own duplicate.
+            val input = if (uid == Process.myUid() && mediaInput != null) mediaInput.dup() else mediaInput
+            return runBlocking(Dispatchers.IO) { taskRouter.value.submit(pkg, uid, request, input, callback) }
+        }
+
+        override fun getTaskStatus(taskId: String?): Bundle {
+            val pkg = getCallingPackageName()
+            return taskRouter.value.status(pkg, Binder.getCallingUid(), taskId)
+        }
+
+        override fun cancelTask(taskId: String?): Boolean {
+            val pkg = getCallingPackageName()
+            return taskRouter.value.cancel(pkg, Binder.getCallingUid(), taskId)
         }
 
         override fun extractStructuredJson(text: String?, schemaKeys: Array<String>?): String =
@@ -318,6 +329,11 @@ class LocalAiCoreService : Service() {
         }
     }
 
+    private fun routerCall(call: suspend (String, TaskRouter) -> Bundle): Bundle {
+        val pkg = getCallingPackageName()
+        return runBlocking(Dispatchers.IO) { call(pkg, taskRouter.value) }
+    }
+
     private fun runAuthorized(scope: String, inference: Boolean = true, block: suspend () -> String): String {
         val pkg = getCallingPackageName()
         val uid = Binder.getCallingUid()
@@ -325,8 +341,11 @@ class LocalAiCoreService : Service() {
         if (!allowed) return org.json.JSONObject().put("error", reason).toString()
         if (inference) check(inferenceOwner.compareAndSet(-1, uid)) { "AI Core is busy" }
         return try { runBlocking(Dispatchers.Default) {
-            if (inference) repository.resolveAndActivateForClient(pkg, clientContextSize(), preferLoaded = true)
-            block()
+            if (!inference) block()
+            else runOwnedLegacy {
+                repository.resolveAndActivateForClient(pkg, clientContextSize(), preferLoaded = true)
+                block()
+            }
         } }
         finally { if (inference) inferenceOwner.set(-1) }
     }
@@ -373,7 +392,7 @@ class LocalAiCoreService : Service() {
                     callingUid = uid,
                     requestType = type,
                     promptPreview = "",
-                    responsePreview = if (status == "SUCCESS") "" else response.take(200),
+                    responsePreview = "",
                     latencyMs = latencyMs,
                     tokensPerSecond = tokPerSec,
                     totalTokens = tokens,

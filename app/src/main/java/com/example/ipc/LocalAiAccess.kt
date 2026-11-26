@@ -24,7 +24,7 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
         val phase = when {
             preparing -> preparation.phase
             repository.isModelLoading -> "LOADING_MODEL"
-            telemetry.isRunning -> "OTHER_REQUEST"
+            telemetry.isRunning || repository.clientExecution.isLocked -> "OTHER_REQUEST"
             preparation.failed -> preparation.phase
             repository.engine.isReady() -> "READY"
             else -> "MODEL_REQUIRED"
@@ -44,7 +44,7 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
             if (preparation.failed) putString("error", preparation.error)
             putString("active_model", if (repository.engine.isReady()) repository.engine.activeModelName else "")
             putString("status", if (access != "READY") access else if (repository.isModelLoading || preparing) "BUSY"
-                else if (telemetry.isRunning) "BUSY"
+                else if (telemetry.isRunning || repository.clientExecution.isLocked) "BUSY"
                 else if (preparation.failed) if (phase == "MODEL_REQUIRED") "MODEL_REQUIRED" else "ERROR"
                 else if (!repository.engine.isReady()) "MODEL_REQUIRED"
                 else "READY")
@@ -71,7 +71,7 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
                 else -> runBlocking(Dispatchers.Default) {
                     val (allowed, reason) = repository.checkSecurityAndRateLimit(caller)
                     if (!allowed) failure(if (reason.startsWith("Rate limit")) "RATE_LIMITED" else "DENIED", reason)
-                    else try {
+                    else try { repository.runLegacyClient {
                         val requested = PolishText.parameters(repository.engine.activeContextLength, text).contextSize
                         val selected = repository.resolveAndActivateForClient(caller, requested, preferLoaded = true)
                         if (selected.role == com.example.engine.ModelTierRole.NONE) failure("ERROR", selected.reason)
@@ -80,6 +80,7 @@ class LocalAiAccess(private val context: Context, private val repository: AiCore
                             val output = repository.engine.generateSync(PolishText.prompt(text), params)
                             Bundle().apply { putString("status", "SUCCESS"); putString("text", output) }
                         }
+                    }
                     } catch (e: Exception) {
                         failure(if (e.message?.contains("busy", true) == true) "BUSY" else "ERROR",
                             "The local model could not complete polishing. Try a shorter passage or another model.")
