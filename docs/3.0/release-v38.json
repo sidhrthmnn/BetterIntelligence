@@ -1,0 +1,42 @@
+{
+  "versionCode": 38,
+  "versionName": "3.0.0",
+  "sourceCommit": "c82b70d2c1d0786bc553efafef38dd17314ebdd1",
+  "bundleSha256": "18f71d0dfa58b692612d9b008c9df620259706293313e92000a0fff12bba7aa0",
+  "bundleBytes": 94653547,
+  "signatureVerified": true,
+  "nativeAlignmentBytes": 16384,
+  "track": "production",
+  "releaseId": "4",
+  "rolloutPercent": 100,
+  "observedDate": "2026-11-26",
+  "status": "CHANGES_IN_REVIEW",
+  "quickChecksAtSubmission": "RUNNING",
+  "managedPublishing": false,
+  "tests": {
+    "kotlin": { "passed": 404, "failed": 0, "skipped": 1 },
+    "rustPassed": 31,
+    "releaseLintErrors": 0,
+    "releaseLintWarnings": 147,
+    "device": "HONOR VKP-NX9 (Android 17), isolated validation and separate client packages",
+    "deviceChecks": [
+      "Task API negotiation, unsupported request, invalid request version, input pipe rejection and cancellation",
+      "A client with text-only permission was denied speech, vision and download requests",
+      "Real text generation and proofreading across Binder, plus existing provider and Binder proofreading",
+      "Gemma answered a controlled image and identified words in a controlled WAV in both transcription and audio tasks",
+      "Installed offline Android voice returned a readable WAV descriptor",
+      "BGE returned finite normalized 384-dimensional embeddings and scored related text higher than unrelated text",
+      "Models, Apps, Settings, discovery cards, Wi-Fi preference and both themes passed physical-device UI checks",
+      "All 24 catalog entries returned the first 4096 bytes over secure HTTPS range requests"
+    ],
+    "measuredSingleTaskRuns": {
+      "imageUnderstandingCpu": { "latencyMs": 10074, "loadMs": 3044, "firstTokenMs": 6630, "peakProcessPssMb": 2304 },
+      "audioTranscriptionCpu": { "latencyMs": 4480, "loadMs": 2819, "firstTokenMs": 1204, "peakProcessPssMb": 1510 },
+      "audioUnderstandingCpu": { "latencyMs": 4216, "loadMs": 2468, "firstTokenMs": 1088, "peakProcessPssMb": 1513 },
+      "offlineSpeechSystemManaged": { "latencyMs": 840 },
+      "embeddingsCpu": { "latencyMs": 174 },
+      "textPolishCpu": { "latencyMs": 722 }
+    }
+  },
+  "playConsole": "https://play.google.com/console/u/0/developers/7469907004406722588/app/4975407059009835662/publishing"
+}
