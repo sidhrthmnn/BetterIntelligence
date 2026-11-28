@@ -207,7 +207,7 @@ internal object TaskModels {
     fun estimateMb(model: ModelEntity, type: TaskType): Long =
         when {
             type in mediaTypes -> when (model.sha256Checksum) {
-                GEMMA_E4B -> 3750
+                GEMMA_E4B -> if (type == TaskType.IMAGE_UNDERSTANDING) 4350 else 3750
                 LFM_VISION -> 1100
                 else -> 3000
             }

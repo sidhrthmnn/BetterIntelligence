@@ -197,7 +197,7 @@
     "revision": "2eee7ac325f20eb8c9ac1d0e972f7c84663062da",
     "license": "apache-2.0",
     "tier": "QUALITY",
-    "description": "Higher-capacity Gemma for text, image understanding and short audio. Media runs on CPU and needs about 3750 MB of safe RAM. The text memory estimate is lower.",
+    "description": "Higher-capacity Gemma for text, image understanding and short audio. Uses CPU for media. Allow about 4350 MB of safe RAM for images or 3750 MB for audio.",
     "quantization": "Mixed 2/4/8-bit",
     "url": "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/2eee7ac325f20eb8c9ac1d0e972f7c84663062da/gemma-4-E4B-it.litertlm",
     "layers": 42,

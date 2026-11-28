@@ -20,6 +20,6 @@ Models separates Installed, Downloads and Library. **AI assignments** configures
 
 ## Compatibility limits
 
-- Media packages contain their own weights. Gemma 4 E4B requires about 3,750 MB of safe model RAM for media and LFM Vision about 1,100 MB for images. Qwen LiteRT and instruction GGUF downloads use the text path. Separate GGUF vision projectors, sharded packages, and custom multi-file dependencies are unavailable in this build.
+- Media packages contain their own weights. Gemma 4 E4B requires about 4,350 MB of safe model RAM for images and 3,750 MB for audio. LFM Vision needs about 1,100 MB for images. Qwen LiteRT and instruction GGUF downloads use the text path. Separate GGUF vision projectors, sharded packages, and custom multi-file dependencies are unavailable in this build.
 - Image generation, editing, upscaling, background removal, live voice, video analysis or generation, and music and sound generation report `CAPABILITY_UNAVAILABLE`. These need dedicated validated models or media processing and are listed in the protocol for compatibility. Whisper, Piper/Kokoro, diffusion, video and audio-generation runtimes are candidates for independent validation. The build has no desktop execution endpoint.
 - The production build ships CPU media and embeddings. No media GPU benchmarking, NPU or battery-consumption claim is made. Text hardware reporting follows actual runtime selection. Android voice execution reports `System-managed` because the service does not expose its processor.

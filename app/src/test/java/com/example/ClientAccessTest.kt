@@ -52,10 +52,14 @@ class ClientAccessTest {
         assertFalse(repository.checkSecurityAndRateLimit(pkg).first)
         val pending = db.clientPolicyDao().getPolicyForPackage(pkg)!!
         assertFalse(pending.isWhitelisted)
+        assertFalse(pending.allowInference)
+        assertFalse(pending.allowStructuredJson)
         assertFalse(pending.allowReadMemory)
         assertFalse(pending.allowWriteMemory)
-        repository.updatePolicy(pending.copy(isWhitelisted = true, rateLimitPerMin = 1))
+        repository.setClientConnection(pkg, allowed = true, text = true)
+        repository.updateConnectedPolicy(pkg) { it.copy(rateLimitPerMin = 1) }
         assertFalse(repository.checkSecurityAndRateLimit(pkg, "READ_MEMORY").first)
+        assertFalse(repository.checkSecurityAndRateLimit(pkg, "STRUCTURED_JSON").first)
         assertTrue(repository.checkSecurityAndRateLimit(pkg).first)
         assertFalse(repository.checkSecurityAndRateLimit(pkg).first)
         repository.logIpcCall(IpcLogEntity(callingPackage = pkg, callingUid = 1234, requestType = "POLISH",
