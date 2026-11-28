@@ -1,0 +1,39 @@
+{
+  "versionCode": 39,
+  "versionName": "3.0.1",
+  "sourceCommit": "68dc266c824bb782d13f0cacb06f213bd2d3842b",
+  "bundleSha256": "915b53c71329c583624a597c91379366c034a58749cee34303cc7975c93bb236",
+  "bundleBytes": 94682780,
+  "signatureVerified": true,
+  "nativeAlignmentBytes": 16384,
+  "track": "production",
+  "releaseId": "5",
+  "rolloutPercent": 100,
+  "observedDate": "2026-11-28",
+  "status": "CHANGES_IN_REVIEW",
+  "managedPublishing": false,
+  "tests": {
+    "kotlin": { "passed": 405, "failed": 0, "skipped": 1 },
+    "finalCatalogAndProtocolRetestPassed": 22,
+    "rustPassed": 31,
+    "releaseLintErrors": 0,
+    "device": "HONOR VKP-NX9, isolated validation and test client packages",
+    "deviceChecks": [
+      "Installed, Downloads and Library navigation and separation",
+      "Connection approval enables selected text permission only",
+      "Existing Binder and content-provider proofreading",
+      "Secure ranged HTTPS downloads from all 26 pinned entries, including entries retired from the visible Library",
+      "LFM Vision identified the test image; Gemma E4B identified the image and interpreted controlled WAV audio",
+      "Under high memory pressure, an E4B preference fell back to the installed LFM vision or Gemma E2B audio model",
+      "Qwen LiteRT text generation completed through the CPU path"
+    ],
+    "measuredPeakProcessPssMb": {
+      "lfmVisionImage": 805,
+      "gemmaE4bImage": 4013,
+      "gemmaE4bTranscription": 3099,
+      "gemmaE4bAudioUnderstanding": 3086,
+      "qwen35TwoBText": 3101
+    }
+  },
+  "playConsole": "https://play.google.com/console/u/0/developers/7469907004406722588/app/4975407059009835662/publishing"
+}
