@@ -33,7 +33,7 @@ See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin 
 | BGE Small English F16 | 67,308,128 | 600 MB (embeddings) |
 | Gemma 4 E4B LiteRT mixed precision | 3,659,530,240 | 3,590 MB (text only) |
 | LFM 2.5 Vision 450M LiteRT | 406,896,640 | 1,100 MB (image) |
-| Qwen 3.5 2B INT8 LiteRT | 2,119,744,416 | 2,487 MB (text) |
+| Qwen 3.5 2B INT8 LiteRT | 2,119,744,416 | 3,350 MB (text) |
 | Gemma 4 E2B GGUF Q4_K_M | 3,106,738,272 | 3,596 MB |
 | Gemma 4 E4B GGUF Q4_K_M | 4,977,171,584 | 5,718 MB |
 | Qwen 3 0.6B LiteRT INT4 | 347,251,840 | 894 MB |
