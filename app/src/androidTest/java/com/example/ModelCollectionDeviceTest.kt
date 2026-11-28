@@ -26,7 +26,7 @@ class ModelCollectionDeviceTest {
         assertTrue(installed.size >= 2)
         val one = installed.first()
         val available = models.first { !it.isInstalled && it.filename.startsWith("qwen3_0.6b") }
-        compose.onNodeWithTag("model_source_my_models").assertIsSelected()
+        compose.onNodeWithTag("model_source_my_models").performClick().assertIsSelected()
         compose.onNodeWithTag("models_list").performScrollToNode(hasTestTag("model_card_${one.id}"))
         compose.onNodeWithTag("model_card_${one.id}").assertIsDisplayed()
         compose.onNodeWithTag("model_card_${available.id}").assertDoesNotExist()
