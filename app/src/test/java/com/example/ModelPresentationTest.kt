@@ -21,16 +21,17 @@ class ModelPresentationTest {
         val base = model()
         val downloading = base.copy(id = 3, downloadState = "DOWNLOADING", downloadProgress = .1f)
         val installed = base.copy(id = 2, isInstalled = true)
-        val initial = ModelPresentation.byRam(listOf(base, installed, downloading), 2048, listOf(3)).map { it.id }
-        assertEquals(listOf(3L, 1L, 2L), initial)
-        assertEquals(initial, ModelPresentation.byRam(listOf(base, installed, downloading.copy(downloadProgress = .9f)), 2048, listOf(3)).map { it.id })
-        assertEquals(initial, ModelPresentation.byRam(listOf(base, installed, downloading.copy(isInstalled = true, downloadState = "DOWNLOADED")), 2048, listOf(3)).map { it.id })
+        val initial = ModelPresentation.transfers(listOf(base, installed, downloading), listOf(3)).map { it.id }
+        assertEquals(listOf(3L), initial)
+        assertEquals(initial, ModelPresentation.transfers(listOf(base, installed, downloading.copy(downloadProgress = .9f)), listOf(3)).map { it.id })
+        assertEquals(initial, ModelPresentation.transfers(listOf(base, installed, downloading.copy(isInstalled = true, downloadState = "DOWNLOADED")), listOf(3)).map { it.id })
     }
 
     @Test fun myModelsIncludesIncompleteDownloadsAndClearCompletion() {
         val base = model()
-        for (state in listOf("DOWNLOADING", "PAUSED", "ERROR")) assertTrue(ModelPresentation.hasDownload(base.copy(downloadState = state)))
-        assertFalse(ModelPresentation.hasDownload(base))
+        for (state in listOf("DOWNLOADING", "QUEUED", "PAUSED", "ERROR")) assertTrue(ModelPresentation.hasTransfer(base.copy(downloadState = state)))
+        assertFalse(ModelPresentation.hasTransfer(base))
+        assertFalse(ModelPresentation.hasTransfer(base.copy(isInstalled = true, downloadState = "ERROR")))
         assertEquals("Downloaded · Ready to use", ModelPresentation.status(base.copy(isInstalled = true)))
         assertEquals("Checking file before installing…", ModelPresentation.status(base.copy(downloadState = "DOWNLOADING", checksumVerificationStatus = "VERIFYING")))
         assertEquals("Paused · 65% saved", ModelPresentation.status(base.copy(downloadState = "PAUSED", downloadProgress = .65f)))
@@ -38,11 +39,12 @@ class ModelPresentationTest {
 
     @Test fun memoryDistinguishesPressureFromInsufficientDeviceCapacity() {
         val base = model()
-        assertEquals("Checking available RAM…", ModelPresentation.memoryLabel(base, null, false))
-        assertEquals("Can run · Fits available RAM", ModelPresentation.memoryLabel(base, profile(4000), false))
-        assertEquals("Can't run now · Close other apps to free RAM", ModelPresentation.memoryLabel(base, profile(550), false))
-        assertEquals("Can't run · Needs more RAM than this phone has", ModelPresentation.memoryLabel(base.copy(fileSizeMb = 12000), profile(4000), false))
-        assertEquals("In use · Ready", ModelPresentation.memoryLabel(base, profile(550), true))
+        val memory = ModelPresentation.estimatedRam(base, 512)
+        assertEquals("Checking available RAM…", ModelPresentation.memoryLabel(memory, null, false))
+        assertEquals("Can run · Fits available RAM", ModelPresentation.memoryLabel(memory, profile(4000), false))
+        assertEquals("Can't run now · Close other apps to free RAM", ModelPresentation.memoryLabel(memory, profile(550), false))
+        assertEquals("Can't run · Needs more RAM than this phone has", ModelPresentation.memoryLabel(12000, profile(4000), false))
+        assertEquals("In use · Ready", ModelPresentation.memoryLabel(memory, profile(550), true))
     }
 
     @Test fun liteRtMemoryUsesTheContextActuallyRequestedOnLoad() {

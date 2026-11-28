@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -19,54 +20,99 @@ import com.example.ui.AiCoreViewModel
 import com.example.ui.components.DetailDisclosure
 
 @Composable
-internal fun CapabilityFilters(selection: String, select: (String) -> Unit) {
+internal fun CapabilityFilters(selection: String, labels: List<String>, select: (String) -> Unit) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf("All", "Text", "Vision", "Image", "Voice", "Audio", "Video").forEach { label ->
+        labels.forEach { label ->
             FilterChip(selected = selection == label, onClick = { select(label) }, label = { Text(label) },
                 modifier = Modifier.testTag("capability_filter_$label"))
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun MyAiSetup(viewModel: AiCoreViewModel, models: List<ModelEntity>) {
+internal fun MyAiSetup(viewModel: AiCoreViewModel, models: List<ModelEntity>, focus: ModelEntity?, onClose: () -> Unit) {
     val settings by viewModel.taskSettings.collectAsState()
     val acceleration by viewModel.accelerationCapabilities.collectAsState()
-    var selected by rememberSaveable { mutableStateOf(TaskType.TEXT_GENERATION) }
-    val configured = settings.getValue(selected)
-    val options = models.filter { selected in TaskModels.capabilities(it) }
-    DetailDisclosure("My AI Setup", "Choose what each AI capability uses") {
-        OptionMenu("Capability", selected, TaskType.entries, { it.label }, { selected = it })
-        if (selected !in TaskModels.implemented) {
-            Text("Unavailable on this build", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            TaskSwitch("Enabled", configured.enabled) { viewModel.setTaskSettings(selected, configured.copy(enabled = it)) }
-            if (selected == TaskType.SPEECH_GENERATION) {
-                Text("Uses an installed Android voice that works offline.", style = MaterialTheme.typography.bodySmall)
+    val autoFallback by viewModel.autoRamFallback.collectAsState()
+    val primaryId by viewModel.primaryModelId.collectAsState()
+    val fallback by viewModel.secondaryModel.collectAsState()
+    var selected by rememberSaveable(focus?.id) { mutableStateOf<TaskType?>(null) }
+    val types = TaskType.entries.filter { it in TaskModels.implemented && (focus == null || it in TaskModels.capabilities(focus)) }
+    val type = selected?.takeIf { it in types }
+    val installed = models.filter { it.isInstalled }
+    fun name(id: Long?): String? = installed.find { it.id == id }?.let {
+        it.name.substringBefore(" · ") + " · " + if (it.filename.endsWith(".litertlm", true)) "LiteRT" else "GGUF"
+    }
+    ModalBottomSheet(onDismissRequest = onClose) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (type == null) {
+                Text(focus?.name?.substringBefore(" · ") ?: "AI assignments", style = MaterialTheme.typography.headlineSmall)
+                for (item in types) {
+                    val config = settings.getValue(item)
+                    val compatible = installed.any { item in TaskModels.capabilities(it) }
+                    val summary = when {
+                        !config.enabled -> "Off"
+                        item == TaskType.SPEECH_GENERATION -> "Android offline voice"
+                        config.primaryId != null && name(config.primaryId) == null -> "Primary model missing"
+                        name(config.primaryId) != null -> "Primary: ${name(config.primaryId)}"
+                        !compatible -> "Install a compatible model"
+                        config.auto -> "Automatic"
+                        item in TaskModels.text && name(primaryId) != null -> "Text default: ${name(primaryId)}"
+                        else -> "Choose a model"
+                    }
+                    TextButton(onClick = { selected = item }, modifier = Modifier.fillMaxWidth().testTag("assign_task_${item.name}")) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(item.label, style = MaterialTheme.typography.titleSmall)
+                            Text(listOfNotNull(summary, name(config.fallbackId)?.let { "Fallback: $it" }).joinToString("\n"),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (focus == null) {
+                    HorizontalDivider()
+                    TaskSwitch("Automatic text fallback", autoFallback) { viewModel.setAutoRamFallback(it) }
+                    if (autoFallback) fallback?.let { Text(it.name, style = MaterialTheme.typography.bodySmall) }
+                }
             } else {
-                TaskSwitch("Choose models automatically", configured.auto) { viewModel.setTaskSettings(selected, configured.copy(auto = it)) }
-                val ids = listOf<Long?>(null) + options.sortedByDescending { it.isInstalled }.map { it.id }
-                fun label(id: Long?): String = options.find { it.id == id }?.let {
-                    it.name.substringBefore(" · ") + if (it.isInstalled) "" else " (download required)"
-                } ?: if (selected in TaskModels.text) "Default text setup" else "Automatic"
-                OptionMenu("Primary model", configured.primaryId, ids, ::label) {
-                    viewModel.setTaskSettings(selected, configured.copy(primaryId = it, fallbackId = configured.fallbackId.takeUnless { fallback -> fallback == it }))
-                }
-                OptionMenu("Fallback model", configured.fallbackId, ids.filter { it == null || it != configured.primaryId }, ::label) {
-                    viewModel.setTaskSettings(selected, configured.copy(fallbackId = it))
-                }
-            }
-            val backends = if (selected in TaskModels.text) buildList {
-                add(ProcessingMode.AUTO); add(ProcessingMode.CPU)
-                if (acceleration.gpuAvailable) add(ProcessingMode.GPU)
-                if (BuildConfig.QUALCOMM_NPU_ENABLED && acceleration.npuAvailable) add(ProcessingMode.NPU)
-            } else listOf(ProcessingMode.AUTO, ProcessingMode.CPU)
-            if (selected != TaskType.SPEECH_GENERATION) {
-                OptionMenu("Processor", configured.backend, backends, { it.title }) {
-                    viewModel.setTaskSettings(selected, configured.copy(backend = it))
-                }
-                OptionMenu("Quality", configured.quality, TaskQuality.entries, { it.label }) {
-                    viewModel.setTaskSettings(selected, configured.copy(quality = it))
+                TextButton(onClick = { selected = null }) { Text("All assignments") }
+                Text(type.label, style = MaterialTheme.typography.headlineSmall)
+                val configured = settings.getValue(type)
+                TaskSwitch("Enabled", configured.enabled) { enabled -> viewModel.updateTaskSettings(type) { it.copy(enabled = enabled) } }
+                if (type == TaskType.SPEECH_GENERATION) {
+                    Text("Uses an installed Android voice that works offline.", style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    val ids = installed.filter { type in TaskModels.capabilities(it) }.map { it.id }
+                    fun primary(id: Long?) = name(id) ?: if (id != null) "Model missing" else if (type in TaskModels.text) "Text default" else "No preference"
+                    fun backup(id: Long?) = name(id) ?: if (id != null) "Model missing" else "None"
+                    TaskSwitch("Automatic selection", configured.auto) { auto -> viewModel.updateTaskSettings(type) { it.copy(auto = auto) } }
+                    OptionMenu("Primary model", configured.primaryId, listOf<Long?>(null) + ids, ::primary) { id ->
+                        viewModel.updateTaskSettings(type) { it.copy(primaryId = id, fallbackId = it.fallbackId.takeUnless { fallbackId -> fallbackId == id }) }
+                    }
+                    OptionMenu("Fallback model", configured.fallbackId, listOf<Long?>(null) + ids.filter { it != configured.primaryId }, ::backup) { id ->
+                        viewModel.updateTaskSettings(type) { it.copy(fallbackId = id.takeUnless { modelId -> modelId == it.primaryId }) }
+                    }
+                    if (focus?.id in ids) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val id = focus?.id
+                        Button(enabled = id != configured.primaryId, onClick = {
+                            viewModel.updateTaskSettings(type) { it.copy(primaryId = id, fallbackId = it.fallbackId.takeUnless { fallbackId -> fallbackId == id }) }
+                        }) { Text("Set as primary") }
+                        OutlinedButton(enabled = id != configured.primaryId && id != configured.fallbackId, onClick = {
+                            viewModel.updateTaskSettings(type) { it.copy(fallbackId = id.takeUnless { modelId -> modelId == it.primaryId }) }
+                        }) { Text("Set as fallback") }
+                    }
+                    val backends = if (type in TaskModels.text) buildList {
+                        add(ProcessingMode.AUTO); add(ProcessingMode.CPU)
+                        if (acceleration.gpuAvailable) add(ProcessingMode.GPU)
+                        if (BuildConfig.QUALCOMM_NPU_ENABLED && acceleration.npuAvailable) add(ProcessingMode.NPU)
+                    } else listOf(ProcessingMode.AUTO, ProcessingMode.CPU)
+                    OptionMenu("Processor", configured.backend, backends, { it.title }) { backend ->
+                        viewModel.updateTaskSettings(type) { it.copy(backend = backend) }
+                    }
+                    if (type != TaskType.EMBEDDINGS) OptionMenu("Quality", configured.quality, TaskQuality.entries, { it.label }) { quality ->
+                        viewModel.updateTaskSettings(type) { it.copy(quality = quality) }
+                    }
                 }
             }
         }
@@ -125,6 +171,7 @@ internal fun SmartModelCollection(viewModel: AiCoreViewModel, models: List<Model
         val cap = resources.maxMemoryMb.toLong().takeIf { it > 0 } ?: Long.MAX_VALUE
         val candidates = models.filter {
             TaskType.TEXT_GENERATION in TaskModels.capabilities(it) && ModelLibrary.automaticUseAllowed(it) &&
+                (it.isInstalled || ModelLibrary.visibleInLibrary(it)) &&
                 (!it.architecture.startsWith("gemma") || it.architecture.startsWith("gemma4")) &&
                 (it.isInstalled || it.downloadUrl != null && !it.sha256Checksum.isNullOrBlank()) &&
                 TaskModels.estimateMb(it, TaskType.TEXT_GENERATION) <= minOf(memory, cap)
@@ -136,9 +183,15 @@ internal fun SmartModelCollection(viewModel: AiCoreViewModel, models: List<Model
                 .minByOrNull { TaskModels.estimateMb(it, TaskType.TEXT_GENERATION) }
                 ?: candidates.minByOrNull { TaskModels.estimateMb(it, TaskType.TEXT_GENERATION) }
         }
-        val media = if (tier == "Essential") null else candidates.firstOrNull {
-            val capabilities = TaskModels.capabilities(it).intersect(TaskModels.gemmaMedia)
-            capabilities.isNotEmpty() && TaskModels.estimateMb(it, capabilities.first()) <= minOf(memory, cap)
+        val mediaChoices = candidates.filter {
+            val capabilities = TaskModels.capabilities(it).intersect(TaskModels.mediaTypes)
+            capabilities.isNotEmpty() && capabilities.all { type -> TaskModels.estimateMb(it, type) <= minOf(memory, cap) }
+        }
+        val media = when (tier) {
+            "Essential" -> mediaChoices.minByOrNull { it.fileSizeMb }
+            "Advanced" -> mediaChoices.maxByOrNull { it.fileSizeMb }
+            else -> mediaChoices.find { TaskType.AUDIO_UNDERSTANDING in TaskModels.capabilities(it) }
+                ?: mediaChoices.minByOrNull { it.fileSizeMb }
         }
         if (text == null) Text("No model fits the available memory.", style = MaterialTheme.typography.bodySmall)
         else {

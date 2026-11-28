@@ -81,13 +81,15 @@ internal class TaskRouter(private val context: Context, private val repository: 
     suspend fun capabilities(pkg: String): Bundle {
         val device = engine.hardware.resources()
         val memoryCap = settings.resourcePolicy.value.maxMemoryMb
+        val batteryLimited = settings.resourcePolicy.value.respectBatterySaver &&
+            context.getSystemService(PowerManager::class.java).isPowerSaveMode
         val rows = TaskType.entries.map { type ->
             val configuration = settings[type]
             val access = repository.taskAccessStatus(pkg, type.access, type.intensive)
             val installed = if (type in TaskModels.implemented && type != TaskType.SPEECH_GENERATION)
                 repository.orderedTaskModels(type, pkg, null, true, configuration) else emptyList()
             val available = type in TaskModels.implemented
-            val cpuOnly = type in TaskModels.gemmaMedia || type == TaskType.EMBEDDINGS
+            val cpuOnly = type in TaskModels.mediaTypes || type == TaskType.EMBEDDINGS
             val state = when {
                 !available -> "CAPABILITY_UNAVAILABLE"
                 !configuration.enabled -> "DISABLED"
@@ -95,9 +97,10 @@ internal class TaskRouter(private val context: Context, private val repository: 
                 type == TaskType.SPEECH_GENERATION -> if (speech.available()) "SYSTEM_VOICE_REQUIRED" else "CAPABILITY_UNAVAILABLE"
                 installed.isEmpty() -> "MODEL_REQUIRED"
                 cpuOnly && configuration.backend !in setOf(ProcessingMode.AUTO, ProcessingMode.CPU) -> "BACKEND_UNAVAILABLE"
+                type.intensive && batteryLimited -> "RESOURCE_LIMIT"
                 cpuOnly && (device.lowMemory || device.thermal >= 3 || installed.none {
                     val required = TaskModels.estimateMb(it, type)
-                    val reclaimable = if (type in TaskModels.gemmaMedia) engine.releasableGpuWeightsMb() else 0L
+                    val reclaimable = if (type in TaskModels.mediaTypes) engine.releasableGpuWeightsMb() else 0L
                     required <= ModelMemoryPlanner.budget(device.totalMb, device.availableMb + reclaimable) &&
                         (memoryCap == 0 || required <= memoryCap)
                 }) -> "RESOURCE_LIMIT"
@@ -112,6 +115,13 @@ internal class TaskRouter(private val context: Context, private val repository: 
                 putString("output_format", type.output)
                 putBoolean("resource_intensive", type.intensive)
                 putString("backend_preference", configuration.backend.name)
+                when (state) {
+                    "MODEL_REQUIRED" -> putString("message", "Install and select a compatible model in Models")
+                    "RESOURCE_LIMIT" -> putString("message", if (type.intensive && batteryLimited) "Battery Saver is limiting this task"
+                        else "The configured models need more available RAM or thermal headroom")
+                    "DENIED" -> putString("message", if (type.intensive && repository.taskAccessStatus(pkg, type.access) == "READY")
+                        "Also grant High-memory tasks under Apps" else "Grant ${type.access.label} under Apps")
+                }
             }
         }
         return bundle("SUCCESS").apply { putParcelableArrayList("capabilities", ArrayList(rows)) }
@@ -272,7 +282,7 @@ internal class TaskRouter(private val context: Context, private val repository: 
                     TaskType.SPEECH_GENERATION -> speech.run(request, configuration) { phase(work, it) }
                     TaskType.EMBEDDINGS -> embedding(work, configuration)
                     TaskType.TEXT_GENERATION, TaskType.TEXT_POLISH -> text(work, configuration)
-                    in TaskModels.gemmaMedia -> media(work, configuration, checkNotNull(media))
+                    in TaskModels.mediaTypes -> media(work, configuration, checkNotNull(media))
                     else -> throw TaskFailure("CAPABILITY_UNAVAILABLE", "No validated runtime for this task")
                 }
             }
@@ -334,18 +344,30 @@ internal class TaskRouter(private val context: Context, private val repository: 
         val request = work.request
         val effective = config.copy(quality = request.quality ?: config.quality)
         val models = repository.orderedTaskModels(request.type, work.caller.pkg, request.modelId, true, effective)
-        if (models.isEmpty()) throw TaskFailure("MODEL_REQUIRED", "Install Gemma 4 E2B LiteRT in Models")
+        if (models.isEmpty()) throw TaskFailure("MODEL_REQUIRED", if (request.type == TaskType.IMAGE_UNDERSTANDING)
+            "Install a compatible vision model in Models, such as LFM 2.5 Vision or Gemma 4 LiteRT"
+        else "Install Gemma 4 E2B or E4B LiteRT for audio in Models")
         val cap = settings.resourcePolicy.value.maxMemoryMb
         var rejected: TaskFailure? = null
         for (model in models.take(3)) {
             val estimate = TaskModels.estimateMb(model, request.type)
             if (cap > 0 && estimate > cap) continue
             synchronized(lock) { work.selectedModel = model.id }
+            var streamed = false
             try {
                 return repository.withTaskModel(model) { file ->
-                    visionAudio.run(model, file, request, effective, data, { phase(work, it) }) { work.callback.onText(work.id, it) }
+                    visionAudio.run(model, file, request, effective, data, { phase(work, it) }) { delta ->
+                        streamed = true
+                        work.callback.onText(work.id, delta)
+                    }
                 }
-            } catch (e: TaskFailure) { rejected = e }
+            } catch (e: CancellationException) { throw e }
+            catch (e: TaskFailure) { rejected = e }
+            catch (e: Exception) {
+                if (streamed) throw e
+                android.util.Log.w("BiTaskRouter", "Media model initialization failed: ${e.javaClass.simpleName}")
+                rejected = TaskFailure("INFERENCE_FAILED", "A compatible media model could not start. Try another installed model.")
+            }
         }
         throw rejected ?: TaskFailure("RESOURCE_LIMIT", "Models exceed the configured memory limit")
     }

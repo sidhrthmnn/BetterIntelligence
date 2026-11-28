@@ -33,9 +33,9 @@ internal object TaskMedia {
             offset += read
         }
         return when (mime) {
-            "image/png", "image/jpeg" -> prepareImage(bytes, mime)
+            "image/png", "image/jpeg", "image/webp" -> prepareImage(bytes, mime)
             "audio/wav", "audio/x-wav" -> normaliseWave(bytes)
-            else -> throw IllegalArgumentException("Use JPEG, PNG or mono 16 kHz PCM WAV for this task")
+            else -> throw IllegalArgumentException("Use JPEG, PNG, WebP or mono 16 kHz PCM WAV for this task")
         }
     }
 

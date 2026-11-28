@@ -1,12 +1,15 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.tasks.TaskAccess
 import com.example.tasks.TaskModels
+import com.example.tasks.TaskType
 import com.example.ui.components.ScreenCard
 import com.example.ui.components.DetailDisclosure
 import androidx.compose.material.icons.Icons
@@ -82,10 +85,21 @@ fun ConnectScreen(viewModel: AiCoreViewModel) {
 @Composable
 private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewModel) {
     var expanded by rememberSaveable(policy.packageName) { mutableStateOf(false) }
+    var approving by rememberSaveable(policy.packageName) { mutableStateOf(false) }
     val activity by viewModel.taskActivity.collectAsState(initial = emptyList())
     val last = activity.firstOrNull { it.callingPackage == policy.packageName }
     val allModels by viewModel.allModels.collectAsState()
     val installedModels = remember(allModels) { allModels.filter { it.isInstalled } }
+    val textModels = installedModels.filter { TaskType.TEXT_GENERATION in TaskModels.capabilities(it) }
+    val connected = policy.isWhitelisted && !policy.isBlocked
+    val taskPermissions = listOf(TaskAccess.TEXT, TaskAccess.VISION, TaskAccess.AUDIO, TaskAccess.VOICE, TaskAccess.INTENSIVE, TaskAccess.DOWNLOAD)
+    fun availability(access: TaskAccess): String? = when (access) {
+        TaskAccess.INTENSIVE -> "Required for image and audio analysis"
+        TaskAccess.DOWNLOAD -> "Each download still needs your approval"
+        TaskAccess.VOICE -> "Uses an installed offline Android voice"
+        else -> if (installedModels.none { model -> TaskModels.capabilities(model).any { it.access == access } })
+            "Install a compatible model first" else null
+    }
     val context = LocalContext.current
     val icon by produceState<android.graphics.Bitmap?>(null, policy.packageName) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching {
@@ -103,53 +117,57 @@ private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewMo
                     Text(if (policy.isBlocked) "Denied" else if (policy.isWhitelisted) "Allowed · On-device AI" else "Needs approval",
                         style = MaterialTheme.typography.labelMedium)
                 }
-                Switch(checked = policy.isWhitelisted && !policy.isBlocked,
-                    onCheckedChange = { viewModel.togglePolicyWhitelist(policy) }, enabled = !policy.isBlocked,
+                Switch(checked = connected,
+                    onCheckedChange = { if (it) approving = true else { viewModel.setClientConnection(policy.packageName, false); expanded = false } },
+                    enabled = !policy.isBlocked,
                     modifier = Modifier.testTag("allow_app_${policy.packageName}"))
             }
             if (policy.totalRequests > 0) Text("Last used ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(policy.lastAccessTimestamp))}",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (policy.isWhitelisted && !policy.isBlocked) {
+            if (connected) {
                 val skills = TaskModels.implemented.map { it.access }.distinct().filter { access ->
                     if (access == TaskAccess.TEXT) policy.allowInference else policy.taskScopes and access.bit != 0
-                }.map { it.label }
-                if (skills.isNotEmpty()) Text(skills.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
+                }.map { permissionLabel(it) }
+                Text(if (skills.isEmpty()) "Choose what this app can use" else skills.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                 last?.let { Text("Last task: ${it.requestType.lowercase().replace('_', ' ')} · ${it.status.lowercase().replace('_', ' ')}",
                     style = MaterialTheme.typography.bodySmall) }
             }
-            TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide permissions" else "Permissions and limits") }
-            if (expanded) {
+            if (connected || policy.isBlocked) TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide permissions" else "Permissions and limits") }
+            if (expanded && (connected || policy.isBlocked)) {
                 Text(policy.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (connected) {
+                    taskPermissions.forEach { access ->
+                        val enabled = if (access == TaskAccess.TEXT) policy.allowInference else policy.taskScopes and access.bit != 0
+                        val detail = if (enabled && access in setOf(TaskAccess.VISION, TaskAccess.AUDIO) &&
+                            policy.taskScopes and TaskAccess.INTENSIVE.bit == 0) "Also enable high-memory tasks" else availability(access)
+                        PermissionRow(permissionLabel(access), enabled, detail, tag = "permission_${access.name}") {
+                            if (access == TaskAccess.TEXT) viewModel.togglePolicyInference(policy)
+                            else viewModel.setTaskAccess(policy.packageName, access, !enabled)
+                        }
+                    }
+                    HorizontalDivider()
                 ModelSelectionRow(
-                    label = "Primary model",
+                    label = "Preferred text model",
                     selectedId = policy.primaryModelId,
-                    models = installedModels,
+                    models = textModels,
                     onSelect = { viewModel.updateClientPrimaryModel(policy, it) }
                 )
                 ModelSelectionRow(
-                    label = "Fallback model",
+                    label = "Fallback text model",
                     selectedId = policy.fallbackModelId,
-                    models = installedModels,
+                    models = textModels,
                     onSelect = { viewModel.updateClientFallbackModel(policy, it) }
                 )
-                PermissionRow("AI generation and polish", policy.allowInference) { viewModel.togglePolicyInference(policy) }
-                TaskAccess.entries.filter { it != TaskAccess.TEXT }.forEach { access ->
-                    val offered = TaskModels.implemented.any { it.access == access } ||
-                        access in setOf(TaskAccess.INTENSIVE, TaskAccess.DOWNLOAD)
-                    if (offered) {
-                        PermissionRow(access.label, policy.taskScopes and access.bit != 0) {
-                            viewModel.setTaskAccess(policy.packageName, access, policy.taskScopes and access.bit == 0)
-                        }
-                    }
-                }
+                PermissionRow("Structured text operations", policy.allowStructuredJson) { viewModel.togglePolicyStructuredJson(policy) }
                 PermissionRow("App-specific context", policy.allowAppContext) { viewModel.togglePolicyAppContext(policy) }
                 PermissionRow("Read shared memories", policy.allowReadMemory) { viewModel.togglePolicyReadMemory(policy) }
                 PermissionRow("Write shared memories", policy.allowWriteMemory) { viewModel.togglePolicyWriteMemory(policy) }
                 Text("Requests per minute: ${policy.rateLimitPerMin}", style = MaterialTheme.typography.bodyMedium)
                 Slider(value = policy.rateLimitPerMin.toFloat().coerceIn(1f, 120f), onValueChange = { viewModel.updatePolicyRateLimit(policy, it.toInt()) },
                     valueRange = 1f..120f, steps = 118)
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(onClick = { viewModel.revokeClientPermissions(policy) },
+                    if (connected) TextButton(onClick = { viewModel.revokeClientPermissions(policy) },
                         modifier = Modifier.testTag("revoke_permissions_${policy.packageName}")) {
                         Text("Revoke permissions", color = MaterialTheme.colorScheme.error)
                     }
@@ -160,6 +178,33 @@ private fun AppAccessCard(policy: ClientAppPolicyEntity, viewModel: AiCoreViewMo
             }
         }
     }
+    if (approving) {
+        var grants by rememberSaveable { mutableIntStateOf(0) }
+        var text by rememberSaveable { mutableStateOf(false) }
+        AlertDialog(onDismissRequest = { approving = false }, title = { Text("Allow ${policy.appName}?") },
+            text = {
+                Column(Modifier.heightIn(max = 410.dp).verticalScroll(rememberScrollState())) {
+                    taskPermissions.forEach { access ->
+                        val selected = if (access == TaskAccess.TEXT) text else grants and access.bit != 0
+                        PermissionRow(permissionLabel(access), selected, availability(access), tag = "grant_${access.name}") {
+                            if (access == TaskAccess.TEXT) text = !text
+                            else grants = if (selected) grants and access.bit.inv() else grants or access.bit
+                        }
+                    }
+                }
+            }, confirmButton = { TextButton(modifier = Modifier.testTag("approve_connection"), enabled = text || grants != 0, onClick = {
+                val selected = taskPermissions.filter { if (it == TaskAccess.TEXT) text else grants and it.bit != 0 }.toSet()
+                viewModel.setClientConnection(policy.packageName, true, selected)
+                approving = false
+            }) { Text("Allow selected") } },
+            dismissButton = { TextButton(onClick = { approving = false }) { Text("Cancel") } })
+    }
+}
+
+private fun permissionLabel(access: TaskAccess): String = when (access) {
+    TaskAccess.TEXT -> "Text and proofreading"
+    TaskAccess.INTENSIVE -> "High-memory tasks"
+    else -> access.label
 }
 
 @Composable
@@ -204,9 +249,12 @@ private fun ModelSelectionRow(
 }
 
 @Composable
-private fun PermissionRow(label: String, checked: Boolean, onToggle: () -> Unit) {
+private fun PermissionRow(label: String, checked: Boolean, detail: String? = null, tag: String? = null, onToggle: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Switch(checked = checked, onCheckedChange = { onToggle() })
+        Column(Modifier.weight(1f).padding(end = 10.dp)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        Switch(checked = checked, onCheckedChange = { onToggle() }, modifier = if (tag == null) Modifier else Modifier.testTag(tag))
     }
 }

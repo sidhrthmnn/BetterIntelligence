@@ -11,7 +11,7 @@ Copy the three AIDL files under `app/src/main/aidl/com/example/ipc` into the sam
 </queries>
 ```
 
-Bind explicitly with the action `com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE` and package `com.aistudio.betterintelligence.mobile`. The user approves the connection in **Apps**. Grant the relevant scope to each approved app. Gemma image, audio and transcription also require the **Resource-intensive tasks** scope. Text and embeddings use the text inference scope. Shared memory uses its existing read and write scopes, independently of tasks.
+Bind explicitly with the action `com.aistudio.betterintelligence.mobile.ACTION_BIND_AI_CORE` and package `com.aistudio.betterintelligence.mobile`. The user chooses which permissions to allow in **Apps**. Image, audio and transcription require their own permission and **High-memory tasks**. Text and embeddings use **Text and proofreading**. Shared memory uses its existing read and write scopes, independently of tasks.
 
 Call `getApiVersion()` to negotiate. Version 3 supports the calls below. For older installations where the method is absent, use `getServiceStatus()` and the existing text API. The legacy status still advertises its own version 2 protocol. Retry the binding when BI is installed again and request approval again after BI's private settings are cleared. See the [connecting app guide](../APP_INTEGRATION.md) and [working Kotlin client](../../sample-client/src/main/java/com/example/betterclient/BiTaskClient.kt).
 
@@ -38,11 +38,11 @@ Send a `Bundle` and, for a media task, one read-only `ParcelFileDescriptor`. Mak
 | `context_roles`, `context_text` | Matching string array lists of up to 12 turns and 6,000 total characters. `user` and `assistant` roles. Available for text generation and image understanding. |
 | `model_id` | Optional positive long. A suggestion subject to the user's model selection and runtime admission. |
 | `quality` | Optional `FAST`, `BALANCED` or `QUALITY`. Sets the requested generation budget or model ranking where applicable. |
-| `media_mime` | `image/jpeg`, `image/png`, `audio/wav` or `audio/x-wav`, matching the task. |
+| `media_mime` | `image/jpeg`, `image/png`, `image/webp`, `audio/wav` or `audio/x-wav`, matching the task. |
 | `language_tag` | Optional BCP 47 language tag for speech synthesis. Defaults to the system language. |
 | `output_format` | Optional. If provided, must equal the supported output format for the task. |
 
-Image input is JPEG or PNG, up to 8 MiB and 24 megapixels, with each dimension at most 8,192 pixels. BI strips metadata by decoding and scales the image to at most 384 pixels on its longest side. Audio input is mono 16 kHz, 16-bit PCM WAV, up to 12 seconds. BI accepts bounded, seekable regular files. The client can copy a provider's content URI to its own private cache first. The client can close its descriptor after `submitTask` returns. BI closes its copy after success, cancellation or failure.
+Image input is JPEG, PNG or WebP, up to 8 MiB and 24 megapixels, with each dimension at most 8,192 pixels. BI strips metadata by decoding and scales the image to at most 384 pixels on its longest side. Audio input is mono 16 kHz, 16-bit PCM WAV, up to 12 seconds. BI accepts bounded, seekable regular files. The client can copy a provider's content URI to its own private cache first. The client can close its descriptor after `submitTask` returns. BI closes its copy after success, cancellation or failure.
 
 A `QUEUED` response supplies the BI-generated `task_id`. Use it for `getTaskStatus` or `cancelTask`. Only the verified submitting UID and package can query or cancel the task. BI cancels queued or active work when the callback's process dies. Proofreading takes precedence at task boundaries. A running native task must release its resources before the next task starts.
 

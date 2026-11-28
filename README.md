@@ -1,6 +1,6 @@
 # Better Intelligence
 
-Better Intelligence is the local AI model hub for Android. In **Models**, download and manage local models and configure how each capability runs. In **Apps**, approve individual clients and grant access to the capabilities they need. **Settings** controls downloads, hardware and memory. Client apps provide the chat and research experience.
+Better Intelligence is the local AI model hub for Android. **Models** separates Installed, Downloads and Library. Use **AI assignments** to set a primary and fallback for each task. In **Apps**, approve individual clients and choose exactly which capabilities each can use. **Settings** controls downloads, hardware and memory. Client apps provide the chat and research experience.
 
 The built-in chat, conversation history, web research, chat-memory controls and request simulator have been removed. BI no longer creates or resumes chat sessions at launch or initializes a web research coordinator. Existing private database tables are retained for non-destructive upgrades and compatibility; removal of a screen does not erase user data. No automatic transfer of old conversations to another app is performed.
 
@@ -32,6 +32,8 @@ See [the integration guide](docs/APP_INTEGRATION.md) for the permission, Kotlin 
 | Gemma 4 E2B LiteRT mixed precision | 2,588,147,712 | 2,374 MB (text only) |
 | BGE Small English F16 | 67,308,128 | 600 MB (embeddings) |
 | Gemma 4 E4B LiteRT mixed precision | 3,659,530,240 | 3,590 MB (text only) |
+| LFM 2.5 Vision 450M LiteRT | 406,896,640 | 1,100 MB (image) |
+| Qwen 3.5 2B INT8 LiteRT | 2,119,744,416 | 2,487 MB (text) |
 | Gemma 4 E2B GGUF Q4_K_M | 3,106,738,272 | 3,596 MB |
 | Gemma 4 E4B GGUF Q4_K_M | 4,977,171,584 | 5,718 MB |
 | Qwen 3 0.6B LiteRT INT4 | 347,251,840 | 894 MB |

@@ -87,7 +87,15 @@ public class MultimodalTaskTest {
             } else if ("TEXT_POLISH".equals(type)) {
                 text = "The lights is on.";
             }
-            Bundle queued = client.submit(type, text, capture, temporary, mime, "en-GB");
+            String modelPrefix = arguments.getString("modelPrefix");
+            long modelId = 0;
+            if (modelPrefix != null) {
+                java.util.ArrayList<Bundle> models = api.getInstalledModels().getParcelableArrayList("models");
+                assertNotNull(models);
+                modelId = models.stream().filter(model -> model.getString("name", "").startsWith(modelPrefix))
+                    .findFirst().orElseThrow(() -> new IllegalStateException("Requested validation model is missing")).getLong("model_id");
+            }
+            Bundle queued = client.submit(type, text, capture, temporary, mime, "en-GB", modelId);
             assertEquals(queued.toString(), "QUEUED", queued.getString("status"));
             String id = queued.getString("task_id");
             assertNotNull(id);
@@ -106,6 +114,7 @@ public class MultimodalTaskTest {
                 " peakMb=" + response.getFloat("observed_ram_mb") + " latencyMs=" + response.getLong("latency_ms") +
                 " backend=" + response.getString("backend") + " detail=" + response.getString("message", ""));
             assertEquals(response.toString(), "SUCCESS", status);
+            if (modelId > 0) assertEquals(modelId, response.getLong("model_id"));
             assertTrue(capture.phases.contains("PROCESSING"));
             assertEquals("SUCCESS", api.getTaskStatus(id).getString("status"));
             assertFalse(api.getTaskStatus(id).containsKey("text"));

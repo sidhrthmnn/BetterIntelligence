@@ -73,8 +73,8 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
     val modelDownloadApprovals = repository.taskSettings.downloadApprovals
     val taskActivity = repository.recentIpcLogs
 
-    fun setTaskSettings(type: TaskType, settings: CapabilitySettings) {
-        viewModelScope.launch(Dispatchers.IO) { repository.taskSettings.set(type, settings) }
+    fun updateTaskSettings(type: TaskType, transform: (CapabilitySettings) -> CapabilitySettings) {
+        viewModelScope.launch(Dispatchers.IO) { repository.taskSettings.update(type, transform) }
     }
 
     fun setTaskResourcePolicy(settings: TaskResourcePolicy) {
@@ -118,7 +118,7 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
                 }
                 check(selected.none(::needsTerms)) { "Accept the model terms in Models before adding it to your setup." }
                 TaskModels.text.forEach { type -> repository.taskSettings.set(type, taskSettings.value.getValue(type).copy(primaryId = text.id)) }
-                media?.let { model -> TaskModels.gemmaMedia.forEach { type ->
+                media?.let { model -> TaskModels.capabilities(model).intersect(TaskModels.mediaTypes).forEach { type ->
                     repository.taskSettings.set(type, taskSettings.value.getValue(type).copy(primaryId = model.id))
                 } }
                 pending.forEach { repository.startModelDownload(it) }
@@ -148,13 +148,13 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         com.example.service.DownloadQueueStore(getApplication()).setNotificationsEnabled(value)
     }
     fun togglePolicyAppContext(policy: ClientAppPolicyEntity) {
-        viewModelScope.launch { repository.updatePolicy(policy.copy(allowAppContext = !policy.allowAppContext)) }
+        viewModelScope.launch { repository.updateConnectedPolicy(policy.packageName) { it.copy(allowAppContext = !it.allowAppContext) } }
     }
     fun updateClientPrimaryModel(policy: ClientAppPolicyEntity, modelId: Long?) {
-        viewModelScope.launch { repository.updatePolicy(policy.copy(primaryModelId = modelId)) }
+        viewModelScope.launch { repository.updateConnectedPolicy(policy.packageName) { it.copy(primaryModelId = modelId) } }
     }
     fun updateClientFallbackModel(policy: ClientAppPolicyEntity, modelId: Long?) {
-        viewModelScope.launch { repository.updatePolicy(policy.copy(fallbackModelId = modelId)) }
+        viewModelScope.launch { repository.updateConnectedPolicy(policy.packageName) { it.copy(fallbackModelId = modelId) } }
     }
     fun revokeClientPermissions(policy: ClientAppPolicyEntity) {
         viewModelScope.launch {
@@ -812,39 +812,39 @@ class AiCoreViewModel(application: Application, private val savedState: SavedSta
         }
     }
 
-    fun togglePolicyWhitelist(policy: ClientAppPolicyEntity) {
+    fun setClientConnection(pkg: String, allowed: Boolean, grants: Set<TaskAccess> = emptySet()) {
         viewModelScope.launch {
-            repository.updatePolicy(policy.copy(isWhitelisted = !policy.isWhitelisted))
+            repository.setClientConnection(pkg, allowed, TaskAccess.TEXT in grants, grants.fold(0) { bits, access -> bits or access.bit })
         }
     }
 
     fun updatePolicyRateLimit(policy: ClientAppPolicyEntity, rateLimit: Int) {
         viewModelScope.launch {
-            repository.updatePolicy(policy.copy(rateLimitPerMin = rateLimit))
+            repository.updateConnectedPolicy(policy.packageName) { it.copy(rateLimitPerMin = rateLimit) }
         }
     }
 
     fun togglePolicyInference(policy: ClientAppPolicyEntity) {
         viewModelScope.launch {
-            repository.updatePolicy(policy.copy(allowInference = !policy.allowInference))
+            repository.updateConnectedPolicy(policy.packageName) { it.copy(allowInference = !it.allowInference) }
         }
     }
 
     fun togglePolicyReadMemory(policy: ClientAppPolicyEntity) {
         viewModelScope.launch {
-            repository.updatePolicy(policy.copy(allowReadMemory = !policy.allowReadMemory))
+            repository.updateConnectedPolicy(policy.packageName) { it.copy(allowReadMemory = !it.allowReadMemory) }
         }
     }
 
     fun togglePolicyWriteMemory(policy: ClientAppPolicyEntity) {
         viewModelScope.launch {
-            repository.updatePolicy(policy.copy(allowWriteMemory = !policy.allowWriteMemory))
+            repository.updateConnectedPolicy(policy.packageName) { it.copy(allowWriteMemory = !it.allowWriteMemory) }
         }
     }
 
     fun togglePolicyStructuredJson(policy: ClientAppPolicyEntity) {
         viewModelScope.launch {
-            repository.updatePolicy(policy.copy(allowStructuredJson = !policy.allowStructuredJson))
+            repository.updateConnectedPolicy(policy.packageName) { it.copy(allowStructuredJson = !it.allowStructuredJson) }
         }
     }
 

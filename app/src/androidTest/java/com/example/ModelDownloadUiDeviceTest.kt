@@ -31,7 +31,7 @@ class ModelDownloadUiDeviceTest {
         check(context.packageName.endsWith(".validation"))
         val repository = AiCoreRepository.getInstance(context)
         val model = withTimeout(30_000) { repository.allModels.first { it.isNotEmpty() } }
-            .single { it.filename == "smollm2-135m-instruct-q4_k_m.gguf" }
+            .single { it.filename == "qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm" }
         val vm = ViewModelProvider(compose.activity)[AiCoreViewModel::class.java]
         compose.runOnUiThread { vm.selectTab(AppTab.MODELS) }
         compose.onNodeWithTag("model_ram_summary").assertExists()
@@ -65,6 +65,7 @@ class ModelDownloadUiDeviceTest {
                 compose.waitUntil(180_000) { vm.allModels.value.any { it.id == model.id && it.isInstalled } }
             }
         }
+        compose.onNodeWithTag("model_source_my_models").performClick()
         compose.onNodeWithTag("models_list").performScrollToNode(hasTestTag("model_status_${model.id}"))
         compose.onNodeWithTag("model_status_${model.id}").assertTextEquals("Downloaded")
         compose.onNodeWithTag("load_model_${model.id}").assertExists()

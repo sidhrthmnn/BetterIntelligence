@@ -14,6 +14,8 @@ object ModelLibrary {
     private val runtimeMemoryFloors = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val categories = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val manualModels = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val featuredModels = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    fun visibleInLibrary(model: ModelEntity): Boolean = model.sha256Checksum?.let(featuredModels::contains) == true
     fun automaticUseAllowed(model: ModelEntity): Boolean = model.sha256Checksum?.let(manualModels::contains) != true &&
         !model.architecture.contains("bert", true) && !model.architecture.contains("embedding", true)
     fun category(model: ModelEntity): String? = model.sha256Checksum?.let(categories::get)
@@ -38,6 +40,7 @@ object ModelLibrary {
     }
 
     fun liteRtGpuRestriction(sha256: String): String = when (sha256) {
+        com.example.tasks.TaskModels.LFM_VISION -> "This LFM vision package has been validated on CPU."
         // This exact mobile export's publisher reports a Qualcomm GPU hard reboot.
         // Keep its CPU graph usable; lifting this requires a fixed package/runtime
         // and actual Android validation, not a change of filename or device brand.
@@ -72,7 +75,11 @@ object ModelLibrary {
             item.optLong("runtimeMemoryFloorMb", 0).takeIf { it > 0 }?.let { runtimeMemoryFloors[item.getString("sha256")] = it }
             if (primary) item.optString("recommendedMode").takeIf { it in setOf("FAST", "BALANCED", "ADVANCED", "EXPERIMENTAL") }
                 ?.let { categories[item.getString("sha256")] = it }
-            if (primary) { if (item.optBoolean("manualOnly")) manualModels.add(item.getString("sha256")) else manualModels.remove(item.getString("sha256")) }
+            if (primary) {
+                val sha = item.getString("sha256")
+                if (item.optBoolean("manualOnly")) manualModels.add(sha) else manualModels.remove(sha)
+                if (item.optBoolean("featured")) featuredModels.add(sha) else featuredModels.remove(sha)
+            }
             if (item.getString("filename").endsWith(".litertlm") && !item.optBoolean("dynamicContext", false))
                 fixedContexts[item.getString("sha256")] = item.optInt("runtimeMaxContext", 0).takeIf { it > 0 } ?: 2048
             ModelEntity(name = item.getString("name"), filename = item.getString("filename"),
@@ -130,7 +137,8 @@ object ModelLibrary {
     fun fits(model: ModelEntity, profile: HardwareProfile, context: Int = 2048): Boolean = incompatibilityReason(model, profile, context) == null
 
     fun recommend(models: List<ModelEntity>, profile: HardwareProfile): ModelRecommendation? {
-        val selected = models.filter { !it.isCustom && automaticUseAllowed(it) && category(it) != "EXPERIMENTAL" && fits(it, profile) }
+        val selected = models.filter { (it.isInstalled || visibleInLibrary(it)) && !it.isCustom &&
+            automaticUseAllowed(it) && category(it) != "EXPERIMENTAL" && fits(it, profile) }
             .minWithOrNull(compareBy<ModelEntity> { when (category(it)) { "BALANCED" -> 0; "FAST" -> 1; "ADVANCED" -> 2; else -> 3 } }
                 .thenBy { it.fileSizeMb }) ?: return null
         return ModelRecommendation(selected.name, selected.filename, selected.quantization, 0f,

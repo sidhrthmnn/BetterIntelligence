@@ -15,7 +15,7 @@ object AutomaticModelSelector {
         val sha = it.sha256Checksum.orEmpty()
         sha.matches(Regex("[a-fA-F0-9]{64}")) && billions(it) >= 0.3 && ModelLibrary.automaticUseAllowed(it) &&
             ModelLibrary.category(it) != "EXPERIMENTAL" && !it.architecture.contains("bert", true) &&
-            (it.isInstalled || !it.isCustom && it.downloadUrl?.startsWith("https://") == true && it.description.contains("License:")) &&
+            (it.isInstalled || ModelLibrary.visibleInLibrary(it) && !it.isCustom && it.downloadUrl?.startsWith("https://") == true && it.description.contains("License:")) &&
             ModelLibrary.fits(it, profile, ModelLibrary.configuredContext(it, 1024))
     }
     fun recommend(models: List<ModelEntity>, profile: HardwareProfile): AutomaticModelPair {

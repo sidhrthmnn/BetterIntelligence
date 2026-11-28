@@ -78,10 +78,10 @@ class ModelLibraryTest {
 
     @Test fun recommendationUsesAvailableMemoryAndStorage() {
         val models = ModelLibrary.read(ApplicationProvider.getApplicationContext())
-        assertEquals(24, models.size)
+        assertEquals(26, models.size)
         assertTrue(models.all { !it.isInstalled && !it.isActive && !it.isChecksumVerified })
         assertEquals("Qwen 3 0.6B Instruct · LiteRT", ModelLibrary.recommend(models, profile())!!.recommendedModelName)
-        assertEquals("SmolLM2 135M Instruct", ModelLibrary.recommend(models, profile(storage = 0.3f))!!.recommendedModelName)
+        assertNull(ModelLibrary.recommend(models, profile(storage = 0.3f)))
         assertNull(ModelLibrary.recommend(models, profile(ram = 512)))
         assertNull(ModelLibrary.recommend(models, profile(abi = "armeabi-v7a")))
         assertEquals("Gemma 4 E2B Instruct · LiteRT", ModelLibrary.recommend(models, profile(ram = 4096))!!.recommendedModelName)
@@ -152,7 +152,7 @@ class ModelLibraryTest {
         val asset = context.assets.open("model-library.json").bufferedReader().use { it.readText() }
         assertEquals(java.io.File("../models/library.json").readText().trim(), asset.trim())
         val models = ModelLibrary.read(context)
-        assertEquals(24, models.map { it.filename }.distinct().size)
+        assertEquals(26, models.map { it.filename }.distinct().size)
         assertEquals(setOf("LIGHTWEIGHT", "BALANCED", "QUALITY"), models.map { it.recommendedTier }.toSet())
         for (model in models) {
             assertTrue(model.sha256Checksum!!.matches(Regex("[a-f0-9]{64}")))
@@ -160,6 +160,8 @@ class ModelLibraryTest {
             assertTrue(model.downloadUrl!!.contains("/resolve/${model.versionTag}/"))
             assertEquals(when {
                 model.name.startsWith("LFM 2.5 1.2B") -> "INT4 block32 (GPU export)"
+                model.filename == "LFM2.5-VL-450M_int4_fixB.litertlm" -> "INT4"
+                model.filename == "Qwen3.5-2B_int8.litertlm" -> "INT8"
                 model.name.startsWith("SmolLM3 3B") && model.filename.endsWith(".litertlm") -> "INT4 block32 + INT8 embed"
                 model.architecture == "qwen3" && model.filename.endsWith(".litertlm") -> "INT4 block32"
                 model.filename.endsWith(".litertlm") -> "Mixed 2/4/8-bit"

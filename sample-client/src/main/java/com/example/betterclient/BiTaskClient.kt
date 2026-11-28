@@ -14,8 +14,8 @@ import java.io.File
 class BiTaskClient(private val service: ILocalAiCoreService) {
     fun taskApiVersion(): Int = runCatching { service.apiVersion }.getOrDefault(2)
 
-    fun submit(type: String, text: String, callback: IBiTaskCallback, media: File? = null,
-        mime: String? = null, languageTag: String? = null): Bundle {
+    @JvmOverloads fun submit(type: String, text: String, callback: IBiTaskCallback, media: File? = null,
+        mime: String? = null, languageTag: String? = null, modelId: Long = 0): Bundle {
         require(taskApiVersion() >= 3) { "The installed Better Intelligence version only supports text IPC v2" }
         val request = Bundle().apply {
             putInt("api_version", 3)
@@ -23,6 +23,7 @@ class BiTaskClient(private val service: ILocalAiCoreService) {
             putString("text", text)
             putString("media_mime", mime)
             putString("language_tag", languageTag)
+            if (modelId > 0) putLong("model_id", modelId)
         }
         if (media == null) return service.submitTask(request, null, callback)
         return ParcelFileDescriptor.open(media, ParcelFileDescriptor.MODE_READ_ONLY).use { reading ->

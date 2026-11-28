@@ -174,29 +174,43 @@ internal class TaskSettings(context: Context) {
             .putString("${key}_backend", settings.backend.name).putString("${key}_quality", settings.quality.name).commit())
         current.value = current.value + (type to settings)
     }
+
+    @Synchronized fun update(type: TaskType, transform: (CapabilitySettings) -> CapabilitySettings) {
+        set(type, transform(get(type)))
+    }
 }
 
 /** Treat exact weights and validated runtime support as the source of capability, not Hub tags. */
 internal object TaskModels {
     const val GEMMA_E2B = "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c"
+    const val GEMMA_E4B = "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0"
+    const val LFM_VISION = "18cb1f93cf35cc8a7c3ea47a9854bacecccf2e80cca574e49e6da1bbd940fcec"
     const val BGE_SMALL = "f0b2fef971e8366438bfd2d9aefea1b0115919389448806d290237f638bae999"
     // Revisions enabled here have device validation for the enabled modality.
-    val gemmaMedia = setOf(TaskType.IMAGE_UNDERSTANDING, TaskType.AUDIO_UNDERSTANDING, TaskType.AUDIO_TRANSCRIPTION)
+    val mediaTypes = setOf(TaskType.IMAGE_UNDERSTANDING, TaskType.AUDIO_UNDERSTANDING, TaskType.AUDIO_TRANSCRIPTION)
     val text = setOf(TaskType.TEXT_GENERATION, TaskType.TEXT_POLISH)
-    val implemented get() = text + gemmaMedia + setOf(TaskType.SPEECH_GENERATION, TaskType.EMBEDDINGS)
+    val implemented get() = text + mediaTypes + setOf(TaskType.SPEECH_GENERATION, TaskType.EMBEDDINGS)
 
     fun capabilities(model: ModelEntity): Set<TaskType> {
         if (model.filename.endsWith(".gguf", true) && model.sha256Checksum == BGE_SMALL) return setOf(TaskType.EMBEDDINGS)
         val language = !model.architecture.contains("embedding", true) && !model.architecture.contains("bert", true) &&
             (model.filename.endsWith(".gguf", true) || model.filename.endsWith(".litertlm", true))
         if (!language) return emptySet()
-        return text + if (model.filename.endsWith(".litertlm", true) && model.sha256Checksum == GEMMA_E2B)
-            gemmaMedia else emptySet()
+        if (!model.filename.endsWith(".litertlm", true)) return text
+        return text + when (model.sha256Checksum) {
+            GEMMA_E2B, GEMMA_E4B -> mediaTypes
+            LFM_VISION -> setOf(TaskType.IMAGE_UNDERSTANDING)
+            else -> emptySet()
+        }
     }
 
     fun estimateMb(model: ModelEntity, type: TaskType): Long =
         when {
-            type in gemmaMedia -> 3000
+            type in mediaTypes -> when (model.sha256Checksum) {
+                GEMMA_E4B -> 3750
+                LFM_VISION -> 1100
+                else -> 3000
+            }
             type == TaskType.EMBEDDINGS -> 600
             else -> ModelLibrary.memoryEstimate(model, 1024).totalMb
         }

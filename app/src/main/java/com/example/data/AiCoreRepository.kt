@@ -473,7 +473,7 @@ class AiCoreRepository(
     internal suspend fun taskModels(type: TaskType, installedOnly: Boolean): List<ModelEntity> {
         awaitModelInitialization()
         return modelDao.getAllModels().first().filter {
-            (!installedOnly || it.isInstalled) && type in TaskModels.capabilities(it)
+            (it.isInstalled || !installedOnly && ModelLibrary.visibleInLibrary(it)) && type in TaskModels.capabilities(it)
         }
     }
 
@@ -896,7 +896,7 @@ class AiCoreRepository(
             appContext.packageManager.getApplicationLabel(
                 appContext.packageManager.getApplicationInfo(packageName, 0)).toString()
         }.getOrDefault(packageName)
-        clientPolicyDao.insertPendingPolicy(ClientAppPolicyEntity(packageName, label))
+        clientPolicyDao.insertPendingPolicy(ClientAppPolicyEntity(packageName, label, allowInference = false, allowStructuredJson = false))
     }
 
     suspend fun clientAccessStatus(packageName: String): String {
@@ -969,8 +969,30 @@ class AiCoreRepository(
 
     internal suspend fun setTaskScope(pkg: String, access: TaskAccess, allowed: Boolean) {
         if (access.bit == 0) return
-        clientPolicyDao.setTaskScope(pkg, access.bit, allowed)
+        updateConnectedPolicy(pkg) { policy ->
+            val bits = if (allowed) policy.taskScopes or access.bit else policy.taskScopes and access.bit.inv()
+            policy.copy(taskScopes = bits)
+        }
         if (!allowed && access == TaskAccess.DOWNLOAD) taskSettings.clearDownloadsFrom(pkg)
+    }
+
+    internal suspend fun updateConnectedPolicy(pkg: String, transform: (ClientAppPolicyEntity) -> ClientAppPolicyEntity) {
+        database.withTransaction {
+            val current = clientPolicyDao.getPolicyForPackage(pkg) ?: return@withTransaction
+            if (current.isWhitelisted && !current.isBlocked) clientPolicyDao.insertOrUpdatePolicy(transform(current))
+        }
+    }
+
+    internal suspend fun setClientConnection(pkg: String, allowed: Boolean, text: Boolean = false, scopes: Int = 0) {
+        database.withTransaction {
+            val current = clientPolicyDao.getPolicyForPackage(pkg) ?: return@withTransaction
+            if (current.isBlocked || current.isWhitelisted == allowed) return@withTransaction
+            clientPolicyDao.insertOrUpdatePolicy(current.copy(isWhitelisted = allowed,
+                allowInference = allowed && text, allowStructuredJson = false,
+                taskScopes = if (allowed) scopes else 0, allowAppContext = false,
+                allowReadMemory = false, allowWriteMemory = false))
+        }
+        if (!allowed) taskSettings.clearDownloadsFrom(pkg)
     }
 
     suspend fun isPackageAllowed(packageName: String): Boolean {

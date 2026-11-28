@@ -58,7 +58,7 @@ class AutomaticSetupDeviceTest {
         part.writeBytes(ByteArray(8192) { 7 })
         dao.updateModel(model.copy(downloadState = "PAUSED", downloadProgress = .1f))
         compose.runOnUiThread { vm.selectTab(AppTab.MODELS) }
-        compose.onNodeWithTag("model_source_library").performClick()
+        compose.onNodeWithTag("model_source_downloads").performClick()
         compose.onNodeWithTag("models_list").performScrollToNode(hasTestTag("delete_partial_${model.id}"))
         compose.onNodeWithTag("delete_partial_${model.id}").performClick()
         compose.onNodeWithTag("confirm_delete_partial").performClick()
@@ -165,7 +165,7 @@ class AutomaticSetupDeviceTest {
         withTimeout(15_000) { while (repo.modelForDownload(model.id)?.downloadState != "PAUSED") delay(100) }
         val bytes = part.length(); assertTrue(bytes > 0)
         compose.runOnUiThread { vm.selectTab(AppTab.MODELS) }
-        compose.onNodeWithTag("model_source_library").performClick()
+        compose.onNodeWithTag("model_source_downloads").performClick()
         compose.onNodeWithTag("models_list").performScrollToNode(hasTestTag("delete_partial_${model.id}"))
         compose.onNodeWithTag("delete_partial_${model.id}").performClick()
         compose.onNodeWithTag("confirm_delete_partial").performClick()

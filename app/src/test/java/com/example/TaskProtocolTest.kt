@@ -44,6 +44,21 @@ class TaskProtocolTest {
         assertFalse(TaskType.IMAGE_GENERATION in TaskModels.capabilities(gemma))
     }
 
+    @Test fun featuredMediaOffersTwoRamTiersAndDoesNotAdvertiseLfmAudio() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val all = ModelLibrary.read(context)
+        val featured = all.filter(ModelLibrary::visibleInLibrary)
+        assertEquals(6, featured.size)
+        assertTrue(featured.all { it.filename.endsWith(".litertlm") || it.sha256Checksum == TaskModels.BGE_SMALL })
+        val large = featured.single { it.sha256Checksum == TaskModels.GEMMA_E4B }
+        val small = featured.single { it.sha256Checksum == TaskModels.LFM_VISION }
+        assertTrue(TaskType.AUDIO_TRANSCRIPTION in TaskModels.capabilities(large))
+        assertTrue(TaskType.IMAGE_UNDERSTANDING in TaskModels.capabilities(small))
+        assertFalse(TaskType.AUDIO_UNDERSTANDING in TaskModels.capabilities(small))
+        assertTrue(TaskModels.estimateMb(small, TaskType.IMAGE_UNDERSTANDING) < TaskModels.estimateMb(large, TaskType.IMAGE_UNDERSTANDING))
+        assertFalse(ModelLibrary.visibleInLibrary(all.first()))
+    }
+
     @Test fun rejectsUnpinnedLiteRtAndFreeProjectors() {
         val metadata = JSONObject("""{"sha":"${"a".repeat(40)}","siblings":[
             {"rfilename":"model.litertlm","size":1048576,"lfs":{"sha256":"${"b".repeat(64)}"}},
