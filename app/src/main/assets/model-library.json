@@ -514,7 +514,7 @@
     "revision": "a81697205288c632ca83361206af1e4b07133e76",
     "license": "apache-2.0",
     "tier": "BALANCED",
-    "description": "Text and reasoning in the LiteRT-LM INT8 export. Choose a Gemma or LFM vision package to analyse media.",
+    "description": "Text and reasoning in the LiteRT-LM INT8 CPU export. Choose a Gemma or LFM vision package to analyse media.",
     "url": "https://huggingface.co/litert-community/Qwen3.5-2B/resolve/a81697205288c632ca83361206af1e4b07133e76/Qwen3.5-2B_int8.litertlm",
     "layers": 24,
     "kvBytesPerToken": 24576,

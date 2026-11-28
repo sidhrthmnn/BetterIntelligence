@@ -41,6 +41,8 @@ object ModelLibrary {
 
     fun liteRtGpuRestriction(sha256: String): String = when (sha256) {
         com.example.tasks.TaskModels.LFM_VISION -> "This LFM vision package has been validated on CPU."
+        "fa4ac3259404567c7f82533746549eed94e2e1c8222095706c63cce17653c68a" ->
+            "Qwen 3.5 2B uses CPU to avoid a long first-time OpenCL initialization."
         // This exact mobile export's publisher reports a Qualcomm GPU hard reboot.
         // Keep its CPU graph usable; lifting this requires a fixed package/runtime
         // and actual Android validation, not a change of filename or device brand.
